@@ -1,6 +1,6 @@
 # Mayflower
 
-## Dependencies
+## Linux Dependencies
 - gcc
 - make
 - bison

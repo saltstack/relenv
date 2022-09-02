@@ -163,7 +163,9 @@ def populate_env(dirs, env):
         "-L{glibc}/lib",
         "-I{prefix}/include",
         "-I{prefix}/include/readline",
-        "-I{glibc}/include",
+        "-I{prefix}/include/uuid",
+    ] + [
+        "-I{}".format(_) for _ in all_dirs(dirs.glibc / "include")
     ]
     env["CFLAGS"] = " ".join(cflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
 
