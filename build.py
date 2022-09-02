@@ -124,7 +124,6 @@ def build_default(env, dirs, logfp):
     runcmd([
         './configure',
         "--prefix={}".format(dirs.prefix),
-        #"--host=x86_64-pc-linux-gnu",
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
@@ -141,8 +140,17 @@ def gcc_version(cc):
     proc = runcmd([cc, "--version"], stderr=PIPE, stdout=PIPE)
     return _parse_gcc_version(proc.stdout.decode())
 
+def _parse_kernel_version(stdout):
+    return ".".join(stdout.decode().split('.')[:3])
+
+def kernel_version():
+    proc = runcmd(["uname", "-r"], stderr=PIPE, stdout=PIPE)
+    return _parse_kernel_version(proc.stdout)
+
+
 def populate_env(dirs, env):
-    env["CC"] = "gcc-10 -std=gnu89"
+    env["CC"] = "gcc"
+    #env["CXXFLAGS"] = "-std=gnu++14"
     ldflags = [
         "-Wl,--rpath='$$ORIGIN'",
         "-Wl,--rpath={prefix}/lib",
@@ -154,6 +162,7 @@ def populate_env(dirs, env):
         "-L{prefix}/lib",
         "-L{glibc}/lib",
         "-I{prefix}/include",
+        "-I{prefix}/include/readline",
         "-I{glibc}/include",
     ]
     env["CFLAGS"] = " ".join(cflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
@@ -168,9 +177,6 @@ class Recipies:
             self.recipies = recipies
         self.build_default = build_default
         self.populate_env = populate_env
-
-    def xadd(self, *args, **kwargs):
-        pass
 
     def add(self, name, url, checksum, build_func=None, wait_on=None):
         if wait_on is None:
@@ -206,6 +212,8 @@ class Recipies:
         os.makedirs(dirs.downloads, exist_ok=True)
         os.makedirs(logs, exist_ok=True)
         logfp = io.open(os.path.join(logs, "{}.log".format(name)), "w")
+        #XXX should separate downloads and builds.
+        #archive = os.path.join(dirs.downloads, os.path.basename(url))
         archive = download_url(url, dirs.downloads)
         verify_checksum(archive, checksum)
         extract_archive(dirs.sources, archive)
@@ -231,15 +239,29 @@ recipies = Recipies()
 
 def build_glibc(env, dirs, logfp):
     os.chdir(dirs.build)
-    env["CFLAGS"] = "-std=gnu99 -O2 -no-pie"
+    env["CFLAGS"] = "-O2 -no-pie" # -D_FORTIFY_SOURCE -Wno-missing-attributes -Wno-array-bounds -Wno-array-parameter -Wno-stringop-overflow -Wno-maybe-uninitialized"
     env["LDFLAGS"] = "-no-pie"
     config = str(dirs.source / 'configure')
-    runcmd(["sed", "-i", 's/3.79/4.3/g', config])
+    # Allow any version of make
+    runcmd(["sed", "-i", 's/3.79/*/g', config])
+    # Allow any version of gcc
     runcmd(["sed", "-i", 's/4\.\[3-9\]\.*/*/', config])
+    #XXX audit these options
     runcmd([
         config,
+        "--disable-werror",
         "--prefix={}".format(dirs.glibc),
+        "--with-tls",
+        "--disable-debug",
+        "--with-__thread",
+        "--without-gd",
+        "--disable-sanity-checks",
+        "--enable-obsolete-rpc",
+        "--enable-add-ons=nptl",
+        "--enable-kernel={}".format(kernel_version()),
     ], env=env, stderr=logfp, stdout=logfp)
+    makefile = str(dirs.source / 'Makefile')
+    runcmd(["sed", "-i", 's/ifndef abi-variants/ifdef api-variants/g ', makefile])
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
@@ -252,7 +274,6 @@ def build_openssl(env, dirs, logfp):
         "shared",
         "--prefix={}".format(dirs.prefix),
         "--openssldir={}/ssl".format(dirs.prefix),
-        #"--libdir=lib",
         ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install_sw", "install_ssldirs"], env=env, stderr=logfp, stdout=logfp)
@@ -277,7 +298,6 @@ def build_sqlite(env, dirs, logfp):
     #]
     runcmd([
         "./configure",
-        #"--host=x86_64-pc-linux-gnu",
         "--enable-threadsafe",
         "--disable-readline",
         "--disable-dependency-tracking",
@@ -288,7 +308,6 @@ def build_sqlite(env, dirs, logfp):
 
 
 def build_bzip2(env, dirs, logfp):
-    #env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
     runcmd([
         "make",
         "-j8",
@@ -315,7 +334,6 @@ def build_gdbm(env, dirs, logfp):
     runcmd([
         './configure',
         "--prefix={}".format(dirs.prefix),
-        #"--host=x86_64-linux",
         "--enable-libgdbm-compat",
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -326,13 +344,9 @@ def build_ncurses(env, dirs, logfp):
     runcmd([
         "./configure",
         "--prefix={}".format(dirs.prefix),
-        #"--host=x86_64-linux",
         "--with-shared",
         "--without-cxx",
         "--enable-widec",
-        "--with-termlib",
-       # "--enable-rpath",
-       # "--with-libtool",
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
@@ -341,22 +355,17 @@ def build_libffi(env, dirs, logfp):
     runcmd([
         './configure',
         "--prefix={}".format(dirs.prefix),
-        #"--host=x86_64-pc-linux-gnu",
-        #"--libdir={}/lib".format(dirs.prefix),
-        #"--libexecdir={}/lib".format(dirs.prefix),
         "--disable-multi-os-directory"
     ], env=env, stderr=logfp, stdout=logfp)
+    # libffi doens't want to honor libdir, force install to lib instead of lib64
     runcmd(["sed", "-i", "s/lib64/lib/g", "Makefile"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 def build_zlib(env, dirs, logfp):
-    #env.pop("CFLAGS")
-    #env.pop("LDFLAGS")
     env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
     runcmd([
         './configure',
-        #"--host=x86_64-linux",
         "--prefix={}".format(dirs.prefix),
         "--libdir={}/lib".format(dirs.prefix),
         "--shared",
@@ -369,12 +378,8 @@ def build_krb(env, dirs, logfp):
     os.chdir(dirs.source / "src")
     runcmd([
         './configure',
-        #"--host=x86_64-linux",
-        #"--build=x86_64-linux",
         "--prefix={}".format(dirs.prefix),
         "--without-system-verto",
-        #"--host=x86_64-pc-linux",
-        #"--target=x86_64-pc-linux",
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
@@ -385,12 +390,9 @@ def build_python(env, dirs, logfp):
     runcmd([
         './configure',
          "-v",
-    #    "--host=x86_64-pc-linux-gnu",
-    #    "--build=x86_64-pc-linux-gnu",
         "--prefix={}".format(dirs.prefix),
-        #"--with-build-python=/usr/bin/python3",
         "--with-openssl={}".format(dirs.prefix),
-        #"--without-tkinter",
+        "--enable-optimizations",
     ], env=env, stderr=logfp, stdout=logfp)
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
@@ -417,8 +419,6 @@ recipies.add(
     "OpenSSL",
     "https://www.openssl.org/source/openssl-1.1.1n.tar.gz",
     "2aad5635f9bb338bc2c6b7d19cbc9676",
-    #"https://www.openssl.org/source/openssl-3.0.5.tar.gz",
-    #"163bb3e58c143793d1dc6a6ec7d185d5",
     build_func=build_openssl,
     wait_on=["glibc"],
 )
@@ -476,8 +476,6 @@ recipies.add(
     "zlib",
     "https://zlib.net/fossils/zlib-1.2.12.tar.gz",
     "5fc414a9726be31427b440b434d05f78",
-    #"https://zlib.net/fossils/zlib-1.2.3.tar.gz",
-    #None,
     build_zlib,
     wait_on=["glibc"],
 )
@@ -492,9 +490,6 @@ recipies.add(
 recipies.add(
     "krb5",
     "https://kerberos.org/dist/krb5/1.20/krb5-1.20.tar.gz",
-    #"e88657aca6e6b0528c11a78643498bd5",
-    #"https://kerberos.org/dist/krb5/1.16/krb5-1.16.tar.gz",
-    #"aaf18447a5a014aa3b7e81814923f4c9",
     None,
     build_func=build_krb,
     wait_on=["OpenSSL", "glibc"],
@@ -509,9 +504,7 @@ recipies.add(
 
 recipies.add(
     "Python",
-    #"https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tar.xz",
     "https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tar.xz",
-    #"5e2411217b0060828d5f923eb422a3b8",
     None,
     build_func=build_python,
     wait_on=[
@@ -532,9 +525,6 @@ recipies.add(
 
 
 def main():
-    #toolchain = os.path.join(os.getcwd(), "toolchain", "bin")
-    #glibc = os.path.join(os.getcwd(), "toolchain", "glibc_2_17", "bin")
-    #os.environ["PATH"] = "{}:{}".format(toolchain, os.environ["PATH"])
     random.seed()
     if '--clean' in sys.argv:
       try:
@@ -552,7 +542,6 @@ def main():
 
     # Start a process for each build passing it an event used to notify each
     # process if it's dependencies have finished.
-    #for name in ['glibc']:
     if "RUN" in os.environ:
         run = [_.strip() for _ in os.environ["RUN"].split(",") if _.strip()]
     else:
@@ -579,14 +568,10 @@ def main():
             print_ui(events, processes, fails)
             if proc.exitcode is None:
                 continue
-            #print("Pop {} {}".format(proc.exitcode, proc.name))
             processes.pop(proc.name)
             if proc.exitcode != 0:
-                #proc.stderr.seek(0, io.SEEK_END)
-                #proc.stderr.seek(proc.tell() - 4096)
                 fails.append(proc.name)
                 is_failure=True
-                #fails.append(proc.stderr.read(4096))
             else:
                 is_failure=False
             for name in waits:
