@@ -141,11 +141,12 @@ def gcc_version(cc):
     return _parse_gcc_version(proc.stdout.decode())
 
 def _parse_kernel_version(stdout):
-    return ".".join(stdout.decode().split('.')[:3])
+    stdout = stdout.split('-', 1)[0]
+    return ".".join(stdout.split('.')[:3])
 
 def kernel_version():
     proc = runcmd(["uname", "-r"], stderr=PIPE, stdout=PIPE)
-    return _parse_kernel_version(proc.stdout)
+    return _parse_kernel_version(proc.stdout.decode())
 
 def populate_env(dirs, env):
     pass

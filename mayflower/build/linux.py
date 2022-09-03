@@ -2,9 +2,7 @@ from .common import *
 
 def populate_env(dirs, env):
     env["CC"] = "gcc"
-    #env["CXXFLAGS"] = "-std=gnu++14"
     ldflags = [
-        "-Wl,--rpath='$$ORIGIN'",
         "-Wl,--rpath={prefix}/lib",
         "-L{prefix}/lib",
         "-L{glibc}/lib",
@@ -41,7 +39,7 @@ def build_glibc(env, dirs, logfp):
         "--disable-sanity-checks",
         "--enable-obsolete-rpc",
         "--enable-add-ons=nptl",
-        "--enable-kernel={}".format(kernel_version()),
+#        "--enable-kernel={}".format(kernel_version()),
     ], env=env, stderr=logfp, stdout=logfp)
     makefile = str(dirs.source / 'Makefile')
     runcmd(["sed", "-i", 's/ifndef abi-variants/ifdef api-variants/g ', makefile])
