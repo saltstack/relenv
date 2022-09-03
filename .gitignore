@@ -1,3 +1,7 @@
-build
-download
-logs
+__pycache__
+*.pyc
+
+# These are created when builds run
+/build
+/download
+/logs
