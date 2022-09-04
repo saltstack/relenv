@@ -154,7 +154,7 @@ def populate_env(dirs, env):
 class Builder:
 
     def __init__(self, install_dir='build', recipies=None, build_default=build_default, populate_env=populate_env):
-        self.install_dir = install_dir
+        self.install_dir = str(pathlib.Path(install_dir).resolve())
         if recipies is None:
             self.recipies = {}
         else:
@@ -288,5 +288,7 @@ def run_build(builder):
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
-    download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py")
-    run_cmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"])
+    shutil.rmtree(str(pathlib.Path(builder.install_dir) / "src"))
+    to = pathlib.Path(builder.install_dir).parent
+    download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
+    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"])
