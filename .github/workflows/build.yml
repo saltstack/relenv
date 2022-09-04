@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+
+  build_linux_x86_64:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Dependencies
+      run: sudo apt-get install build-essential bison linux-headers-$(uname -r)
+
+    - name: build
+      run: CICD=true python3 -m mayflower.build.linux
+
+    - name: Linux Logs
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: linux-x86_64-logs
+        path: logs/*
+        retention-days: 5
+
+    - name: Create Tarball
+      run: tar cJf python-linux-x86_64.tar.xz build
+
+    - name: Python build
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-linux-x86_64.tar.xz
+        path: python-linux-x86_64.tar.xz
+        retention-days: 5
+
+  build_osx_x86_64:
+
+    runs-on: macos-12
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build
+      run: CICD=true python3 -m mayflower.build.darwin
+
+    - name: MacOS Logs
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: osx-x86_64-logs
+        path: logs/*
+        retention-days: 5
+
+    - name: Create Tarball
+      run: tar cJf python-macos-x86_64.tar.xz build
+
+    - name: Python build
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-macos-x86_64.tar.xz
+        path: python-macos-x86_64.tar.xz
+        retention-days: 5

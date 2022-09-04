@@ -1,5 +1,42 @@
 from .common import *
-from .linux import build_openssl, build_xz, build_sqlite, build_python
+from .linux import build_openssl, build_sqlite
+
+def populate_env(dirs, env):
+    env["CC"] = 'clang'
+    ldflags = [
+        "-Wl,-rpath,{prefix}/lib",
+        "-L{prefix}/lib",
+    ]
+    env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
+    cflags = [
+        "-L{prefix}/lib",
+        "-I{prefix}/include",
+        "-I{prefix}/include/readline",
+    ]
+    env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
+
+def build_python(env, dirs, logfp):
+    env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
+        prefix=dirs.prefix, ldflags=env["LDFLAGS"])
+    runcmd([
+        './configure',
+         "-v",
+        "--prefix={}".format(dirs.prefix),
+        "--with-openssl={}".format(dirs.prefix),
+        "--enable-optimizations",
+    ], env=env, stderr=logfp, stdout=logfp)
+    with io.open("Modules/Setup", "a+") as fp:
+        fp.seek(0, io.SEEK_END)
+        fp.write(
+            "*disabled*\n"
+            "_tkinter\n"
+            "nsl\n"
+            "ncurses\n"
+            "nis\n"
+        )
+    runcmd(["sed", "s/#zlib/zlib/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 build = Builder(populate_env=populate_env)
 
