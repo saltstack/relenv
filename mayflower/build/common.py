@@ -291,4 +291,5 @@ def run_build(builder):
     shutil.rmtree(str(pathlib.Path(builder.install_dir) / "src"))
     to = pathlib.Path(builder.install_dir).parent
     download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
-    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"])
+    logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
+    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"], stderr=logfp, stdout=logfp)
