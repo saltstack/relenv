@@ -13,7 +13,7 @@ move the root directory around on the filesystem.
 
 ## Building on Linux
 
-Running `python3 mayflower.build.linux --clean` will, if successful, create a python
+Running `python3 -m mayflower.build.linux --clean` will, if successful, create a python
 environment to the `build/` directory. All of the dependencies needed for
 Python are located in `build/lib`.
 
@@ -22,4 +22,4 @@ Python are located in `build/lib`.
 
 ## Building on Mac OS
 
-Run `python3 mayflower.build.darwin --clean`
+Run `python3 -m mayflower.build.darwin --clean`
