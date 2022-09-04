@@ -30,11 +30,14 @@ jobs:
         path: logs/*
         retention-days: 5
 
+    - name: Create Tarball
+      run: tar cJf python-linux-x86_64.tar.xz build
+
     - name: Python build
       uses: actions/upload-artifact@v3
       with:
-        name: python-linux-x86_64
-        path: build
+        name: python-linux-x86_64.tar.xz
+        path: python-linux-x86_64.tar.xz
         retention-days: 5
 
   build_osx_x86_64:
@@ -55,9 +58,12 @@ jobs:
         path: logs/*
         retention-days: 5
 
+    - name: Create Tarball
+      run: tar cJf python-macos-x86_64.tar.xz build
+
     - name: Python build
       uses: actions/upload-artifact@v3
       with:
-        name: python-macos-x86_64
-        path: build
+        name: python-macos-x86_64.tar.xz
+        path: python-macos-x86_64.tar.xz
         retention-days: 5
