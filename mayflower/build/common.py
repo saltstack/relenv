@@ -288,3 +288,5 @@ def run_build(builder):
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
+    download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py")
+    run_cmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"])
