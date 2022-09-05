@@ -12,7 +12,8 @@ move the root directory around on the filesystem.
 - libtool
 - patchelf
 
-| Arch linux varients also require libxcrypt-compat
+**Arch linux varients also require libxcrypt-compat**
+> This should get fixed in the future.
  
 ## Building on Linux
 
