@@ -23,3 +23,17 @@ Python are located in `build/lib`.
 ## Building on Mac OS
 
 Run `python3 -m mayflower.build.darwin --clean`
+
+
+# How it Works
+
+1. Build python from source.
+
+2. Modify the rpath of all binaries so that shared libraries are loaded via
+   relative paths.
+
+3. Modify the shebangs of Python's scripts run Python using a relative path.
+
+4. Install a small wrapper around Pip which makes sure the shebangs of
+   installed scripst use the relative python. This wrapper will also limit the
+   `PYTHON_PATH	 of scripts run to directories in our python environment.
