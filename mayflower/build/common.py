@@ -87,7 +87,16 @@ def runcmd(*args, **kwargs):
 
 def download_url(url, dest):
     local = os.path.join(dest, os.path.basename(url))
-    fin = urllib_request.urlopen(url)
+    n = 0
+    while n < 3:
+        n += 1
+        try:
+            fin = urllib_request.urlopen(url)
+        except urllib.error.HTTPError as exc:
+            if n == 3:
+                raise
+            print("Unable to download: %s %r".format(url, exc))
+            time.sleep(n + 1)
     fout = open(local, 'wb')
     block = fin.read(10240)
     try:
@@ -98,9 +107,10 @@ def download_url(url, dest):
         fout.close()
     except:
         try:
-            os.unlink(name)
+            os.unlink(local)
         except OSError:
             pass
+        raise
     return local
 
 def verify_checksum(file, checksum):
