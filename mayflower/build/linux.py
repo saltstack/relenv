@@ -157,7 +157,8 @@ def build_krb(env, dirs, logfp):
         "--prefix={}".format(dirs.prefix),
         "--with-shared",
         "--without-static",
-        "--without-system-libverto",
+        "--without-system-verto",
+        "--without-libedit",
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
