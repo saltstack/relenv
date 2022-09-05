@@ -187,7 +187,7 @@ class Builder:
             glibc = prefix / "glibc"
             downloads = cwd / "download"
             logs = cwd / "logs"
-            sources = prefix / "src"
+            sources = cwd / "src"
             build = tempfile.mkdtemp(prefix="{}_build".format(name))
 
         logs = str(pathlib.Path('logs').resolve())
@@ -215,6 +215,71 @@ class Builder:
         finally:
             os.chdir(_)
             logfp.close()
+
+PIP_WRAPPER="""#!/bin/sh
+"exec" "`dirname $0`/python3" "$0" "$@"
+import os
+import re
+import sys
+
+bin_path = os.path.dirname(os.path.abspath(__file__))
+if bin_path.endswith("bin"):
+    prefix_path = os.path.dirname(bin_path)
+else:
+    prefix_path = bin_path
+
+
+# Pin to the python in our directory
+sys.prefix = prefix_path
+sys.exec_prefix = prefix_path
+
+# Remove paths outside of our python location
+path = []
+for i in list(sys.path):
+    if i.startswith(sys.prefix):
+        path.append(i)
+sys.path = path
+
+# isort: off
+
+from pip._internal.cli.main import main
+from pip._vendor.distlib.scripts import ScriptMaker
+
+# isort: on
+
+ScriptMaker.script_template = r\"\"\"# -*- coding: utf-8 -*-
+import os
+import re
+import sys
+
+bin_path = os.path.dirname(os.path.abspath(__file__))
+if bin_path.endswith("bin"):
+    prefix_path = os.path.dirname(bin_path)
+else:
+    prefix_path = bin_path
+
+# Pin to the python in our directory
+sys.prefix = prefix_path
+sys.exec_prefix = prefix_path
+
+# Remove paths outside of our python location
+path = []
+for i in list(sys.path):
+    if i.startswith(sys.prefix):
+        path.append(i)
+sys.path = path
+
+from %(module)s import %(import_name)s
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(%(func)s())
+\"\"\"
+
+
+if __name__ == "__main__":
+    sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
+    sys.exit(main())
+"""
 
 
 def run_build(builder):
@@ -288,8 +353,40 @@ def run_build(builder):
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
-    shutil.rmtree(str(pathlib.Path(builder.install_dir) / "src"))
+
+    # Download and run relok8 to make sure the rpaths are relocatable.
     to = pathlib.Path(builder.install_dir).parent
     download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
     logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
     runcmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"], stderr=logfp, stdout=logfp)
+
+    # Fix the shebangs in python's scripts.
+	#sed $(SED_OPTS) 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $(SCRIPTS_DIR)/$@;
+
+    bindir = pathlib.Path(builder.install_dir) / "bin"
+    pyex = bindir / "python3.10"
+    shebang = "#!{}".format(str(pyex))
+    for root, dirs, files in os.walk(str(bindir)):
+        #print(root), print(dirs), print(files)
+        for file in files:
+            with open(os.path.join(root, file), "rb") as fp:
+                try:
+                    data = fp.read(len(shebang.encode())).decode()
+                except:
+                    print("skip: {}".format(file))
+                    continue
+                if data == shebang:
+                    print(file)
+                    print(repr(data))
+                else:
+                    print("skip: {}".format(file))
+                    continue
+                data = fp.read().decode()
+            with open(os.path.join(root, file), "w") as fp:
+                fp.write("#!/bin/sh\n")
+                fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
+                fp.write(data)
+    for file in ["pip3", "pip3.10"]:
+        path = bindir / file
+        with io.open(str(path), "w") as fp:
+            fp.write(PIP_WRAPPER)
