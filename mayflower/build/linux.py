@@ -4,16 +4,16 @@ def populate_env(dirs, env):
     env["CC"] = "gcc"
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
-        "-L{prefix}/lib",
         "-L{glibc}/lib",
+        "-L{prefix}/lib",
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
     cflags = [
-        "-L{prefix}/lib",
         "-L{glibc}/lib",
+        "-L{prefix}/lib",
+        "-I{glibc}/include",
         "-I{prefix}/include",
         "-I{prefix}/include/readline",
-        "-I{glibc}/include",
     ]
     env["CFLAGS"] = " ".join(cflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
 
@@ -32,14 +32,7 @@ def build_glibc(env, dirs, logfp):
         config,
         "--disable-werror",
         "--prefix={}".format(dirs.glibc),
-        "--with-tls",
-        "--disable-debug",
-        "--with-__thread",
-        "--without-gd",
-        "--disable-sanity-checks",
-        "--enable-obsolete-rpc",
-        "--enable-add-ons=nptl",
-#        "--enable-kernel={}".format(kernel_version()),
+        "--enable-kernel={}".format(kernel_version()) if not CICD else "",
     ], env=env, stderr=logfp, stdout=logfp)
     makefile = str(dirs.source / 'Makefile')
     runcmd(["sed", "-i", 's/ifndef abi-variants/ifdef api-variants/g ', makefile])
@@ -156,17 +149,20 @@ def build_zlib(env, dirs, logfp):
 
 
 def build_krb(env, dirs, logfp):
+    env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
+    env["LDFLAGS"] = "-lm -lresolv -ldl {}".format(env["LDFLAGS"])
     os.chdir(dirs.source / "src")
     runcmd([
         './configure',
         "--prefix={}".format(dirs.prefix),
-        "--without-system-verto",
+        "--with-shared",
+        "--without-static",
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 def build_python(env, dirs, logfp):
-    env["LDFLAGS"] = "-Wl,--rpath='$$ORIGIN/../..' -Wl,--rpath={prefix}/lib {ldflags}".format(
+    env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"])
     runcmd([
         './configure',
@@ -304,79 +300,6 @@ build.add(
         "readline",
     ]
 )
-
-
-def main():
-    random.seed()
-    if '--clean' in sys.argv:
-      try:
-          shutil.rmtree(build.install_dir)
-      except FileNotFoundError: pass
-
-    import concurrent.futures
-
-    fails = []
-    futures = []
-    events = {}
-    waits = {}
-    processes = {}
-
-
-    # Start a process for each build passing it an event used to notify each
-    # process if it's dependencies have finished.
-    if "RUN" in os.environ:
-        run = [_.strip() for _ in os.environ["RUN"].split(",") if _.strip()]
-    else:
-        run = build.recipies
-    for name in run:
-        event = multiprocessing.Event()
-        events[name] = event
-        kwargs = dict(build.recipies[name])
-        waits[name] = kwargs.pop('wait_on', [])
-        if not waits[name]:
-            event.set()
-        proc = multiprocessing.Process(name=name, target=build.run, args=(name, event), kwargs=kwargs)
-        proc.start()
-        processes[name] = proc
-
-    sys.stdout.write("\n")
-    print_ui(events, processes, fails)
-
-    # Wait for the processes to finish and check if we should send any
-    # dependency events.
-    while processes:
-        for proc in list(processes.values()):
-            proc.join(.3)
-            print_ui(events, processes, fails)
-            if proc.exitcode is None:
-                continue
-            processes.pop(proc.name)
-            if proc.exitcode != 0:
-                fails.append(proc.name)
-                is_failure=True
-            else:
-                is_failure=False
-            for name in waits:
-                if proc.name in waits[name]:
-                    if is_failure:
-                        if name in processes:
-                            processes[name].terminate()
-                            time.sleep(.1)
-                    waits[name].remove(proc.name)
-                if not waits[name] and not events[name].is_set():
-                    events[name].set()
-
-
-    if fails:
-        sys.stderr.write("The following failures were reported\n")
-        for fail in fails :
-            sys.stderr.write(fail + "\n")
-        sys.stderr.flush()
-        sys.exit(1)
-    time.sleep(.1)
-    print_ui(events, processes, fails)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
 
 
 

@@ -10,7 +10,10 @@ move the root directory around on the filesystem.
 - make
 - bison
 - libtool
+- patchelf
 
+| Arch linux varients also require libxcrypt-compat
+ 
 ## Building on Linux
 
 Running `python3 -m mayflower.build.linux --clean` will, if successful, create a python
