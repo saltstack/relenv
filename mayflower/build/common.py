@@ -373,7 +373,7 @@ def run_build(builder):
     to = pathlib.Path(builder.install_dir).parent
     download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
     logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
-    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/libs", "--rpath-only"], stderr=logfp, stdout=logfp)
+    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/lib", "--rpath-only"], stderr=logfp, stdout=logfp)
 
     # Fix the shebangs in python's scripts.
 	#sed $(SED_OPTS) 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $(SCRIPTS_DIR)/$@;
