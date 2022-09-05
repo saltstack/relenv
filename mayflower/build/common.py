@@ -13,7 +13,8 @@ import sys
 import io
 import os
 import platform
-import urllib.request as urllib_request
+import urllib.request
+import urllib.error
 import multiprocessing
 
 log = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ def download_url(url, dest):
     while n < 3:
         n += 1
         try:
-            fin = urllib_request.urlopen(url)
+            fin = urllib.request.urlopen(url)
         except urllib.error.HTTPError as exc:
             if n == 3:
                 raise
