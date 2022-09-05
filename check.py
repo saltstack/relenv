@@ -1,3 +1,4 @@
+# Toying aroud with what sanity checks we might run durring a build
 import logging
 import os
 import subprocess
