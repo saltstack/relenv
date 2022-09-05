@@ -39,4 +39,4 @@ Run `python3 -m mayflower.build.darwin --clean`
 
 4. Install a small wrapper around Pip which makes sure the shebangs of
    installed scripst use the relative python. This wrapper will also limit the
-   `PYTHON_PATH	 of scripts run to directories in our python environment.
+   `PYTHONPATH` of scripts run to directories in our python environment.
