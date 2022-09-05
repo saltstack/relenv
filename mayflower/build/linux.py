@@ -32,7 +32,7 @@ def build_glibc(env, dirs, logfp):
         config,
         "--disable-werror",
         "--prefix={}".format(dirs.glibc),
-        #"--enable-kernel={}".format(kernel_version()),
+        "--enable-kernel={}".format(kernel_version()) if not CICD else "",
     ], env=env, stderr=logfp, stdout=logfp)
     makefile = str(dirs.source / 'Makefile')
     runcmd(["sed", "-i", 's/ifndef abi-variants/ifdef api-variants/g ', makefile])

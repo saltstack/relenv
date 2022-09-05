@@ -29,6 +29,8 @@ END = "\033[0m"
 MOVEUP = "\033[F"
 
 
+CICD = False
+
 def print_ui(events, processes, fails, flipstat={}):
     uiline = []
     for name in events:
@@ -218,6 +220,9 @@ class Builder:
 
 
 def run_build(builder):
+    global CICD
+    if 'CICD' in os.environ:
+        CICD = True
     random.seed()
     if '--clean' in sys.argv:
       try:
