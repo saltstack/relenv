@@ -1,0 +1,81 @@
+import os, pathlib, sys
+from .build.common import download_url, extract_archive, runcmd
+
+
+CT_NG_VER = "1.25.0"
+CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
+
+#XXX This should be triplet not arch
+TC_URL = "https://woz.io/mayflower/toolchain/{arch}-linux-gnu.tar.xz"
+
+
+def main(argparser):
+    argparser.descrption = "Build Linux Toolchains"
+    argparser.add_argument('command', default='download', help='What type of toolchain operation to perform: build or download')
+    argparser.add_argument(
+        "--arch", default="x86_64,aarch64",
+        help="Comma separated list of arches to build or download"
+    )
+    argparser.add_argument(
+        "--clean", default=False, action="store_true",
+        help="Comma separated list of arches to build or download"
+    )
+    ns, argv = argparser.parse_known_args()
+    if getattr(ns, "help", None):
+        argparser.print_help()
+        sys.exit(0)
+    ns.arch = [_.strip() for _ in ns.arch.split(",")]
+    cwd = pathlib.Path(os.getcwd())
+    toolchaindir = cwd / "toolchain"
+    downloaddir = cwd / "download"
+    if not downloaddir.exists():
+        os.mkdir(downloaddir)
+
+    if ns.command == 'download':
+        for arch in ns.arch:
+            archtcdir = toolchaindir / arch
+            if ns.clean:
+                shutil.rmtree(archtcdir)
+            if archtcdir.exists():
+                print("Toolchain directory exists, skipping {}".format(arch))
+            url = TC_URL.format(arch=arch)
+            print("Downloading {}".format(url))
+            archive = download_url(url, "download")
+            extract_archive("toolchain", archive)
+        sys.exit(0)
+
+    ctngdir = toolchaindir / "crosstool-ng-{}".format(CT_NG_VER)
+    if not ctngdir.exists():
+        url = CT_URL.format(version=CT_NG_VER)
+        archive = download_url(url, "download")
+        extract_archive("toolchain", archive)
+        os.chdir(ctngdir)
+        runcmd(["./configure", "--enable-local"])
+        runcmd(["make"])
+        os.chdir(toolchaindir)
+
+    ctng = ctngdir / "ct-ng"
+    for arch in ns.arch:
+        triplet = "{}-linux-gnu".format(arch)
+        archdir = toolchaindir / triplet
+        if archdir.exists():
+            print("Toolchain directory exists: {}".format(arch))
+            continue
+        config = toolchaindir / "{}-ct-ng-config".format(triplet)
+        if not config.exists():
+            print("Toolchain config missing: {}".format(config))
+            sys.exit(1)
+        with open(config, "r") as rfp:
+            with open(".config", "w") as wfp:
+                wfp.write(rfp.read())
+        env = os.environ.copy()
+        env["CT_PREFIX"] = toolchaindir
+        runcmd([
+            ctng,
+            "build",
+        ], env=env)
+
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+    main(ArgumentParser())
