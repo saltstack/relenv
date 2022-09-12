@@ -186,6 +186,7 @@ def build_openssl(env, dirs, logfp):
     runcmd([
         './Configure',
         #This was "darwin64-x86_64-cc" if sys.platform == 'darwin' else "linux-x86_64",
+        #"linux-x86_64",
         "{}-{}".format(plat, arch),
         "no-idea",
         "shared",
@@ -233,7 +234,7 @@ def build_sqlite(env, dirs, logfp):
 
 class Builder:
 
-    def __init__(self, install_dir='build', recipies=None, build_default=build_default, populate_env=populate_env, skip_download=False, arch='x86_64'):
+    def __init__(self, install_dir='build', recipies=None, build_default=build_default, populate_env=populate_env, no_download=False, arch='x86_64'):
         self.install_dir = pathlib.Path(install_dir).resolve()
         self.cwd = pathlib.Path(os.getcwd())
         self.arch = arch
@@ -241,6 +242,8 @@ class Builder:
             self.triplet = "{}-darwin".format(self.arch)
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
+        #self.sysroot = self.install_dir / self.triplet
+        #self.prefix = self.sysroot / "mayflower"
         self.prefix = self.install_dir / self.triplet
         self.sources = self.cwd / "src"
         self.downloads = self.cwd / "download"
@@ -250,16 +253,19 @@ class Builder:
             self.recipies = recipies
         self.build_default = build_default
         self.populate_env = populate_env
-        self.skip_download = skip_download
+        self.no_download = no_download
         self.toolchains = self.cwd / 'toolchain'
 
     def set_arch(self, arch):
         self.arch = arch
         if sys.platform == "darwin":
             self.triplet = "{}-darwin".format(self.arch)
+            self.prefix = self.install_dir / "{}-macos".format(self.arch)
         else:
+            #self.sysroot = self.install_dir / self.triplet
+            #self.prefix = self.sysroot / "mayflower"
             self.triplet = "{}-linux-gnu".format(self.arch)
-        self.prefix = self.install_dir / self.triplet
+            self.prefix = self.install_dir / self.triplet
 
     def add(self, name, url, checksum, build_func=None, wait_on=None):
         if wait_on is None:
@@ -282,28 +288,35 @@ class Builder:
 
         class dirs:
             cwd = self.cwd
+#            sysroot = self.sysroot
             prefix = self.prefix
             downloads = self.downloads
             # This directory is only used to build the environment. We link
             # against the glibc headers but at runtime the system glibc is
             # used.
-            #glibc = prefix / "glibc"
             logs = cwd / "logs"
             sources = self.sources
             build = tempfile.mkdtemp(prefix="{}_build".format(name))
             toolchains = self.toolchains
             toolchain = toolchains / self.triplet
             toolchaincc = toolchains / self.triplet / "bin" / "{}-gcc".format(self.triplet)
-            glibc = toolchain / self.triplet / "sysroot"
+            #glibc = toolchain / self.triplet / "sysroot"
+            glibc = prefix / "glibc"
 
         logs = str(pathlib.Path('logs').resolve())
-        os.makedirs(dirs.prefix, exist_ok=True)
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.downloads, exist_ok=True)
         os.makedirs(logs, exist_ok=True)
+        #os.makedirs(dirs.prefix, exist_ok=True)
+        if not dirs.prefix.exists():
+            os.makedirs(dirs.prefix, exist_ok=True)
+            #shutil.copytree(
+            #    dirs.toolchain / self.triplet / "sysroot",
+            #    dirs.prefix
+            #)
         logfp = io.open(os.path.join(logs, "{}.log".format(name)), "w")
         #XXX should separate downloads and builds.
-        if self.skip_download:
+        if self.no_download:
             archive = os.path.join(dirs.downloads, os.path.basename(url))
         else:
             archive = download_url(url, dirs.downloads)
@@ -407,7 +420,7 @@ def run_build(builder, argparser):
     #XXX We should automatically skip downloads that can be verified as not
     #being corrupt and this can become --force-download
     argparser.add_argument(
-        "--skip-download", default=False, action="store_true",
+        "--no-download", default=False, action="store_true",
         help="Skip downloading source tarballs"
     )
     ns, argv = argparser.parse_known_args()
@@ -423,9 +436,9 @@ def run_build(builder, argparser):
           shutil.rmtree(builder.prefix)
           shutil.rmtree(builder.sources)
       except FileNotFoundError: pass
-    builder.skip_download = False
-    if ns.skip_download:
-        builder.skip_download = True
+    builder.no_download = False
+    if ns.no_download:
+        builder.no_download = True
 
     import concurrent.futures
 
