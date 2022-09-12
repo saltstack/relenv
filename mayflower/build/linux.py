@@ -5,7 +5,6 @@ def populate_env(env, dirs):
     env["CC"] = dirs.toolchain / "bin" / "{}-gcc -no-pie".format(
         env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
-    #env["PATH"] = "{}/{MAYFLOWER_HOST}/bin:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
         "-L{prefix}/lib",
@@ -93,7 +92,6 @@ def build_ncurses(env, dirs, logfp):
         "--enable-widec",
         "--without-normal",
         "--disable-stripping",
-        #"--disable-multiarch",
         "--build=x86_64-linux-gnu",
         "--host={}".format(env["MAYFLOWER_HOST"]),
     ], env=env, stderr=logfp, stdout=logfp)
@@ -133,8 +131,6 @@ def build_zlib(env, dirs, logfp):
 
 
 def build_krb(env, dirs, logfp):
-    #env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
-    #env["LDFLAGS"] = "-lm -lresolv -ldl -lrt {}".format(env["LDFLAGS"])
     if env["MAYFLOWER_ARCH"] == "aarch64":
         env["krb5_cv_attr_constructor_destructor"] = "yes,yes"
         env["ac_cv_func_regcomp"] = "yes"
@@ -143,11 +139,9 @@ def build_krb(env, dirs, logfp):
     runcmd([
         './configure',
         "--prefix={}".format(dirs.prefix),
-        #"--shared",
-        #"--without-static",
         "--without-system-verto",
         "--without-libedit",
-    #    "--build=x86_64-linux-gnu",
+        "--build=x86_64-linux-gnu",
         "--host={}".format(env["MAYFLOWER_HOST"]),
     ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -169,12 +163,11 @@ def build_python(env, dirs, logfp):
     env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"])
 
-    # Modify config script to allow aarch64 cross
-    #if env["MAYFLOWER_HOST"] == "aarch64-linux-gnu":
+    # Needed when using a toolchain even if build and host match.
     runcmd(["sed", "-i", 's/ac_cv_buggy_getaddrinfo=yes/ac_cv_buggy_getaddrinfo=no/g', 'configure'])
     runcmd(["sed", "-i", 's/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g', 'configure'])
-    #runcmd(["echo", "ac_cv_file__dev_ptmx=no", "config.site"])
-    #runcmd(["echo", "ac_cv_file__dev_ptmx=no", "config.site"])
+
+
     with open('/tmp/patch', 'w') as fp:
         fp.write(PATCH)
     runcmd(["patch", "-p0", "-i", "/tmp/patch"],
@@ -186,32 +179,23 @@ def build_python(env, dirs, logfp):
         "--prefix={}".format(dirs.prefix),
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
-    #    "--build=x86_64-linux-gnu",
         "--build={}".format(env["MAYFLOWER_ARCH"]),
         "--host={}".format(env["MAYFLOWER_HOST"]),
     ]
-    #if env["MAYFLOWER_HOST"] == "aarch64-linux-gnu":
+
+    # Needed when using a toolchain even if build and host match.
     cmd += [
         "ac_cv_file__dev_ptmx=yes",
         "ac_cv_file__dev_ptc=no",
     ]
 
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-
-    # Link with '-lncurses' insead of '-lcurses'.
-    #runcmd(["sed", "-i", "s/#_curses _cursesmodule.c -lcurses/_curses _cursesmodule.c -lncurses/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
-    #runcmd(["sed", "-i", "s/#_curses_panel/_curses_panel/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
-
-    #XXX Is this working?
-    #runcmd(["sed", "-i", "s/#zlib/zlib/g", "./Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
-
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write(
             "*disabled*\n"
             "_tkinter\n"
             "nsl\n"
-    #        "ncurses\n"
             "nis\n"
         )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
