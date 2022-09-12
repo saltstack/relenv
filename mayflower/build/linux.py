@@ -5,7 +5,7 @@ def populate_env(env, dirs):
     env["CC"] = dirs.toolchain / "bin" / "{}-gcc -no-pie".format(
         env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
-    env["PATH"] = "{}/{MAYFLOWER_HOST}/bin:{PATH}".format(dirs.toolchain, **env)
+    #env["PATH"] = "{}/{MAYFLOWER_HOST}/bin:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
         "-L{prefix}/lib",
@@ -16,8 +16,8 @@ def populate_env(env, dirs):
         "-L{prefix}/lib",
         "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
         "-I{prefix}/include",
-#        "-I{prefix}/include/readline",
-#        "-I{prefix}/include/ncursesw",
+        "-I{prefix}/include/readline",
+        "-I{prefix}/include/ncursesw",
         "-I{}/{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
     ]
     env["CFLAGS"] = " ".join(cflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
@@ -93,7 +93,7 @@ def build_ncurses(env, dirs, logfp):
         "--enable-widec",
         "--without-normal",
         "--disable-stripping",
-        "--disable-multiarch",
+        #"--disable-multiarch",
         "--build=x86_64-linux-gnu",
         "--host={}".format(env["MAYFLOWER_HOST"]),
     ], env=env, stderr=logfp, stdout=logfp)
