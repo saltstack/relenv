@@ -1,38 +1,39 @@
 from .common import *
+import textwrap
 
 def populate_env(env, dirs):
     env["CC"] = dirs.toolchain / "bin" / "{}-gcc -no-pie".format(
         env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
+    env["PATH"] = "{}/{MAYFLOWER_HOST}/bin:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
         "-L{prefix}/lib",
-        "-L{}/bin/../{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
+        "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
     cflags = [
         "-L{prefix}/lib",
-        "-L{}/bin/../{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
+        "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
         "-I{prefix}/include",
-        "-I{prefix}/include/readline",
-        "-I{prefix}/include/ncursesw",
-        "-I{}/bin/../{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
+#        "-I{prefix}/include/readline",
+#        "-I{prefix}/include/ncursesw",
+        "-I{}/{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
     ]
     env["CFLAGS"] = " ".join(cflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
     # CPPFLAGS are needed for Python's setup.py to find the 'nessicery bits'
     # for things like zlib and sqlite.
     cpplags = [
         "-L{prefix}/lib",
-        "-L{}/bin/../{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
+        "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
         "-I{prefix}/include",
         "-I{prefix}/include/readline",
         "-I{prefix}/include/ncursesw",
-        "-I{}/bin/../{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
+        "-I{}/{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
     ]
     env["CPPFLAGS"] = " ".join(cpplags).format(glibc=dirs.glibc, prefix=dirs.prefix)
     if env["MAYFLOWER_ARCH"] == "aarch64":
         env["LDFLAGS"] = "-Wl,--no-apply-dynamic-relocs {}".format(env["LDFLAGS"])
-#    env["_PYTHON_HOST_PLATFORM"] = "linux-x86_64"
 
 
 def build_bzip2(env, dirs, logfp):
@@ -92,6 +93,7 @@ def build_ncurses(env, dirs, logfp):
         "--enable-widec",
         "--without-normal",
         "--disable-stripping",
+        "--disable-multiarch",
         "--build=x86_64-linux-gnu",
         "--host={}".format(env["MAYFLOWER_HOST"]),
     ], env=env, stderr=logfp, stdout=logfp)
@@ -151,6 +153,17 @@ def build_krb(env, dirs, logfp):
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
+PATCH = """--- ./setup.py
++++ ./setup.py
+@@ -664,6 +664,7 @@
+             self.failed.append(ext.name)
+
+     def add_multiarch_paths(self):
++        return
+         # Debian/Ubuntu multiarch support.
+         # https://wiki.ubuntu.com/MultiarchSpec
+         tmpfile = os.path.join(self.build_temp, 'multiarch')
+"""
 
 def build_python(env, dirs, logfp):
     env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
@@ -162,7 +175,10 @@ def build_python(env, dirs, logfp):
     runcmd(["sed", "-i", 's/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g', 'configure'])
     #runcmd(["echo", "ac_cv_file__dev_ptmx=no", "config.site"])
     #runcmd(["echo", "ac_cv_file__dev_ptmx=no", "config.site"])
-    env["CONFIG_SITE"] = "config.site"
+    with open('/tmp/patch', 'w') as fp:
+        fp.write(PATCH)
+    runcmd(["patch", "-p0", "-i", "/tmp/patch"],
+        env=env, stderr=logfp, stdout=logfp)
 
     cmd = [
         './configure',
