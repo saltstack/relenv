@@ -99,7 +99,6 @@ jobs:
         retention-days: 5
 
     - name: Create Tarball
-      run: tar cJf python-x86_64-macos.tar.xz build/x86_64-macos
       run: tar -C build -cJf python-x86_64-macos.tar.xz x86_64-macos
 
     - name: Python build
