@@ -34,7 +34,7 @@ jobs:
         retention-days: 5
 
     - name: Create Tarball
-      run: tar cJf python-x86_64-linux-gnu.tar.xz build/x86_64-linux-gnu
+      run: tar -C build -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
 
     - name: Python build
       uses: actions/upload-artifact@v3
@@ -71,7 +71,7 @@ jobs:
         retention-days: 5
 
     - name: Create Tarball
-      run: tar cJf python-aarch64-linux-gnu.tar.xz build/aarch64-linux-gnu
+      run: tar -C build -cJf python-aarch64-linux-gnu.tar.xz  aarch64-linux-gnu
 
     - name: Python build
       uses: actions/upload-artifact@v3
@@ -100,6 +100,7 @@ jobs:
 
     - name: Create Tarball
       run: tar cJf python-x86_64-macos.tar.xz build/x86_64-macos
+      run: tar -C build -cJf python-x86_64-macos.tar.xz x86_64-macos
 
     - name: Python build
       uses: actions/upload-artifact@v3
