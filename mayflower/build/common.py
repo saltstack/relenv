@@ -508,7 +508,10 @@ def run_build(builder, argparser):
     to = pathlib.Path(builder.install_dir).parent
     download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
     logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
-    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/lib", "--rpath-only"], stderr=logfp, stdout=logfp)
+    python = "python3"
+    if ns.arch == "aarch64":
+        python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
+    runcmd([str(python), "relok8.py", "--root={}".format(builder.prefix), "--libs={}/lib".format(builder.prefix), "--rpath-only"], stderr=logfp, stdout=logfp)
 
     # Fix the shebangs in python's scripts.
     bindir = pathlib.Path(builder.prefix) / "bin"
