@@ -203,7 +203,7 @@ def build_python(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] == "aarch64":
-        python = pathlib.Path(dirs.build) / "x86_64-linux-gnu" / "bin" / "python3"
+        python = pathlib.Path(dirs.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
     env["PYTHONUSERBASE"] = dirs.prefix
     runcmd([python, "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
