@@ -399,6 +399,13 @@ if __name__ == '__main__':
     sys.exit(%(func)s())
 \"\"\"
 
+SHEBANG = \"\"\"#!/bin/sh
+"exec" "`dirname $0`/python3" "$0" "$@"
+\"\"\".encode()
+
+def _build_shebang(*args, **kwargs):
+    return SHEBANG
+
 
 if __name__ == "__main__":
     sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])

@@ -42,7 +42,8 @@ def main(argparser):
     if not build.exists():
         tar = build.with_suffix(".tar.xz")
         if not tar.exists():
-            print("Error, build tar file doesn't exist")
+            print("Error, build archive for {} doesn't exist.\n"
+                  "You might try mayflower fetch to resolve this.".format(arch))
             sys.exit(1)
         with chdir(build.parent):
             with tarfile.open(tar, "r:xz") as fp:
