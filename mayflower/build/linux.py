@@ -179,6 +179,7 @@ def build_python(env, dirs, logfp):
         "--prefix={}".format(dirs.prefix),
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
+        "--with-ensurepip=no",
         "--build={}".format(env["MAYFLOWER_ARCH"]),
         "--host={}".format(env["MAYFLOWER_HOST"]),
     ]
@@ -200,14 +201,21 @@ def build_python(env, dirs, logfp):
         )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+    python = dirs.prefix / "bin" / "python3"
+    if env["MAYFLOWER_ARCH"] == "aarch64":
+        python = pathlib.Path(dirs.build) / "x86_64-linux-gnu" / "bin" / "python3"
+    env["PYTHONUSERBASE"] = dirs.prefix
+    runcmd([python, "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
+
 
 
 build = Builder(populate_env=populate_env)
 
 build.add(
     "OpenSSL",
-    "https://www.openssl.org/source/openssl-1.1.1n.tar.gz",
-    "2aad5635f9bb338bc2c6b7d19cbc9676",
+    "https://www.openssl.org/source/openssl-1.1.1q.tar.gz",
+    None,
+    #"2aad5635f9bb338bc2c6b7d19cbc9676",
     build_func=build_openssl,
 )
 

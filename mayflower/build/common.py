@@ -541,3 +541,4 @@ def run_build(builder, argparser):
         path = bindir / file
         with io.open(str(path), "w") as fp:
             fp.write(PIP_WRAPPER)
+        os.chmod(path, 0o744)

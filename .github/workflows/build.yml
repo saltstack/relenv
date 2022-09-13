@@ -56,6 +56,9 @@ jobs:
     - name: fetch toolchain
       run: CICD=true python3 -m mayflower toolchain download --arch=aarch64
 
+    - name: fetch native build
+      run: CICD=true python3 -m mayflower fetch
+
     - name: build
       run: CICD=true python3 -m mayflower build --arch=aarch64
 
