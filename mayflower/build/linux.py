@@ -4,11 +4,14 @@ import textwrap
 def populate_env(env, dirs):
     env["CC"] = dirs.toolchain / "bin" / "{}-gcc -no-pie".format(
         env["MAYFLOWER_HOST"])
+    env["CXX"] = dirs.toolchain / "bin" / "{}-g++ -no-pie".format(
+        env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
         "-L{prefix}/lib",
         "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
+        "-static-libstdc++",
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
     cflags = [
@@ -31,6 +34,7 @@ def populate_env(env, dirs):
         "-I{}/{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
     ]
     env["CPPFLAGS"] = " ".join(cpplags).format(glibc=dirs.glibc, prefix=dirs.prefix)
+    env["CXXFLAGS"] = " ".join(cpplags).format(glibc=dirs.glibc, prefix=dirs.prefix)
     if env["MAYFLOWER_ARCH"] == "aarch64":
         env["LDFLAGS"] = "-Wl,--no-apply-dynamic-relocs {}".format(env["LDFLAGS"])
 

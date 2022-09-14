@@ -191,10 +191,12 @@ def build_openssl(env, dirs, logfp):
         "no-idea",
         "shared",
         "--prefix={}".format(dirs.prefix),
-        "--openssldir={}/ssl".format(dirs.prefix),
+        #"--openssldir={}/ssl".format(dirs.prefix),
+        "--openssldir=/tmp/ssl",
         ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
-    runcmd(["make", "install_sw", "install_ssldirs"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install_sw"], env=env, stderr=logfp, stdout=logfp)
+
 
 def build_sqlite(env, dirs, logfp):
     #extra_cflags=('-Os '
@@ -406,6 +408,7 @@ SHEBANG = \"\"\"#!/bin/sh
 def _build_shebang(*args, **kwargs):
     return SHEBANG
 
+ScriptMaker._build_shebang = _build_shebang
 
 if __name__ == "__main__":
     sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
