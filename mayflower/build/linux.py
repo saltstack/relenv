@@ -2,9 +2,9 @@ from .common import *
 import textwrap
 
 def populate_env(env, dirs):
-    env["CC"] = dirs.toolchain / "bin" / "{}-gcc -no-pie".format(
+    env["CC"] = "{}-gcc -no-pie".format(
         env["MAYFLOWER_HOST"])
-    env["CXX"] = dirs.toolchain / "bin" / "{}-g++ -no-pie".format(
+    env["CXX"] = "{}-g++ -no-pie".format(
         env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
@@ -50,7 +50,7 @@ def build_bzip2(env, dirs, logfp):
         "BUILD={}".format("x86_64-linux-gnu"),
         "HOST={}".format(env["MAYFLOWER_HOST"]),
         "install",
-    ],  stderr=logfp, stdout=logfp)
+    ], env=env, stderr=logfp, stdout=logfp)
     runcmd([
         "make",
         "-f",
