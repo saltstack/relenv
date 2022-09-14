@@ -5,7 +5,10 @@ created with Mayflower are re-producable in the sense that all binaries for the
 builds are built from source. These builds are re-locatable meaning you can
 move the root directory around on the filesystem.
 
+
 # Building a Mayflower Build
+
+**Currently building assumes your building on x86_64**
 
 ## Linux Dependencies
 - gcc
@@ -16,7 +19,7 @@ move the root directory around on the filesystem.
 
 **Arch linux varients also require libxcrypt-compat**
 > This should get fixed in the future.
- 
+
 ## Building on Linux
 
 Running `python3 -m mayflower.build.linux --clean` will, if successful, create a python

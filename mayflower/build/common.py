@@ -31,6 +31,7 @@ MOVEUP = "\033[F"
 
 
 CICD = False
+NODOWLOAD= False
 
 def print_ui(events, processes, fails, flipstat={}):
     uiline = []
@@ -133,14 +134,6 @@ def all_dirs(root, recurse=True):
             paths.append(os.path.join(root, name))
     return paths
 
-def build_default(env, dirs, logfp):
-    runcmd([
-        './configure',
-        "--prefix={}".format(dirs.prefix),
-    ], env=env, stderr=logfp, stdout=logfp)
-    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
-    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
-
 def _parse_gcc_version(stdout):
     vline  = stdout.splitlines()[0]
     vline, vstr = [_.strip() for _ in vline.rsplit(" ", 1)]
@@ -164,16 +157,117 @@ def kernel_version():
 def populate_env(dirs, env):
     pass
 
+def build_default(env, dirs, logfp):
+    cmd = [
+        './configure',
+        "--prefix={}".format(dirs.prefix),
+    ]
+    if env["MAYFLOWER_HOST"].find('linux') > -1:
+        cmd += [
+            "--build=x86_64-linux-gnu",
+            "--host={}".format(env["MAYFLOWER_HOST"]),
+        ]
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
+def build_openssl(env, dirs, logfp):
+    ARCH = "aarch64"
+    if sys.platform == 'darwin':
+        plat = 'darwin64'
+        if env["MAYFLOWER_ARCH"] == 'x86_64':
+            arch = 'x86_64-cc'
+    else:
+        plat = 'linux'
+        if env["MAYFLOWER_ARCH"] == 'x86_64':
+            arch = 'x86_64'
+        elif env["MAYFLOWER_ARCH"] == 'aarch64':
+            arch = "aarch64"
+    runcmd([
+        './Configure',
+        #This was "darwin64-x86_64-cc" if sys.platform == 'darwin' else "linux-x86_64",
+        #"linux-x86_64",
+        "{}-{}".format(plat, arch),
+        "no-idea",
+        "shared",
+        "--prefix={}".format(dirs.prefix),
+        #"--openssldir={}/ssl".format(dirs.prefix),
+        "--openssldir=/tmp/ssl",
+        ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install_sw"], env=env, stderr=logfp, stdout=logfp)
+
+
+def build_sqlite(env, dirs, logfp):
+    #extra_cflags=('-Os '
+    #              '-DSQLITE_ENABLE_FTS5 '
+    #              '-DSQLITE_ENABLE_FTS4 '
+    #              '-DSQLITE_ENABLE_FTS3_PARENTHESIS '
+    #              '-DSQLITE_ENABLE_JSON1 '
+    #              '-DSQLITE_ENABLE_RTREE '
+    #              '-DSQLITE_TCL=0 '
+    #              )
+    #configure_pre=[
+    #    '--enable-threadsafe',
+    #    '--enable-shared=no',
+    #    '--enable-static=yes',
+    #    '--disable-readline',
+    #    '--disable-dependency-tracking',
+    #]
+    cmd = [
+        "./configure",
+        "--with-shared",
+        "--without-static",
+        "--enable-threadsafe",
+        "--disable-readline",
+        "--disable-dependency-tracking",
+        "--prefix={}".format(dirs.prefix),
+        "--enable-add-ons=nptl,ports",
+    ]
+    if env["MAYFLOWER_HOST"].find('linux') > -1:
+        cmd += [
+            "--build=x86_64-linux-gnu",
+            "--host={}".format(env["MAYFLOWER_HOST"]),
+        ]
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
+
 class Builder:
 
-    def __init__(self, install_dir='build', recipies=None, build_default=build_default, populate_env=populate_env):
-        self.install_dir = str(pathlib.Path(install_dir).resolve())
+    def __init__(self, install_dir='build', recipies=None, build_default=build_default, populate_env=populate_env, no_download=False, arch='x86_64'):
+        self.install_dir = pathlib.Path(install_dir).resolve()
+        self.cwd = pathlib.Path(os.getcwd())
+        self.arch = arch
+        if sys.platform == "darwin":
+            self.triplet = "{}-darwin".format(self.arch)
+        else:
+            self.triplet = "{}-linux-gnu".format(self.arch)
+        #self.sysroot = self.install_dir / self.triplet
+        #self.prefix = self.sysroot / "mayflower"
+        self.prefix = self.install_dir / self.triplet
+        self.sources = self.cwd / "src"
+        self.downloads = self.cwd / "download"
         if recipies is None:
             self.recipies = {}
         else:
             self.recipies = recipies
         self.build_default = build_default
         self.populate_env = populate_env
+        self.no_download = no_download
+        self.toolchains = self.cwd / 'toolchain'
+
+    def set_arch(self, arch):
+        self.arch = arch
+        if sys.platform == "darwin":
+            self.triplet = "{}-darwin".format(self.arch)
+            self.prefix = self.install_dir / "{}-macos".format(self.arch)
+        else:
+            #self.sysroot = self.install_dir / self.triplet
+            #self.prefix = self.sysroot / "mayflower"
+            self.triplet = "{}-linux-gnu".format(self.arch)
+            self.prefix = self.install_dir / self.triplet
 
     def add(self, name, url, checksum, build_func=None, wait_on=None):
         if wait_on is None:
@@ -191,26 +285,43 @@ class Builder:
         while event.is_set() is False:
             time.sleep(.3)
 
+        if not self.install_dir.exists():
+            os.makedirs(self.install_dir, exist_ok=True)
+
         class dirs:
-            cwd = pathlib.Path(os.getcwd())
-            prefix = cwd / self.install_dir
+            cwd = self.cwd
+#            sysroot = self.sysroot
+            prefix = self.prefix
+            downloads = self.downloads
             # This directory is only used to build the environment. We link
             # against the glibc headers but at runtime the system glibc is
             # used.
-            glibc = prefix / "glibc"
-            downloads = cwd / "download"
             logs = cwd / "logs"
-            sources = cwd / "src"
+            sources = self.sources
             build = tempfile.mkdtemp(prefix="{}_build".format(name))
+            toolchains = self.toolchains
+            toolchain = toolchains / self.triplet
+            toolchaincc = toolchains / self.triplet / "bin" / "{}-gcc".format(self.triplet)
+            #glibc = toolchain / self.triplet / "sysroot"
+            glibc = prefix / "glibc"
 
         logs = str(pathlib.Path('logs').resolve())
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.downloads, exist_ok=True)
         os.makedirs(logs, exist_ok=True)
+        #os.makedirs(dirs.prefix, exist_ok=True)
+        if not dirs.prefix.exists():
+            os.makedirs(dirs.prefix, exist_ok=True)
+            #shutil.copytree(
+            #    dirs.toolchain / self.triplet / "sysroot",
+            #    dirs.prefix
+            #)
         logfp = io.open(os.path.join(logs, "{}.log".format(name)), "w")
         #XXX should separate downloads and builds.
-        #archive = os.path.join(dirs.downloads, os.path.basename(url))
-        archive = download_url(url, dirs.downloads)
+        if self.no_download:
+            archive = os.path.join(dirs.downloads, os.path.basename(url))
+        else:
+            archive = download_url(url, dirs.downloads)
         verify_checksum(archive, checksum)
         extract_archive(dirs.sources, archive)
         dirs.source = dirs.sources / pathlib.Path(archive).name.split('.tar')[0]
@@ -219,7 +330,9 @@ class Builder:
         os.chdir(dirs.source)
         env = {}
         env["PATH"] = os.environ["PATH"]
-        self.populate_env(dirs, env)
+        env["MAYFLOWER_HOST"] = self.triplet
+        env["MAYFLOWER_ARCH"] = self.arch
+        self.populate_env(env, dirs)
         try:
             return build_func(env, dirs, logfp)
         except Exception as exc:
@@ -288,6 +401,14 @@ if __name__ == '__main__':
     sys.exit(%(func)s())
 \"\"\"
 
+SHEBANG = \"\"\"#!/bin/sh
+"exec" "`dirname $0`/python3" "$0" "$@"
+\"\"\".encode()
+
+def _build_shebang(*args, **kwargs):
+    return SHEBANG
+
+ScriptMaker._build_shebang = _build_shebang
 
 if __name__ == "__main__":
     sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
@@ -295,15 +416,39 @@ if __name__ == "__main__":
 """
 
 
-def run_build(builder):
+def run_build(builder, argparser):
+    random.seed()
+    argparser.descrption = "Build Mayflower Python Environments"
+    argparser.add_argument(
+        "--arch", default="x86_64", type=str,
+        help="The host architecture [default: x86_64]"
+    )
+    argparser.add_argument(
+        "--clean", default=False, action="store_true",
+        help="Clean up before running the build"
+    )
+    #XXX We should automatically skip downloads that can be verified as not
+    #being corrupt and this can become --force-download
+    argparser.add_argument(
+        "--no-download", default=False, action="store_true",
+        help="Skip downloading source tarballs"
+    )
+    ns, argv = argparser.parse_known_args()
+    if getattr(ns, "help", None):
+        argparser.print_help()
+        sys.exit(0)
     global CICD
     if 'CICD' in os.environ:
         CICD = True
-    random.seed()
-    if '--clean' in sys.argv:
+    builder.set_arch(ns.arch)
+    if ns.clean:
       try:
-          shutil.rmtree(builder.install_dir)
+          shutil.rmtree(builder.prefix)
+          shutil.rmtree(builder.sources)
       except FileNotFoundError: pass
+    builder.no_download = False
+    if ns.no_download:
+        builder.no_download = True
 
     import concurrent.futures
 
@@ -312,7 +457,6 @@ def run_build(builder):
     events = {}
     waits = {}
     processes = {}
-
 
     # Start a process for each build passing it an event used to notify each
     # process if it's dependencies have finished.
@@ -374,12 +518,13 @@ def run_build(builder):
     to = pathlib.Path(builder.install_dir).parent
     download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
     logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
-    runcmd(["python3", "relok8.py", "--root=build", "--libs=build/lib", "--rpath-only"], stderr=logfp, stdout=logfp)
+    python = "python3"
+    if ns.arch == "aarch64":
+        python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
+    runcmd([str(python), "relok8.py", "--root={}".format(builder.prefix), "--libs={}/lib".format(builder.prefix), "--rpath-only"], stderr=logfp, stdout=logfp)
 
     # Fix the shebangs in python's scripts.
-	#sed $(SED_OPTS) 's/^#!.*$$/#!\/bin\/sh\n"exec" "`dirname $$0`\/$(PYBIN)" "$$0" "$$@"/' $(SCRIPTS_DIR)/$@;
-
-    bindir = pathlib.Path(builder.install_dir) / "bin"
+    bindir = pathlib.Path(builder.prefix) / "bin"
     pyex = bindir / "python3.10"
     shebang = "#!{}".format(str(pyex))
     for root, dirs, files in os.walk(str(bindir)):
@@ -389,20 +534,24 @@ def run_build(builder):
                 try:
                     data = fp.read(len(shebang.encode())).decode()
                 except:
-                    print("skip: {}".format(file))
+                    #print("skip: {}".format(file))
                     continue
                 if data == shebang:
-                    print(file)
-                    print(repr(data))
+                    pass
+                    #print(file)
+                    #print(repr(data))
                 else:
-                    print("skip: {}".format(file))
+                    #print("skip: {}".format(file))
                     continue
                 data = fp.read().decode()
             with open(os.path.join(root, file), "w") as fp:
                 fp.write("#!/bin/sh\n")
                 fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
                 fp.write(data)
+
+    # Install our pip wrapper
     for file in ["pip3", "pip3.10"]:
         path = bindir / file
         with io.open(str(path), "w") as fp:
             fp.write(PIP_WRAPPER)
+        os.chmod(path, 0o744)

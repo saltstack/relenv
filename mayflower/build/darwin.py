@@ -1,7 +1,6 @@
 from .common import *
-from .linux import build_openssl, build_sqlite
 
-def populate_env(dirs, env):
+def populate_env(env, dirs):
     env["CC"] = 'clang'
     ldflags = [
         "-Wl,-rpath,{prefix}/lib",
@@ -73,5 +72,10 @@ build.add(
 )
 
 
+def main(argparse):
+    run_build(build, argparse)
+
+
 if __name__ == "__main__":
-    run_build(build)
+    from argparse import ArgumentParser
+    main(ArgumentParser())

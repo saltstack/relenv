@@ -1,7 +1,10 @@
 import sys
 import argparse
 from argparse import RawTextHelpFormatter
-import build
+from . import build
+from . import toolchain
+from . import create
+from . import fetch
 
 
 class ArgParser(argparse.ArgumentParser):
@@ -44,7 +47,10 @@ def list_commands(argparser=argparser, show_help=False):
 
 COMMANDS = {
   "list": list_commands,
-  "build" : build.run,
+  "build" : build.main,
+  "toolchain" : toolchain.main,
+  "create" : create.main,
+  "fetch" : fetch.main,
 }
 
 def main():
