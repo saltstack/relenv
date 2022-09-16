@@ -18,6 +18,7 @@ import urllib.error
 import multiprocessing
 
 from ..common import MODULE_DIR, work_root, work_dirs, get_toolchain
+from .relok8 import main as relocate_main
 
 log = logging.getLogger(__name__)
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
@@ -630,13 +631,15 @@ def run_build(builder, argparser):
     sys.stdout.flush()
 
     # Download and run relok8 to make sure the rpaths are relocatable.
-    to = pathlib.Path(os.getcwd())
-    download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
-    logfp = io.open(str(pathlib.Path(builder.dirs.logs) / "relok8.py.log"), "w")
-    python = "python3"
-    if ns.arch == "aarch64":
-        python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
-    runcmd([str(python), "relok8.py", "--root={}".format(builder.prefix), "--libs={}/lib".format(builder.prefix), "--rpath-only"], stderr=logfp, stdout=logfp)
+    #to = pathlib.Path(os.getcwd())
+    #download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
+    #logfp = io.open(str(pathlib.Path(builder.dirs.logs) / "relok8.py.log"), "w")
+    #python = "python3"
+    #if ns.arch == "aarch64":
+    #    python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
+    #runcmd([str(python), "relok8.py", "--root={}".format(builder.prefix), "--libs={}/lib".format(builder.prefix), "--rpath-only"], stderr=logfp, stdout=logfp)
+    logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
+    relocate_main(builder.prefix)
 
     # Fix the shebangs in python's scripts.
     bindir = pathlib.Path(builder.prefix) / "bin"
