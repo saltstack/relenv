@@ -150,23 +150,15 @@ def test_main_linux(tmp_path):
     simple = proj.add_simple_elf("simple.so", "foo", "bar")
     simple2 = proj.add_simple_elf("simple2.so", "foo", "bar", "bop")
     proj.add_file("not-an-so", "fake", "foo", "bar", "bop")
-
-    args = Namespace(
-        root=proj.root_dir,
-        libs=proj.libs_dir,
-        log_level="info",
-        rpath_only=True,
-    )
     calls = [
-        call(str(simple), str(args.libs), args.rpath_only, str(args.root)),
-        call(str(simple2), str(args.libs), args.rpath_only, str(args.root)),
+        call(str(simple), str(proj.libs_dir), True, str(proj.root_dir)),
+        call(str(simple2), str(proj.libs_dir), True, str(proj.root_dir)),
     ]
     with proj:
-        with patch("mayflower.relok8.parser.parse_args", return_value=args):
-                with patch("mayflower.relok8.handle_elf", return_value=args) as elf_mock:
-                    main()
-                    assert elf_mock.call_count == 2
-                    elf_mock.assert_has_calls(calls, any_order=True)
+        with patch("mayflower.relok8.handle_elf") as elf_mock:
+            main(proj.root_dir, proj.libs_dir)
+            assert elf_mock.call_count == 2
+            elf_mock.assert_has_calls(calls, any_order=True)
 
 
 def test_handle_elf(tmp_path):
