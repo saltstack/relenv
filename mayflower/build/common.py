@@ -245,6 +245,63 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+class Dirs:
+    def __init__(self, dirs, name, arch):
+        self.name = name
+        self.arch = arch
+        self.root = dirs.root
+        self.build = dirs.build
+        self.downloads = dirs.download
+        self.logs = dirs.logs
+        self.sources = dirs.src
+        self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
+
+    @property
+    def toolchain(self):
+        if sys.platform == "darwin":
+            return get_toolchain(root=self.root)
+        return get_toolchain(self.arch, self.root)
+
+    @property
+    def _triplet(self):
+        if sys.platform == "darwin":
+            return "{}-macos".format(self.arch)
+        return "{}-linux-gnu".format(self.arch)
+
+    @property
+    def prefix(self):
+        return self.build / self._triplet
+
+    def __getstate__(self):
+        return {
+            'name': self.name,
+            'arch': self.arch,
+            'root': self.root,
+            'build': self.build,
+            'downloads': self.downloads,
+            'logs': self.logs,
+            'sources': self.sources,
+            'tmpbuild': self.tmpbuild,
+        }
+
+    def __setstate__(self, state):
+        self.name = state['name']
+        self.arch = state['arch']
+        self.root = state['root']
+        self.downloads = state['downloads']
+        self.logs = state['logs']
+        self.sources = state['sources']
+        self.build = state['build']
+        self.tmpbuild = state['tmpbuild']
+
+    def to_dict(self):
+        return { x: getattr(self, x) for x in [
+            "root", "prefix", "downloads", "logs", "sources", "build",
+             "toolchain",
+            ]
+        }
+
+
 class Builder:
 
     def __init__(self, root=None, recipies=None, build_default=build_default, populate_env=populate_env, no_download=False, arch='x86_64'):
@@ -253,13 +310,13 @@ class Builder:
         #self.cwd = pathlib.Path(os.getcwd())
         self.arch = arch
         if sys.platform == "darwin":
-            self.triplet = "{}-darwin".format(self.arch)
+            self.triplet = "{}-macos".format(self.arch)
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
         #self.sysroot = self.install_dir / self.triplet
         #self.prefix = self.sysroot / "mayflower"
-
         self.prefix = self.dirs.build / self.triplet
+
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
 
@@ -284,7 +341,7 @@ class Builder:
     def set_arch(self, arch):
         self.arch = arch
         if sys.platform == "darwin":
-            self.triplet = "{}-darwin".format(self.arch)
+            self.triplet = "{}-macos".format(self.arch)
             self.prefix = self.dirs.build / "{}-macos".format(self.arch)
             #XXX Not used for MacOS
             self.toolchain = get_toolchain(root=self.dirs.root)
@@ -294,6 +351,12 @@ class Builder:
             self.triplet = "{}-linux-gnu".format(self.arch)
             self.prefix = self.dirs.build / self.triplet
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
+
+    @property
+    def _triplet(self):
+        if sys.platform == "darwin":
+            return "{}-macos".format(self.arch)
+        return "{}-linux-gnu".format(self.arch)
 
     def add(self, name, url, checksum, build_func=None, wait_on=None):
         if wait_on is None:
@@ -308,33 +371,38 @@ class Builder:
         }
 
     def run(self, name, event, url, checksum, build_func):
+        print(self.dirs.build)
         while event.is_set() is False:
             time.sleep(.3)
 
         if not self.dirs.build.exists():
             os.makedirs(self.dirs.build, exist_ok=True)
 
-        class dirs:
-            root = self.dirs.root
-#            sysroot = self.sysroot
-            prefix = self.prefix
-            downloads = self.downloads
-            # This directory is only used to build the environment. We link
-            # against the glibc headers but at runtime the system glibc is
-            # used.
-            logs = self.dirs.logs
-            sources = self.dirs.src
-            build = tempfile.mkdtemp(prefix="{}_build".format(name))
-            toolchaincc =  self.toolchain / "bin" / "{}-gcc".format(self.triplet)
-            toolchain = self.toolchain
-            glibc = prefix / "glibc"
+        dirs = Dirs(self.dirs, name, self.arch)
+        state = dirs.__getstate__()
+        dirs.__setstate__(state)
 
-        def to_dict(cls):
-            return { x: getattr(cls, x) for x in [
-                "root", "prefix", "downloads", "logs", "sources", "build",
-                "toolchaincc", "toolchain", "glibc",
-                ]
-            }
+#        class dirs:
+#            root = self.dirs.root
+##            sysroot = self.sysroot
+#            prefix = self.prefix
+#            downloads = self.downloads
+#            # This directory is only used to build the environment. We link
+#            # against the glibc headers but at runtime the system glibc is
+#            # used.
+#            logs = self.dirs.logs
+#            sources = self.dirs.src
+#            build = tempfile.mkdtemp(prefix="{}_build".format(name))
+#            toolchaincc =  self.toolchain / "bin" / "{}-gcc".format(self.triplet)
+#            toolchain = self.toolchain
+#            glibc = prefix / "glibc"
+#
+#        def to_dict(cls):
+#            return { x: getattr(cls, x) for x in [
+#                "root", "prefix", "downloads", "logs", "sources", "build",
+#                "toolchaincc", "toolchain", "glibc",
+#                ]
+#            }
 
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.downloads, exist_ok=True)
@@ -365,7 +433,7 @@ class Builder:
         self.populate_env(env, dirs)
 
         logfp.write("*" * 80 + "\n")
-        _  = to_dict(dirs) #.to_dict()
+        _  = dirs.to_dict() #.to_dict()
         for k in _:
         #    print("{} {}".format(k, _[k]))
             logfp.write("{} {}\n".format(k, _[k]))
@@ -599,6 +667,7 @@ def run_build(builder, argparser):
     # Install our pip wrapper
     for file in ["pip3", "pip3.10"]:
         path = bindir / file
+        print(path)
         with io.open(str(path), "w") as fp:
             fp.write(PIP_WRAPPER)
         os.chmod(path, 0o744)

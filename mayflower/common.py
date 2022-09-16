@@ -21,17 +21,37 @@ def work_dir(name, root=None):
         base = root / name
     return base
 
+class WorkDirs:
+    def __init__(self, root):
+        self.root = root
+        self.toolchain = work_dir("toolchain", self.root)
+        self.build = work_dir("build", self.root)
+        self.src = work_dir("src", self.root)
+        self.logs = work_dir("logs", self.root)
+        self.download = work_dir("download", self.root)
+
+    def __getstate__(self):
+        return {
+            'root': self.root,
+            'toolchain': self.toolchain,
+            'build': self.build,
+            'src': self.src,
+            'logs': self.logs,
+            'download': self.download,
+        }
+
+    def __setstate__(self, state):
+        self.root = state['root']
+        self.toolchain = state['toolchain']
+        self.build = state['build']
+        self.src = state['src']
+        self.logs = state['logs']
+        self.download = state['download']
+
+
 
 def work_dirs(root=None):
-    _root = root
-    class dirs:
-        root = work_root(_root)
-        toolchain = work_dir("toolchain", _root)
-        build = work_dir("build", _root)
-        src = work_dir("src", _root)
-        logs = work_dir("logs", _root)
-        download = work_dir("download", _root)
-    return dirs
+    return WorkDirs(work_root(root))
 
 
 def get_toolchain(arch=None, root=None):

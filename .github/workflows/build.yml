@@ -30,11 +30,11 @@ jobs:
       if: always()
       with:
         name: x86-64-linux-gnu-logs
-        path: logs/*
+        path: mayflower/_logs/*
         retention-days: 5
 
     - name: Create Tarball
-      run: tar -C mayvlower/_build -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
+      run: tar -C mayflower/_build -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
 
     - name: Python build
       uses: actions/upload-artifact@v3
@@ -67,7 +67,7 @@ jobs:
       if: always()
       with:
         name: aarch64-linux-gnu-logs
-        path: logs/*
+        path: mayflower/_logs/*
         retention-days: 5
 
     - name: Create Tarball
@@ -95,11 +95,11 @@ jobs:
       if: always()
       with:
         name: x86_64-macos-logs
-        path: logs/*
+        path: mayflower/_logs/*
         retention-days: 5
 
     - name: Create Tarball
-      run: tar -C build -cJf python-x86_64-macos.tar.xz x86_64-macos
+      run: tar -C mayflower/_build -cJf python-x86_64-macos.tar.xz x86_64-macos
 
     - name: Python build
       uses: actions/upload-artifact@v3

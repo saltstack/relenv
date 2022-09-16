@@ -1,6 +1,6 @@
 import sys, os, pathlib, shutil, contextlib, tarfile
 from .build.common import download_url, extract_archive
-from .common import MODULE_DIR
+from .common import MODULE_DIR, work_dir
 
 
 def main(argparser):
@@ -10,7 +10,7 @@ def main(argparser):
         help="Architecture to download"
     )
     url = "https://woz.io/mayflower/build/x86_64-linux-gnu.tar.xz"
-    builddir = pathlib.Path("build").resolve()
+    builddir = work_dir("build")
     os.makedirs(builddir, exist_ok=True)
     archive = download_url(url, builddir)
     extract_archive(builddir, archive)

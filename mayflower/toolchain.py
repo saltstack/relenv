@@ -23,7 +23,7 @@ def main(argparser):
         help="Comma separated list of arches to build or download"
     )
     argparser.add_argument(
-        "--crostool-only", default=False, action="store_true",
+        "--crosstool-only", default=False, action="store_true",
         help="When building only build Crosstool NG. Do not build toolchains"
     )
     ns, argv = argparser.parse_known_args()
