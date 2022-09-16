@@ -329,13 +329,12 @@ class Builder:
             toolchain = self.toolchain
             glibc = prefix / "glibc"
 
-            @classmethod
-            def to_dict(cls):
-                return { x: getattr(cls, x) for x in [
-                    "root", "prefix", "downloads", "logs", "sources", "build",
-                    "toolchaincc", "toolchain", "glibc",
-                    ]
-                }
+        def to_dict(cls):
+            return { x: getattr(cls, x) for x in [
+                "root", "prefix", "downloads", "logs", "sources", "build",
+                "toolchaincc", "toolchain", "glibc",
+                ]
+            }
 
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.downloads, exist_ok=True)
@@ -366,7 +365,7 @@ class Builder:
         self.populate_env(env, dirs)
 
         logfp.write("*" * 80 + "\n")
-        _  = dirs.to_dict()
+        _  = to_dict(dirs) #.to_dict()
         for k in _:
         #    print("{} {}".format(k, _[k]))
             logfp.write("{} {}\n".format(k, _[k]))
