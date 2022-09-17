@@ -2,9 +2,9 @@ from .common import *
 import textwrap
 
 def populate_env(env, dirs):
-    env["CC"] = dirs.toolchain / "bin" / "{}-gcc -no-pie".format(
+    env["CC"] = "{}-gcc -no-pie".format(
         env["MAYFLOWER_HOST"])
-    env["CXX"] = dirs.toolchain / "bin" / "{}-g++ -no-pie".format(
+    env["CXX"] = "{}-g++ -no-pie".format(
         env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
@@ -13,7 +13,7 @@ def populate_env(env, dirs):
         "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
         "-static-libstdc++",
     ]
-    env["LDFLAGS"] = " ".join(ldflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
+    env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
     cflags = [
         "-L{prefix}/lib",
         "-L{}/{MAYFLOWER_HOST}/sysroot/lib".format(dirs.toolchain, **env),
@@ -22,7 +22,7 @@ def populate_env(env, dirs):
         "-I{prefix}/include/ncursesw",
         "-I{}/{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
     ]
-    env["CFLAGS"] = " ".join(cflags).format(glibc=dirs.glibc, prefix=dirs.prefix)
+    env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
     # CPPFLAGS are needed for Python's setup.py to find the 'nessicery bits'
     # for things like zlib and sqlite.
     cpplags = [
@@ -33,8 +33,8 @@ def populate_env(env, dirs):
         "-I{prefix}/include/ncursesw",
         "-I{}/{MAYFLOWER_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
     ]
-    env["CPPFLAGS"] = " ".join(cpplags).format(glibc=dirs.glibc, prefix=dirs.prefix)
-    env["CXXFLAGS"] = " ".join(cpplags).format(glibc=dirs.glibc, prefix=dirs.prefix)
+    env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
+    env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     if env["MAYFLOWER_ARCH"] == "aarch64":
         env["LDFLAGS"] = "-Wl,--no-apply-dynamic-relocs {}".format(env["LDFLAGS"])
 
@@ -50,7 +50,7 @@ def build_bzip2(env, dirs, logfp):
         "BUILD={}".format("x86_64-linux-gnu"),
         "HOST={}".format(env["MAYFLOWER_HOST"]),
         "install",
-    ],  stderr=logfp, stdout=logfp)
+    ], env=env, stderr=logfp, stdout=logfp)
     runcmd([
         "make",
         "-f",

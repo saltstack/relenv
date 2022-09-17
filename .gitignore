@@ -4,8 +4,20 @@ __pycache__
 # These are created when builds run
 /build
 /download
+/toolchain
 /logs
 /src
 
+/mayflower/_build/*
+!/mayflower/_build/README
+/mayflower/_download
+/mayflower/_toolchain/*
+!/mayflower/_toolchain/*-ct-ng.config
+!/mayflower/_toolchain/README
+!*/_toolchain/*ct-ng.config
+/mayflower/_logs
+/mayflower/_src
 
 mayflower.egg-info
+
+relok8.py

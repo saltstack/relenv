@@ -17,6 +17,8 @@ import urllib.request
 import urllib.error
 import multiprocessing
 
+from ..common import MODULE_DIR, work_root, work_dirs, get_toolchain
+
 log = logging.getLogger(__name__)
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
@@ -32,6 +34,15 @@ MOVEUP = "\033[F"
 
 CICD = False
 NODOWLOAD= False
+WORK_IN_CWD = False
+
+def get_build():
+    if WORK_IN_CWD:
+        base = pathlib.Path("build").resolve()
+    else:
+        base = MODULE_DIR / "_build"
+    return base
+
 
 def print_ui(events, processes, fails, flipstat={}):
     uiline = []
@@ -234,40 +245,118 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+class Dirs:
+    def __init__(self, dirs, name, arch):
+        self.name = name
+        self.arch = arch
+        self.root = dirs.root
+        self.build = dirs.build
+        self.downloads = dirs.download
+        self.logs = dirs.logs
+        self.sources = dirs.src
+        self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
+
+    @property
+    def toolchain(self):
+        if sys.platform == "darwin":
+            return get_toolchain(root=self.root)
+        return get_toolchain(self.arch, self.root)
+
+    @property
+    def _triplet(self):
+        if sys.platform == "darwin":
+            return "{}-macos".format(self.arch)
+        return "{}-linux-gnu".format(self.arch)
+
+    @property
+    def prefix(self):
+        return self.build / self._triplet
+
+    def __getstate__(self):
+        return {
+            'name': self.name,
+            'arch': self.arch,
+            'root': self.root,
+            'build': self.build,
+            'downloads': self.downloads,
+            'logs': self.logs,
+            'sources': self.sources,
+            'tmpbuild': self.tmpbuild,
+        }
+
+    def __setstate__(self, state):
+        self.name = state['name']
+        self.arch = state['arch']
+        self.root = state['root']
+        self.downloads = state['downloads']
+        self.logs = state['logs']
+        self.sources = state['sources']
+        self.build = state['build']
+        self.tmpbuild = state['tmpbuild']
+
+    def to_dict(self):
+        return { x: getattr(self, x) for x in [
+            "root", "prefix", "downloads", "logs", "sources", "build",
+             "toolchain",
+            ]
+        }
+
+
 class Builder:
 
-    def __init__(self, install_dir='build', recipies=None, build_default=build_default, populate_env=populate_env, no_download=False, arch='x86_64'):
-        self.install_dir = pathlib.Path(install_dir).resolve()
-        self.cwd = pathlib.Path(os.getcwd())
+    def __init__(self, root=None, recipies=None, build_default=build_default, populate_env=populate_env, no_download=False, arch='x86_64'):
+        self.dirs = work_dirs(root)
+
+        #self.cwd = pathlib.Path(os.getcwd())
         self.arch = arch
         if sys.platform == "darwin":
-            self.triplet = "{}-darwin".format(self.arch)
+            self.triplet = "{}-macos".format(self.arch)
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
         #self.sysroot = self.install_dir / self.triplet
         #self.prefix = self.sysroot / "mayflower"
-        self.prefix = self.install_dir / self.triplet
-        self.sources = self.cwd / "src"
-        self.downloads = self.cwd / "download"
+        self.prefix = self.dirs.build / self.triplet
+
+        self.sources = self.dirs.src
+        self.downloads = self.dirs.download
+
         if recipies is None:
             self.recipies = {}
         else:
             self.recipies = recipies
+
         self.build_default = build_default
         self.populate_env = populate_env
         self.no_download = no_download
-        self.toolchains = self.cwd / 'toolchain'
+        self.toolchains = get_toolchain(root=self.dirs.root)
+        self.toolchain = get_toolchain(self.arch, self.dirs.root)
+
+    @property
+    def native_python(self):
+        if sys.platform == "darwin":
+            return self.dirs.build / "x86_64-macos" / "bin" / "python3"
+        else:
+            return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
     def set_arch(self, arch):
         self.arch = arch
         if sys.platform == "darwin":
-            self.triplet = "{}-darwin".format(self.arch)
-            self.prefix = self.install_dir / "{}-macos".format(self.arch)
+            self.triplet = "{}-macos".format(self.arch)
+            self.prefix = self.dirs.build / "{}-macos".format(self.arch)
+            #XXX Not used for MacOS
+            self.toolchain = get_toolchain(root=self.dirs.root)
         else:
             #self.sysroot = self.install_dir / self.triplet
             #self.prefix = self.sysroot / "mayflower"
             self.triplet = "{}-linux-gnu".format(self.arch)
-            self.prefix = self.install_dir / self.triplet
+            self.prefix = self.dirs.build / self.triplet
+            self.toolchain = get_toolchain(self.arch, self.dirs.root)
+
+    @property
+    def _triplet(self):
+        if sys.platform == "darwin":
+            return "{}-macos".format(self.arch)
+        return "{}-linux-gnu".format(self.arch)
 
     def add(self, name, url, checksum, build_func=None, wait_on=None):
         if wait_on is None:
@@ -282,33 +371,42 @@ class Builder:
         }
 
     def run(self, name, event, url, checksum, build_func):
+        print(self.dirs.build)
         while event.is_set() is False:
             time.sleep(.3)
 
-        if not self.install_dir.exists():
-            os.makedirs(self.install_dir, exist_ok=True)
+        if not self.dirs.build.exists():
+            os.makedirs(self.dirs.build, exist_ok=True)
 
-        class dirs:
-            cwd = self.cwd
-#            sysroot = self.sysroot
-            prefix = self.prefix
-            downloads = self.downloads
-            # This directory is only used to build the environment. We link
-            # against the glibc headers but at runtime the system glibc is
-            # used.
-            logs = cwd / "logs"
-            sources = self.sources
-            build = tempfile.mkdtemp(prefix="{}_build".format(name))
-            toolchains = self.toolchains
-            toolchain = toolchains / self.triplet
-            toolchaincc = toolchains / self.triplet / "bin" / "{}-gcc".format(self.triplet)
-            #glibc = toolchain / self.triplet / "sysroot"
-            glibc = prefix / "glibc"
+        dirs = Dirs(self.dirs, name, self.arch)
+        state = dirs.__getstate__()
+        dirs.__setstate__(state)
 
-        logs = str(pathlib.Path('logs').resolve())
+#        class dirs:
+#            root = self.dirs.root
+##            sysroot = self.sysroot
+#            prefix = self.prefix
+#            downloads = self.downloads
+#            # This directory is only used to build the environment. We link
+#            # against the glibc headers but at runtime the system glibc is
+#            # used.
+#            logs = self.dirs.logs
+#            sources = self.dirs.src
+#            build = tempfile.mkdtemp(prefix="{}_build".format(name))
+#            toolchaincc =  self.toolchain / "bin" / "{}-gcc".format(self.triplet)
+#            toolchain = self.toolchain
+#            glibc = prefix / "glibc"
+#
+#        def to_dict(cls):
+#            return { x: getattr(cls, x) for x in [
+#                "root", "prefix", "downloads", "logs", "sources", "build",
+#                "toolchaincc", "toolchain", "glibc",
+#                ]
+#            }
+
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.downloads, exist_ok=True)
-        os.makedirs(logs, exist_ok=True)
+        os.makedirs(dirs.logs, exist_ok=True)
         #os.makedirs(dirs.prefix, exist_ok=True)
         if not dirs.prefix.exists():
             os.makedirs(dirs.prefix, exist_ok=True)
@@ -316,7 +414,7 @@ class Builder:
             #    dirs.toolchain / self.triplet / "sysroot",
             #    dirs.prefix
             #)
-        logfp = io.open(os.path.join(logs, "{}.log".format(name)), "w")
+        logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
         #XXX should separate downloads and builds.
         if self.no_download:
             archive = os.path.join(dirs.downloads, os.path.basename(url))
@@ -326,20 +424,31 @@ class Builder:
         extract_archive(dirs.sources, archive)
         dirs.source = dirs.sources / pathlib.Path(archive).name.split('.tar')[0]
 
-        _ = os.getcwd()
+        cwd = os.getcwd()
         os.chdir(dirs.source)
         env = {}
         env["PATH"] = os.environ["PATH"]
         env["MAYFLOWER_HOST"] = self.triplet
         env["MAYFLOWER_ARCH"] = self.arch
         self.populate_env(env, dirs)
+
+        logfp.write("*" * 80 + "\n")
+        _  = dirs.to_dict() #.to_dict()
+        for k in _:
+        #    print("{} {}".format(k, _[k]))
+            logfp.write("{} {}\n".format(k, _[k]))
+        logfp.write("*" * 80 + "\n")
+        for k in env:
+        #    print("{} {}".format(k, env[k]))
+            logfp.write("{} {}\n".format(k, env[k]))
+        logfp.write("*" * 80 + "\n")
         try:
             return build_func(env, dirs, logfp)
         except Exception as exc:
             logfp.write(traceback.format_exc()+ "\n")
             sys.exit(1)
         finally:
-            os.chdir(_)
+            os.chdir(cwd)
             logfp.close()
 
 PIP_WRAPPER="""#!/bin/sh
@@ -359,8 +468,14 @@ else:
 sys.prefix = prefix_path
 sys.exec_prefix = prefix_path
 
+MAYFLOWER_CROSS = os.environ.get("MAYFLOWER_CROSS", None)
+
 # Remove paths outside of our python location
 path = []
+if MAYFLOWER_CROSS:
+    for i in list(sys.path):
+        if i.startswith(MAYFLOWER_CROSS):
+            path.append(i)
 for i in list(sys.path):
     if i.startswith(sys.prefix):
         path.append(i)
@@ -515,9 +630,9 @@ def run_build(builder, argparser):
     sys.stdout.flush()
 
     # Download and run relok8 to make sure the rpaths are relocatable.
-    to = pathlib.Path(builder.install_dir).parent
+    to = pathlib.Path(os.getcwd())
     download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
-    logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
+    logfp = io.open(str(pathlib.Path(builder.dirs.logs) / "relok8.py.log"), "w")
     python = "python3"
     if ns.arch == "aarch64":
         python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
@@ -552,6 +667,25 @@ def run_build(builder, argparser):
     # Install our pip wrapper
     for file in ["pip3", "pip3.10"]:
         path = bindir / file
+        print(path)
         with io.open(str(path), "w") as fp:
             fp.write(PIP_WRAPPER)
         os.chmod(path, 0o744)
+
+    pip = bindir / "pip3"
+    env = os.environ.copy()
+    target = None
+    #XXX This needs to be more robust
+    if sys.platform == "linux":
+        if builder.arch != "x86_64":
+            env["MAYFLOWER_CROSS"] = str(builder.native_python.parent.parent)
+            target = pip.parent / "lib" / "python3.10" / "site-packages"
+    cmd =  [
+        str(builder.native_python),
+        str(pip),
+        "install",
+        "wheel",
+    ]
+    if target:
+        cmd.append("--target={}".format(target))
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
