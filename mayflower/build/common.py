@@ -18,7 +18,7 @@ import urllib.error
 import multiprocessing
 
 from ..common import MODULE_DIR, work_root, work_dirs, get_toolchain
-from .relocate import main as relocate_main
+from ..relocate import main as relocate_main
 
 log = logging.getLogger(__name__)
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
