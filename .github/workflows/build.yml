@@ -123,4 +123,4 @@ jobs:
 
 
     - name: Run tests
-      run: py.test -v
+      run: pytest -v tests/
