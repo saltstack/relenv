@@ -197,8 +197,6 @@ def build_openssl(env, dirs, logfp):
             arch = "aarch64"
     runcmd([
         './Configure',
-        #This was "darwin64-x86_64-cc" if sys.platform == 'darwin' else "linux-x86_64",
-        #"linux-x86_64",
         "{}-{}".format(plat, arch),
         "no-idea",
         "shared",
@@ -382,38 +380,10 @@ class Builder:
         state = dirs.__getstate__()
         dirs.__setstate__(state)
 
-#        class dirs:
-#            root = self.dirs.root
-##            sysroot = self.sysroot
-#            prefix = self.prefix
-#            downloads = self.downloads
-#            # This directory is only used to build the environment. We link
-#            # against the glibc headers but at runtime the system glibc is
-#            # used.
-#            logs = self.dirs.logs
-#            sources = self.dirs.src
-#            build = tempfile.mkdtemp(prefix="{}_build".format(name))
-#            toolchaincc =  self.toolchain / "bin" / "{}-gcc".format(self.triplet)
-#            toolchain = self.toolchain
-#            glibc = prefix / "glibc"
-#
-#        def to_dict(cls):
-#            return { x: getattr(cls, x) for x in [
-#                "root", "prefix", "downloads", "logs", "sources", "build",
-#                "toolchaincc", "toolchain", "glibc",
-#                ]
-#            }
-
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.downloads, exist_ok=True)
         os.makedirs(dirs.logs, exist_ok=True)
-        #os.makedirs(dirs.prefix, exist_ok=True)
-        if not dirs.prefix.exists():
-            os.makedirs(dirs.prefix, exist_ok=True)
-            #shutil.copytree(
-            #    dirs.toolchain / self.triplet / "sysroot",
-            #    dirs.prefix
-            #)
+        os.makedirs(dirs.prefix, exist_ok=True)
         logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
         #XXX should separate downloads and builds.
         if self.no_download:
@@ -433,13 +403,11 @@ class Builder:
         self.populate_env(env, dirs)
 
         logfp.write("*" * 80 + "\n")
-        _  = dirs.to_dict() #.to_dict()
+        _  = dirs.to_dict()
         for k in _:
-        #    print("{} {}".format(k, _[k]))
             logfp.write("{} {}\n".format(k, _[k]))
         logfp.write("*" * 80 + "\n")
         for k in env:
-        #    print("{} {}".format(k, env[k]))
             logfp.write("{} {}\n".format(k, env[k]))
         logfp.write("*" * 80 + "\n")
         try:
@@ -629,14 +597,7 @@ def run_build(builder, argparser):
     sys.stdout.write("\n")
     sys.stdout.flush()
 
-    # Download and run relok8 to make sure the rpaths are relocatable.
-    #to = pathlib.Path(os.getcwd())
-    #download_url("https://raw.githubusercontent.com/dwoz/relok8.py/main/relok8.py", to)
-    #logfp = io.open(str(pathlib.Path(builder.dirs.logs) / "relok8.py.log"), "w")
-    #python = "python3"
-    #if ns.arch == "aarch64":
-    #    python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
-    #runcmd([str(python), "relok8.py", "--root={}".format(builder.prefix), "--libs={}/lib".format(builder.prefix), "--rpath-only"], stderr=logfp, stdout=logfp)
+    # Run relok8 to make sure the rpaths are relocatable.
     logfp = io.open(str(builder.dirs.logs / "relok8.py.log"), "w")
     relocate_main(builder.prefix)
 
