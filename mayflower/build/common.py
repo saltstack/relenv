@@ -372,7 +372,6 @@ class Builder:
         }
 
     def run(self, name, event, url, checksum, build_func):
-        print(self.dirs.build)
         while event.is_set() is False:
             time.sleep(.3)
 
@@ -638,7 +637,7 @@ def run_build(builder, argparser):
     #if ns.arch == "aarch64":
     #    python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
     #runcmd([str(python), "relok8.py", "--root={}".format(builder.prefix), "--libs={}/lib".format(builder.prefix), "--rpath-only"], stderr=logfp, stdout=logfp)
-    logfp = io.open(str(pathlib.Path('logs') / "relok8.py.log"), "w")
+    logfp = io.open(str(builder.dirs.logs / "relok8.py.log"), "w")
     relocate_main(builder.prefix)
 
     # Fix the shebangs in python's scripts.

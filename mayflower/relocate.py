@@ -6,6 +6,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+from .common import work_dirs
 
 log = logging.getLogger(__name__)
 
@@ -218,10 +219,11 @@ def handle_elf(path, libs, rpath_only, root=None):
 
 
 def main(root, libs_dir=None, rpath_only=True, log_level="INFO"):
+    dirs = work_dirs()
     logging.basicConfig(
         level=logging.getLevelName(log_level.upper()),
         format="%(asctime)s %(message)s",
-        filename=str(pathlib.Path('logs') / "relocate.py.log"),
+        filename=str(dirs.logs / "relocate.py.log"),
         filemode="w",
     )
     root_dir = str(pathlib.Path(root).resolve())
