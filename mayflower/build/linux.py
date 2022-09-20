@@ -81,7 +81,7 @@ def build_gdbm(env, dirs, logfp):
 def build_ncurses(env, dirs, logfp):
     configure = pathlib.Path(dirs.source) / "configure"
     if env["MAYFLOWER_ARCH"] == "aarch64":
-        os.chdir(dirs.build)
+        os.chdir(dirs.tmpbuild)
         runcmd([str(configure)], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "progs", "tic"], stderr=logfp, stdout=logfp)
@@ -103,7 +103,7 @@ def build_ncurses(env, dirs, logfp):
     runcmd([
         "make",
         "DESTDIR={}".format(dirs.prefix),
-        "TIC_PATH={}".format(str(pathlib.Path(dirs.build) / "progs" / "tic")),
+        "TIC_PATH={}".format(str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")),
         "install"], env=env, stderr=logfp, stdout=logfp)
 
 
@@ -205,6 +205,8 @@ def build_python(env, dirs, logfp):
         )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
+    #MAYFLOWERCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] == "aarch64":
         python = pathlib.Path(dirs.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"

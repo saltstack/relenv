@@ -7,7 +7,7 @@ CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
 
 #XXX This should be triplet not arch
-TC_URL = "https://woz.io/mayflower/toolchain/{arch}-linux-gnu.tar.xz"
+TC_URL = "https://woz.io/mayflower/{version}/toolchain/{arch}-linux-gnu.tar.xz"
 
 
 
@@ -41,7 +41,7 @@ def main(argparser):
                 shutil.rmtree(archtcdir)
             if archdir.exists():
                 print("Toolchain directory exists, skipping {}".format(arch))
-            url = TC_URL.format(arch=arch)
+            url = TC_URL.format(version="0.0.0", arch=arch)
             print("Downloading {}".format(url))
             archive = download_url(url, toolchain)
             extract_archive(toolchain, archive)

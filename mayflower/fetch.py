@@ -9,7 +9,13 @@ def main(argparser):
         "--arch", default="x86_64",
         help="Architecture to download"
     )
-    url = "https://woz.io/mayflower/build/x86_64-linux-gnu.tar.xz"
+    ns, argv = argparser.parse_known_args()
+    if getattr(ns, "help", None):
+        argparser.print_help()
+        sys.exit(0)
+    url = "https://woz.io/mayflower/{version}/build/{arch}-linux-gnu.tar.xz".format(
+        version="0.0.0", arch=ns.arch
+    )
     builddir = work_dir("build")
     os.makedirs(builddir, exist_ok=True)
     archive = download_url(url, builddir)
