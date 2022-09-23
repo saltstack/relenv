@@ -9,8 +9,8 @@ from . import fetch
 
 class ArgParser(argparse.ArgumentParser):
     """
-    Wrap default ArgParser implementation adding the ability to supress
-    a positional argument from the example cammand output by the
+    Wrap default ArgParser implementation adding the ability to suppress
+    a positional argument from the example command output by the
     print_help method.
     """
 
@@ -45,13 +45,15 @@ def list_commands(argparser=argparser, show_help=False):
     for i in COMMANDS:
         print("  " + i)
 
+
 COMMANDS = {
-  "list": list_commands,
-  "build" : build.main,
-  "toolchain" : toolchain.main,
-  "create" : create.main,
-  "fetch" : fetch.main,
+    "list": list_commands,
+    "build": build.main,
+    "toolchain": toolchain.main,
+    "create": create.main,
+    "fetch": fetch.main,
 }
+
 
 def main():
     argparser.add_argument('command', help='Run this command')
@@ -69,6 +71,6 @@ def main():
         argparser.print_help()
         sys.exit(0)
 
-if __name__ == "__main__":
-   main()
 
+if __name__ == "__main__":
+    main()

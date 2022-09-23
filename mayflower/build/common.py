@@ -12,20 +12,19 @@ import random
 import sys
 import io
 import os
-import platform
 import urllib.request
 import urllib.error
 import multiprocessing
 import pprint
 
-from ..common import MODULE_DIR, work_root, work_dirs, get_toolchain
+from ..common import MODULE_DIR, work_dirs, get_toolchain
 from ..relocate import main as relocate_main
 
 log = logging.getLogger(__name__)
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 
-PIPE=subprocess.PIPE
+PIPE = subprocess.PIPE
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -33,10 +32,10 @@ RED = "\033[0;31m"
 END = "\033[0m"
 MOVEUP = "\033[F"
 
-
 CICD = False
 NODOWLOAD= False
 WORK_IN_CWD = False
+
 
 def get_build():
     if WORK_IN_CWD:
@@ -68,6 +67,7 @@ def print_ui(events, processes, fails, flipstat={}):
     sys.stdout.write("".join(uiline))
     sys.stdout.flush()
 
+
 def xprint_ui(events, processes, fails, flipstat={}, first=False):
     uiline = []
     for name in events:
@@ -88,17 +88,19 @@ def xprint_ui(events, processes, fails, flipstat={}, first=False):
 
     if first is not False:
         sys.stdout.write(MOVEUP)
-        for i in uiline:
+        for _ in uiline:
             sys.stdout.write(MOVEUP)
 
     sys.stdout.write("\n" + "\n".join(uiline) + END + "\n")
     sys.stdout.flush()
+
 
 def runcmd(*args, **kwargs):
     proc = subprocess.run(*args, **kwargs)
     if proc.returncode != 0:
         raise Exception("Build cmd '{}' failed".format(" ".join(args[0])))
     return proc
+
 
 def download_url(url, dest):
     local = os.path.join(dest, os.path.basename(url))
@@ -128,6 +130,7 @@ def download_url(url, dest):
         raise
     return local
 
+
 def verify_checksum(file, checksum):
     if checksum is None:
         return
@@ -135,10 +138,12 @@ def verify_checksum(file, checksum):
         if checksum != hashlib.md5(fp.read()).hexdigest():
             raise Exception("md5 checksum verification failed")
 
+
 def extract_archive(todir, archive):
     proc = subprocess.run(["tar", "-C", todir, "-xf", archive], stderr=PIPE, stdout=PIPE)
     if proc.returncode != 0:
         raise Exception("Extracting archive failed {}".format(proc.stderr))
+
 
 def all_dirs(root, recurse=True):
     paths = [root]
@@ -147,8 +152,9 @@ def all_dirs(root, recurse=True):
             paths.append(os.path.join(root, name))
     return paths
 
+
 def _parse_gcc_version(stdout):
-    vline  = stdout.splitlines()[0]
+    vline = stdout.splitlines()[0]
     vline, vstr = [_.strip() for _ in vline.rsplit(" ", 1)]
     if vstr.find(".") != -1:
         return vstr
@@ -159,16 +165,20 @@ def gcc_version(cc):
     proc = runcmd([cc, "--version"], stderr=PIPE, stdout=PIPE)
     return _parse_gcc_version(proc.stdout.decode())
 
+
 def _parse_kernel_version(stdout):
     stdout = stdout.split('-', 1)[0]
     return ".".join(stdout.split('.')[:3])
+
 
 def kernel_version():
     proc = runcmd(["uname", "-r"], stderr=PIPE, stdout=PIPE)
     return _parse_kernel_version(proc.stdout.decode())
 
+
 def populate_env(dirs, env):
     pass
+
 
 def build_default(env, dirs, logfp):
     cmd = [
@@ -184,8 +194,9 @@ def build_default(env, dirs, logfp):
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
+
 def build_openssl(env, dirs, logfp):
-    ARCH = "aarch64"
+    arch = "aarch64"
     if sys.platform == 'darwin':
         plat = 'darwin64'
         if env["MAYFLOWER_ARCH"] == 'x86_64':
@@ -202,7 +213,7 @@ def build_openssl(env, dirs, logfp):
         "no-idea",
         "shared",
         "--prefix={}".format(dirs.prefix),
-        #"--openssldir={}/ssl".format(dirs.prefix),
+        # "--openssldir={}/ssl".format(dirs.prefix),
         "--openssldir=/tmp/ssl",
         ], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -210,21 +221,21 @@ def build_openssl(env, dirs, logfp):
 
 
 def build_sqlite(env, dirs, logfp):
-    #extra_cflags=('-Os '
-    #              '-DSQLITE_ENABLE_FTS5 '
-    #              '-DSQLITE_ENABLE_FTS4 '
-    #              '-DSQLITE_ENABLE_FTS3_PARENTHESIS '
-    #              '-DSQLITE_ENABLE_JSON1 '
-    #              '-DSQLITE_ENABLE_RTREE '
-    #              '-DSQLITE_TCL=0 '
-    #              )
-    #configure_pre=[
-    #    '--enable-threadsafe',
-    #    '--enable-shared=no',
-    #    '--enable-static=yes',
-    #    '--disable-readline',
-    #    '--disable-dependency-tracking',
-    #]
+    # extra_cflags=('-Os '
+    #               '-DSQLITE_ENABLE_FTS5 '
+    #               '-DSQLITE_ENABLE_FTS4 '
+    #               '-DSQLITE_ENABLE_FTS3_PARENTHESIS '
+    #               '-DSQLITE_ENABLE_JSON1 '
+    #               '-DSQLITE_ENABLE_RTREE '
+    #               '-DSQLITE_TCL=0 '
+    #               )
+    # configure_pre=[
+    #     '--enable-threadsafe',
+    #     '--enable-shared=no',
+    #     '--enable-static=yes',
+    #     '--disable-readline',
+    #     '--disable-dependency-tracking',
+    # ]
     cmd = [
         "./configure",
         "--with-shared",
@@ -492,8 +503,8 @@ def run_build(builder, argparser):
         "--clean", default=False, action="store_true",
         help="Clean up before running the build"
     )
-    #XXX We should automatically skip downloads that can be verified as not
-    #being corrupt and this can become --force-download
+    # TODO: We should automatically skip downloads that can be verified as not
+    # TODO: being corrupt and this can become --force-download
     argparser.add_argument(
         "--no-download", default=False, action="store_true",
         help="Skip downloading source tarballs"
@@ -507,18 +518,16 @@ def run_build(builder, argparser):
         CICD = True
     builder.set_arch(ns.arch)
     if ns.clean:
-      try:
-          shutil.rmtree(builder.prefix)
-          shutil.rmtree(builder.sources)
-      except FileNotFoundError: pass
+        try:
+            shutil.rmtree(builder.prefix)
+            shutil.rmtree(builder.sources)
+        except FileNotFoundError:
+            pass
     builder.no_download = False
     if ns.no_download:
         builder.no_download = True
 
-    import concurrent.futures
-
     fails = []
-    futures = []
     events = {}
     waits = {}
     processes = {}
@@ -587,18 +596,18 @@ def run_build(builder, argparser):
     pyex = bindir / "python3.10"
     shebang = "#!{}".format(str(pyex))
     for root, dirs, files in os.walk(str(bindir)):
-        #print(root), print(dirs), print(files)
+        # print(root), print(dirs), print(files)
         for file in files:
             with open(os.path.join(root, file), "rb") as fp:
                 try:
                     data = fp.read(len(shebang.encode())).decode()
                 except:
-                    #print("skip: {}".format(file))
+                    # print("skip: {}".format(file))
                     continue
                 if data == shebang:
                     pass
-                    #print(file)
-                    #print(repr(data))
+                    # print(file)
+                    # print(repr(data))
                 else:
                     #print("skip: {}".format(file))
                     continue

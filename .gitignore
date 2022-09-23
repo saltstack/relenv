@@ -1,5 +1,7 @@
 __pycache__
 *.pyc
+.idea
+*.un~
 
 # These are created when builds run
 /build

@@ -1,5 +1,6 @@
 import sys
 
+
 def main(argparse):
     if sys.platform == "darwin":
         from .darwin import main
@@ -8,5 +9,5 @@ def main(argparse):
         from .linux import main
         main(argparse)
     else:
-        print("Unsuported platform")
+        print("Unsupported platform")
         sys.exit(1)

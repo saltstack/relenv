@@ -1,4 +1,9 @@
-import sys, os, pathlib, shutil, contextlib, tarfile
+import contextlib
+import os
+import pathlib
+import shutil
+import sys
+import tarfile
 from .common import MODULE_DIR
 
 
@@ -10,7 +15,6 @@ def chdir(path):
         yield
     finally:
         os.chdir(cwd)
-
 
 
 def main(argparser):
@@ -53,7 +57,3 @@ def main(argparser):
         build,
         dest,
     )
-
-
-
-

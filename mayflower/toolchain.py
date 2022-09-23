@@ -1,6 +1,8 @@
-import os, pathlib, sys
-from .common import work_root, MODULE_DIR, work_dirs, get_toolchain
+import os
+import shutil
+import sys
 from .build.common import download_url, extract_archive, runcmd
+from .common import get_toolchain
 
 WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
@@ -38,7 +40,7 @@ def main(argparser):
         for arch in ns.arch:
             archdir = get_toolchain(arch)
             if ns.clean:
-                shutil.rmtree(archtcdir)
+                shutil.rmtree(archdir)
             if archdir.exists():
                 print("Toolchain directory exists, skipping {}".format(arch))
             url = TC_URL.format(version="0.0.0", arch=arch)
