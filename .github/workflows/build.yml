@@ -56,7 +56,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: x86-64-linux-gnu-toolchain-logs
+        name: aarch64-linux-gnu-toolchain-logs
         path: mayflower/_toolchain/build.log
         retention-days: 5
 
