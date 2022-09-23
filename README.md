@@ -5,16 +5,33 @@ created with Mayflower are re-producable in the sense that all binaries for the
 builds are built from source. These builds are re-locatable meaning you can
 move the root directory around on the filesystem.
 
+# Installing Mayflower
+
+```
+pip install git+https://github.com/dwoz/Mayflower.git
+```
+
+
+# Pre-built Mayflower Python Environments
+
+Mayflower can use pre-build Mayflower Python environments.
+
+```
+python3 -m mayflower fetch
+python3 -m mayflower create foo
+foo/bin/pip3 install myproject
+```
+
 
 # Building a Mayflower Build
 
 **Currently building assumes your building on x86_64**
 
 ## Linux Dependencies
-- gcc
+
 - make
 - bison
-- libtool
+- perl
 - patchelf
 
 **Arch linux varients also require libxcrypt-compat**
@@ -22,16 +39,34 @@ move the root directory around on the filesystem.
 
 ## Building on Linux
 
-Running `python3 -m mayflower.build.linux --clean` will, if successful, create a python
-environment to the `build/` directory. All of the dependencies needed for
-Python are located in `build/lib`.
+When using Mayflower to create builds on linux you first need a toolchain. You
+can either build the toolchain or use a pre-built toolchain.
+
+Using a pre-built toolchain.
+
+```
+python3 -m mayflower toolchain download
+```
+
+Building a toolchain from scratch.
+
+```
+python3 -m mayflower toolchain build
+```
+
+After installing the Mayflower toolchain for the architecture you are targeting you build a Mayflower Python build.
+
+```
+python3 -m mayflower build --clean
+```
 
 ## Mac OS Dependencies
+
 - developer tools
 
 ## Building on Mac OS
 
-Run `python3 -m mayflower.build.darwin --clean`
+Run `python3 -m mayflower build --clean`
 
 
 # How it Works
