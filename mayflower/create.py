@@ -28,19 +28,25 @@ def main(argparser):
     plat = sys.platform
     arch = os.uname().machine
     if plat == "linux":
-        if arch in ("x86_64", "aarch64"):
+        if arch in ["x86_64", "aarch64"]:
             triplet = "{}-{}-gnu".format(arch, plat)
         else:
-            print("Unkown arch {}".format(arch))
+            print("Unknown arch {}".format(arch))
             sys.exit(1)
     elif plat == "darwin":
-        if arch in ("x86_64"):
+        if arch in ["x86_64"]:
             triplet = "{}-macos".format(arch)
         else:
-            print("Unkown arch {}".format(arch))
+            print("Unknown arch {}".format(arch))
+            sys.exit(1)
+    elif plat == "win32":
+        if arch in ["x86_64"]:
+            triplet = "{}-win".format(arch)
+        else:
+            print("Unknown arch {}".format(arch))
             sys.exit(1)
     else:
-        print("Unkown platform {}".format(plat))
+        print("Unknown platform {}".format(plat))
         sys.exit(1)
     build = MODULE_DIR / "_build" / triplet
     if not build.exists():

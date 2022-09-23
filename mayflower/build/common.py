@@ -4,6 +4,7 @@ import codecs
 import hashlib
 import pathlib
 import shutil
+import tarfile
 import tempfile
 import time
 import traceback
@@ -139,10 +140,18 @@ def verify_checksum(file, checksum):
             raise Exception("md5 checksum verification failed")
 
 
-def extract_archive(todir, archive):
-    proc = subprocess.run(["tar", "-C", todir, "-xf", archive], stderr=PIPE, stdout=PIPE)
-    if proc.returncode != 0:
-        raise Exception("Extracting archive failed {}".format(proc.stderr))
+def extract_archive(to_dir, archive):
+    print(to_dir)
+    if archive.endswith("tgz"):
+        read_type = "r:gz"
+    elif archive.endswith("xz"):
+        read_type = "r:xz"
+    elif archive.endswith("bz2"):
+        read_type = "r:bz"
+    else:
+        read_type = "r"
+    with tarfile.open(archive, read_type) as t:
+        t.extractall(to_dir)
 
 
 def all_dirs(root, recurse=True):
@@ -272,13 +281,19 @@ class Dirs:
     def toolchain(self):
         if sys.platform == "darwin":
             return get_toolchain(root=self.root)
-        return get_toolchain(self.arch, self.root)
+        elif sys.platform == "win32":
+            return get_toolchain(root=self.root)
+        else:
+            return get_toolchain(self.arch, self.root)
 
     @property
     def _triplet(self):
         if sys.platform == "darwin":
             return "{}-macos".format(self.arch)
-        return "{}-linux-gnu".format(self.arch)
+        elif sys.platform == "win32":
+            return "{}-win".format(self.arch)
+        else:
+            return "{}-linux-gnu".format(self.arch)
 
     @property
     def prefix(self):
@@ -322,6 +337,8 @@ class Builder:
 
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
+        elif sys.platform == "win32":
+            self.triplet = "{}-win".format(self.arch)
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
 
@@ -344,6 +361,8 @@ class Builder:
     def native_python(self):
         if sys.platform == "darwin":
             return self.dirs.build / "x86_64-macos" / "bin" / "python3"
+        elif sys.platform == "win32":
+            return self.dirs.build / "x86_64-win" / "bin" / "python3"
         else:
             return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
@@ -352,7 +371,12 @@ class Builder:
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
             self.prefix = self.dirs.build / "{}-macos".format(self.arch)
-            #XXX Not used for MacOS
+            # XXX Not used for MacOS
+            self.toolchain = get_toolchain(root=self.dirs.root)
+        elif sys.platform == "win32":
+            self.triplet = "{}-win".format(self.arch)
+            self.prefix = self.dirs.build / "{}-win".format(self.arch)
+            # XXX Not used for Windows
             self.toolchain = get_toolchain(root=self.dirs.root)
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
@@ -363,7 +387,10 @@ class Builder:
     def _triplet(self):
         if sys.platform == "darwin":
             return "{}-macos".format(self.arch)
-        return "{}-linux-gnu".format(self.arch)
+        elif sys.platform == "win32":
+            return "{}-win".format(self.arch)
+        else:
+            return "{}-linux-gnu".format(self.arch)
 
     def add(self, name, url, checksum, build_func=None, wait_on=None):
         if wait_on is None:
@@ -405,14 +432,20 @@ class Builder:
 
         cwd = os.getcwd()
         os.chdir(dirs.source)
-        env = {}
-        env["PATH"] = os.environ["PATH"]
-        env["MAYFLOWER_HOST"] = self.triplet
-        env["MAYFLOWER_ARCH"] = self.arch
+        if sys.platform == "win32":
+            env = os.environ
+            env["MAYFLOWER_HOST"] = self.triplet
+            env["MAYFLOWER_ARCH"] = self.arch
+        else:
+            env = {
+                "PATH": os.environ["PATH"],
+                "MAYFLOWER_HOST": self.triplet,
+                "MAYFLOWER_ARCH": self.arch,
+            }
         self.populate_env(env, dirs)
 
         logfp.write("*" * 80 + "\n")
-        _  = dirs.to_dict()
+        _ = dirs.to_dict()
         for k in _:
             logfp.write("{} {}\n".format(k, _[k]))
         logfp.write("*" * 80 + "\n")
@@ -422,7 +455,7 @@ class Builder:
         try:
             return build_func(env, dirs, logfp)
         except Exception as exc:
-            logfp.write(traceback.format_exc()+ "\n")
+            logfp.write(traceback.format_exc() + "\n")
             sys.exit(1)
         finally:
             os.chdir(cwd)
@@ -550,14 +583,14 @@ def run_build(builder, argparser):
         processes[name] = proc
 
     sys.stdout.write("\n")
-    print_ui(events, processes, fails)
+    # print_ui(events, processes, fails)
 
     # Wait for the processes to finish and check if we should send any
     # dependency events.
     while processes:
         for proc in list(processes.values()):
             proc.join(.3)
-            print_ui(events, processes, fails)
+            # print_ui(events, processes, fails)
             if proc.exitcode is None:
                 continue
             processes.pop(proc.name)
@@ -583,11 +616,12 @@ def run_build(builder, argparser):
         sys.stderr.flush()
         sys.exit(1)
     time.sleep(.1)
-    print_ui(events, processes, fails)
+    # print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
 
     # Run relok8 to make sure the rpaths are relocatable.
+    builder.dirs.logs.mkdir(exist_ok=True, parents=True)
     logfp = io.open(str(builder.dirs.logs / "relok8.py.log"), "w")
     relocate_main(builder.prefix)
 
@@ -609,7 +643,7 @@ def run_build(builder, argparser):
                     # print(file)
                     # print(repr(data))
                 else:
-                    #print("skip: {}".format(file))
+                    # print("skip: {}".format(file))
                     continue
                 data = fp.read().decode()
             with open(os.path.join(root, file), "w") as fp:
