@@ -8,68 +8,6 @@ on:
 
 jobs:
 
-  build_toolchain_x86_64:
-
-    runs-on: ubuntu-22.04
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install Dependencies
-      run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man
-
-    - name: Build toolchain
-      run: CICD=true python3 -m mayflower toolchain build --arch=x86_64
-
-    - name: Linux Logs
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: x86-64-linux-gnu-toolchain-logs
-        path: mayflower/_toolchain/build.log
-        retention-days: 5
-
-    - name: Create Tarball
-      run: tar -C mayflower/_toolchain -cJf toolchain-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
-
-    - name: Toolchain build
-      uses: actions/upload-artifact@v3
-      with:
-        name: toolchain-x86_64-linux-gnu.tar.xz
-        path: toolchain-x86_64-linux-gnu.tar.xz
-        retention-days: 5
-
-  build_toolchain_aarch64:
-
-    runs-on: ubuntu-22.04
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install Dependencies
-      run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man
-
-    - name: Build toolchain
-      run: CICD=true python3 -m mayflower toolchain build --arch=aarch64
-
-    - name: Linux Logs
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: aarch64-linux-gnu-toolchain-logs
-        path: mayflower/_toolchain/build.log
-        retention-days: 5
-
-    - name: Create Tarball
-      run: tar -C mayflower/_toolchain -cJf toolchain-aarch64-linux-gnu.tar.xz  aarch64-linux-gnu
-
-    - name: Toolchain build
-      uses: actions/upload-artifact@v3
-      with:
-        name: toolchain-aarch64-linux-gnu.tar.xz
-        path: toolchain-aarch64-linux-gnu.tar.xz
-        retention-days: 5
-
   build_linux_x86_64:
 
     runs-on: ubuntu-22.04
@@ -137,6 +75,7 @@ jobs:
 
     - name: Python build
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: python-aarch64-linux-gnu.tar.xz
         path: python-aarch64-linux-gnu.tar.xz
