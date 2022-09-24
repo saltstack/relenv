@@ -132,6 +132,7 @@ jobs:
         retention-days: 5
 
     - name: Create Tarball
+      if: always()
       run: tar -C mayflower/_build -cJf python-aarch64-linux-gnu.tar.xz  aarch64-linux-gnu
 
     - name: Python build
