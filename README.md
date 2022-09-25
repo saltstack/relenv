@@ -89,11 +89,13 @@ should work just like any other python installation. The difference is this
 python can be moved around on the filesystem or even to other machines.
 
 ```/bin/sh
-# cp -R ./build ./mycoolbuild
-# mycoolbuild/bin/pip3 install mycoolpython
-# tar cJf mycoolbuild.tar.xz mycoolbuild
+python3 mayflower create myproject
+./myproject/bin/pip3 install myproject
+zip myproject.zip myproject
 ```
 
+The newly created `myproject` mayflower environment can be sent to freind,
+co-worker, or customer.
 
 
 # Pre-Built Mayflower Builds
