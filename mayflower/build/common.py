@@ -617,11 +617,13 @@ def run_build(builder, argparser):
                     return file[:-3]
     cwd = os.getcwd()
     modname = find_sysconfigdata(pymodules)
-    os.chdir(pymodules)
+    path = sys.path
+    sys.path = [str(pymodules)]
     try:
         mod = __import__(modname)
     finally:
         os.chdir(cwd)
+        sys.path = path
     dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
     install_sysdata(mod, dest, builder.prefix, builder.toolchain)
 
