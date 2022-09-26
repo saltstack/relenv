@@ -22,7 +22,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install Dependencies
-      run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man
+      run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man python3-all
 
     - name: Build toolchain
       run: CICD=true python3 -m mayflower toolchain build --arch=x86_64
@@ -53,7 +53,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install Dependencies
-      run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man
+      run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man python3-all
 
     - name: Build toolchain
       run: CICD=true python3 -m mayflower toolchain build --arch=aarch64
