@@ -22,6 +22,7 @@ def build_python(env, dirs, logfp):
     # TODO: For now we'll only support 64bit
     build_dir = dirs.source / "PCbuild" / "amd64"
     bin_dir = dirs.prefix / "bin"
+    python = bin_dir / "python.exe"
 
     # Move python binaries
     binaries = [
@@ -84,6 +85,13 @@ def build_python(env, dirs, logfp):
     )
 
     # Download and install Pip
+    urllib.request.urlretrieve(
+        url="https://bootstrap.pypa.io/get-pip.py",
+        filename=str(dirs.downloads / "get_pip.py"),
+    )
+
+    cmd = [python, str(dirs.downloads / "get_pip.py")]
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
 
 build = Builder(populate_env=populate_env)

@@ -141,7 +141,6 @@ def verify_checksum(file, checksum):
 
 
 def extract_archive(to_dir, archive):
-    print(to_dir)
     if archive.endswith("tgz"):
         read_type = "r:gz"
     elif archive.endswith("xz"):
@@ -362,7 +361,7 @@ class Builder:
         if sys.platform == "darwin":
             return self.dirs.build / "x86_64-macos" / "bin" / "python3"
         elif sys.platform == "win32":
-            return self.dirs.build / "x86_64-win" / "bin" / "python3"
+            return self.dirs.build / "x86_64-win" / "bin" / "python"
         else:
             return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
