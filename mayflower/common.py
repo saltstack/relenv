@@ -1,9 +1,7 @@
-import os
-import pathlib
+import os, pathlib
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
-
 
 def work_root(root=None):
     if root is not None:
@@ -22,7 +20,6 @@ def work_dir(name, root=None):
     else:
         base = root / name
     return base
-
 
 class WorkDirs:
     def __init__(self, root):
@@ -52,6 +49,7 @@ class WorkDirs:
         self.download = state['download']
 
 
+
 def work_dirs(root=None):
     return WorkDirs(work_root(root))
 
@@ -61,3 +59,4 @@ def get_toolchain(arch=None, root=None):
     if arch:
         return dirs.toolchain / "{}-linux-gnu".format(arch)
     return dirs.toolchain
+

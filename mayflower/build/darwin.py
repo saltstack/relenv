@@ -1,6 +1,5 @@
 from .common import *
 
-
 def populate_env(env, dirs):
     env["CC"] = 'clang'
     ldflags = [
@@ -15,13 +14,12 @@ def populate_env(env, dirs):
     ]
     env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
 
-
 def build_python(env, dirs, logfp):
     env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"])
     runcmd([
-        "./configure",
-        "-v",
+        './configure',
+         "-v",
         "--prefix={}".format(dirs.prefix),
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
@@ -38,7 +36,6 @@ def build_python(env, dirs, logfp):
     runcmd(["sed", "s/#zlib/zlib/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
-
 
 build = Builder(populate_env=populate_env)
 

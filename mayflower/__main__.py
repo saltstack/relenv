@@ -45,15 +45,13 @@ def list_commands(argparser=argparser, show_help=False):
     for i in COMMANDS:
         print("  " + i)
 
-
 COMMANDS = {
-    "list": list_commands,
-    "build": build.main,
-    "toolchain": toolchain.main,
-    "create": create.main,
-    "fetch": fetch.main,
+  "list": list_commands,
+  "build" : build.main,
+  "toolchain" : toolchain.main,
+  "create" : create.main,
+  "fetch" : fetch.main,
 }
-
 
 def main():
     argparser.add_argument('command', help='Run this command')
@@ -71,6 +69,6 @@ def main():
         argparser.print_help()
         sys.exit(0)
 
-
 if __name__ == "__main__":
-    main()
+   main()
+

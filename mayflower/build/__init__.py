@@ -1,6 +1,5 @@
 import sys
 
-
 def main(argparse):
     if sys.platform == "darwin":
         from .darwin import main

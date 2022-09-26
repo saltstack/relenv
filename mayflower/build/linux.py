@@ -1,5 +1,5 @@
 from .common import *
-
+import textwrap
 
 def populate_env(env, dirs):
     env["CC"] = "{}-gcc -no-pie".format(
@@ -151,7 +151,6 @@ def build_krb(env, dirs, logfp):
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
-
 PATCH = """--- ./setup.py
 +++ ./setup.py
 @@ -664,6 +664,7 @@
@@ -164,28 +163,23 @@ PATCH = """--- ./setup.py
          tmpfile = os.path.join(self.build_temp, 'multiarch')
 """
 
-
 def build_python(env, dirs, logfp):
     env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"])
 
     # Needed when using a toolchain even if build and host match.
     runcmd(["sed", "-i", 's/ac_cv_buggy_getaddrinfo=yes/ac_cv_buggy_getaddrinfo=no/g', 'configure'])
-    runcmd(
-        ["sed",
-         "-i",
-         's/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g',
-         'configure'
-         ]
-    )
+    runcmd(["sed", "-i", 's/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g', 'configure'])
+
 
     with open('/tmp/patch', 'w') as fp:
         fp.write(PATCH)
-    runcmd(["patch", "-p0", "-i", "/tmp/patch"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["patch", "-p0", "-i", "/tmp/patch"],
+        env=env, stderr=logfp, stdout=logfp)
 
     cmd = [
-        "./configure",
-        "-v",
+        './configure',
+         "-v",
         "--prefix={}".format(dirs.prefix),
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
@@ -220,15 +214,17 @@ def build_python(env, dirs, logfp):
     runcmd([python, "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
+
 build = Builder(populate_env=populate_env)
 
 build.add(
     "OpenSSL",
     "https://www.openssl.org/source/openssl-1.1.1q.tar.gz",
     None,
-    # "2aad5635f9bb338bc2c6b7d19cbc9676",
+    #"2aad5635f9bb338bc2c6b7d19cbc9676",
     build_func=build_openssl,
 )
+
 
 build.add(
     "XZ",
@@ -239,30 +235,30 @@ build.add(
 build.add(
     name="SQLite",
     url="https://sqlite.org/2022/sqlite-autoconf-3390300.tar.gz",
-    # checksum='683cc5312ee74e71079c14d24b7a6d27',
+    #checksum='683cc5312ee74e71079c14d24b7a6d27',
     checksum=None,
     build_func=build_sqlite,
 )
 
 build.add(
     name="bzip2",
-    url="https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
-    checksum="67e051268d0c475ea773822f7500d0e5",
+    url = "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+    checksum = "67e051268d0c475ea773822f7500d0e5",
     build_func=build_bzip2,
 )
 
 build.add(
     name="gdbm",
-    url="https://ftp.gnu.org/gnu/gdbm/gdbm-1.21.tar.gz",
-    checksum="a285c6e2dfed78668664c0555a7d202b",
+    url = "https://ftp.gnu.org/gnu/gdbm/gdbm-1.21.tar.gz",
+    checksum = "a285c6e2dfed78668664c0555a7d202b",
     build_func=build_gdbm,
 )
 
 build.add(
     name="ncurses",
-    url="https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.3.tar.gz",
-    # checksum="a2736befde5fee7d2b7eb45eb281cdbe",
-    checksum=None,
+    url = "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.3.tar.gz",
+    #checksum = "a2736befde5fee7d2b7eb45eb281cdbe",
+    checksum = None,
     build_func=build_ncurses,
     wait_on=["readline"],
 )
@@ -321,10 +317,8 @@ build.add(
     ]
 )
 
-
 def main(argparse):
     run_build(build, argparse)
-
 
 if __name__ == "__main__":
     from argparse import ArgumentParser

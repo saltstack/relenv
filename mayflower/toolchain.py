@@ -1,15 +1,18 @@
-import os
-import shutil
-import sys
+import os, pathlib, sys
+from .common import work_root, MODULE_DIR, work_dirs, get_toolchain
 from .build.common import download_url, extract_archive, runcmd
-from .common import get_toolchain
 
 WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
 
 #XXX This should be triplet not arch
+<<<<<<< HEAD
 TC_URL = "https://woz.io/mayflower/{version}/toolchain/{arch}-linux-gnu.tar.xz"
+
+=======
+TC_URL = "https://woz.io/mayflower/toolchain/{arch}-linux-gnu.tar.xz"
+>>>>>>> 591d2bf (remove pep8 changes)
 
 
 

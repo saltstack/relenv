@@ -1,9 +1,4 @@
-import contextlib
-import os
-import pathlib
-import shutil
-import sys
-import tarfile
+import sys, os, pathlib, shutil, contextlib, tarfile
 from .common import MODULE_DIR
 
 
@@ -17,6 +12,7 @@ def chdir(path):
         os.chdir(cwd)
 
 
+
 def main(argparser):
     argparser.descrption = "Create Mayflower Environments"
     argparser.add_argument('name', help='The name of the directory to create')
@@ -28,13 +24,13 @@ def main(argparser):
     plat = sys.platform
     arch = os.uname().machine
     if plat == "linux":
-        if arch in ["x86_64", "aarch64"]:
+        if arch in ("x86_64", "aarch64"):
             triplet = "{}-{}-gnu".format(arch, plat)
         else:
             print("Unknown arch {}".format(arch))
             sys.exit(1)
     elif plat == "darwin":
-        if arch in ["x86_64"]:
+        if arch in ("x86_64"):
             triplet = "{}-macos".format(arch)
         else:
             print("Unknown arch {}".format(arch))
@@ -63,3 +59,7 @@ def main(argparser):
         build,
         dest,
     )
+
+
+
+

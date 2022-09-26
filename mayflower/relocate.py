@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import argparse
+import json
 import logging
 import os
 import pathlib
@@ -192,7 +194,7 @@ def handle_elf(path, libs, rpath_only, root=None):
             needs_rpath = True
             log.warning("File already within root directory: %s", linked_lib)
             continue
-
+        
         relocated_path = os.path.join(libs, lib_basename)
 
         if os.path.exists(relocated_path):

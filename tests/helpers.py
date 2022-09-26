@@ -1,7 +1,6 @@
 import pathlib
 import shutil
 
-
 class BaseProject:
     def __init__(self, root_dir):
         self.root_dir = root_dir

@@ -1,6 +1,6 @@
-import os
+import sys, os, pathlib, shutil, contextlib, tarfile
 from .build.common import download_url, extract_archive
-from .common import work_dir
+from .common import MODULE_DIR, work_dir
 
 
 def main(argparser):

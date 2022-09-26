@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, call, patch
 from mayflower.relocate import is_elf, is_in_dir, is_macho, main, parse_readelf_d, patch_rpath, handle_elf
 from tests.helpers import LinuxProject
 
+from argparse import Namespace
+
 
 def test_is_macho_true(tmp_path):
     lib_path = tmp_path / "test.dylib"
