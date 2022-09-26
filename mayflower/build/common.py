@@ -409,6 +409,10 @@ class Builder:
         os.makedirs(dirs.logs, exist_ok=True)
         os.makedirs(dirs.prefix, exist_ok=True)
         logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
+
+        # DEBUG: Uncomment to debug
+        # logfp = sys.stdout
+
         #XXX should separate downloads and builds.
         if self.no_download:
             archive = os.path.join(dirs.downloads, os.path.basename(url))
@@ -573,6 +577,7 @@ def run_build(builder, argparser):
         processes[name] = proc
 
     sys.stdout.write("\n")
+    # DEBUG: Comment to debug
     print_ui(events, processes, fails)
 
     # Wait for the processes to finish and check if we should send any
@@ -580,6 +585,7 @@ def run_build(builder, argparser):
     while processes:
         for proc in list(processes.values()):
             proc.join(.3)
+            # DEBUG: Comment to debug
             print_ui(events, processes, fails)
             if proc.exitcode is None:
                 continue
@@ -607,6 +613,7 @@ def run_build(builder, argparser):
         sys.stderr.flush()
         sys.exit(1)
     time.sleep(.1)
+    # DEBUG: Comment to debug
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
@@ -654,7 +661,7 @@ def run_build(builder, argparser):
     path = sys.path
     sys.path = [str(pymodules)]
     try:
-        mod = __import__(modname)
+        mod = __import__(str(modname))
     finally:
         os.chdir(cwd)
         sys.path = path

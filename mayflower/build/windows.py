@@ -22,6 +22,7 @@ def build_python(env, dirs, logfp):
     # TODO: For now we'll only support 64bit
     build_dir = dirs.source / "PCbuild" / "amd64"
     bin_dir = dirs.prefix / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
 
     # Move python binaries
     binaries = [
