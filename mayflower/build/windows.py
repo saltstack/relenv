@@ -21,8 +21,6 @@ def build_python(env, dirs, logfp):
     # This is where build.bat puts everything
     # TODO: For now we'll only support 64bit
     build_dir = dirs.source / "PCbuild" / "amd64"
-    bin_dir = dirs.prefix / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
 
     # Move python binaries
     binaries = [
@@ -37,39 +35,39 @@ def build_python(env, dirs, logfp):
         "venvwlauncher.exe",
     ]
     for binary in binaries:
-        shutil.move(src=str(build_dir / binary), dst=str(bin_dir / binary))
+        shutil.move(src=str(build_dir / binary), dst=str(dirs.prefix / binary))
 
     # Create DLLs directory
-    (bin_dir / "DLLs").mkdir(parents=True, exist_ok=True)
+    (dirs.prefix / "DLLs").mkdir(parents=True, exist_ok=True)
     # Move all library files to DLLs directory (*.pyd, *.dll)
     for file in glob.glob(str(build_dir / "*.pyd")):
-        shutil.move(src=file, dst=str(bin_dir / "DLLs"))
+        shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
     for file in glob.glob(str(build_dir / "*.dll")):
-        shutil.move(src=file, dst=str(bin_dir / "DLLs"))
+        shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
 
     # Copy include directory
     shutil.copytree(
         src=str(dirs.source / "Include"),
-        dst=str(bin_dir / "Include"),
+        dst=str(dirs.prefix / "Include"),
     )
     shutil.copy(
         src=str(dirs.source / "PC" / "pyconfig.h"),
-        dst=str(bin_dir / "Include"),
+        dst=str(dirs.prefix / "Include"),
     )
 
     # Copy library files
-    shutil.copytree(src=str(dirs.source / "Lib"), dst=str(bin_dir / "Lib"))
+    shutil.copytree(src=str(dirs.source / "Lib"), dst=str(dirs.prefix / "Lib"))
 
     # Create libs directory
-    (bin_dir / "libs").mkdir(parents=True, exist_ok=True)
+    (dirs.prefix / "libs").mkdir(parents=True, exist_ok=True)
     # Copy lib files
     shutil.copy(
         src=str(build_dir / "python3.lib"),
-        dst=str(bin_dir / "libs" / "python3.lib"),
+        dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     shutil.copy(
         src=str(build_dir / "python310.lib"),
-        dst=str(bin_dir / "libs" / "python310.lib"),
+        dst=str(dirs.prefix / "libs" / "python310.lib"),
     )
 
 
