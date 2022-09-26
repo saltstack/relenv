@@ -22,7 +22,6 @@ def build_python(env, dirs, logfp):
     # TODO: For now we'll only support 64bit
     build_dir = dirs.source / "PCbuild" / "amd64"
     bin_dir = dirs.prefix / "bin"
-    python = bin_dir / "python.exe"
 
     # Move python binaries
     binaries = [
@@ -31,7 +30,7 @@ def build_python(env, dirs, logfp):
         "python.exe",
         "pythonw.exe",
         "python3.dll",
-        "python38.dll",
+        "python310.dll",
         "vcruntime140.dll",
         "venvlauncher.exe",
         "venvwlauncher.exe",
@@ -68,37 +67,16 @@ def build_python(env, dirs, logfp):
         dst=str(bin_dir / "libs" / "python3.lib"),
     )
     shutil.copy(
-        src=str(build_dir / "python38.lib"),
-        dst=str(bin_dir / "libs" / "python38.lib"),
+        src=str(build_dir / "python310.lib"),
+        dst=str(bin_dir / "libs" / "python310.lib"),
     )
-
-    # TODO: This part will be removed when we build our own OpenSSL
-    # Download OpenSSL dlls
-    base_url = "https://repo.saltproject.io/windows/dependencies/64"
-    urllib.request.urlretrieve(
-        url="{}/openssl/1.1.1k/libeay32.dll".format(base_url),
-        filename=str(bin_dir / "libeay32.dll"),
-    )
-    urllib.request.urlretrieve(
-        url="{}/openssl/1.1.1k/ssleay32.dll".format(base_url),
-        filename=str(bin_dir / "ssleay32.dll"),
-    )
-
-    # Download and install Pip
-    urllib.request.urlretrieve(
-        url="https://bootstrap.pypa.io/get-pip.py",
-        filename=str(dirs.downloads / "get_pip.py"),
-    )
-
-    cmd = [python, str(dirs.downloads / "get_pip.py")]
-    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
 
 build = Builder(populate_env=populate_env)
 
 build.add(
     "Python",
-    "https://www.python.org/ftp/python/3.8.14/Python-3.8.14.tar.xz",
+    "https://www.python.org/ftp/python/3.10.7/Python-3.10.7.tar.xz",
     None,
     build_func=build_python,
 )
