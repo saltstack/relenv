@@ -110,16 +110,25 @@ def bootstrap():
     #XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
     if 'SSL_CERT_DIR' not in os.environ:
-        proc = subprocess.run(
-            ["openssl", "version", "-d"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        if proc.returncode != 0:
-            return
-        label, _ = proc.stdout.decode().split(":")
-        path = pathlib.Path(_.strip().strip("\""))
-        os.environ["SSL_CERT_DIR"] = str(path / "certs")
+        try:
+            proc = subprocess.run(
+                ["openssl", "version", "-d"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except Exception:
+            if os.environ.get("MAYFLOWER_DEBUG", ""):
+                # It might make sense to have some default locations to check
+                # for various OSes. For instance centos may have the
+                # certificate chain installed but no openssl binary.
+                print("Unable to configure openssl %s")
+        else:
+            if proc.returncode != 0:
+                return
+            label, _ = proc.stdout.decode().split(":")
+            path = pathlib.Path(_.strip().strip("\""))
+            os.environ["SSL_CERT_DIR"] = str(path / "certs")
+            os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
     build_time_vars = BuildTimeVars()
     importer = MayflowerImporter()
     importer.build_time_vars = build_time_vars
