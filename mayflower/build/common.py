@@ -142,7 +142,7 @@ def extract_archive(to_dir, archive):
     elif archive.endswith("xz"):
         read_type = "r:xz"
     elif archive.endswith("bz2"):
-        read_type = "r:bz"
+        read_type = "r:bz2"
     else:
         read_type = "r"
     with tarfile.open(archive, read_type) as t:

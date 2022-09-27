@@ -109,6 +109,37 @@ jobs:
         path: python-x86_64-macos.tar.xz
         retention-days: 5
 
+  build_windows:
+
+    runs-on: windows-latest
+
+    env:
+      CICD: true
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build Python with Mayflower
+        run: python -m mayflower build --arch=x86_64
+
+      - name: Create Zipfile from build
+        run: Compress-Archive -Path .\mayflower\_build\* -DestinationPath .\python-x86_64-windows.zip
+
+      - name: Upload Build Logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: x86-64-windows-logs
+          path: mayflower/_logs/*
+          retention-days: 5
+
+      - name: Upload Zipfile
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-x86_64-windows.zip
+          path: python-x86_64-windows.zip
+          retention-days: 5
+
   test:
 
     runs-on: ubuntu-latest
