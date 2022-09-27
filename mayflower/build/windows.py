@@ -41,11 +41,9 @@ def build_python(env, dirs, logfp):
     (dirs.prefix / "DLLs").mkdir(parents=True, exist_ok=True)
     # Move all library files to DLLs directory (*.pyd, *.dll)
     for file in glob.glob(str(build_dir / "*.pyd")):
-        if not os.path.exists(file):
-            shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
+        shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
     for file in glob.glob(str(build_dir / "*.dll")):
-        if not os.path.exists(file):
-            shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
+        shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
 
     # Copy include directory
     shutil.copytree(
