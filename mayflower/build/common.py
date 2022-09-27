@@ -351,7 +351,7 @@ class Builder:
         if sys.platform == "darwin":
             return self.dirs.build / "x86_64-macos" / "bin" / "python3"
         elif sys.platform == "win32":
-            return self.dirs.build / "x86_64-win" / "bin" / "python"
+            return self.dirs.build / "x86_64-win" / "Scripts" / "python.exe"
         else:
             return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
@@ -617,43 +617,60 @@ def run_build(builder, argparser):
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
+    logfp = io.open(str(builder.dirs.logs / "mayflower.log"), "w")
 
-    # Run relok8 to make sure the rpaths are relocatable.
-    builder.dirs.logs.mkdir(exist_ok=True, parents=True)
-    logfp = io.open(str(builder.dirs.logs / "relok8.py.log"), "w")
-    relocate_main(builder.prefix)
-
-    # Fix the shebangs in python's scripts.
-    if sys.platform == "win32":
+    if sys.platform == 'win32':
+        # Lay down site customize
         bindir = pathlib.Path(builder.prefix) / "Scripts"
-    else:
-        bindir = pathlib.Path(builder.prefix) / "bin"
-    pyex = bindir / "python3.10"
-    shebang = "#!{}".format(str(pyex))
-    for root, dirs, files in os.walk(str(bindir)):
-        #print(root), print(dirs), print(files)
-        for file in files:
-            with open(os.path.join(root, file), "rb") as fp:
-                try:
-                    data = fp.read(len(shebang.encode())).decode()
-                except:
-                    #print("skip: {}".format(file))
-                    continue
-                if data == shebang:
-                    pass
-                    #print(file)
-                    #print(repr(data))
-                else:
-                    #print("skip: {}".format(file))
-                    continue
-                data = fp.read().decode()
-            with open(os.path.join(root, file), "w") as fp:
-                fp.write("#!/bin/sh\n")
-                fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
-                fp.write(data)
+        sitecustomize = bindir.parent / "Lib" / "site-packages" / "sitecustomize.py"
+        with io.open(str(sitecustomize), "w") as fp:
+            fp.write(SITECUSTOMIZE)
 
-    # Install mayflower-sysconfigdata module
-    if sys.platform != "win32":
+        # Lay down mayflower.runtime, we'll pip install the rest later
+        mayflowerdir = bindir.parent / "Lib" / "site-packages" / "mayflower"
+        if os.makedirs(mayflowerdir, exist_ok=True):
+            runtime = MODULE_DIR / "runtime.py"
+            dest = mayflowerdir / "runtime.py"
+            with io.open(runtime, "r") as rfp:
+                with io.open(dest, "r") as wfp:
+                    wfp.write(rfp.read())
+        init = mayflowerdir / "__init__.py"
+        init.touch()
+
+        # Install pip
+        env = os.environ.copy()
+        python = builder.prefix / "Scripts" / "python.exe"
+        runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
+
+        def runpip(pkg):
+            # XXX Support cross pip installs on windows
+            pip = bindir / "pip3.exe"
+            env = os.environ.copy()
+            target = None
+            cmd =  [
+                str(pip),
+                "install",
+                str(pkg),
+            ]
+            print(cmd)
+            if target:
+                cmd.append("--target={}".format(target))
+            runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+        runpip("wheel")
+        # This needs to handle running from the root of the git repo and also from
+        # an installed Mayflower
+        if (MODULE_DIR.parent / ".git").exists():
+            runpip(MODULE_DIR.parent)
+        else:
+            runpip("mayflower")
+    else:
+        # Run relok8 to make sure the rpaths are relocatable.
+        builder.dirs.logs.mkdir(exist_ok=True, parents=True)
+        relocate_main(builder.prefix)
+
+
+        # Install mayflower-sysconfigdata module
+
         pymodules = pathlib.Path(builder.prefix) / "lib" / "python3.10"
         def find_sysconfigdata(pymodules):
             for root, dirs, files in os.walk(pymodules):
@@ -672,68 +689,87 @@ def run_build(builder, argparser):
         dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
         install_sysdata(mod, dest, builder.prefix, builder.toolchain)
 
-    # Lay down site customize
-    if sys.platform == "win32":
-        sitecustomize = bindir.parent / "Lib" / "site-packages" / "sitecustomize.py"
-        mayflowerdir = bindir.parent / "Lib" / "site-packages" / "mayflower"
-        python = bindir.parent / "python.exe"
-    else:
+        # Lay down site customize
+        bindir = pathlib.Path(builder.prefix) / "bin"
         sitecustomize = bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+        with io.open(str(sitecustomize), "w") as fp:
+            fp.write(SITECUSTOMIZE)
+
+        # Lay down mayflower.runtime, we'll pip install the rest later
         mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
-        python = builder.prefix / "bin" / "python3"
-    with io.open(str(sitecustomize), "w") as fp:
-        fp.write(SITECUSTOMIZE)
+        if os.makedirs(mayflowerdir):
+            runtime = MODULE_DIR / "runtime.py"
+            dest = mayflowerdir / "runtime.py"
+            with io.open(runtime, "r") as rfp:
+                with io.open(dest, "r") as wfp:
+                    wfp.write(rfp.read())
+        init = mayflowerdir / "__init__.py"
+        init.touch()
 
-    # Lay down mayflower.runtime, we'll pip install the rest later
-    if os.makedirs(mayflowerdir):
-        runtime = MODULE_DIR / "runtime.py"
-        dest = mayflowerdir / "runtime.py"
-        with io.open(runtime, "r") as rfp:
-            with io.open(dest, "r") as wfp:
-                wfp.write(rfp.read())
-    init = mayflowerdir / "__init__.py"
-    init.touch()
-
-    #MAYFLOWERCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
-    env = os.environ.copy()
-    if builder.arch == "aarch64":
-        python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
-        env["MAYFLOWERCROSS"] = builder.prefix
-    runcmd([str(python), "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
-
-    # Install our pip wrapper
-    #for file in ["pip3", "pip3.10"]:
-    #    path = bindir / file
-    #    with io.open(str(path), "w") as fp:
-    #        fp.write(PIP_WRAPPER)
-    #    os.chmod(path, 0o744)
-
-    def runpip(pkg):
-        pip = bindir / "pip3"
+        # Install pip
         env = os.environ.copy()
-        target = None
-        #XXX This needs to be more robust
-        if sys.platform == "linux":
-            if builder.arch != "x86_64":
-                env["MAYFLOWER_CROSS"] = str(builder.native_python.parent.parent)
-                target = pip.parent.parent / "lib" / "python3.10" / "site-packages"
-        if sys.platform == "win32":
-            cmd = [str(pip), "install", str(pkg)]
-        else:
-            cmd = [
+        python = builder.prefix / "bin" / "python3"
+        if builder.arch == "aarch64":
+            python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
+            env["MAYFLOWERCROSS"] = builder.prefix
+        runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
+
+        # Install our pip wrapper
+        #for file in ["pip3", "pip3.10"]:
+        #    path = bindir / file
+        #    with io.open(str(path), "w") as fp:
+        #        fp.write(PIP_WRAPPER)
+        #    os.chmod(path, 0o744)
+
+        # Fix the shebangs in python's scripts.
+        bindir = pathlib.Path(builder.prefix) / "bin"
+        pyex = bindir / "python3.10"
+        shebang = "#!{}".format(str(pyex))
+        for root, dirs, files in os.walk(str(bindir)):
+            #print(root), print(dirs), print(files)
+            for file in files:
+                with open(os.path.join(root, file), "rb") as fp:
+                    try:
+                        data = fp.read(len(shebang.encode())).decode()
+                    except:
+                        #print("skip: {}".format(file))
+                        continue
+                    if data == shebang:
+                        pass
+                        #print(file)
+                        #print(repr(data))
+                    else:
+                        #print("skip: {}".format(file))
+                        continue
+                    data = fp.read().decode()
+                with open(os.path.join(root, file), "w") as fp:
+                    fp.write("#!/bin/sh\n")
+                    fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
+                    fp.write(data)
+
+        def runpip(pkg):
+            pip = bindir / "pip3"
+            env = os.environ.copy()
+            target = None
+            #XXX This needs to be more robust
+            if sys.platform == "linux":
+                if builder.arch != "x86_64":
+                    env["MAYFLOWER_CROSS"] = str(builder.native_python.parent.parent)
+                    target = pip.parent.parent / "lib" / "python3.10" / "site-packages"
+            cmd =  [
                 str(builder.native_python),
                 str(pip),
                 "install",
                 str(pkg),
             ]
-        if target:
-            cmd.append("--target={}".format(target))
-        runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-    runpip("wheel")
+            if target:
+                cmd.append("--target={}".format(target))
+            runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+        runpip("wheel")
 
-    # This needs to handle running from the root of the git repo and also from
-    # an installed Mayflower
-    if (MODULE_DIR.parent / ".git").exists():
-        runpip(MODULE_DIR.parent)
-    else:
-        runpip("mayflower")
+        # This needs to handle running from the root of the git repo and also from
+        # an installed Mayflower
+        if (MODULE_DIR.parent / ".git").exists():
+            runpip(MODULE_DIR.parent)
+        else:
+            runpip("mayflower")

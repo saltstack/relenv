@@ -21,6 +21,8 @@ def build_python(env, dirs, logfp):
     # This is where build.bat puts everything
     # TODO: For now we'll only support 64bit
     build_dir = dirs.source / "PCbuild" / "amd64"
+    bin_dir = dirs.prefix / "Scripts"
+    bin_dir.mkdir(parents=True, exist_ok=True)
 
     # Move python binaries
     binaries = [
