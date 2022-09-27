@@ -627,13 +627,18 @@ def run_build(builder, argparser):
             fp.write(SITECUSTOMIZE)
 
         # Lay down mayflower.runtime, we'll pip install the rest later
-        mayflowerdir = bindir.parent / "Lib" / "site-packages" / "mayflower"
-        if os.makedirs(mayflowerdir, exist_ok=True):
-            runtime = MODULE_DIR / "runtime.py"
-            dest = mayflowerdir / "runtime.py"
-            with io.open(runtime, "r") as rfp:
-                with io.open(dest, "r") as wfp:
-                    wfp.write(rfp.read())
+        mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
+        os.makedirs(mayflowerdir, exist_ok=True)
+        runtime = MODULE_DIR / "runtime.py"
+        dest = mayflowerdir / "runtime.py"
+        with io.open(runtime, "r") as rfp:
+            with io.open(dest, "w") as wfp:
+                wfp.write(rfp.read())
+        runtime = MODULE_DIR / "common.py"
+        dest = mayflowerdir / "common.py"
+        with io.open(runtime, "r") as rfp:
+            with io.open(dest, "w") as wfp:
+                wfp.write(rfp.read())
         init = mayflowerdir / "__init__.py"
         init.touch()
 
@@ -697,12 +702,17 @@ def run_build(builder, argparser):
 
         # Lay down mayflower.runtime, we'll pip install the rest later
         mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
-        if os.makedirs(mayflowerdir):
-            runtime = MODULE_DIR / "runtime.py"
-            dest = mayflowerdir / "runtime.py"
-            with io.open(runtime, "r") as rfp:
-                with io.open(dest, "r") as wfp:
-                    wfp.write(rfp.read())
+        os.makedirs(mayflowerdir, exist_ok=True)
+        runtime = MODULE_DIR / "runtime.py"
+        dest = mayflowerdir / "runtime.py"
+        with io.open(runtime, "r") as rfp:
+            with io.open(dest, "w") as wfp:
+                wfp.write(rfp.read())
+        runtime = MODULE_DIR / "common.py"
+        dest = mayflowerdir / "common.py"
+        with io.open(runtime, "r") as rfp:
+            with io.open(dest, "w") as wfp:
+                wfp.write(rfp.read())
         init = mayflowerdir / "__init__.py"
         init.touch()
 
