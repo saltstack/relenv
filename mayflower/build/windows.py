@@ -37,7 +37,7 @@ def build_python(env, dirs, logfp):
         "venvwlauncher.exe",
     ]
     for binary in binaries:
-        shutil.move(src=str(build_dir / binary), dst=str(dirs.prefix / binary))
+        shutil.move(src=str(build_dir / binary), dst=str(bindir / binary))
 
     # Create DLLs directory
     (dirs.prefix / "DLLs").mkdir(parents=True, exist_ok=True)
