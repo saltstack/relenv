@@ -717,12 +717,15 @@ def run_build(builder, argparser):
             if builder.arch != "x86_64":
                 env["MAYFLOWER_CROSS"] = str(builder.native_python.parent.parent)
                 target = pip.parent.parent / "lib" / "python3.10" / "site-packages"
-        cmd =  [
-            str(builder.native_python),
-            str(pip),
-            "install",
-            str(pkg),
-        ]
+        if sys.platform == "win32":
+            cmd = [str(pip), "install", str(pkg)]
+        else:
+            cmd = [
+                str(builder.native_python),
+                str(pip),
+                "install",
+                str(pkg),
+            ]
         if target:
             cmd.append("--target={}".format(target))
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
