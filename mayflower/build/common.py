@@ -624,7 +624,10 @@ def run_build(builder, argparser):
     relocate_main(builder.prefix)
 
     # Fix the shebangs in python's scripts.
-    bindir = pathlib.Path(builder.prefix) / "bin"
+    if sys.platform == "win32":
+        bindir = pathlib.Path(builder.prefix) / "Scripts"
+    else:
+        bindir = pathlib.Path(builder.prefix) / "bin"
     pyex = bindir / "python3.10"
     shebang = "#!{}".format(str(pyex))
     for root, dirs, files in os.walk(str(bindir)):
@@ -650,31 +653,38 @@ def run_build(builder, argparser):
                 fp.write(data)
 
     # Install mayflower-sysconfigdata module
-    pymodules = pathlib.Path(builder.prefix) / "lib" / "python3.10"
-    def find_sysconfigdata(pymodules):
-        for root, dirs, files in os.walk(pymodules):
-            for file in files:
-                if file.find('sysconfigdata') > -1 and file.endswith(".py"):
-                    return file[:-3]
-    cwd = os.getcwd()
-    modname = find_sysconfigdata(pymodules)
-    path = sys.path
-    sys.path = [str(pymodules)]
-    try:
-        mod = __import__(str(modname))
-    finally:
-        os.chdir(cwd)
-        sys.path = path
-    dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
-    install_sysdata(mod, dest, builder.prefix, builder.toolchain)
+    if sys.platform != "win32":
+        pymodules = pathlib.Path(builder.prefix) / "lib" / "python3.10"
+        def find_sysconfigdata(pymodules):
+            for root, dirs, files in os.walk(pymodules):
+                for file in files:
+                    if file.find('sysconfigdata') > -1 and file.endswith(".py"):
+                        return file[:-3]
+        cwd = os.getcwd()
+        modname = find_sysconfigdata(pymodules)
+        path = sys.path
+        sys.path = [str(pymodules)]
+        try:
+            mod = __import__(str(modname))
+        finally:
+            os.chdir(cwd)
+            sys.path = path
+        dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
+        install_sysdata(mod, dest, builder.prefix, builder.toolchain)
 
     # Lay down site customize
-    sitecustomize = bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+    if sys.platform == "win32":
+        sitecustomize = bindir.parent / "Lib" / "site-packages" / "sitecustomize.py"
+        mayflowerdir = bindir.parent / "Lib" / "site-packages" / "mayflower"
+        python = bindir.parent / "python.exe"
+    else:
+        sitecustomize = bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+        mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
+        python = builder.prefix / "bin" / "python3"
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
     # Lay down mayflower.runtime, we'll pip install the rest later
-    mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
     if os.makedirs(mayflowerdir):
         runtime = MODULE_DIR / "runtime.py"
         dest = mayflowerdir / "runtime.py"
@@ -685,12 +695,11 @@ def run_build(builder, argparser):
     init.touch()
 
     #MAYFLOWERCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
-    python = builder.prefix / "bin" / "python3"
     env = os.environ.copy()
     if builder.arch == "aarch64":
         python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
         env["MAYFLOWERCROSS"] = builder.prefix
-    runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
+    runcmd([str(python), "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
 
     # Install our pip wrapper
     #for file in ["pip3", "pip3.10"]:
