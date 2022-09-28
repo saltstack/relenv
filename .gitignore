@@ -26,3 +26,6 @@ docs/build
 mayflower.egg-info
 
 relok8.py
+
+# pyenv
+.python-version
