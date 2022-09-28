@@ -19,12 +19,12 @@ import urllib.error
 import multiprocessing
 import pprint
 
-from ..common import MODULE_DIR, work_root, work_dirs, get_toolchain
-from ..relocate import main as relocate_main
+from mayflower.common import MODULE_DIR, work_root, work_dirs, get_toolchain
+from mayflower.relocate import main as relocate_main
 
 log = logging.getLogger(__name__)
-sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+#sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+#sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 
 PIPE=subprocess.PIPE
 
@@ -48,6 +48,9 @@ def get_build():
 
 
 def print_ui(events, processes, fails, flipstat={}):
+    if "CICD" in os.environ:
+        sys.stdout.flush()
+        return
     uiline = []
     for name in events:
         if not events[name].is_set():
@@ -254,6 +257,65 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+class Download:
+
+    def __init__(self, name, url, signature=None, destination='', version='', md5sum=None):
+        self.name = name
+        self.url_tpl = url
+        self.signature = signature
+        self.destination = destination
+        self.version = version
+        self.md5sum = md5sum
+
+    @property
+    def url(self):
+        return self.url_tpl.format(version=self.version)
+
+    @property
+    def filepath(self):
+        _, name = self.url.rsplit("/", 1)
+        return pathlib.Path(self.destination) / name
+
+    @property
+    def formatted_url(self):
+        return self.url.format(version=version)
+
+
+    def fetch_file(self):
+        return download_url(self.url, self.destination)
+
+    def fetch_signature(self, version):
+        return download_url(self.url, self.destination)
+
+    def exists(self):
+        """
+        True when the artifact already exists on disk
+        """
+        return self.filepath.exists()
+
+    def valid_hash(self):
+        pass
+
+
+    @staticmethod
+    def validate_signature(archive, signature):
+        """
+        True when the archive's signature is valid
+        """
+        pass
+
+    @staticmethod
+    def validate_md5sum(archive, md5sum):
+        """
+        True when when the archive matches the md5 hash
+        """
+        pass
+
+    def __call__(self):
+        os.makedirs(self.filepath.parent, exist_ok=True)
+        self.fetch_file()
+        #XXX Verify the signature and log the checksum
+
 class Dirs:
 
     def __init__(self, dirs, name, arch):
@@ -381,19 +443,23 @@ class Builder:
         else:
             return "{}-linux-gnu".format(self.arch)
 
-    def add(self, name, url, checksum, build_func=None, wait_on=None):
+    def add(self, name, build_func=None, wait_on=None, download=None):
         if wait_on is None:
             wait_on = []
         if build_func is None:
             build_func = self.build_default
         self.recipies[name] = {
-            'url': url,
-            "checksum": checksum,
             "build_func": build_func,
             "wait_on": wait_on,
+            "download": download if download is None else Download(name, destination=self.downloads, **download),
         }
 
-    def run(self, name, event, url, checksum, build_func):
+    def download(self, name):
+        os.makedirs(dirs.downloads, exist_ok=True)
+        self.downloads[name]()
+
+
+    def run(self, name, event, build_func, download):
         while event.is_set() is False:
             time.sleep(.3)
 
@@ -414,13 +480,14 @@ class Builder:
         # logfp = sys.stdout
 
         #XXX should separate downloads and builds.
-        if self.no_download:
-            archive = os.path.join(dirs.downloads, os.path.basename(url))
-        else:
-            archive = download_url(url, dirs.downloads)
-        verify_checksum(archive, checksum)
-        extract_archive(dirs.sources, archive)
-        dirs.source = dirs.sources / pathlib.Path(archive).name.split('.tar')[0]
+        #if self.no_download:
+        #    archive = os.path.join(dirs.downloads, os.path.basename(url))
+        #else:
+        #    archive = download_url(url, dirs.downloads)
+        #verify_checksum(archive, checksum)
+        if download:
+            extract_archive(dirs.sources, str(download.filepath))
+            dirs.source = dirs.sources / download.filepath.name.split('.tar')[0]
 
         cwd = os.getcwd()
         os.chdir(dirs.source)
@@ -552,6 +619,47 @@ def run_build(builder, argparser):
         builder.no_download = True
 
     import concurrent.futures
+    # Start a process for each build passing it an event used to notify each
+    # process if it's dependencies have finished.
+    if "RUN" in os.environ:
+        run = [_.strip() for _ in os.environ["RUN"].split(",") if _.strip()]
+    else:
+        run = builder.recipies
+
+    fails = []
+    processes = {}
+    events = {}
+    sys.stdout.write("Starting downloads \n")
+    print_ui(events, processes, fails)
+    for name in run:
+        event = multiprocessing.Event()
+        event.set()
+        events[name] = event
+        download = builder.recipies[name]["download"]
+        proc = multiprocessing.Process(name=name, target=download)
+        proc.start()
+        processes[name] = proc
+
+    while processes:
+        for proc in list(processes.values()):
+            proc.join(.3)
+            # DEBUG: Comment to debug
+            print_ui(events, processes, fails)
+            if proc.exitcode is None:
+                continue
+            processes.pop(proc.name)
+            if proc.exitcode != 0:
+                fails.append(proc.name)
+                is_failure=True
+            else:
+                is_failure=False
+    sys.stdout.write("\n")
+    if fails:
+        sys.stderr.write("The following failures were reported\n")
+        for fail in fails :
+            sys.stderr.write(fail + "\n")
+        sys.stderr.flush()
+        sys.exit(1)
 
     fails = []
     futures = []
@@ -559,12 +667,10 @@ def run_build(builder, argparser):
     waits = {}
     processes = {}
 
-    # Start a process for each build passing it an event used to notify each
-    # process if it's dependencies have finished.
-    if "RUN" in os.environ:
-        run = [_.strip() for _ in os.environ["RUN"].split(",") if _.strip()]
-    else:
-        run = builder.recipies
+    sys.stdout.write("Starting builds\n")
+    # DEBUG: Comment to debug
+    print_ui(events, processes, fails)
+
     for name in run:
         event = multiprocessing.Event()
         events[name] = event
@@ -576,9 +682,7 @@ def run_build(builder, argparser):
         proc.start()
         processes[name] = proc
 
-    sys.stdout.write("\n")
-    # DEBUG: Comment to debug
-    print_ui(events, processes, fails)
+
 
     # Wait for the processes to finish and check if we should send any
     # dependency events.
@@ -741,8 +845,8 @@ def run_build(builder, argparser):
                 with open(os.path.join(root, file), "rb") as fp:
                     try:
                         data = fp.read(len(shebang.encode())).decode()
-                    except:
-                        #print("skip: {}".format(file))
+                    except Exception as exc:
+                        print(exc)
                         continue
                     if data == shebang:
                         pass

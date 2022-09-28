@@ -214,93 +214,115 @@ def build_python(env, dirs, logfp):
     runcmd([python, "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-
 build = Builder(populate_env=populate_env)
-
 build.add(
     "OpenSSL",
-    "https://www.openssl.org/source/openssl-1.1.1q.tar.gz",
-    None,
-    #"2aad5635f9bb338bc2c6b7d19cbc9676",
     build_func=build_openssl,
+    download={
+        "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
+        "version": "1.1.1q",
+        #"md5sum": "2aad5635f9bb338bc2c6b7d19cbc9676",
+    },
 )
-
 
 build.add(
     "XZ",
-    "http://tukaani.org/xz/xz-5.2.3.tar.gz",
-    'ef68674fb47a8b8e741b34e429d86e9d',
+    download={
+        "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+        "version": "5.2.3",
+        "md5sum": "ef68674fb47a8b8e741b34e429d86e9d",
+    },
 )
 
 build.add(
     name="SQLite",
-    url="https://sqlite.org/2022/sqlite-autoconf-3390300.tar.gz",
-    #checksum='683cc5312ee74e71079c14d24b7a6d27',
-    checksum=None,
     build_func=build_sqlite,
+    download={
+        "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
+        "version": "3390300",
+    },
 )
 
 build.add(
     name="bzip2",
-    url = "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
-    checksum = "67e051268d0c475ea773822f7500d0e5",
     build_func=build_bzip2,
+    download={
+        "url": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+        "version": "1.0.8",
+        "md5sum": "67e051268d0c475ea773822f7500d0e5",
+    },
 )
 
 build.add(
     name="gdbm",
-    url = "https://ftp.gnu.org/gnu/gdbm/gdbm-1.21.tar.gz",
-    checksum = "a285c6e2dfed78668664c0555a7d202b",
     build_func=build_gdbm,
+    download={
+        "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
+        "version": "1.21",
+        "md5sum": "a285c6e2dfed78668664c0555a7d202b",
+    },
 )
 
 build.add(
     name="ncurses",
-    url = "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.3.tar.gz",
-    #checksum = "a2736befde5fee7d2b7eb45eb281cdbe",
-    checksum = None,
     build_func=build_ncurses,
     wait_on=["readline"],
+    download={
+        "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
+        "version": "6.3"
+    },
 )
 
 build.add(
     "libffi",
-    "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz",
-    "6313289e32f1d38a9df4770b014a2ca7",
     build_libffi,
+    download={
+        "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+        "version": "3.3",
+        "md5sum": "6313289e32f1d38a9df4770b014a2ca7",
+    },
 )
 
 build.add(
     "zlib",
-    "https://zlib.net/fossils/zlib-1.2.12.tar.gz",
-    "5fc414a9726be31427b440b434d05f78",
     build_zlib,
+    download={
+        "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
+        "version": "1.2.12",
+        "md5sum": "5fc414a9726be31427b440b434d05f78",
+    },
 )
 
 build.add(
     "uuid",
-    "https://sourceforge.net/projects/libuuid/files/libuuid-1.0.3.tar.gz",
-    "d44d866d06286c08ba0846aba1086d68",
+    download={
+        "url": "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
+        "version": "1.0.3",
+        "md5sum": "d44d866d06286c08ba0846aba1086d68",
+    },
 )
 
 build.add(
     "krb5",
-    "https://kerberos.org/dist/krb5/1.20/krb5-1.20.tar.gz",
-    None,
     build_func=build_krb,
     wait_on=["OpenSSL"],
+    download={
+        "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
+        "version": "1.20",
+    },
 )
 
 build.add(
   "readline",
-  "https://ftp.gnu.org/gnu/readline/readline-8.1.2.tar.gz",
-  "12819fa739a78a6172400f399ab34f81",
+  download={
+        "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
+        "version": "8.1.2",
+        "md5sum": "12819fa739a78a6172400f399ab34f81",
+  },
 )
 
 build.add(
     "Python",
-    "https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tar.xz",
-    None,
     build_func=build_python,
     wait_on=[
         "OpenSSL",
@@ -314,7 +336,11 @@ build.add(
         "uuid",
         "krb5",
         "readline",
-    ]
+    ],
+    download={
+       "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+       "version": "3.10.7",
+    },
 )
 
 def main(argparse):

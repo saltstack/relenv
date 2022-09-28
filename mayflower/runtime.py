@@ -45,6 +45,22 @@ def get_config_var_wrapper(func):
     return wrapped
 
 
+def get_config_var_wrapper(func):
+    def wrapped(name):
+        if name == "BINDIR":
+            orig = func(name)
+            val = "./"
+            if os.environ.get("MAYFLOWER_DEBUG"):
+                print(f"get_config_var call {name} old: {orig} new: {val}")
+            return val
+        else:
+            val = func(name)
+            if os.environ.get("MAYFLOWER_DEBUG"):
+                print(f"get_config_var call {name} {val}")
+            return val
+    return wrapped
+
+
 class MayflowerImporter:
 
     loading_pip_scripts = False

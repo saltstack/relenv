@@ -3,12 +3,15 @@ __pycache__
 .idea
 *.un~
 
-# These are created when builds run
+# These can be created when builds run
 /build
 /download
 /toolchain
 /logs
 /src
+
+
+docs/build
 
 /mayflower/_build/*
 !/mayflower/_build/README
