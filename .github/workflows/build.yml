@@ -18,11 +18,18 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get install build-essential bison linux-headers-$(uname -r)
 
-    - name: fetch toolchain
+    - name: Fetch Toolchain
       run: CICD=true python3 -m mayflower toolchain download --arch=x86_64
 
-    - name: build
+    - name: Build
       run: CICD=true python3 -m mayflower build --arch=x86_64
+
+
+    - name: Create Tarball Directory
+      run: python3 -m mayflower create x86_84-linux-gnu
+
+    - name: Create Tarball
+      run: tar  -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3
@@ -31,9 +38,6 @@ jobs:
         name: x86-64-linux-gnu-logs
         path: mayflower/_logs/*
         retention-days: 5
-
-    - name: Create Tarball
-      run: tar -C mayflower/_build -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
 
     - name: Python build
       uses: actions/upload-artifact@v3
@@ -52,14 +56,21 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get install build-essential bison linux-headers-$(uname -r)
 
-    - name: fetch toolchain
+    - name: Fetch Toolchain
       run: CICD=true python3 -m mayflower toolchain download --arch=aarch64
 
-    - name: fetch native build
+    - name: Fetch Native Build
       run: CICD=true python3 -m mayflower fetch
 
-    - name: build
+    - name: Build
       run: CICD=true python3 -m mayflower build --arch=aarch64
+
+    - name: Create Tarball Directory
+      run: python3 -m mayflower create --arch=aarch64 aarch64-linux-gnu
+
+    - name: Create Tarball
+      if: always()
+      run: tar -cJf python-aarch64-linux-gnu.tar.xz  aarch64-linux-gnu
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3
@@ -68,10 +79,6 @@ jobs:
         name: aarch64-linux-gnu-logs
         path: mayflower/_logs/*
         retention-days: 5
-
-    - name: Create Tarball
-      if: always()
-      run: tar -C mayflower/_build -cJf python-aarch64-linux-gnu.tar.xz  aarch64-linux-gnu
 
     - name: Python build
       uses: actions/upload-artifact@v3
@@ -89,7 +96,13 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Build
-      run: CICD=true python3 -m mayflower.build.darwin
+      run: CICD=true python3 -m mayflower build
+
+    - name: Create Tarball Directory
+      run: python3 -m mayflower create x86_64-macos
+
+    - name: Create Tarball
+      run: tar -cJf python-x86_64-macos.tar.xz x86_64-macos
 
     - name: MacOS Logs
       uses: actions/upload-artifact@v3
@@ -98,9 +111,6 @@ jobs:
         name: x86_64-macos-logs
         path: mayflower/_logs/*
         retention-days: 5
-
-    - name: Create Tarball
-      run: tar -C mayflower/_build -cJf python-x86_64-macos.tar.xz x86_64-macos
 
     - name: Python build
       uses: actions/upload-artifact@v3
@@ -122,8 +132,11 @@ jobs:
       - name: Build Python with Mayflower
         run: python -m mayflower build --arch=x86_64
 
+      - name: Create Tarball Directory
+        run: python3 -m mayflower create x86_64-windows
+
       - name: Create Zipfile from build
-        run: Compress-Archive -Path .\mayflower\_build\* -DestinationPath .\python-x86_64-windows.zip
+        run: Compress-Archive -Path x86_64-windows -DestinationPath .\python-x86_64-windows.zip
 
       - name: Upload Build Logs
         uses: actions/upload-artifact@v3
