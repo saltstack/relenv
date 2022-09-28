@@ -112,7 +112,7 @@ def download_url(url, dest):
             if n == 3:
                 raise
             print("Unable to download: %s %r".format(url, exc))
-            time.sleep(n + 1)
+            time.sleep(n + 1 * 10)
     fout = open(local, 'wb')
     block = fin.read(10240)
     try:
