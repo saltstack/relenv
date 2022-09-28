@@ -1,11 +1,10 @@
 from .common import *
 import textwrap
 
+
 def populate_env(env, dirs):
-    env["CC"] = "{}-gcc -no-pie".format(
-        env["MAYFLOWER_HOST"])
-    env["CXX"] = "{}-g++ -no-pie".format(
-        env["MAYFLOWER_HOST"])
+    env["CC"] = "{}-gcc -no-pie".format(env["MAYFLOWER_HOST"])
+    env["CXX"] = "{}-g++ -no-pie".format(env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
@@ -40,40 +39,52 @@ def populate_env(env, dirs):
 
 
 def build_bzip2(env, dirs, logfp):
-    runcmd([
-        "make",
-        "-j8",
-        "PREFIX={}".format(dirs.prefix),
-        "LDFLAGS={}".format(env["LDFLAGS"]),
-        "CFLAGS=-fPIC",
-        "CC={}".format(env["CC"]),
-        "BUILD={}".format("x86_64-linux-gnu"),
-        "HOST={}".format(env["MAYFLOWER_HOST"]),
-        "install",
-    ], env=env, stderr=logfp, stdout=logfp)
-    runcmd([
-        "make",
-        "-f",
-        "Makefile-libbz2_so",
-        "CC={}".format(env["CC"]),
-        "LDFLAGS={}".format(env["LDFLAGS"]),
-        "BUILD={}".format("x86_64-linux-gnu"),
-        "HOST={}".format(env["MAYFLOWER_HOST"]),
-    ], env=env, stderr=logfp, stdout=logfp)
-    shutil.copy2(
-        "libbz2.so.1.0.8",
-        os.path.join(dirs.prefix, "lib")
+    runcmd(
+        [
+            "make",
+            "-j8",
+            "PREFIX={}".format(dirs.prefix),
+            "LDFLAGS={}".format(env["LDFLAGS"]),
+            "CFLAGS=-fPIC",
+            "CC={}".format(env["CC"]),
+            "BUILD={}".format("x86_64-linux-gnu"),
+            "HOST={}".format(env["MAYFLOWER_HOST"]),
+            "install",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
     )
+    runcmd(
+        [
+            "make",
+            "-f",
+            "Makefile-libbz2_so",
+            "CC={}".format(env["CC"]),
+            "LDFLAGS={}".format(env["LDFLAGS"]),
+            "BUILD={}".format("x86_64-linux-gnu"),
+            "HOST={}".format(env["MAYFLOWER_HOST"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
+    shutil.copy2("libbz2.so.1.0.8", os.path.join(dirs.prefix, "lib"))
 
 
 def build_gdbm(env, dirs, logfp):
-    runcmd([
-        './configure',
-        "--prefix={}".format(dirs.prefix),
-        "--enable-libgdbm-compat",
-        "--build=x86_64-linux-gnu",
-        "--host={}".format(env["MAYFLOWER_HOST"]),
-    ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            "./configure",
+            "--prefix={}".format(dirs.prefix),
+            "--enable-libgdbm-compat",
+            "--build=x86_64-linux-gnu",
+            "--host={}".format(env["MAYFLOWER_HOST"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
@@ -86,50 +97,73 @@ def build_ncurses(env, dirs, logfp):
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "progs", "tic"], stderr=logfp, stdout=logfp)
     os.chdir(dirs.source)
-    runcmd([
-        str(configure),
-        "--prefix=/",
-        "--with-shared",
-        "--without-cxx-shared",
-        "--without-static",
-        "--without-cxx",
-        "--enable-widec",
-        "--without-normal",
-        "--disable-stripping",
-        "--build=x86_64-linux-gnu",
-        "--host={}".format(env["MAYFLOWER_HOST"]),
-    ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            str(configure),
+            "--prefix=/",
+            "--with-shared",
+            "--without-cxx-shared",
+            "--without-static",
+            "--without-cxx",
+            "--enable-widec",
+            "--without-normal",
+            "--disable-stripping",
+            "--build=x86_64-linux-gnu",
+            "--host={}".format(env["MAYFLOWER_HOST"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
-    runcmd([
-        "make",
-        "DESTDIR={}".format(dirs.prefix),
-        "TIC_PATH={}".format(str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")),
-        "install"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            "make",
+            "DESTDIR={}".format(dirs.prefix),
+            "TIC_PATH={}".format(str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")),
+            "install",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
 
 
 def build_libffi(env, dirs, logfp):
-    runcmd([
-        './configure',
-        "--prefix={}".format(dirs.prefix),
-        "--disable-multi-os-directory",
-        "--build=x86_64-linux-gnu",
-        "--host={}".format(env["MAYFLOWER_HOST"]),
-    ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            "./configure",
+            "--prefix={}".format(dirs.prefix),
+            "--disable-multi-os-directory",
+            "--build=x86_64-linux-gnu",
+            "--host={}".format(env["MAYFLOWER_HOST"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     # libffi doens't want to honor libdir, force install to lib instead of lib64
-    runcmd(["sed", "-i", "s/lib64/lib/g", "Makefile"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        ["sed", "-i", "s/lib64/lib/g", "Makefile"], env=env, stderr=logfp, stdout=logfp
+    )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
 def build_zlib(env, dirs, logfp):
     env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
-    runcmd([
-        './configure',
-        "--prefix={}".format(dirs.prefix),
-        "--libdir={}/lib".format(dirs.prefix),
-        "--shared",
-        "--archs=\"-arch {}\"".format(env["MAYFLOWER_ARCH"]),
-    ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            "./configure",
+            "--prefix={}".format(dirs.prefix),
+            "--libdir={}/lib".format(dirs.prefix),
+            "--shared",
+            '--archs="-arch {}"'.format(env["MAYFLOWER_ARCH"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     runcmd(["make", "-no-pie", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
@@ -140,16 +174,22 @@ def build_krb(env, dirs, logfp):
         env["ac_cv_func_regcomp"] = "yes"
         env["ac_cv_printf_positional"] = "yes"
     os.chdir(dirs.source / "src")
-    runcmd([
-        './configure',
-        "--prefix={}".format(dirs.prefix),
-        "--without-system-verto",
-        "--without-libedit",
-        "--build=x86_64-linux-gnu",
-        "--host={}".format(env["MAYFLOWER_HOST"]),
-    ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            "./configure",
+            "--prefix={}".format(dirs.prefix),
+            "--without-system-verto",
+            "--without-libedit",
+            "--build=x86_64-linux-gnu",
+            "--host={}".format(env["MAYFLOWER_HOST"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
 
 PATCH = """--- ./setup.py
 +++ ./setup.py
@@ -163,23 +203,37 @@ PATCH = """--- ./setup.py
          tmpfile = os.path.join(self.build_temp, 'multiarch')
 """
 
+
 def build_python(env, dirs, logfp):
     env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
-        prefix=dirs.prefix, ldflags=env["LDFLAGS"])
+        prefix=dirs.prefix, ldflags=env["LDFLAGS"]
+    )
 
     # Needed when using a toolchain even if build and host match.
-    runcmd(["sed", "-i", 's/ac_cv_buggy_getaddrinfo=yes/ac_cv_buggy_getaddrinfo=no/g', 'configure'])
-    runcmd(["sed", "-i", 's/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g', 'configure'])
+    runcmd(
+        [
+            "sed",
+            "-i",
+            "s/ac_cv_buggy_getaddrinfo=yes/ac_cv_buggy_getaddrinfo=no/g",
+            "configure",
+        ]
+    )
+    runcmd(
+        [
+            "sed",
+            "-i",
+            "s/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g",
+            "configure",
+        ]
+    )
 
-
-    with open('/tmp/patch', 'w') as fp:
+    with open("/tmp/patch", "w") as fp:
         fp.write(PATCH)
-    runcmd(["patch", "-p0", "-i", "/tmp/patch"],
-        env=env, stderr=logfp, stdout=logfp)
+    runcmd(["patch", "-p0", "-i", "/tmp/patch"], env=env, stderr=logfp, stdout=logfp)
 
     cmd = [
-        './configure',
-         "-v",
+        "./configure",
+        "-v",
         "--prefix={}".format(dirs.prefix),
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
@@ -197,19 +251,16 @@ def build_python(env, dirs, logfp):
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
-        fp.write(
-            "*disabled*\n"
-            "_tkinter\n"
-            "nsl\n"
-            "nis\n"
-        )
+        fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
-    #MAYFLOWERCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
+    # MAYFLOWERCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] == "aarch64":
-        python = pathlib.Path(dirs.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
+        python = (
+            pathlib.Path(dirs.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
+        )
     env["PYTHONUSERBASE"] = dirs.prefix
     runcmd([python, "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
@@ -221,7 +272,7 @@ build.add(
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "version": "1.1.1q",
-        #"md5sum": "2aad5635f9bb338bc2c6b7d19cbc9676",
+        # "md5sum": "2aad5635f9bb338bc2c6b7d19cbc9676",
     },
 )
 
@@ -269,7 +320,7 @@ build.add(
     wait_on=["readline"],
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
-        "version": "6.3"
+        "version": "6.3",
     },
 )
 
@@ -313,12 +364,12 @@ build.add(
 )
 
 build.add(
-  "readline",
-  download={
+    "readline",
+    download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
         "version": "8.1.2",
         "md5sum": "12819fa739a78a6172400f399ab34f81",
-  },
+    },
 )
 
 build.add(
@@ -338,8 +389,8 @@ build.add(
         "readline",
     ],
     download={
-       "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-       "version": "3.10.7",
+        "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+        "version": "3.10.7",
     },
 )
 
@@ -352,9 +403,12 @@ build.add(
     ],
 )
 
+
 def main(argparse):
     run_build(build, argparse)
 
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
+
     main(ArgumentParser())

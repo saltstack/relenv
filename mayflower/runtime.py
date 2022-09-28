@@ -9,15 +9,14 @@ environment.
   gcc. This ensures when using pip any c dependencies are compiled against the
   proper glibc version.
 """
-import os
 import collections.abc
-import subprocess
-import pathlib
-import sys
 import importlib
+import os
+import pathlib
+import subprocess
+import sys
 
 from .common import MODULE_DIR
-
 
 SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
 
@@ -28,14 +27,8 @@ def _build_shebang(*args, **kwargs):
             return "#!<launch_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
     if os.environ.get("MAYFLOWER_PIP_DIR"):
-        return (
-            "#!/bin/sh\n"
-            "\"exec\" \"`dirname $0`/bin/python3\" \"$0\" \"$@\""
-        ).encode()
-    return (
-        "#!/bin/sh\n"
-        "\"exec\" \"`dirname $0`/python3\" \"$0\" \"$@\""
-    ).encode()
+        return ("#!/bin/sh\n" '"exec" "`dirname $0`/bin/python3" "$0" "$@"').encode()
+    return ("#!/bin/sh\n" '"exec" "`dirname $0`/python3" "$0" "$@"').encode()
 
 
 def get_config_var_wrapper(func):
@@ -54,6 +47,7 @@ def get_config_var_wrapper(func):
             if os.environ.get("MAYFLOWER_DEBUG"):
                 print(f"get_config_var call {name} {val}")
             return val
+
     return wrapped
 
 
@@ -66,14 +60,13 @@ class MayflowerImporter:
     build_time_vars = None
     sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
 
-
     def find_module(self, module_name, package_path=None):
         if module_name.startswith("sysconfig") and sys.platform == "win32":
             if self.loading_sysconfig:
                 return None
             self.loading_sysconfig = True
             return self
-        elif module_name =="pip._vendor.distlib.scripts":
+        elif module_name == "pip._vendor.distlib.scripts":
             if self.loading_pip_scripts:
                 return None
             self.loading_pip_scripts = True
@@ -90,7 +83,7 @@ class MayflowerImporter:
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
             self.loading_sysconfig = False
-        elif name =="pip._vendor.distlib.scripts":
+        elif name == "pip._vendor.distlib.scripts":
             mod = importlib.import_module(name)
             mod.ScriptMaker._build_shebang = _build_shebang
             self.loading_pip_scripts = False
@@ -111,7 +104,7 @@ class BuildTimeVars(collections.abc.Mapping):
     # This is getting set in MayflowerImporter
     _build_time_vars = {}
 
-    buildroot =  MODULE_DIR.parent.parent.parent.parent
+    buildroot = MODULE_DIR.parent.parent.parent.parent
     toolchain = MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
 
     def __getitem__(self, key, *args, **kwargs):
@@ -126,6 +119,7 @@ class BuildTimeVars(collections.abc.Mapping):
 
     def __iter__(self):
         return iter(self._build_time_vars)
+
     def __len__(self):
         return len(self._build_time_vars)
 
@@ -138,12 +132,12 @@ def bootstrap():
         sys.exec_prefix = str(crossroot)
         sys.path = [
             str(crossroot / "lib" / "python3.10"),
-            str(crossroot / "lib"/ "python3.10" / "site-packages"),
+            str(crossroot / "lib" / "python3.10" / "site-packages"),
         ] + [x for x in sys.path if x.find("site-packages") == -1]
     # Use system openssl dirs
-    #XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
+    # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
-    if 'SSL_CERT_DIR' not in os.environ and sys.platform != "win32":
+    if "SSL_CERT_DIR" not in os.environ and sys.platform != "win32":
         try:
             proc = subprocess.run(
                 ["openssl", "version", "-d"],
@@ -156,7 +150,7 @@ def bootstrap():
         if proc.returncode != 0:
             return
         label, _ = proc.stdout.decode().split(":")
-        path = pathlib.Path(_.strip().strip("\""))
+        path = pathlib.Path(_.strip().strip('"'))
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
     build_time_vars = BuildTimeVars()
     importer = MayflowerImporter()

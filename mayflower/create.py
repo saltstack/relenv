@@ -1,4 +1,10 @@
-import sys, os, pathlib, shutil, contextlib, tarfile
+import contextlib
+import os
+import pathlib
+import shutil
+import sys
+import tarfile
+
 from .common import MODULE_DIR
 
 
@@ -12,10 +18,9 @@ def chdir(path):
         os.chdir(cwd)
 
 
-
 def main(argparser):
     argparser.descrption = "Create Mayflower Environments"
-    argparser.add_argument('name', help='The name of the directory to create')
+    argparser.add_argument("name", help="The name of the directory to create")
     ns, argv = argparser.parse_known_args()
     if getattr(ns, "help", None):
         argparser.print_help()
@@ -48,8 +53,10 @@ def main(argparser):
     if not build.exists():
         tar = build.with_suffix(".tar.xz")
         if not tar.exists():
-            print("Error, build archive for {} doesn't exist.\n"
-                  "You might try mayflower fetch to resolve this.".format(arch))
+            print(
+                "Error, build archive for {} doesn't exist.\n"
+                "You might try mayflower fetch to resolve this.".format(arch)
+            )
             sys.exit(1)
         with chdir(build.parent):
             with tarfile.open(tar, "r:xz") as fp:
@@ -59,7 +66,3 @@ def main(argparser):
         build,
         dest,
     )
-
-
-
-
