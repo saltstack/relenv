@@ -1,4 +1,5 @@
 import pathlib
+import sys
 from textwrap import dedent
 
 import pytest
@@ -10,6 +11,9 @@ from argparse import Namespace
 
 import pathlib
 import shutil
+
+if sys.platform.startswith("win"):
+    pytest.skip("Relocate not used on windows", allow_module_level=True)
 
 class BaseProject:
     def __init__(self, root_dir):

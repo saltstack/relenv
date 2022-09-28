@@ -23,9 +23,6 @@ from mayflower.common import MODULE_DIR, work_root, work_dirs, get_toolchain
 from mayflower.relocate import main as relocate_main
 
 log = logging.getLogger(__name__)
-#sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-#sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
-
 PIPE=subprocess.PIPE
 
 GREEN = "\033[0;32m"
@@ -454,11 +451,6 @@ class Builder:
             "download": download if download is None else Download(name, destination=self.downloads, **download),
         }
 
-    def download(self, name):
-        os.makedirs(dirs.downloads, exist_ok=True)
-        self.downloads[name]()
-
-
     def run(self, name, event, build_func, download):
         while event.is_set() is False:
             time.sleep(.3)
@@ -467,11 +459,7 @@ class Builder:
             os.makedirs(self.dirs.build, exist_ok=True)
 
         dirs = Dirs(self.dirs, name, self.arch)
-        state = dirs.__getstate__()
-        dirs.__setstate__(state)
-
         os.makedirs(dirs.sources, exist_ok=True)
-        os.makedirs(dirs.downloads, exist_ok=True)
         os.makedirs(dirs.logs, exist_ok=True)
         os.makedirs(dirs.prefix, exist_ok=True)
         logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
@@ -479,28 +467,27 @@ class Builder:
         # DEBUG: Uncomment to debug
         # logfp = sys.stdout
 
-        #XXX should separate downloads and builds.
-        #if self.no_download:
-        #    archive = os.path.join(dirs.downloads, os.path.basename(url))
-        #else:
-        #    archive = download_url(url, dirs.downloads)
-        #verify_checksum(archive, checksum)
+        cwd = os.getcwd()
         if download:
             extract_archive(dirs.sources, str(download.filepath))
             dirs.source = dirs.sources / download.filepath.name.split('.tar')[0]
+            os.chdir(dirs.source)
+        else:
+            os.chdir(dirs.prefix)
 
-        cwd = os.getcwd()
-        os.chdir(dirs.source)
         if sys.platform == "win32":
             env = os.environ
-            env["MAYFLOWER_HOST"] = self.triplet
-            env["MAYFLOWER_ARCH"] = self.arch
         else:
             env = {
                 "PATH": os.environ["PATH"],
-                "MAYFLOWER_HOST": self.triplet,
-                "MAYFLOWER_ARCH": self.arch,
             }
+
+        env["MAYFLOWER_HOST"] = self.triplet
+        env["MAYFLOWER_ARCH"] = self.arch
+        env["MAYFLOWER_NATIVE_PY"] = str(self.native_python)
+        if self.arch != "x86_64":
+            env["MAYFLOWER_CROSS"] = str(self.native_python.parent.parent)
+
         self.populate_env(env, dirs)
 
         logfp.write("*" * 80 + "\n")
@@ -584,7 +571,115 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
         pprint.pprint(data, stream=f)
 
 
+def finalize(env, dirs, logfp):
+    # Run relok8 to make sure the rpaths are relocatable.
+    relocate_main(dirs.prefix)
+    # Install mayflower-sysconfigdata module
+    pymodules = pathlib.Path(dirs.prefix) / "lib" / "python3.10"
+    def find_sysconfigdata(pymodules):
+        for root, dirs, files in os.walk(pymodules):
+            for file in files:
+                if file.find('sysconfigdata') > -1 and file.endswith(".py"):
+                    return file[:-3]
+    cwd = os.getcwd()
+    modname = find_sysconfigdata(pymodules)
+    path = sys.path
+    sys.path = [str(pymodules)]
+    try:
+        mod = __import__(str(modname))
+    finally:
+        os.chdir(cwd)
+        sys.path = path
+    dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
+    install_sysdata(mod, dest, dirs.prefix, dirs.toolchain)
+
+    # Lay down site customize
+    bindir = pathlib.Path(dirs.prefix) / "bin"
+    sitecustomize = bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+    with io.open(str(sitecustomize), "w") as fp:
+        fp.write(SITECUSTOMIZE)
+
+    # Lay down mayflower.runtime, we'll pip install the rest later
+    mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
+    os.makedirs(mayflowerdir, exist_ok=True)
+    runtime = MODULE_DIR / "runtime.py"
+    dest = mayflowerdir / "runtime.py"
+    with io.open(runtime, "r") as rfp:
+        with io.open(dest, "w") as wfp:
+            wfp.write(rfp.read())
+    runtime = MODULE_DIR / "common.py"
+    dest = mayflowerdir / "common.py"
+    with io.open(runtime, "r") as rfp:
+        with io.open(dest, "w") as wfp:
+            wfp.write(rfp.read())
+    init = mayflowerdir / "__init__.py"
+    init.touch()
+
+    # Install pip
+    python = dirs.prefix / "bin" / "python3"
+    if env["MAYFLOWER_ARCH"] != "x86_64":
+        env["MAYFLOWER_CROSS"] = dirs.prefix
+    runcmd([env["MAYFLOWER_NATIVE_PY"], "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
+
+
+    # XXX Is fixing shebangs still needed?
+    # Fix the shebangs in python's scripts.
+    bindir = pathlib.Path(dirs.prefix) / "bin"
+    pyex = bindir / "python3.10"
+    shebang = "#!{}".format(str(pyex))
+    for root, _dirs, files in os.walk(str(bindir)):
+        #print(root), print(dirs), print(files)
+        for file in files:
+            with open(os.path.join(root, file), "rb") as fp:
+                try:
+                    data = fp.read(len(shebang.encode())).decode()
+                except UnicodeError as exc:
+                    continue
+                except Exception as exc:
+                    print("Unhandled exception: {}".format(exc))
+                    continue
+                if data == shebang:
+                    pass
+                    #print(file)
+                    #print(repr(data))
+                else:
+                    #print("skip: {}".format(file))
+                    continue
+                data = fp.read().decode()
+            with open(os.path.join(root, file), "w") as fp:
+                fp.write("#!/bin/sh\n")
+                fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
+                fp.write(data)
+
+    def runpip(pkg):
+        pip = bindir / "pip3"
+        target = None
+        #XXX This needs to be more robust
+        if sys.platform == "linux":
+            if env["MAYFLOWER_ARCH"] != "x86_64":
+                target = dirs.prefix / "lib" / "python3.10" / "site-packages"
+        cmd =  [
+            env["MAYFLOWER_NATIVE_PY"],
+            str(pip),
+            "install",
+            str(pkg),
+        ]
+        if target:
+            cmd.append("--target={}".format(target))
+        runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+
+    runpip("wheel")
+    # This needs to handle running from the root of the git repo and also from
+    # an installed Mayflower
+    if (MODULE_DIR.parent / ".git").exists():
+        runpip(MODULE_DIR.parent)
+    else:
+        runpip("mayflower")
+
+
 def run_build(builder, argparser):
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     random.seed()
     argparser.descrption = "Build Mayflower Python Environments"
     argparser.add_argument(
@@ -609,57 +704,56 @@ def run_build(builder, argparser):
     if 'CICD' in os.environ:
         CICD = True
     builder.set_arch(ns.arch)
+
     if ns.clean:
       try:
           shutil.rmtree(builder.prefix)
           shutil.rmtree(builder.sources)
       except FileNotFoundError: pass
-    builder.no_download = False
-    if ns.no_download:
-        builder.no_download = True
 
-    import concurrent.futures
     # Start a process for each build passing it an event used to notify each
     # process if it's dependencies have finished.
-    if "RUN" in os.environ:
-        run = [_.strip() for _ in os.environ["RUN"].split(",") if _.strip()]
-    else:
-        run = builder.recipies
+    run = builder.recipies
 
-    fails = []
-    processes = {}
-    events = {}
-    sys.stdout.write("Starting downloads \n")
-    print_ui(events, processes, fails)
-    for name in run:
-        event = multiprocessing.Event()
-        event.set()
-        events[name] = event
-        download = builder.recipies[name]["download"]
-        proc = multiprocessing.Process(name=name, target=download)
-        proc.start()
-        processes[name] = proc
-
-    while processes:
-        for proc in list(processes.values()):
-            proc.join(.3)
-            # DEBUG: Comment to debug
-            print_ui(events, processes, fails)
-            if proc.exitcode is None:
+    if not ns.no_download:
+        fails = []
+        processes = {}
+        events = {}
+        sys.stdout.write("Starting downloads \n")
+        print_ui(events, processes, fails)
+        for name in run:
+            download = builder.recipies[name]["download"]
+            if download is None:
                 continue
-            processes.pop(proc.name)
-            if proc.exitcode != 0:
-                fails.append(proc.name)
-                is_failure=True
-            else:
-                is_failure=False
-    sys.stdout.write("\n")
-    if fails:
-        sys.stderr.write("The following failures were reported\n")
-        for fail in fails :
-            sys.stderr.write(fail + "\n")
-        sys.stderr.flush()
-        sys.exit(1)
+            event = multiprocessing.Event()
+            event.set()
+            events[name] = event
+            proc = multiprocessing.Process(name=name, target=download)
+            proc.start()
+            processes[name] = proc
+
+        while processes:
+            for proc in list(processes.values()):
+                proc.join(.3)
+                # DEBUG: Comment to debug
+                print_ui(events, processes, fails)
+                if proc.exitcode is None:
+                    continue
+                processes.pop(proc.name)
+                if proc.exitcode != 0:
+                    fails.append(proc.name)
+                    is_failure=True
+                else:
+                    is_failure=False
+        print_ui(events, processes, fails)
+        sys.stdout.write("\n")
+        if fails:
+            print_ui(events, processes, fails)
+            sys.stderr.write("The following failures were reported\n")
+            for fail in fails :
+                sys.stderr.write(fail + "\n")
+            sys.stderr.flush()
+            sys.exit(1)
 
     fails = []
     futures = []
@@ -721,169 +815,3 @@ def run_build(builder, argparser):
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
-    logfp = io.open(str(builder.dirs.logs / "mayflower.log"), "w")
-
-    if sys.platform == 'win32':
-        # Lay down site customize
-        bindir = pathlib.Path(builder.prefix) / "Scripts"
-        sitecustomize = bindir.parent / "Lib" / "site-packages" / "sitecustomize.py"
-        with io.open(str(sitecustomize), "w") as fp:
-            fp.write(SITECUSTOMIZE)
-
-        # Lay down mayflower.runtime, we'll pip install the rest later
-        mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
-        os.makedirs(mayflowerdir, exist_ok=True)
-        runtime = MODULE_DIR / "runtime.py"
-        dest = mayflowerdir / "runtime.py"
-        with io.open(runtime, "r") as rfp:
-            with io.open(dest, "w") as wfp:
-                wfp.write(rfp.read())
-        runtime = MODULE_DIR / "common.py"
-        dest = mayflowerdir / "common.py"
-        with io.open(runtime, "r") as rfp:
-            with io.open(dest, "w") as wfp:
-                wfp.write(rfp.read())
-        init = mayflowerdir / "__init__.py"
-        init.touch()
-
-        # Install pip
-        env = os.environ.copy()
-        python = builder.prefix / "Scripts" / "python.exe"
-        runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
-
-        def runpip(pkg):
-            # XXX Support cross pip installs on windows
-            pip = bindir / "pip3.exe"
-            env = os.environ.copy()
-            target = None
-            cmd =  [
-                str(pip),
-                "install",
-                str(pkg),
-            ]
-            print(cmd)
-            if target:
-                cmd.append("--target={}".format(target))
-            runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-        runpip("wheel")
-        # This needs to handle running from the root of the git repo and also from
-        # an installed Mayflower
-        if (MODULE_DIR.parent / ".git").exists():
-            runpip(MODULE_DIR.parent)
-        else:
-            runpip("mayflower")
-    else:
-        # Run relok8 to make sure the rpaths are relocatable.
-        builder.dirs.logs.mkdir(exist_ok=True, parents=True)
-        relocate_main(builder.prefix)
-
-
-        # Install mayflower-sysconfigdata module
-
-        pymodules = pathlib.Path(builder.prefix) / "lib" / "python3.10"
-        def find_sysconfigdata(pymodules):
-            for root, dirs, files in os.walk(pymodules):
-                for file in files:
-                    if file.find('sysconfigdata') > -1 and file.endswith(".py"):
-                        return file[:-3]
-        cwd = os.getcwd()
-        modname = find_sysconfigdata(pymodules)
-        path = sys.path
-        sys.path = [str(pymodules)]
-        try:
-            mod = __import__(str(modname))
-        finally:
-            os.chdir(cwd)
-            sys.path = path
-        dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
-        install_sysdata(mod, dest, builder.prefix, builder.toolchain)
-
-        # Lay down site customize
-        bindir = pathlib.Path(builder.prefix) / "bin"
-        sitecustomize = bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
-        with io.open(str(sitecustomize), "w") as fp:
-            fp.write(SITECUSTOMIZE)
-
-        # Lay down mayflower.runtime, we'll pip install the rest later
-        mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
-        os.makedirs(mayflowerdir, exist_ok=True)
-        runtime = MODULE_DIR / "runtime.py"
-        dest = mayflowerdir / "runtime.py"
-        with io.open(runtime, "r") as rfp:
-            with io.open(dest, "w") as wfp:
-                wfp.write(rfp.read())
-        runtime = MODULE_DIR / "common.py"
-        dest = mayflowerdir / "common.py"
-        with io.open(runtime, "r") as rfp:
-            with io.open(dest, "w") as wfp:
-                wfp.write(rfp.read())
-        init = mayflowerdir / "__init__.py"
-        init.touch()
-
-        # Install pip
-        env = os.environ.copy()
-        python = builder.prefix / "bin" / "python3"
-        if builder.arch == "aarch64":
-            python = pathlib.Path(builder.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
-            env["MAYFLOWERCROSS"] = builder.prefix
-        runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
-
-        # Install our pip wrapper
-        #for file in ["pip3", "pip3.10"]:
-        #    path = bindir / file
-        #    with io.open(str(path), "w") as fp:
-        #        fp.write(PIP_WRAPPER)
-        #    os.chmod(path, 0o744)
-
-        # Fix the shebangs in python's scripts.
-        bindir = pathlib.Path(builder.prefix) / "bin"
-        pyex = bindir / "python3.10"
-        shebang = "#!{}".format(str(pyex))
-        for root, dirs, files in os.walk(str(bindir)):
-            #print(root), print(dirs), print(files)
-            for file in files:
-                with open(os.path.join(root, file), "rb") as fp:
-                    try:
-                        data = fp.read(len(shebang.encode())).decode()
-                    except Exception as exc:
-                        print(exc)
-                        continue
-                    if data == shebang:
-                        pass
-                        #print(file)
-                        #print(repr(data))
-                    else:
-                        #print("skip: {}".format(file))
-                        continue
-                    data = fp.read().decode()
-                with open(os.path.join(root, file), "w") as fp:
-                    fp.write("#!/bin/sh\n")
-                    fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
-                    fp.write(data)
-
-        def runpip(pkg):
-            pip = bindir / "pip3"
-            env = os.environ.copy()
-            target = None
-            #XXX This needs to be more robust
-            if sys.platform == "linux":
-                if builder.arch != "x86_64":
-                    env["MAYFLOWER_CROSS"] = str(builder.native_python.parent.parent)
-                    target = pip.parent.parent / "lib" / "python3.10" / "site-packages"
-            cmd =  [
-                str(builder.native_python),
-                str(pip),
-                "install",
-                str(pkg),
-            ]
-            if target:
-                cmd.append("--target={}".format(target))
-            runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-        runpip("wheel")
-
-        # This needs to handle running from the root of the git repo and also from
-        # an installed Mayflower
-        if (MODULE_DIR.parent / ".git").exists():
-            runpip(MODULE_DIR.parent)
-        else:
-            runpip("mayflower")
