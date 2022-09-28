@@ -29,3 +29,7 @@ relok8.py
 
 # pyenv
 .python-version
+
+# nox
+.nox
+artifacts

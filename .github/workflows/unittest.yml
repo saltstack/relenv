@@ -19,11 +19,11 @@ jobs:
       run: python3 -m venv venv && source venv/bin/activate
 
     - name: Install python dependencies
-      run: pip3 install pytest
+      run: pip3 install nox
 
 
     - name: Run tests
-      run: python3 -m pytest -vv
+      run: nox -e tests
 
   unittest-osx:
 
@@ -36,11 +36,11 @@ jobs:
       run: python3 -m venv venv && source venv/bin/activate
 
     - name: Install python dependencies
-      run: pip3 install pytest
+      run: pip3 install nox
 
 
     - name: Run tests
-      run: python3 -m pytest -vv
+      run: nox -e tests
 
   unittest-windows:
 
@@ -53,8 +53,8 @@ jobs:
       run: python3 -m venv venv && venv/Scripts/activate
 
     - name: Install python dependencies
-      run: pip3 install pytest
+      run: pip3 install nox
 
 
     - name: Run tests
-      run: python3 -m pytest -vv
+      run: nox -e tests
