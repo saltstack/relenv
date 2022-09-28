@@ -49,6 +49,7 @@ def get_build():
 
 def print_ui(events, processes, fails, flipstat={}):
     if "CICD" in os.environ:
+        sys.stdout.flush()
         return
     uiline = []
     for name in events:
@@ -311,6 +312,7 @@ class Download:
         pass
 
     def __call__(self):
+        os.makedirs(self.filepath.parent, exist_ok=True)
         self.fetch_file()
         #XXX Verify the signature and log the checksum
 
