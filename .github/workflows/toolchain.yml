@@ -24,8 +24,14 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man python3-all
 
+    - name: Create virtualenv
+      run: python3 -m venv venv && source venv/bin/activate
+    
+    - name: Install nox
+      run: python3 -m pip install nox
+
     - name: Build toolchain
-      run: CICD=true python3 -m mayflower toolchain build --arch=x86_64
+      run: CICD=true nox -e toolchain_x86_64
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3
@@ -55,8 +61,14 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get install build-essential libtool-bin linux-headers-$(uname -r) help2man python3-all
 
+    - name: Create virtualenv
+      run: python3 -m venv venv && source venv/bin/activate
+    
+    - name: Install nox
+      run: python3 -m pip install nox
+
     - name: Build toolchain
-      run: CICD=true python3 -m mayflower toolchain build --arch=aarch64
+      run: CICD=true nox -e toolchain_aarch64
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3
