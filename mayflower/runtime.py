@@ -26,20 +26,42 @@ SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
 
 
 def _build_shebang(*args, **kwargs):
+    if sys.platform == "win32":
+        return "#!<launcher_dir>\\python.exe".encode()
     return SHEBANG.encode()
+
+def get_config_var_wrapper(func):
+    def wrapped(name):
+        if name == "BINDIR":
+            orig = func(name)
+            val = "./" 
+            print(f"{name} {orig} (original val)")
+            print(f"{name} {val}")
+            return val
+        else:
+            val = func(name)
+            print(f"{name} {val}")
+            return val
+    return wrapped
 
 
 class MayflowerImporter:
 
     loading_pip_scripts = False
     loading_sysconfig_data = False
+    loading_sysconfig = False
 
     build_time_vars = None
     sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
 
 
     def find_module(self, module_name, package_path=None):
-        if module_name =="pip._vendor.distlib.scripts":
+        if module_name.startswith("sysconfig") and sys.platform == "win32":
+            if self.loading_sysconfig:
+                return None
+            self.loading_sysconfig = True
+            return self
+        elif module_name =="pip._vendor.distlib.scripts":
             if self.loading_pip_scripts:
                 return None
             self.loading_pip_scripts = True
@@ -53,7 +75,9 @@ class MayflowerImporter:
 
     def load_module(self, name):
         if name.startswith("sysconfig"):
-            mod = importlib.import_module("mayflower.sysconfig")
+            mod = importlib.import_module("sysconfig")
+            mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
+            self.loading_sysconfig = False
         elif name =="pip._vendor.distlib.scripts":
             mod = importlib.import_module(name)
             mod.ScriptMaker._build_shebang = _build_shebang
@@ -109,26 +133,21 @@ def bootstrap():
     # Use system openssl dirs
     #XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
-    if 'SSL_CERT_DIR' not in os.environ:
+    if 'SSL_CERT_DIR' not in os.environ and sys.platform != "win32":
         try:
             proc = subprocess.run(
                 ["openssl", "version", "-d"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-        except Exception:
-            if os.environ.get("MAYFLOWER_DEBUG", ""):
-                # It might make sense to have some default locations to check
-                # for various OSes. For instance centos may have the
-                # certificate chain installed but no openssl binary.
+        except Exception as exc:
+            if os.environ.get("MAYFLOWER_DEBUG"):
                 print("Unable to configure openssl %s")
-        else:
-            if proc.returncode != 0:
-                return
-            label, _ = proc.stdout.decode().split(":")
-            path = pathlib.Path(_.strip().strip("\""))
-            os.environ["SSL_CERT_DIR"] = str(path / "certs")
-            os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
+        if proc.returncode != 0:
+            return
+        label, _ = proc.stdout.decode().split(":")
+        path = pathlib.Path(_.strip().strip("\""))
+        os.environ["SSL_CERT_DIR"] = str(path / "certs")
     build_time_vars = BuildTimeVars()
     importer = MayflowerImporter()
     importer.build_time_vars = build_time_vars
