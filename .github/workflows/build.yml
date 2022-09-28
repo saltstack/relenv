@@ -109,7 +109,7 @@ jobs:
         path: python-x86_64-macos.tar.xz
         retention-days: 5
 
-  build_windows:
+  build_windows_x86_64:
 
     runs-on: windows-latest
 
@@ -139,20 +139,3 @@ jobs:
           name: python-x86_64-windows.zip
           path: python-x86_64-windows.zip
           retention-days: 5
-
-  test:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Create virtualenv
-      run: python3 -m venv venv && source venv/bin/activate
-
-    - name: Install python dependencies
-      run: pip3 install pytest
-
-
-    - name: Run tests
-      run: python3 -m pytest -vv

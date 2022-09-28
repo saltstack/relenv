@@ -83,6 +83,14 @@ build.add(
 )
 
 
+build.add(
+    "mayflower-finalize",
+    build_func=finalize,
+    wait_on=[
+        "Python",
+    ],
+)
+
 def main(argparse):
     run_build(build, argparse)
 

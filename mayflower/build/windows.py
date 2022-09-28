@@ -1,7 +1,13 @@
 import glob
 import shutil
 import urllib.request
+import sys
 from .common import *
+
+if sys.platform == "win32":
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
 
 def populate_env(env, dirs):
@@ -13,7 +19,7 @@ def build_python(env, dirs, logfp):
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
-        "x64" if dirs.arch == "x86_64" else "x86",
+        "x64" if env["MAYFLOWER_ARCH"] == "x86_64" else "x86",
         "--no-tkinter",
     ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -64,6 +70,7 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "Lib"),
         dirs_exist_ok=True,
     )
+    os.makedirs(str(dirs.prefix / "Lib" / "site-packages"), exist_ok=True)
 
     # Create libs directory
     (dirs.prefix / "libs").mkdir(parents=True, exist_ok=True)
@@ -87,6 +94,63 @@ build.add(
        "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
        "version": "3.10.7",
     },
+)
+
+def finalize(env, dirs, logfp):
+    # Lay down site customize
+    bindir = pathlib.Path(dirs.prefix) / "Scripts"
+    sitepackages = dirs.prefix / "Lib" / "site-packages"
+    sitecustomize = sitepackages / "sitecustomize.py"
+    with io.open(str(sitecustomize), "w") as fp:
+        fp.write(SITECUSTOMIZE)
+
+    # Lay down mayflower.runtime, we'll pip install the rest later
+    mayflowerdir = sitepackages / "mayflower"
+    os.makedirs(mayflowerdir, exist_ok=True)
+    runtime = MODULE_DIR / "runtime.py"
+    dest = mayflowerdir / "runtime.py"
+    with io.open(runtime, "r") as rfp:
+        with io.open(dest, "w") as wfp:
+            wfp.write(rfp.read())
+    runtime = MODULE_DIR / "common.py"
+    dest = mayflowerdir / "common.py"
+    with io.open(runtime, "r") as rfp:
+        with io.open(dest, "w") as wfp:
+            wfp.write(rfp.read())
+    init = mayflowerdir / "__init__.py"
+    init.touch()
+
+    # Install pip
+    python = dirs.prefix / "Scripts" / "python.exe"
+    runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
+
+    def runpip(pkg):
+        # XXX Support cross pip installs on windows
+        pip = bindir / "pip3.exe"
+        env = os.environ.copy()
+        target = None
+        cmd =  [
+            str(pip),
+            "install",
+            str(pkg),
+        ]
+        print(cmd)
+        if target:
+            cmd.append("--target={}".format(target))
+        runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runpip("wheel")
+    # This needs to handle running from the root of the git repo and also from
+    # an installed Mayflower
+    if (MODULE_DIR.parent / ".git").exists():
+        runpip(MODULE_DIR.parent)
+    else:
+        runpip("mayflower")
+
+
+build.add(
+    "mayflower-finalize",
+    build_func=finalize,
+    wait_on=["Python"],
 )
 
 

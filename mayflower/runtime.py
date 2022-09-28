@@ -19,37 +19,33 @@ import importlib
 from .common import MODULE_DIR
 
 
-SHEBANG = """#!/bin/sh
-"exec" "`dirname $0`/python3" "$0" "$@"
-"""
 SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
 
 
 def _build_shebang(*args, **kwargs):
     if sys.platform == "win32":
+        if os.environ.get("MAYFLOWER_PIP_DIR"):
+            return "#!<launch_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
-    return SHEBANG.encode()
-
-def get_config_var_wrapper(func):
-    def wrapped(name):
-        if name == "BINDIR":
-            orig = func(name)
-            val = "./" 
-            print(f"{name} {orig} (original val)")
-            print(f"{name} {val}")
-            return val
-        else:
-            val = func(name)
-            print(f"{name} {val}")
-            return val
-    return wrapped
+    if os.environ.get("MAYFLOWER_PIP_DIR"):
+        return (
+            "#!/bin/sh\n"
+            "\"exec\" \"`dirname $0`/bin/python3\" \"$0\" \"$@\""
+        ).encode()
+    return (
+        "#!/bin/sh\n"
+        "\"exec\" \"`dirname $0`/python3\" \"$0\" \"$@\""
+    ).encode()
 
 
 def get_config_var_wrapper(func):
     def wrapped(name):
         if name == "BINDIR":
             orig = func(name)
-            val = "./"
+            if os.environ.get("MAYFLOWER_PIP_DIR"):
+                val = "../"
+            else:
+                val = "./"
             if os.environ.get("MAYFLOWER_DEBUG"):
                 print(f"get_config_var call {name} old: {orig} new: {val}")
             return val
@@ -134,10 +130,8 @@ class BuildTimeVars(collections.abc.Mapping):
         return len(self._build_time_vars)
 
 
-
-
 def bootstrap():
-    cross = os.environ.get("MAYFLOWERCROSS", "")
+    cross = os.environ.get("MAYFLOWER_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()
         sys.prefix = str(crossroot)
