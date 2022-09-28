@@ -745,7 +745,7 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
             relpath = pathlib.Path(relroot) / f
             matches = False
             for g in globs:
-                toarch = dirs.prefix.name / relpath.relative_to(relpath.root)
+                toarch = toarchive.name / relpath.relative_to(relpath.root)
                 if glob.fnmatch.fnmatch(str(relpath), g):
                     matches = True
                     break
