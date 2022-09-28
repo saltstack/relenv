@@ -1,6 +1,7 @@
 import glob
 import shutil
 import urllib.request
+import sys
 from .common import *
 
 if sys.platform == "win32":
@@ -98,12 +99,13 @@ build.add(
 def finalize(env, dirs, logfp):
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "Scripts"
-    sitecustomize = dirs.prefix / "Lib" / "site-packages" / "sitecustomize.py"
+    sitepackages = dirs.prefix / "Lib" / "site-packages"
+    sitecustomize = sitepackages / "sitecustomize.py"
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
     # Lay down mayflower.runtime, we'll pip install the rest later
-    mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
+    mayflowerdir = sitepackages / "mayflower"
     os.makedirs(mayflowerdir, exist_ok=True)
     runtime = MODULE_DIR / "runtime.py"
     dest = mayflowerdir / "runtime.py"
