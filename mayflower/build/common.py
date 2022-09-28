@@ -3,6 +3,7 @@ import os.path
 import codecs
 import hashlib
 import pathlib
+import glob
 import shutil
 import tarfile
 import tempfile
@@ -722,6 +723,39 @@ def finalize(env, dirs, logfp):
         runpip(MODULE_DIR.parent)
     else:
         runpip("mayflower")
+    globs = [
+        '/bin/python*',
+        '/bin/pip*',
+        '*.so',
+        '*.a',
+        '*.py',
+    ]
+    archive = dirs.prefix.with_suffix('.tar.xz')
+    with tarfile.open(archive, mode="w:xz") as fp:
+        create_archive(fp, dirs.prefix, globs, logfp)
+
+
+
+def create_archive(tarfp, toarchive, globs, logfp=None):
+    if logfp:
+        logfp.write(f"Creating archive {tarfp.name}\n")
+    for root, _dirs, files in os.walk(toarchive):
+        relroot = root.split(str(toarchive))[1]
+        for f in files:
+            relpath = pathlib.Path(relroot) / f
+            matches = False
+            for g in globs:
+                toarch = dirs.prefix.name / relpath.relative_to(relpath.root)
+                if glob.fnmatch.fnmatch(str(relpath), g):
+                    matches = True
+                    break
+            if matches:
+                if logfp:
+                    logfp.write("Adding {}\n".format(toarch))
+                tarfp.add(str(pathlib.Path(root) / f), toarch, recursive=False)
+            else:
+                if logfp:
+                    logfp.write("Skipping {}\n".format(toarch))
 
 
 def run_build(builder, argparser):
@@ -739,7 +773,20 @@ def run_build(builder, argparser):
         "--clean",
         default=False,
         action="store_true",
-        help="Clean up before running the build",
+        help=(
+            "Clean up before running the build. This option will remove the "
+            "logs, src, build, and previous tarball."
+        ),
+    )
+    argparser.add_argument(
+        "--no-cleanup",
+        default=False,
+        action="store_true",
+        help=(
+            "By default the build directory is removed after the build "
+            "tarball is created. Setting this option will leave the build "
+            "directory in place."
+        ),
     )
     # XXX We should automatically skip downloads that can be verified as not
     # being corrupt and this can become --force-download
@@ -857,14 +904,20 @@ def run_build(builder, argparser):
                 if not waits[name] and not events[name].is_set():
                     events[name].set()
 
+    def cleanup():
+        if not ns.no_cleanup:
+            shutil.rmtree(builder.prefix)
+
     if fails:
         sys.stderr.write("The following failures were reported\n")
         for fail in fails:
             sys.stderr.write(fail + "\n")
         sys.stderr.flush()
+        cleanup()
         sys.exit(1)
     time.sleep(0.1)
     # DEBUG: Comment to debug
     print_ui(events, processes, fails)
     sys.stdout.write("\n")
     sys.stdout.flush()
+    cleanup()

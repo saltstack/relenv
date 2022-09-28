@@ -148,6 +148,14 @@ def finalize(env, dirs, logfp):
         runpip(MODULE_DIR.parent)
     else:
         runpip("mayflower")
+    globs = [
+        "*.exe",
+        "*.py",
+        "*.dll",
+    ]
+    archive = dirs.prefix.with_suffix('.tar.xz')
+    with tarfile.open(archive, mode="w:xz") as fp:
+        create_archive(fp, dirs.prefix, globs, logfp)
 
 
 build.add(
