@@ -41,34 +41,45 @@ build = Builder(populate_env=populate_env)
 
 build.add(
     "OpenSSL",
-    "https://www.openssl.org/source/openssl-1.1.1n.tar.gz",
-    "2aad5635f9bb338bc2c6b7d19cbc9676",
     build_func=build_openssl,
+    download={
+        "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
+        "version": "1.1.1q",
+        #"md5sum": "2aad5635f9bb338bc2c6b7d19cbc9676",
+    },
 )
 
 build.add(
     "XZ",
-    "http://tukaani.org/xz/xz-5.2.3.tar.gz",
-    'ef68674fb47a8b8e741b34e429d86e9d',
+    download={
+        "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+        "version": "5.2.3",
+        "md5sum": "ef68674fb47a8b8e741b34e429d86e9d",
+    },
 )
 
 build.add(
     name="SQLite",
-    url="https://sqlite.org/2022/sqlite-autoconf-3370200.tar.gz",
-    checksum='683cc5312ee74e71079c14d24b7a6d27',
     build_func=build_sqlite,
+    download={
+        "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
+        "version": "3370200",
+        "md5sum": "683cc5312ee74e71079c14d24b7a6d27",
+    },
 )
 
 build.add(
     "Python",
-    "https://www.python.org/ftp/python/3.10.6/Python-3.10.6.tar.xz",
-    None,
     build_func=build_python,
     wait_on=[
         "OpenSSL",
         "XZ",
         "SQLite",
-    ]
+    ],
+    download={
+       "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+       "version": "3.10.7",
+    },
 )
 
 

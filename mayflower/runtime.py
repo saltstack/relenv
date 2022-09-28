@@ -30,17 +30,19 @@ def _build_shebang(*args, **kwargs):
         return "#!<launcher_dir>\\python.exe".encode()
     return SHEBANG.encode()
 
+
 def get_config_var_wrapper(func):
     def wrapped(name):
         if name == "BINDIR":
             orig = func(name)
-            val = "./" 
-            print(f"{name} {orig} (original val)")
-            print(f"{name} {val}")
+            val = "./"
+            if os.environ.get("MAYFLOWER_DEBUG"):
+                print(f"get_config_var call {name} old: {orig} new: {val}")
             return val
         else:
             val = func(name)
-            print(f"{name} {val}")
+            if os.environ.get("MAYFLOWER_DEBUG"):
+                print(f"get_config_var call {name} {val}")
             return val
     return wrapped
 

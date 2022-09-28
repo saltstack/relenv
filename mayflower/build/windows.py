@@ -82,9 +82,11 @@ build = Builder(populate_env=populate_env)
 
 build.add(
     "Python",
-    "https://www.python.org/ftp/python/3.10.7/Python-3.10.7.tar.xz",
-    None,
     build_func=build_python,
+    download={
+       "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+       "version": "3.10.7",
+    },
 )
 
 
