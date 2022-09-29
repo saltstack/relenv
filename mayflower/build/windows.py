@@ -151,9 +151,10 @@ def finalize(env, dirs, logfp):
     globs = [
         "*.exe",
         "*.py",
+        "*.pyd",
         "*.dll",
     ]
-    archive = dirs.prefix.with_suffix('.tar.xz')
+    archive = dirs.prefix.with_suffix(".tar.xz")
     with tarfile.open(archive, mode="w:xz") as fp:
         create_archive(fp, dirs.prefix, globs, logfp)
 

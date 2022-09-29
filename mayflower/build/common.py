@@ -543,19 +543,6 @@ class Builder:
             logfp.close()
 
 
-# XXX This can be removed.
-# PIP_WRAPPER="""#!/bin/sh
-# "exec" "`dirname $0`/python3" "$0" "$@"
-## -*- coding: utf-8 -*-
-# import re
-# import sys
-# from pip._internal.cli.main import main
-# if __name__ == "__main__":
-#    sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
-#    sys.exit(main())
-# """
-
-
 SITECUSTOMIZE = """\"\"\"
 Mayflower site customize
 \"\"\"
@@ -724,38 +711,38 @@ def finalize(env, dirs, logfp):
     else:
         runpip("mayflower")
     globs = [
-        '/bin/python*',
-        '/bin/pip*',
-        '*.so',
-        '*.a',
-        '*.py',
+        "/bin/python*",
+        "/bin/pip*",
+        "/lib/python3.10/site-packages/pip/_vendor/certifi/*.pem",
+        "*.so",
+        "*.a",
+        "*.py",
     ]
-    archive = dirs.prefix.with_suffix('.tar.xz')
+    archive = dirs.prefix.with_suffix(".tar.xz")
     with tarfile.open(archive, mode="w:xz") as fp:
         create_archive(fp, dirs.prefix, globs, logfp)
 
 
-
 def create_archive(tarfp, toarchive, globs, logfp=None):
+    logfp.write(f"CURRENT DIR {os.getcwd()}")
     if logfp:
         logfp.write(f"Creating archive {tarfp.name}\n")
     for root, _dirs, files in os.walk(toarchive):
-        relroot = root.split(str(toarchive))[1]
+        relroot = pathlib.Path(root).relative_to(toarchive)
         for f in files:
-            relpath = pathlib.Path(relroot) / f
+            relpath = relroot / f
             matches = False
             for g in globs:
-                toarch = toarchive.name / relpath.relative_to(relpath.root)
-                if glob.fnmatch.fnmatch(str(relpath), g):
+                if glob.fnmatch.fnmatch("/" / relpath, g):
                     matches = True
                     break
             if matches:
                 if logfp:
-                    logfp.write("Adding {}\n".format(toarch))
-                tarfp.add(str(pathlib.Path(root) / f), toarch, recursive=False)
+                    logfp.write("Adding {}\n".format(relpath))
+                tarfp.add(relpath, relpath, recursive=False)
             else:
                 if logfp:
-                    logfp.write("Skipping {}\n".format(toarch))
+                    logfp.write("Skipping {}\n".format(relpath))
 
 
 def run_build(builder, argparser):
@@ -796,6 +783,16 @@ def run_build(builder, argparser):
         action="store_true",
         help="Skip downloading source tarballs",
     )
+    argparser.add_argument(
+        "--steps",
+        default=None,
+        help=(
+            "Comman separated list of steps to run. When this option is used to "
+            "invoke builds, depenencies of the steps are ignored.  This option "
+            "should be used with care, as it's easy to request a situation that "
+            "has no chance of being succesfull. "
+        ),
+    )
     ns, argv = argparser.parse_known_args()
     if getattr(ns, "help", None):
         argparser.print_help()
@@ -804,18 +801,28 @@ def run_build(builder, argparser):
     if "CICD" in os.environ:
         CICD = True
     builder.set_arch(ns.arch)
+    if ns.steps:
+        ns.steps = [_.strip() for _ in ns.steps.split(",")]
+        run = ns.steps
+    else:
+        run = builder.recipies
 
     if ns.clean:
-        try:
-            shutil.rmtree(builder.prefix)
-            shutil.rmtree(builder.sources)
-        except FileNotFoundError:
-            pass
+        # Clean directories
+        for _ in [builder.prefix, builder.sources]:
+            try:
+                shutil.rmtree(_)
+            except FileNotFoundError:
+                pass
+        # Clean files
+        for _ in [builder.prefix.with_suffix(".tar.xz")]:
+            try:
+                os.remove(_)
+            except FileNotFoundError:
+                pass
 
     # Start a process for each build passing it an event used to notify each
     # process if it's dependencies have finished.
-    run = builder.recipies
-
     if not ns.no_download:
         fails = []
         processes = {}
@@ -870,9 +877,17 @@ def run_build(builder, argparser):
         event = multiprocessing.Event()
         events[name] = event
         kwargs = dict(builder.recipies[name])
-        waits[name] = kwargs.pop("wait_on", [])
+
+        # Determine needed dependency recipies.
+        wait_on = kwargs.pop("wait_on", [])
+        for _ in wait_on[:]:
+            if _ not in run:
+                wait_on.remove(_)
+
+        waits[name] = wait_on
         if not waits[name]:
             event.set()
+
         proc = multiprocessing.Process(
             name=name, target=builder.run, args=(name, event), kwargs=kwargs
         )

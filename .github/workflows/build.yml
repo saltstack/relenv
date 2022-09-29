@@ -26,10 +26,10 @@ jobs:
 
 
     - name: Create Tarball Directory
-      run: python3 -m mayflower create x86_84-linux-gnu
+      run: python3 -m mayflower create x86_64-linux-gnu
 
     - name: Create Tarball
-      run: tar  -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
+      run: tar -cJf python-x86_64-linux-gnu.tar.xz  x86_64-linux-gnu
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3

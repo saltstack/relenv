@@ -4,6 +4,7 @@ import pathlib
 import shutil
 import sys
 import tarfile
+import tempfile
 
 from .common import MODULE_DIR
 
@@ -26,6 +27,9 @@ def main(argparser):
         argparser.print_help()
         sys.exit(0)
     name = ns.name
+    if pathlib.Path(name).exists():
+        print("The requested path already exists.")
+        sys.exit(1)
     plat = sys.platform
     if plat == "win32":
         arch = "x86_64"
@@ -55,15 +59,12 @@ def main(argparser):
     build = MODULE_DIR / "_build" / triplet
     tar = build.with_suffix(".tar.xz")
     if not tar.exists():
-        print("Error, build archive for {} doesn't exist.\n"
-              "You might try mayflower fetch to resolve this.".format(arch))
+        print(
+            "Error, build archive for {} doesn't exist.\n"
+            "You might try mayflower fetch to resolve this.".format(arch)
+        )
         sys.exit(1)
-    with chdir(build.parent):
-        with tarfile.open(tar, "r:xz") as fp:
-            fp.extractall()
-    dest = pathlib.Path(name).resolve()
-    dest.mkdir()
-    shutil.copytree(
-        build,
-        dest,
-    )
+    tmp = tempfile.mkdtemp()
+    with tarfile.open(tar, "r:xz") as fp:
+        for f in fp:
+            fp.extract(f, name)
