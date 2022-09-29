@@ -17,15 +17,12 @@ jobs:
 
     - name: Install Dependencies
       run: sudo apt-get install build-essential bison linux-headers-$(uname -r)
-    
-    - name: Create virtualenv
-      run: python3 -m venv venv && source venv/bin/activate
-    
-    - name: Install nox
-      run: python3 -m pip install nox
 
-    - name: Run build on downloaded toolchain
-      run: CICD=true nox -e build_x86_64
+    - name: fetch toolchain
+      run: CICD=true python3 -m mayflower toolchain download --arch=x86_64
+
+    - name: build
+      run: CICD=true python3 -m mayflower build --arch=x86_64
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3
@@ -55,14 +52,14 @@ jobs:
     - name: Install Dependencies
       run: sudo apt-get install build-essential bison linux-headers-$(uname -r)
 
-    - name: Create virtualenv
-      run: python3 -m venv venv && source venv/bin/activate
-    
-    - name: Install nox
-      run: python3 -m pip install nox
+    - name: fetch toolchain
+      run: CICD=true python3 -m mayflower toolchain download --arch=aarch64
 
-    - name: Run build on downloaded toolchain
-      run: CICD=true nox -e build_aarch64
+    - name: fetch native build
+      run: CICD=true python3 -m mayflower fetch
+
+    - name: build
+      run: CICD=true python3 -m mayflower build --arch=aarch64
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3
@@ -91,14 +88,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Create virtualenv
-      run: python3 -m venv venv && source venv/bin/activate
-    
-    - name: Install nox
-      run: python3 -m pip install nox
-
-    - name: Run build on downloaded toolchain
-      run: CICD=true nox -e build_x86_64
+    - name: Build
+      run: CICD=true python3 -m mayflower.build.darwin
 
     - name: MacOS Logs
       uses: actions/upload-artifact@v3
@@ -128,14 +119,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Create virtualenv
-        run: python -m venv venv && .\venv\Scripts\activate
-      
-      - name: Install nox
-        run: python -m pip install nox
-
-      - name: Run build on downloaded toolchain
-        run: nox -e build_x86_64
+      - name: Build Python with Mayflower
+        run: python -m mayflower build --arch=x86_64
 
       - name: Create Zipfile from build
         run: Compress-Archive -Path .\mayflower\_build\* -DestinationPath .\python-x86_64-windows.zip
