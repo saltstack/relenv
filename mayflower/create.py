@@ -27,7 +27,10 @@ def main(argparser):
         sys.exit(0)
     name = ns.name
     plat = sys.platform
-    arch = os.uname().machine
+    if plat == "win32":
+        arch = "x86_64"
+    else:
+        arch = os.uname().machine
     if plat == "linux":
         if arch in ("x86_64", "aarch64"):
             triplet = "{}-{}-gnu".format(arch, plat)
@@ -50,18 +53,16 @@ def main(argparser):
         print("Unknown platform {}".format(plat))
         sys.exit(1)
     build = MODULE_DIR / "_build" / triplet
-    if not build.exists():
-        tar = build.with_suffix(".tar.xz")
-        if not tar.exists():
-            print(
-                "Error, build archive for {} doesn't exist.\n"
-                "You might try mayflower fetch to resolve this.".format(arch)
-            )
-            sys.exit(1)
-        with chdir(build.parent):
-            with tarfile.open(tar, "r:xz") as fp:
-                fp.extractall()
+    tar = build.with_suffix(".tar.xz")
+    if not tar.exists():
+        print("Error, build archive for {} doesn't exist.\n"
+              "You might try mayflower fetch to resolve this.".format(arch))
+        sys.exit(1)
+    with chdir(build.parent):
+        with tarfile.open(tar, "r:xz") as fp:
+            fp.extractall()
     dest = pathlib.Path(name).resolve()
+    dest.mkdir()
     shutil.copytree(
         build,
         dest,
