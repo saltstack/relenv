@@ -6,6 +6,7 @@ from .common import *
 
 if sys.platform == "win32":
     import ctypes
+
     kernel32 = ctypes.windll.kernel32
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
@@ -91,10 +92,11 @@ build.add(
     "Python",
     build_func=build_python,
     download={
-       "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-       "version": "3.10.7",
+        "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+        "version": "3.10.7",
     },
 )
+
 
 def finalize(env, dirs, logfp):
     # Lay down site customize
@@ -129,7 +131,7 @@ def finalize(env, dirs, logfp):
         pip = bindir / "pip3.exe"
         env = os.environ.copy()
         target = None
-        cmd =  [
+        cmd = [
             str(pip),
             "install",
             str(pkg),
@@ -138,6 +140,7 @@ def finalize(env, dirs, logfp):
         if target:
             cmd.append("--target={}".format(target))
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+
     runpip("wheel")
     # This needs to handle running from the root of the git repo and also from
     # an installed Mayflower
@@ -160,4 +163,5 @@ def main(argparse):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
+
     main(ArgumentParser())

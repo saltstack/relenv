@@ -1,19 +1,24 @@
 import pathlib
+import shutil
 import sys
 from textwrap import dedent
-
-import pytest
 from unittest.mock import MagicMock, call, patch
 
-from mayflower.relocate import is_elf, is_in_dir, is_macho, main, parse_readelf_d, patch_rpath, handle_elf
+import pytest
 
-from argparse import Namespace
-
-import pathlib
-import shutil
+from mayflower.relocate import (
+    handle_elf,
+    is_elf,
+    is_in_dir,
+    is_macho,
+    main,
+    parse_readelf_d,
+    patch_rpath,
+)
 
 if sys.platform.startswith("win"):
     pytest.skip("Relocate not used on windows", allow_module_level=True)
+
 
 class BaseProject:
     def __init__(self, root_dir):
@@ -44,6 +49,7 @@ class BaseProject:
 
     def __exit__(self, *exc):
         self.destroy_project()
+
 
 class LinuxProject(BaseProject):
     def add_simple_elf(self, name, *relpath):
@@ -157,7 +163,10 @@ def test_patch_rpath(tmp_path):
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        with patch("mayflower.relocate.parse_rpath", return_value=[str(tmp_path / "old" / "lib")]):
+        with patch(
+            "mayflower.relocate.parse_rpath",
+            return_value=[str(tmp_path / "old" / "lib")],
+        ):
             assert patch_rpath(path, new_rpath) == new_rpath
 
 
@@ -165,7 +174,10 @@ def test_patch_rpath_failed(tmp_path):
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=1)):
-        with patch("mayflower.relocate.parse_rpath", return_value=[str(tmp_path / "old" / "lib")]):
+        with patch(
+            "mayflower.relocate.parse_rpath",
+            return_value=[str(tmp_path / "old" / "lib")],
+        ):
             assert patch_rpath(path, new_rpath) is False
 
 
@@ -181,7 +193,10 @@ def test_patch_rpath_remove_non_relative(tmp_path):
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        with patch("mayflower.relocate.parse_rpath", return_value=[str(tmp_path / "old" / "lib")]):
+        with patch(
+            "mayflower.relocate.parse_rpath",
+            return_value=[str(tmp_path / "old" / "lib")],
+        ):
             assert patch_rpath(path, new_rpath) == new_rpath
 
 
@@ -212,7 +227,9 @@ def test_handle_elf(tmp_path):
 	libcrypt.so.2 => {libcrypt} (0x0123456789)
 	libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
 	libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
-    """.format(libcrypt=libcrypt).encode()
+    """.format(
+        libcrypt=libcrypt
+    ).encode()
 
     with proj:
         with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
@@ -239,7 +256,9 @@ def test_handle_elf_rpath_only(tmp_path):
 	fake.so.2 => {fake} (0x0123456789)
 	libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
 	libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
-    """.format(libcrypt=libcrypt, fake=fake).encode()
+    """.format(
+        libcrypt=libcrypt, fake=fake
+    ).encode()
 
     with proj:
         libcrypt.touch()

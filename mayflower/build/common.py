@@ -23,7 +23,7 @@ from mayflower.common import MODULE_DIR, work_root, work_dirs, get_toolchain
 from mayflower.relocate import main as relocate_main
 
 log = logging.getLogger(__name__)
-PIPE=subprocess.PIPE
+PIPE = subprocess.PIPE
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -33,8 +33,9 @@ MOVEUP = "\033[F"
 
 
 CICD = False
-NODOWLOAD= False
+NODOWLOAD = False
 WORK_IN_CWD = False
+
 
 def get_build():
     if WORK_IN_CWD:
@@ -58,7 +59,7 @@ def print_ui(events, processes, fails, flipstat={}):
                 flipstat[name] = (0, now)
             if flipstat[name][1] < now:
                 flipstat[name] = (1 - flipstat[name][0], now + random.random())
-            status = " {}{}".format(GREEN, ' ' if flipstat[name][0] == 1 else '.')
+            status = " {}{}".format(GREEN, " " if flipstat[name][0] == 1 else ".")
         elif name in fails:
             status = " {}\u2718".format(RED)
         else:
@@ -68,6 +69,7 @@ def print_ui(events, processes, fails, flipstat={}):
     sys.stdout.write("\r")
     sys.stdout.write("".join(uiline))
     sys.stdout.flush()
+
 
 def xprint_ui(events, processes, fails, flipstat={}, first=False):
     uiline = []
@@ -80,7 +82,9 @@ def xprint_ui(events, processes, fails, flipstat={}, first=False):
                 flipstat[name] = (0, now)
             if flipstat[name][1] < now:
                 flipstat[name] = (1 - flipstat[name][0], now + random.random())
-            status = "{}{} {}".format(GREEN, name, ' ' if flipstat[name][0] == 1 else '.')
+            status = "{}{} {}".format(
+                GREEN, name, " " if flipstat[name][0] == 1 else "."
+            )
         elif name in fails:
             status = "{}{} \u2718".format(RED, name)
         else:
@@ -95,11 +99,13 @@ def xprint_ui(events, processes, fails, flipstat={}, first=False):
     sys.stdout.write("\n" + "\n".join(uiline) + END + "\n")
     sys.stdout.flush()
 
+
 def runcmd(*args, **kwargs):
     proc = subprocess.run(*args, **kwargs)
     if proc.returncode != 0:
         raise Exception("Build cmd '{}' failed".format(" ".join(args[0])))
     return proc
+
 
 def download_url(url, dest):
     local = os.path.join(dest, os.path.basename(url))
@@ -113,7 +119,7 @@ def download_url(url, dest):
                 raise
             print("Unable to download: %s %r".format(url, exc))
             time.sleep(n + 1 * 10)
-    fout = open(local, 'wb')
+    fout = open(local, "wb")
     block = fin.read(10240)
     try:
         while block:
@@ -129,12 +135,14 @@ def download_url(url, dest):
         raise
     return local
 
+
 def verify_checksum(file, checksum):
     if checksum is None:
         return
-    with open(file, 'rb') as fp:
+    with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
             raise Exception("md5 checksum verification failed")
+
 
 def extract_archive(to_dir, archive):
     if archive.endswith("tgz"):
@@ -156,8 +164,9 @@ def all_dirs(root, recurse=True):
             paths.append(os.path.join(root, name))
     return paths
 
+
 def _parse_gcc_version(stdout):
-    vline  = stdout.splitlines()[0]
+    vline = stdout.splitlines()[0]
     vline, vstr = [_.strip() for _ in vline.rsplit(" ", 1)]
     if vstr.find(".") != -1:
         return vstr
@@ -168,23 +177,27 @@ def gcc_version(cc):
     proc = runcmd([cc, "--version"], stderr=PIPE, stdout=PIPE)
     return _parse_gcc_version(proc.stdout.decode())
 
+
 def _parse_kernel_version(stdout):
-    stdout = stdout.split('-', 1)[0]
-    return ".".join(stdout.split('.')[:3])
+    stdout = stdout.split("-", 1)[0]
+    return ".".join(stdout.split(".")[:3])
+
 
 def kernel_version():
     proc = runcmd(["uname", "-r"], stderr=PIPE, stdout=PIPE)
     return _parse_kernel_version(proc.stdout.decode())
 
+
 def populate_env(dirs, env):
     pass
 
+
 def build_default(env, dirs, logfp):
     cmd = [
-        './configure',
+        "./configure",
         "--prefix={}".format(dirs.prefix),
     ]
-    if env["MAYFLOWER_HOST"].find('linux') > -1:
+    if env["MAYFLOWER_HOST"].find("linux") > -1:
         cmd += [
             "--build=x86_64-linux-gnu",
             "--host={}".format(env["MAYFLOWER_HOST"]),
@@ -193,33 +206,39 @@ def build_default(env, dirs, logfp):
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
+
 def build_openssl(env, dirs, logfp):
     arch = "aarch64"
-    if sys.platform == 'darwin':
-        plat = 'darwin64'
-        if env["MAYFLOWER_ARCH"] == 'x86_64':
-            arch = 'x86_64-cc'
+    if sys.platform == "darwin":
+        plat = "darwin64"
+        if env["MAYFLOWER_ARCH"] == "x86_64":
+            arch = "x86_64-cc"
     else:
-        plat = 'linux'
-        if env["MAYFLOWER_ARCH"] == 'x86_64':
-            arch = 'x86_64'
-        elif env["MAYFLOWER_ARCH"] == 'aarch64':
+        plat = "linux"
+        if env["MAYFLOWER_ARCH"] == "x86_64":
+            arch = "x86_64"
+        elif env["MAYFLOWER_ARCH"] == "aarch64":
             arch = "aarch64"
-    runcmd([
-        './Configure',
-        "{}-{}".format(plat, arch),
-        "no-idea",
-        "shared",
-        "--prefix={}".format(dirs.prefix),
-        #"--openssldir={}/ssl".format(dirs.prefix),
-        "--openssldir=/tmp/ssl",
-        ], env=env, stderr=logfp, stdout=logfp)
+    runcmd(
+        [
+            "./Configure",
+            "{}-{}".format(plat, arch),
+            "no-idea",
+            "shared",
+            "--prefix={}".format(dirs.prefix),
+            # "--openssldir={}/ssl".format(dirs.prefix),
+            "--openssldir=/tmp/ssl",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install_sw"], env=env, stderr=logfp, stdout=logfp)
 
 
 def build_sqlite(env, dirs, logfp):
-    #extra_cflags=('-Os '
+    # extra_cflags=('-Os '
     #              '-DSQLITE_ENABLE_FTS5 '
     #              '-DSQLITE_ENABLE_FTS4 '
     #              '-DSQLITE_ENABLE_FTS3_PARENTHESIS '
@@ -227,13 +246,13 @@ def build_sqlite(env, dirs, logfp):
     #              '-DSQLITE_ENABLE_RTREE '
     #              '-DSQLITE_TCL=0 '
     #              )
-    #configure_pre=[
+    # configure_pre=[
     #    '--enable-threadsafe',
     #    '--enable-shared=no',
     #    '--enable-static=yes',
     #    '--disable-readline',
     #    '--disable-dependency-tracking',
-    #]
+    # ]
     cmd = [
         "./configure",
         "--with-shared",
@@ -244,7 +263,7 @@ def build_sqlite(env, dirs, logfp):
         "--prefix={}".format(dirs.prefix),
         "--enable-add-ons=nptl,ports",
     ]
-    if env["MAYFLOWER_HOST"].find('linux') > -1:
+    if env["MAYFLOWER_HOST"].find("linux") > -1:
         cmd += [
             "--build=x86_64-linux-gnu",
             "--host={}".format(env["MAYFLOWER_HOST"]),
@@ -255,8 +274,9 @@ def build_sqlite(env, dirs, logfp):
 
 
 class Download:
-
-    def __init__(self, name, url, signature=None, destination='', version='', md5sum=None):
+    def __init__(
+        self, name, url, signature=None, destination="", version="", md5sum=None
+    ):
         self.name = name
         self.url_tpl = url
         self.signature = signature
@@ -277,7 +297,6 @@ class Download:
     def formatted_url(self):
         return self.url.format(version=version)
 
-
     def fetch_file(self):
         return download_url(self.url, self.destination)
 
@@ -292,7 +311,6 @@ class Download:
 
     def valid_hash(self):
         pass
-
 
     @staticmethod
     def validate_signature(archive, signature):
@@ -311,10 +329,10 @@ class Download:
     def __call__(self):
         os.makedirs(self.filepath.parent, exist_ok=True)
         self.fetch_file()
-        #XXX Verify the signature and log the checksum
+        # XXX Verify the signature and log the checksum
+
 
 class Dirs:
-
     def __init__(self, dirs, name, arch):
         self.name = name
         self.arch = arch
@@ -349,37 +367,51 @@ class Dirs:
 
     def __getstate__(self):
         return {
-            'name': self.name,
-            'arch': self.arch,
-            'root': self.root,
-            'build': self.build,
-            'downloads': self.downloads,
-            'logs': self.logs,
-            'sources': self.sources,
-            'tmpbuild': self.tmpbuild,
+            "name": self.name,
+            "arch": self.arch,
+            "root": self.root,
+            "build": self.build,
+            "downloads": self.downloads,
+            "logs": self.logs,
+            "sources": self.sources,
+            "tmpbuild": self.tmpbuild,
         }
 
     def __setstate__(self, state):
-        self.name = state['name']
-        self.arch = state['arch']
-        self.root = state['root']
-        self.downloads = state['downloads']
-        self.logs = state['logs']
-        self.sources = state['sources']
-        self.build = state['build']
-        self.tmpbuild = state['tmpbuild']
+        self.name = state["name"]
+        self.arch = state["arch"]
+        self.root = state["root"]
+        self.downloads = state["downloads"]
+        self.logs = state["logs"]
+        self.sources = state["sources"]
+        self.build = state["build"]
+        self.tmpbuild = state["tmpbuild"]
 
     def to_dict(self):
-        return { x: getattr(self, x) for x in [
-            "root", "prefix", "downloads", "logs", "sources", "build",
-             "toolchain",
+        return {
+            x: getattr(self, x)
+            for x in [
+                "root",
+                "prefix",
+                "downloads",
+                "logs",
+                "sources",
+                "build",
+                "toolchain",
             ]
         }
 
 
 class Builder:
-
-    def __init__(self, root=None, recipies=None, build_default=build_default, populate_env=populate_env, no_download=False, arch='x86_64'):
+    def __init__(
+        self,
+        root=None,
+        recipies=None,
+        build_default=build_default,
+        populate_env=populate_env,
+        no_download=False,
+        arch="x86_64",
+    ):
         self.dirs = work_dirs(root)
         self.arch = arch
 
@@ -419,7 +451,7 @@ class Builder:
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
             self.prefix = self.dirs.build / "{}-macos".format(self.arch)
-            #XXX Not used for MacOS
+            # XXX Not used for MacOS
             self.toolchain = get_toolchain(root=self.dirs.root)
         elif sys.platform == "win32":
             self.triplet = "{}-win".format(self.arch)
@@ -448,12 +480,14 @@ class Builder:
         self.recipies[name] = {
             "build_func": build_func,
             "wait_on": wait_on,
-            "download": download if download is None else Download(name, destination=self.downloads, **download),
+            "download": download
+            if download is None
+            else Download(name, destination=self.downloads, **download),
         }
 
     def run(self, name, event, build_func, download):
         while event.is_set() is False:
-            time.sleep(.3)
+            time.sleep(0.3)
 
         if not self.dirs.build.exists():
             os.makedirs(self.dirs.build, exist_ok=True)
@@ -470,7 +504,7 @@ class Builder:
         cwd = os.getcwd()
         if download:
             extract_archive(dirs.sources, str(download.filepath))
-            dirs.source = dirs.sources / download.filepath.name.split('.tar')[0]
+            dirs.source = dirs.sources / download.filepath.name.split(".tar")[0]
             os.chdir(dirs.source)
         else:
             os.chdir(dirs.prefix)
@@ -491,7 +525,7 @@ class Builder:
         self.populate_env(env, dirs)
 
         logfp.write("*" * 80 + "\n")
-        _  = dirs.to_dict()
+        _ = dirs.to_dict()
         for k in _:
             logfp.write("{} {}\n".format(k, _[k]))
         logfp.write("*" * 80 + "\n")
@@ -501,7 +535,7 @@ class Builder:
         try:
             return build_func(env, dirs, logfp)
         except Exception as exc:
-            logfp.write(traceback.format_exc()+ "\n")
+            logfp.write(traceback.format_exc() + "\n")
             sys.exit(1)
         finally:
             os.chdir(cwd)
@@ -509,16 +543,16 @@ class Builder:
 
 
 # XXX This can be removed.
-#PIP_WRAPPER="""#!/bin/sh
-#"exec" "`dirname $0`/python3" "$0" "$@"
+# PIP_WRAPPER="""#!/bin/sh
+# "exec" "`dirname $0`/python3" "$0" "$@"
 ## -*- coding: utf-8 -*-
-#import re
-#import sys
-#from pip._internal.cli.main import main
-#if __name__ == "__main__":
+# import re
+# import sys
+# from pip._internal.cli.main import main
+# if __name__ == "__main__":
 #    sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
 #    sys.exit(main())
-#"""
+# """
 
 
 SITECUSTOMIZE = """\"\"\"
@@ -538,12 +572,16 @@ else:
 
 
 def install_sysdata(mod, destfile, buildroot, toolchain):
-    BUILDROOT = str(buildroot) #"/home/dan/src/Mayflower/mayflower/_build/x86_64-linux-gnu"
-    TOOLCHAIN = str(toolchain) #"/home/dan/src/Mayflower/mayflower/_toolchain/x86_64-linux-gnu"
-    dest = 'sysdata.py'
+    BUILDROOT = str(
+        buildroot
+    )  # "/home/dan/src/Mayflower/mayflower/_build/x86_64-linux-gnu"
+    TOOLCHAIN = str(
+        toolchain
+    )  # "/home/dan/src/Mayflower/mayflower/_toolchain/x86_64-linux-gnu"
+    dest = "sysdata.py"
     data = {}
-    buildroot = lambda _ : _.replace(BUILDROOT, "{BUILDROOT}")
-    toolchain = lambda _ : _.replace(TOOLCHAIN, "{TOOLCHAIN}")
+    buildroot = lambda _: _.replace(BUILDROOT, "{BUILDROOT}")
+    toolchain = lambda _: _.replace(TOOLCHAIN, "{TOOLCHAIN}")
     keymap = {
         "BINDIR": (buildroot,),
         "BINLIBDEST": (buildroot,),
@@ -564,10 +602,11 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
             val = _(val)
         data[key] = val
 
-    with open(destfile, 'w', encoding='utf8') as f:
-        f.write('# system configuration generated and used by'
-                ' the mayflower at runtime\n')
-        f.write('build_time_vars = ')
+    with open(destfile, "w", encoding="utf8") as f:
+        f.write(
+            "# system configuration generated and used by" " the mayflower at runtime\n"
+        )
+        f.write("build_time_vars = ")
         pprint.pprint(data, stream=f)
 
 
@@ -576,11 +615,13 @@ def finalize(env, dirs, logfp):
     relocate_main(dirs.prefix)
     # Install mayflower-sysconfigdata module
     pymodules = pathlib.Path(dirs.prefix) / "lib" / "python3.10"
+
     def find_sysconfigdata(pymodules):
         for root, dirs, files in os.walk(pymodules):
             for file in files:
-                if file.find('sysconfigdata') > -1 and file.endswith(".py"):
+                if file.find("sysconfigdata") > -1 and file.endswith(".py"):
                     return file[:-3]
+
     cwd = os.getcwd()
     modname = find_sysconfigdata(pymodules)
     path = sys.path
@@ -595,7 +636,9 @@ def finalize(env, dirs, logfp):
 
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "bin"
-    sitecustomize = bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+    sitecustomize = (
+        bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+    )
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
@@ -619,8 +662,12 @@ def finalize(env, dirs, logfp):
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] != "x86_64":
         env["MAYFLOWER_CROSS"] = dirs.prefix
-    runcmd([env["MAYFLOWER_NATIVE_PY"], "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
-
+    runcmd(
+        [env["MAYFLOWER_NATIVE_PY"], "-m", "ensurepip"],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
 
     # XXX Is fixing shebangs still needed?
     # Fix the shebangs in python's scripts.
@@ -628,7 +675,7 @@ def finalize(env, dirs, logfp):
     pyex = bindir / "python3.10"
     shebang = "#!{}".format(str(pyex))
     for root, _dirs, files in os.walk(str(bindir)):
-        #print(root), print(dirs), print(files)
+        # print(root), print(dirs), print(files)
         for file in files:
             with open(os.path.join(root, file), "rb") as fp:
                 try:
@@ -640,10 +687,10 @@ def finalize(env, dirs, logfp):
                     continue
                 if data == shebang:
                     pass
-                    #print(file)
-                    #print(repr(data))
+                    # print(file)
+                    # print(repr(data))
                 else:
-                    #print("skip: {}".format(file))
+                    # print("skip: {}".format(file))
                     continue
                 data = fp.read().decode()
             with open(os.path.join(root, file), "w") as fp:
@@ -654,11 +701,11 @@ def finalize(env, dirs, logfp):
     def runpip(pkg):
         pip = bindir / "pip3"
         target = None
-        #XXX This needs to be more robust
+        # XXX This needs to be more robust
         if sys.platform == "linux":
             if env["MAYFLOWER_ARCH"] != "x86_64":
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
-        cmd =  [
+        cmd = [
             env["MAYFLOWER_NATIVE_PY"],
             str(pip),
             "install",
@@ -683,33 +730,40 @@ def run_build(builder, argparser):
     random.seed()
     argparser.descrption = "Build Mayflower Python Environments"
     argparser.add_argument(
-        "--arch", default="x86_64", type=str,
-        help="The host architecture [default: x86_64]"
+        "--arch",
+        default="x86_64",
+        type=str,
+        help="The host architecture [default: x86_64]",
     )
     argparser.add_argument(
-        "--clean", default=False, action="store_true",
-        help="Clean up before running the build"
+        "--clean",
+        default=False,
+        action="store_true",
+        help="Clean up before running the build",
     )
-    #XXX We should automatically skip downloads that can be verified as not
-    #being corrupt and this can become --force-download
+    # XXX We should automatically skip downloads that can be verified as not
+    # being corrupt and this can become --force-download
     argparser.add_argument(
-        "--no-download", default=False, action="store_true",
-        help="Skip downloading source tarballs"
+        "--no-download",
+        default=False,
+        action="store_true",
+        help="Skip downloading source tarballs",
     )
     ns, argv = argparser.parse_known_args()
     if getattr(ns, "help", None):
         argparser.print_help()
         sys.exit(0)
     global CICD
-    if 'CICD' in os.environ:
+    if "CICD" in os.environ:
         CICD = True
     builder.set_arch(ns.arch)
 
     if ns.clean:
-      try:
-          shutil.rmtree(builder.prefix)
-          shutil.rmtree(builder.sources)
-      except FileNotFoundError: pass
+        try:
+            shutil.rmtree(builder.prefix)
+            shutil.rmtree(builder.sources)
+        except FileNotFoundError:
+            pass
 
     # Start a process for each build passing it an event used to notify each
     # process if it's dependencies have finished.
@@ -734,7 +788,7 @@ def run_build(builder, argparser):
 
         while processes:
             for proc in list(processes.values()):
-                proc.join(.3)
+                proc.join(0.3)
                 # DEBUG: Comment to debug
                 print_ui(events, processes, fails)
                 if proc.exitcode is None:
@@ -742,15 +796,15 @@ def run_build(builder, argparser):
                 processes.pop(proc.name)
                 if proc.exitcode != 0:
                     fails.append(proc.name)
-                    is_failure=True
+                    is_failure = True
                 else:
-                    is_failure=False
+                    is_failure = False
         print_ui(events, processes, fails)
         sys.stdout.write("\n")
         if fails:
             print_ui(events, processes, fails)
             sys.stderr.write("The following failures were reported\n")
-            for fail in fails :
+            for fail in fails:
                 sys.stderr.write(fail + "\n")
             sys.stderr.flush()
             sys.exit(1)
@@ -769,20 +823,20 @@ def run_build(builder, argparser):
         event = multiprocessing.Event()
         events[name] = event
         kwargs = dict(builder.recipies[name])
-        waits[name] = kwargs.pop('wait_on', [])
+        waits[name] = kwargs.pop("wait_on", [])
         if not waits[name]:
             event.set()
-        proc = multiprocessing.Process(name=name, target=builder.run, args=(name, event), kwargs=kwargs)
+        proc = multiprocessing.Process(
+            name=name, target=builder.run, args=(name, event), kwargs=kwargs
+        )
         proc.start()
         processes[name] = proc
-
-
 
     # Wait for the processes to finish and check if we should send any
     # dependency events.
     while processes:
         for proc in list(processes.values()):
-            proc.join(.3)
+            proc.join(0.3)
             # DEBUG: Comment to debug
             print_ui(events, processes, fails)
             if proc.exitcode is None:
@@ -790,27 +844,26 @@ def run_build(builder, argparser):
             processes.pop(proc.name)
             if proc.exitcode != 0:
                 fails.append(proc.name)
-                is_failure=True
+                is_failure = True
             else:
-                is_failure=False
+                is_failure = False
             for name in waits:
                 if proc.name in waits[name]:
                     if is_failure:
                         if name in processes:
                             processes[name].terminate()
-                            time.sleep(.1)
+                            time.sleep(0.1)
                     waits[name].remove(proc.name)
                 if not waits[name] and not events[name].is_set():
                     events[name].set()
 
-
     if fails:
         sys.stderr.write("The following failures were reported\n")
-        for fail in fails :
+        for fail in fails:
             sys.stderr.write(fail + "\n")
         sys.stderr.flush()
         sys.exit(1)
-    time.sleep(.1)
+    time.sleep(0.1)
     # DEBUG: Comment to debug
     print_ui(events, processes, fails)
     sys.stdout.write("\n")

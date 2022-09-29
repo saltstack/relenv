@@ -6,6 +6,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+
 from .common import work_dirs
 
 log = logging.getLogger(__name__)
@@ -194,7 +195,7 @@ def handle_elf(path, libs, rpath_only, root=None):
             needs_rpath = True
             log.warning("File already within root directory: %s", linked_lib)
             continue
-        
+
         relocated_path = os.path.join(libs, lib_basename)
 
         if os.path.exists(relocated_path):

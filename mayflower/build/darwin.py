@@ -1,7 +1,8 @@
 from .common import *
 
+
 def populate_env(env, dirs):
-    env["CC"] = 'clang'
+    env["CC"] = "clang"
     ldflags = [
         "-Wl,-rpath,{prefix}/lib",
         "-L{prefix}/lib",
@@ -14,28 +15,32 @@ def populate_env(env, dirs):
     ]
     env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
 
+
 def build_python(env, dirs, logfp):
     env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
-        prefix=dirs.prefix, ldflags=env["LDFLAGS"])
-    runcmd([
-        './configure',
-         "-v",
-        "--prefix={}".format(dirs.prefix),
-        "--with-openssl={}".format(dirs.prefix),
-        "--enable-optimizations",
-    ], env=env, stderr=logfp, stdout=logfp)
+        prefix=dirs.prefix, ldflags=env["LDFLAGS"]
+    )
+    runcmd(
+        [
+            "./configure",
+            "-v",
+            "--prefix={}".format(dirs.prefix),
+            "--with-openssl={}".format(dirs.prefix),
+            "--enable-optimizations",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
-        fp.write(
-            "*disabled*\n"
-            "_tkinter\n"
-            "nsl\n"
-            "ncurses\n"
-            "nis\n"
-        )
-    runcmd(["sed", "s/#zlib/zlib/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
+        fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "ncurses\n" "nis\n")
+    runcmd(
+        ["sed", "s/#zlib/zlib/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp
+    )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
 
 build = Builder(populate_env=populate_env)
 
@@ -77,8 +82,8 @@ build.add(
         "SQLite",
     ],
     download={
-       "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-       "version": "3.10.7",
+        "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+        "version": "3.10.7",
     },
 )
 
@@ -91,10 +96,12 @@ build.add(
     ],
 )
 
+
 def main(argparse):
     run_build(build, argparse)
 
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
+
     main(ArgumentParser())

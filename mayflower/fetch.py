@@ -1,14 +1,17 @@
-import sys, os, pathlib, shutil, contextlib, tarfile
+import contextlib
+import os
+import pathlib
+import shutil
+import sys
+import tarfile
+
 from .build.common import download_url, extract_archive
 from .common import MODULE_DIR, work_dir
 
 
 def main(argparser):
     argparser.descrption = "Fetch mayflower builds"
-    argparser.add_argument(
-        "--arch", default="x86_64",
-        help="Architecture to download"
-    )
+    argparser.add_argument("--arch", default="x86_64", help="Architecture to download")
     ns, argv = argparser.parse_known_args()
     if getattr(ns, "help", None):
         argparser.print_help()
