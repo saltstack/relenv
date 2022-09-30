@@ -20,8 +20,15 @@ docs/build
 !/mayflower/_toolchain/*-ct-ng.config
 !/mayflower/_toolchain/README
 !*/_toolchain/*ct-ng.config
+
+# Default log location for `mayflower build`
 /mayflower/_logs
+
+# Default location for sources downloaded by `mayflower build`
 /mayflower/_src
+
+# Location of native python used when cross compiling builds
+/mayflower/_native
 
 mayflower.egg-info
 

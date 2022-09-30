@@ -258,9 +258,7 @@ def build_python(env, dirs, logfp):
     # MAYFLOWERCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] == "aarch64":
-        python = (
-            pathlib.Path(dirs.prefix).parent / "x86_64-linux-gnu" / "bin" / "python3"
-        )
+        python = env["MAYFLOWER_NATIVE_PY"]
     env["PYTHONUSERBASE"] = dirs.prefix
     runcmd([python, "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 

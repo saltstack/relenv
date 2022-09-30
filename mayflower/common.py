@@ -1,8 +1,15 @@
 import os
 import pathlib
+import sys
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
+
+
+class MayflowerException(Exception):
+    """
+    Base class for exeptions generated from mayflower
+    """
 
 
 def work_root(root=None):
@@ -61,3 +68,26 @@ def get_toolchain(arch=None, root=None):
     if arch:
         return dirs.toolchain / "{}-linux-gnu".format(arch)
     return dirs.toolchain
+
+
+def get_triplet(platform=None):
+    if not platform:
+        platform = sys.platform
+    if platform == "darwin":
+        return "macos"
+    elif platform == "win32":
+        return "win"
+    elif platform == "linux":
+        return "linux-gnu"
+    else:
+        raise MayflowerException("Unknown platform {}".format(platform))
+
+
+def archived_build(arch="x86_64", triplet=None):
+    """
+    Returns a `Path` object pointing to the location of an archived build.
+    """
+    if not triplet:
+        triplet = get_triplet()
+    dirs = work_dirs()
+    return (dirs.build / "{}-{}".format(arch, triplet)).with_suffix(".tar.xz")
