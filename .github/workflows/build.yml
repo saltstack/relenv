@@ -70,7 +70,7 @@ jobs:
 
     - name: Create Tarball
       if: always()
-      run: tar -cJf python-aarch64-linux-gnu.tar.xz  aarch64-linux-gnu
+      run: tar -cJf python-aarch64-linux-gnu.tar.xz aarch64-linux-gnu
 
     - name: Linux Logs
       uses: actions/upload-artifact@v3

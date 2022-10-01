@@ -633,8 +633,9 @@ def finalize(env, dirs, logfp):
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] != "x86_64":
         env["MAYFLOWER_CROSS"] = dirs.prefix
+        python = env["MAYFLOWER_NATIVE_PY"]
     runcmd(
-        [env["MAYFLOWER_NATIVE_PY"], "-m", "ensurepip"],
+        [python, "-m", "ensurepip"],
         env=env,
         stderr=logfp,
         stdout=logfp,
@@ -673,11 +674,13 @@ def finalize(env, dirs, logfp):
         pip = bindir / "pip3"
         target = None
         # XXX This needs to be more robust
+        python = dirs.prefix / "bin" / "python3"
         if sys.platform == "linux":
             if env["MAYFLOWER_ARCH"] != "x86_64":
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
+                python = env["MAYFLOWER_NATIVE_PY"]
         cmd = [
-            env["MAYFLOWER_NATIVE_PY"],
+            python,
             str(pip),
             "install",
             str(pkg),

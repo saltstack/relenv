@@ -89,7 +89,11 @@ class MayflowerImporter:
             self.loading_pip_scripts = False
         elif name == self.sysconfigdata:
             mod = importlib.import_module(name)
-            maymod = importlib.import_module("mayflower-sysconfigdata")
+            try:
+                maymod = importlib.import_module("mayflower-sysconfigdata")
+            except ImportError:
+                if os.environ.get("MAYFLOWER_DEBUG"):
+                    print("Unable to import mayflower-sysconfigdata")
             if isinstance(mod.build_time_vars, dict):
                 self.build_time_vars.build_time_vars = maymod.build_time_vars
                 mod.build_time_vars = self.build_time_vars
