@@ -21,6 +21,11 @@ from .common import MODULE_DIR
 SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
 
 
+def debug(string):
+    if os.environ.get("MAYFLOWER_DEBUG"):
+        print(string)
+
+
 def _build_shebang(*args, **kwargs):
     if sys.platform == "win32":
         if os.environ.get("MAYFLOWER_PIP_DIR"):
@@ -39,13 +44,11 @@ def get_config_var_wrapper(func):
                 val = "../"
             else:
                 val = "./"
-            if os.environ.get("MAYFLOWER_DEBUG"):
-                print(f"get_config_var call {name} old: {orig} new: {val}")
+            debug(f"get_config_var call {name} old: {orig} new: {val}")
             return val
         else:
             val = func(name)
-            if os.environ.get("MAYFLOWER_DEBUG"):
-                print(f"get_config_var call {name} {val}")
+            debug(f"get_config_var call {name} {val}")
             return val
 
     return wrapped
@@ -64,35 +67,56 @@ class MayflowerImporter:
         if module_name.startswith("sysconfig") and sys.platform == "win32":
             if self.loading_sysconfig:
                 return None
+            debug(f"MayflowerImporter - match {module_name}")
             self.loading_sysconfig = True
             return self
         elif module_name == "pip._vendor.distlib.scripts":
             if self.loading_pip_scripts:
                 return None
+            debug(f"MayflowerImporter - match {module_name}")
             self.loading_pip_scripts = True
             return self
         elif module_name == self.sysconfigdata:
             if self.loading_sysconfig_data:
                 return None
+            debug(f"MayflowerImporter - match {module_name}")
             self.loading_sysconfig_data = True
             return self
         return None
 
     def load_module(self, name):
         if name.startswith("sysconfig"):
+            debug(f"MayflowerImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
             self.loading_sysconfig = False
         elif name == "pip._vendor.distlib.scripts":
+            debug(f"MayflowerImporter - load_module {name}")
             mod = importlib.import_module(name)
             mod.ScriptMaker._build_shebang = _build_shebang
             self.loading_pip_scripts = False
         elif name == self.sysconfigdata:
+            debug(f"MayflowerImporter - load_module {name}")
             mod = importlib.import_module(name)
-            maymod = importlib.import_module("mayflower-sysconfigdata")
-            if isinstance(mod.build_time_vars, dict):
-                self.build_time_vars.build_time_vars = maymod.build_time_vars
-                mod.build_time_vars = self.build_time_vars
+            try:
+                maymod = importlib.import_module("mayflower-sysconfigdata")
+            except ImportError:
+                if os.environ.get("MAYFLOWER_DEBUG"):
+                    print("Unable to import mayflower-sysconfigdata")
+                return mod
+            buildroot = MODULE_DIR.parent.parent.parent.parent
+            toolchain = MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
+            build_time_vars = {}
+            for key in maymod.build_time_vars:
+                val = maymod.build_time_vars[key]
+                if isinstance(val, str):
+                    val = val.format(
+                        BUILDROOT=buildroot,
+                        TOOLCHAIN=toolchain,
+                    )
+                build_time_vars[key] = val
+                # self.build_time_vars.build_time_vars = build_time_vars
+                mod.build_time_vars = build_time_vars
             self.loading_sysconfig_data = False
             return self
         sys.modules[name] = mod
@@ -104,16 +128,14 @@ class BuildTimeVars(collections.abc.Mapping):
     # This is getting set in MayflowerImporter
     _build_time_vars = {}
 
-    buildroot = MODULE_DIR.parent.parent.parent.parent
-    toolchain = MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
-
     def __getitem__(self, key, *args, **kwargs):
+        debug(f"BuildTimeVars - getitem {name}")
         val = self._build_time_vars.__getitem__(key, *args, **kwargs)
         sys.stdout.flush()
         if isinstance(val, str):
             return val.format(
-                BUILDROOT=BUILDROOT,
-                TOOLCHAIN=TOOLCHAIN,
+                BUILDROOT=self.buildroot,
+                TOOLCHAIN=self.toolchain,
             )
         return val
 
@@ -132,6 +154,7 @@ def bootstrap():
         sys.exec_prefix = str(crossroot)
         sys.path = [
             str(crossroot / "lib" / "python3.10"),
+            str(crossroot / "lib" / "python3.10" / "lib-dynload"),
             str(crossroot / "lib" / "python3.10" / "site-packages"),
         ] + [x for x in sys.path if x.find("site-packages") == -1]
     # Use system openssl dirs

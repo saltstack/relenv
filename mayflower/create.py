@@ -19,17 +19,19 @@ def chdir(path):
         os.chdir(cwd)
 
 
-def main(argparser):
-    argparser.descrption = "Create Mayflower Environments"
-    argparser.add_argument("name", help="The name of the directory to create")
-    ns, argv = argparser.parse_known_args()
-    if getattr(ns, "help", None):
-        argparser.print_help()
-        sys.exit(0)
-    name = ns.name
-    if pathlib.Path(name).exists():
-        print("The requested path already exists.")
-        sys.exit(1)
+class CreateException(Exception):
+    pass
+
+
+def create(name, dest=None):
+    if dest:
+        writeto = pathlib.Path(dest) / name
+    else:
+        writeto = pathlib.Path(name).resolve()
+
+    if pathlib.Path(writeto).exists():
+        raise CreateException("The requested path already exists.")
+
     plat = sys.platform
     if plat == "win32":
         arch = "x86_64"
@@ -39,32 +41,42 @@ def main(argparser):
         if arch in ("x86_64", "aarch64"):
             triplet = "{}-{}-gnu".format(arch, plat)
         else:
-            print("Unknown arch {}".format(arch))
-            sys.exit(1)
+            raise CreateException("Unknown arch")
     elif plat == "darwin":
         if arch in ("x86_64"):
             triplet = "{}-macos".format(arch)
         else:
-            print("Unknown arch {}".format(arch))
-            sys.exit(1)
+            raise CreateException("Unknown arch")
     elif plat == "win32":
         if arch in ["x86_64"]:
             triplet = "{}-win".format(arch)
         else:
-            print("Unknown arch {}".format(arch))
-            sys.exit(1)
+            raise CreateException("Unknown arch")
     else:
-        print("Unknown platform {}".format(plat))
-        sys.exit(1)
-    build = MODULE_DIR / "_build" / triplet
-    tar = build.with_suffix(".tar.xz")
+        raise CreateException("Unknown platform")
+
+    tar = (MODULE_DIR / "_build" / triplet).with_suffix(".tar.xz")
     if not tar.exists():
-        print(
+        raise CreateException(
             "Error, build archive for {} doesn't exist.\n"
             "You might try mayflower fetch to resolve this.".format(arch)
         )
-        sys.exit(1)
     tmp = tempfile.mkdtemp()
     with tarfile.open(tar, "r:xz") as fp:
         for f in fp:
-            fp.extract(f, name)
+            fp.extract(f, writeto)
+
+
+def main(argparser):
+    argparser.descrption = "Create Mayflower Environments"
+    argparser.add_argument("name", help="The name of the directory to create")
+    ns, argv = argparser.parse_known_args()
+    if getattr(ns, "help", None):
+        argparser.print_help()
+        sys.exit(0)
+    name = ns.name
+    try:
+        create(name)
+    except CreateException as exc:
+        print(exc)
+        sys.exit(1)

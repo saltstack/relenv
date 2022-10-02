@@ -22,6 +22,7 @@ import pprint
 
 from mayflower.common import MODULE_DIR, work_root, work_dirs, get_toolchain
 from mayflower.relocate import main as relocate_main
+from mayflower.create import create
 
 log = logging.getLogger(__name__)
 PIPE = subprocess.PIPE
@@ -69,35 +70,6 @@ def print_ui(events, processes, fails, flipstat={}):
     uiline.append("  " + END)
     sys.stdout.write("\r")
     sys.stdout.write("".join(uiline))
-    sys.stdout.flush()
-
-
-def xprint_ui(events, processes, fails, flipstat={}, first=False):
-    uiline = []
-    for name in events:
-        if not events[name].is_set():
-            status = "{}{} .".format(name, YELLOW)
-        elif name in processes:
-            now = time.time()
-            if name not in flipstat:
-                flipstat[name] = (0, now)
-            if flipstat[name][1] < now:
-                flipstat[name] = (1 - flipstat[name][0], now + random.random())
-            status = "{}{} {}".format(
-                GREEN, name, " " if flipstat[name][0] == 1 else "."
-            )
-        elif name in fails:
-            status = "{}{} \u2718".format(RED, name)
-        else:
-            status = "{}{} \u2718".format(GREEN, name)
-        uiline.append(status)
-
-    if first is not False:
-        sys.stdout.write(MOVEUP)
-        for i in uiline:
-            sys.stdout.write(MOVEUP)
-
-    sys.stdout.write("\n" + "\n".join(uiline) + END + "\n")
     sys.stdout.flush()
 
 
@@ -519,9 +491,12 @@ class Builder:
 
         env["MAYFLOWER_HOST"] = self.triplet
         env["MAYFLOWER_ARCH"] = self.arch
-        env["MAYFLOWER_NATIVE_PY"] = str(self.native_python)
         if self.arch != "x86_64":
             env["MAYFLOWER_CROSS"] = str(self.native_python.parent.parent)
+            native_root = MODULE_DIR / "_native"
+            if not native_root.exists():
+                create("_native", MODULE_DIR)
+            env["MAYFLOWER_NATIVE_PY"] = native_root / "bin" / "python3"
 
         self.populate_env(env, dirs)
 
@@ -560,6 +535,10 @@ else:
 
 
 def install_sysdata(mod, destfile, buildroot, toolchain):
+    """
+    Helper method used by the `finalize` build method to create a Mayflower
+    Python environment's sysconfigdata.
+    """
     BUILDROOT = str(
         buildroot
     )  # "/home/dan/src/Mayflower/mayflower/_build/x86_64-linux-gnu"
@@ -599,6 +578,10 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
 
 
 def finalize(env, dirs, logfp):
+    """
+    Run after we've fully built python. This method enhances the newly created
+    python with Mayflower's runtime hacks.
+    """
     # Run relok8 to make sure the rpaths are relocatable.
     relocate_main(dirs.prefix)
     # Install mayflower-sysconfigdata module
@@ -650,8 +633,9 @@ def finalize(env, dirs, logfp):
     python = dirs.prefix / "bin" / "python3"
     if env["MAYFLOWER_ARCH"] != "x86_64":
         env["MAYFLOWER_CROSS"] = dirs.prefix
+        python = env["MAYFLOWER_NATIVE_PY"]
     runcmd(
-        [env["MAYFLOWER_NATIVE_PY"], "-m", "ensurepip"],
+        [python, "-m", "ensurepip"],
         env=env,
         stderr=logfp,
         stdout=logfp,
@@ -687,14 +671,18 @@ def finalize(env, dirs, logfp):
                 fp.write(data)
 
     def runpip(pkg):
-        pip = bindir / "pip3"
         target = None
         # XXX This needs to be more robust
+        python = dirs.prefix / "bin" / "python3"
+        pip = dirs.prefix / "bin" / "pip3"
         if sys.platform == "linux":
             if env["MAYFLOWER_ARCH"] != "x86_64":
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
+                python = env["MAYFLOWER_NATIVE_PY"]
+                # pip = pathlib.Path(env["MAYFLOWER_NATIVE_PY"]).parent / "pip3"
+                # pip = dirs.prefix / "bin" / "pip3"
         cmd = [
-            env["MAYFLOWER_NATIVE_PY"],
+            str(python),
             str(pip),
             "install",
             str(pkg),
@@ -713,8 +701,10 @@ def finalize(env, dirs, logfp):
     globs = [
         "/bin/python*",
         "/bin/pip*",
-        "/lib/python3.10/site-packages/pip/_vendor/certifi/*.pem",
+        "/lib/python3.10/site-packages/*",
+        "/include/*",
         "*.so",
+        "/lib/*.so.*",
         "*.a",
         "*.py",
     ]
@@ -724,6 +714,9 @@ def finalize(env, dirs, logfp):
 
 
 def create_archive(tarfp, toarchive, globs, logfp=None):
+    """
+    Create an archive
+    """
     logfp.write(f"CURRENT DIR {os.getcwd()}")
     if logfp:
         logfp.write(f"Creating archive {tarfp.name}\n")
@@ -749,7 +742,7 @@ def run_build(builder, argparser):
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     random.seed()
-    argparser.descrption = "Build Mayflower Python Environments"
+    argparser.descrption = "Build Mayflower Python Environments from source"
     argparser.add_argument(
         "--arch",
         default="x86_64",
@@ -812,6 +805,8 @@ def run_build(builder, argparser):
         for _ in [builder.prefix, builder.sources]:
             try:
                 shutil.rmtree(_)
+            except PermissionError:
+                sys.stderr.write(f"Unable to remove directory: {_}")
             except FileNotFoundError:
                 pass
         # Clean files
