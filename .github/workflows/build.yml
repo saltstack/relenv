@@ -16,7 +16,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install Dependencies
-      run: sudo apt-get install build-essential bison linux-headers-$(uname -r)
+      run: sudo apt-get install build-essential bison linux-headers-$(uname -r) python3-pytest
 
     - name: Fetch Toolchain
       run: CICD=true python3 -m mayflower toolchain download --arch=x86_64
@@ -24,6 +24,8 @@ jobs:
     - name: Build
       run: CICD=true python3 -m mayflower build --arch=x86_64
 
+    - name: Verify Build
+      run: python3 -m pytest tests/test_verify_build.py
 
     - name: Create Tarball Directory
       run: python3 -m mayflower create x86_64-linux-gnu

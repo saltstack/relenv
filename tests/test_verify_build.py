@@ -44,7 +44,37 @@ def test_imports(build):
         "termios",
         "unicodedata",
     ]
+    python = str(build / "bin" / "python3")
     for mod in modules:
-        python = str(build / "bin" / "python3")
         p = subprocess.run([python, "-c", f"import {mod}"])
         assert p.returncode == 0, f"Failed to import {mod}"
+
+
+def test_pip_install_salt(build):
+    packages = [
+        "salt",
+    ]
+    pip = str(build / "bin" / "pip3")
+    for name in packages:
+        p = subprocess.run([pip, "install", name, "--no-cache"])
+        assert p.returncode == 0, f"Failed to pip install {name}"
+
+
+def test_pip_install_cryptography(build):
+    packages = [
+        "cryptography",
+    ]
+    pip = str(build / "bin" / "pip3")
+    for name in packages:
+        p = subprocess.run([pip, "install", name, "--no-cache"])
+        assert p.returncode == 0, f"Failed to pip install {name}"
+
+
+def test_pip_install_idem(build):
+    packages = [
+        "idem",
+    ]
+    pip = str(build / "bin" / "pip3")
+    for name in packages:
+        p = subprocess.run([pip, "install", name, "--no-cache"])
+        assert p.returncode == 0, f"Failed to pip install {name}"
