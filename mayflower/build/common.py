@@ -701,7 +701,7 @@ def finalize(env, dirs, logfp):
     globs = [
         "/bin/python*",
         "/bin/pip*",
-        "/lib/python3.10/site-packages/pip/_vendor/certifi/*.pem",
+        "/lib/python3.10/site-packages/*",
         "/include/*",
         "*.so",
         "/lib/*.so.*",
