@@ -671,16 +671,18 @@ def finalize(env, dirs, logfp):
                 fp.write(data)
 
     def runpip(pkg):
-        pip = bindir / "pip3"
         target = None
         # XXX This needs to be more robust
         python = dirs.prefix / "bin" / "python3"
+        pip = dirs.prefix / "bin" / "pip3"
         if sys.platform == "linux":
             if env["MAYFLOWER_ARCH"] != "x86_64":
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
                 python = env["MAYFLOWER_NATIVE_PY"]
+                # pip = pathlib.Path(env["MAYFLOWER_NATIVE_PY"]).parent / "pip3"
+                # pip = dirs.prefix / "bin" / "pip3"
         cmd = [
-            python,
+            str(python),
             str(pip),
             "install",
             str(pkg),
@@ -702,6 +704,7 @@ def finalize(env, dirs, logfp):
         "/lib/python3.10/site-packages/pip/_vendor/certifi/*.pem",
         "/include/*",
         "*.so",
+        "/lib/*.so.*",
         "*.a",
         "*.py",
     ]
@@ -739,7 +742,7 @@ def run_build(builder, argparser):
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     random.seed()
-    argparser.descrption = "Build Mayflower Python Environments"
+    argparser.descrption = "Build Mayflower Python Environments from source"
     argparser.add_argument(
         "--arch",
         default="x86_64",
@@ -802,6 +805,8 @@ def run_build(builder, argparser):
         for _ in [builder.prefix, builder.sources]:
             try:
                 shutil.rmtree(_)
+            except PermissionError:
+                sys.stderr.write(f"Unable to remove directory: {_}")
             except FileNotFoundError:
                 pass
         # Clean files

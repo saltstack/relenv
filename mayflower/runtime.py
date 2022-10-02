@@ -136,6 +136,7 @@ def bootstrap():
         sys.exec_prefix = str(crossroot)
         sys.path = [
             str(crossroot / "lib" / "python3.10"),
+            str(crossroot / "lib" / "python3.10" / "lib-dynload"),
             str(crossroot / "lib" / "python3.10" / "site-packages"),
         ] + [x for x in sys.path if x.find("site-packages") == -1]
     # Use system openssl dirs
