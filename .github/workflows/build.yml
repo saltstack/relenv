@@ -131,6 +131,24 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download VS Build Tools
+        run: Invoke-webrequest -uri  https://aka.ms/vs/15/release/vs_buildtools.exe -OutFile vs_buildtools.exe
+        shell: powershell
+
+      - name: Install VS Build Tools
+        run: >
+          .\vs_buildtools.exe
+          --wait
+          --norestart
+          --quiet
+          --includeRecommended
+          --add Microsoft.VisualStudio.Workload.MSBuildTools
+          --add Microsoft.VisualStudio.Workload.VCTools
+          --add Microsoft.VisualStudio.Component.Windows81SDK
+          --add Microsoft.VisualStudio.Component.Windows10SDK.17763
+          --add Microsoft.Component.VC.Runtime.UCRTSDK
+        shell: cmd
+
       - name: Build Python with Mayflower
         run: python -m mayflower build --arch=x86_64
 
