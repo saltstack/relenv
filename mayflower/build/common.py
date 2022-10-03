@@ -227,7 +227,7 @@ class Download:
 
     @property
     def formatted_url(self):
-        return self.url.format(version=version)
+        return self.url.format(version=self.version)
 
     def fetch_file(self):
         return download_url(self.url, self.destination)
@@ -249,19 +249,32 @@ class Download:
         """
         True when the archive's signature is valid
         """
-        pass
+        try:
+            runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
+            return True
+        except Exception as exc:
+            log.error(f"Signature validation failed on {archive}: {exc}")
+            return False
 
     @staticmethod
     def validate_md5sum(archive, md5sum):
         """
         True when when the archive matches the md5 hash
         """
-        pass
+        try:
+            verify_checksum(archive, md5sum)
+            return True
+        except Exception as exc:
+            log.error(f"md5 validation failed on {archive}: {exc}")
+            return False
 
     def __call__(self):
         os.makedirs(self.filepath.parent, exist_ok=True)
         self.fetch_file()
-        # XXX Verify the signature and log the checksum
+        valid_sig = self.validate_signature(self.filepath, self.signature)
+        valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
+        log.debug(f"Checksum for {self.name}: {self.md5sum}")
+        return valid_sig and valid_md5
 
 
 class Dirs:
