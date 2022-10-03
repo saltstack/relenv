@@ -250,6 +250,9 @@ class Download:
         """
         True when the archive's signature is valid
         """
+        if signature is None:
+            log.debug(f"Not checking signature because none was given")
+            return
         try:
             runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
             return True
