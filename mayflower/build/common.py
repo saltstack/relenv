@@ -20,12 +20,20 @@ import urllib.error
 import multiprocessing
 import pprint
 
-from mayflower.common import MODULE_DIR, work_root, work_dirs, get_toolchain
+from mayflower.common import (
+    MODULE_DIR,
+    work_root,
+    work_dirs,
+    get_toolchain,
+    extract_archive,
+    download_url,
+    runcmd,
+    PIPE,
+)
 from mayflower.relocate import main as relocate_main
 from mayflower.create import create
 
 log = logging.getLogger(__name__)
-PIPE = subprocess.PIPE
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -73,61 +81,12 @@ def print_ui(events, processes, fails, flipstat={}):
     sys.stdout.flush()
 
 
-def runcmd(*args, **kwargs):
-    proc = subprocess.run(*args, **kwargs)
-    if proc.returncode != 0:
-        raise Exception("Build cmd '{}' failed".format(" ".join(args[0])))
-    return proc
-
-
-def download_url(url, dest):
-    local = os.path.join(dest, os.path.basename(url))
-    n = 0
-    while n < 3:
-        n += 1
-        try:
-            fin = urllib.request.urlopen(url)
-        except urllib.error.HTTPError as exc:
-            if n == 3:
-                raise
-            print("Unable to download: %s %r".format(url, exc))
-            time.sleep(n + 1 * 10)
-    fout = open(local, "wb")
-    block = fin.read(10240)
-    try:
-        while block:
-            fout.write(block)
-            block = fin.read(10240)
-        fin.close()
-        fout.close()
-    except:
-        try:
-            os.unlink(local)
-        except OSError:
-            pass
-        raise
-    return local
-
-
 def verify_checksum(file, checksum):
     if checksum is None:
         return
     with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
             raise Exception("md5 checksum verification failed")
-
-
-def extract_archive(to_dir, archive):
-    if archive.endswith("tgz"):
-        read_type = "r:gz"
-    elif archive.endswith("xz"):
-        read_type = "r:xz"
-    elif archive.endswith("bz2"):
-        read_type = "r:bz2"
-    else:
-        read_type = "r"
-    with tarfile.open(archive, read_type) as t:
-        t.extractall(to_dir)
 
 
 def all_dirs(root, recurse=True):

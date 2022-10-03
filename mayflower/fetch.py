@@ -5,8 +5,7 @@ import shutil
 import sys
 import tarfile
 
-from .build.common import download_url, extract_archive
-from .common import MODULE_DIR, work_dir
+from .common import MODULE_DIR, download_url, extract_archive, work_dir
 
 
 def main(argparser):

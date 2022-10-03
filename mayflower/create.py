@@ -6,7 +6,7 @@ import sys
 import tarfile
 import tempfile
 
-from .common import MODULE_DIR
+from .common import MODULE_DIR, MayflowerException
 
 
 @contextlib.contextmanager
@@ -19,8 +19,10 @@ def chdir(path):
         os.chdir(cwd)
 
 
-class CreateException(Exception):
-    pass
+class CreateException(MayflowerException):
+    """
+    Raised when there is an issue creating a new mayflower environment.
+    """
 
 
 def create(name, dest=None, arch="x86_64"):
