@@ -101,3 +101,12 @@ def test_runcmd_fail():
         moc.side_effect = [ret]
         with pytest.raises(MayflowerException):
             _ = runcmd(["echo", "foo"])
+
+
+def test_verify_checksum():
+    with patch("subprocess.run") as moc:
+        ret = Mock()
+        ret.returncode = 1
+        moc.side_effect = [ret]
+        with pytest.raises(MayflowerException):
+            _ = runcmd(["echo", "foo"])

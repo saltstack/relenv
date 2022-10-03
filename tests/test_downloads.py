@@ -1,24 +1,10 @@
-import hashlib
 import pathlib
 import subprocess
 import sys
 from unittest.mock import patch
 
-import pytest
-
 from mayflower.build.common import Download
-
-
-@pytest.fixture
-def fake_download(tmp_path):
-    download = tmp_path / "fake_download"
-    download.write_text("This is some file contents")
-    return download
-
-
-@pytest.fixture
-def fake_download_md5(fake_download):
-    return hashlib.md5(fake_download.read_bytes()).hexdigest()
+from mayflower.common import MayflowerException
 
 
 def test_download_url():
@@ -77,20 +63,41 @@ def test_download_exists(tmp_path):
     assert download.exists() == True
 
 
-def test_validate_md5sum(fake_download, fake_download_md5):
-    assert Download.validate_md5sum(str(fake_download), fake_download_md5) is True
+def test_validate_md5sum(tmp_path):
+    fake_md5 = "fakemd5"
+    with patch("mayflower.build.common.verify_checksum") as run_mock:
+        assert Download.validate_md5sum(str(tmp_path), fake_md5) is True
+        run_mock.assert_called_with(str(tmp_path), fake_md5)
 
 
-def test_validate_md5sum_failed(fake_download):
-    assert Download.validate_md5sum(str(fake_download), "fake_download_md5") is False
+def test_validate_md5sum_failed(tmp_path):
+    fake_md5 = "fakemd5"
+    with patch(
+        "mayflower.build.common.verify_checksum", side_effect=MayflowerException
+    ) as run_mock:
+        assert Download.validate_md5sum(str(tmp_path), fake_md5) is False
+        run_mock.assert_called_with(str(tmp_path), fake_md5)
 
 
-def test_validate_signature(fake_download):
+def test_validate_signature(tmp_path):
     sig = "fakesig"
     with patch("mayflower.build.common.runcmd") as run_mock:
-        assert Download.validate_signature(str(fake_download), sig) is True
+        assert Download.validate_signature(str(tmp_path), sig) is True
         run_mock.assert_called_with(
-            ["gpg", "--verify", sig, str(fake_download)],
+            ["gpg", "--verify", sig, str(tmp_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+
+def test_validate_signature_failed(tmp_path):
+    sig = "fakesig"
+    with patch(
+        "mayflower.build.common.runcmd", side_effect=MayflowerException
+    ) as run_mock:
+        assert Download.validate_signature(str(tmp_path), sig) is False
+        run_mock.assert_called_with(
+            ["gpg", "--verify", sig, str(tmp_path)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )

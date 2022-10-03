@@ -22,6 +22,7 @@ import pprint
 
 from mayflower.common import (
     MODULE_DIR,
+    MayflowerException,
     work_root,
     work_dirs,
     get_toolchain,
@@ -86,7 +87,7 @@ def verify_checksum(file, checksum):
         return
     with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
-            raise Exception("md5 checksum verification failed")
+            raise MayflowerException("md5 checksum verification failed")
 
 
 def all_dirs(root, recurse=True):
@@ -252,7 +253,7 @@ class Download:
         try:
             runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
             return True
-        except Exception as exc:
+        except MayflowerException as exc:
             log.error(f"Signature validation failed on {archive}: {exc}")
             return False
 
@@ -264,7 +265,7 @@ class Download:
         try:
             verify_checksum(archive, md5sum)
             return True
-        except Exception as exc:
+        except MayflowerException as exc:
             log.error(f"md5 validation failed on {archive}: {exc}")
             return False
 

@@ -1,9 +1,22 @@
+import hashlib
 import sys
 
 import pytest
 
-from mayflower.build.common import Builder
-from mayflower.common import MODULE_DIR
+from mayflower.build.common import Builder, verify_checksum
+from mayflower.common import MODULE_DIR, MayflowerException
+
+
+@pytest.fixture
+def fake_download(tmp_path):
+    download = tmp_path / "fake_download"
+    download.write_text("This is some file contents")
+    return download
+
+
+@pytest.fixture
+def fake_download_md5(fake_download):
+    return hashlib.md5(fake_download.read_bytes()).hexdigest()
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="Only valid on linux")
@@ -20,3 +33,11 @@ def test_builder_defaults_linux():
     assert callable(builder.populate_env)
     assert builder.no_download == False
     assert builder.recipies == {}
+
+
+def test_verify_checksum(fake_download, fake_download_md5):
+    assert verify_checksum(fake_download, fake_download_md5) is None
+
+
+def test_verify_checksum_failed(fake_download):
+    pytest.raises(MayflowerException, verify_checksum, fake_download, "no")
