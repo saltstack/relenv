@@ -1,5 +1,6 @@
 import pathlib
 import sys
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -8,6 +9,7 @@ from mayflower.common import (
     MayflowerException,
     archived_build,
     get_triplet,
+    runcmd,
     work_dir,
     work_dirs,
     work_root,
@@ -80,3 +82,22 @@ def test_work_dirs_attributes():
     ]
     for attr in checkfor:
         assert hasattr(dirs, attr)
+
+
+def test_runcmd_success():
+    with patch("subprocess.run") as moc:
+        ret = Mock()
+        ret.returncode = 0
+        moc.side_effect = [ret]
+        _ = runcmd(["echo", "foo"])
+        assert moc.called_with(["echo", "foo"])
+        assert _ == ret
+
+
+def test_runcmd_fail():
+    with patch("subprocess.run") as moc:
+        ret = Mock()
+        ret.returncode = 1
+        moc.side_effect = [ret]
+        with pytest.raises(MayflowerException):
+            _ = runcmd(["echo", "foo"])

@@ -1,9 +1,14 @@
 import os
 import pathlib
+import subprocess
 import sys
+import tarfile
+import urllib.error
+import urllib.request
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
+PIPE = subprocess.PIPE
 
 
 class MayflowerException(Exception):
@@ -91,3 +96,64 @@ def archived_build(arch="x86_64", triplet=None):
         triplet = get_triplet()
     dirs = work_dirs()
     return (dirs.build / "{}-{}".format(arch, triplet)).with_suffix(".tar.xz")
+
+
+def extract_archive(to_dir, archive):
+    """
+    Extract an archive to a specific location
+    """
+    if archive.endswith("tgz"):
+        read_type = "r:gz"
+    elif archive.endswith("xz"):
+        read_type = "r:xz"
+    elif archive.endswith("bz2"):
+        read_type = "r:bz2"
+    else:
+        read_type = "r"
+    with tarfile.open(archive, read_type) as t:
+        t.extractall(to_dir)
+
+
+def download_url(url, dest):
+    """
+    Download the url to the provided destination. This method assumes the last
+    part of the url is a filename. (https://foo.com/bar/myfile.tar.xz)
+    """
+    local = os.path.join(dest, os.path.basename(url))
+    n = 0
+    while n < 3:
+        n += 1
+        try:
+            fin = urllib.request.urlopen(url)
+        except urllib.error.HTTPError as exc:
+            if n == 3:
+                raise
+            print("Unable to download: %s %r".format(url, exc))
+            time.sleep(n + 1 * 10)
+    fout = open(local, "wb")
+    block = fin.read(10240)
+    try:
+        while block:
+            fout.write(block)
+            block = fin.read(10240)
+        fin.close()
+        fout.close()
+    except:
+        try:
+            os.unlink(local)
+        except OSError:
+            pass
+        raise
+    return local
+
+
+def runcmd(*args, **kwargs):
+    """
+    Run the provided command, raising an Exception when the command finishes
+    with a non zero exit code.
+    """
+    proc = subprocess.run(*args, **kwargs)
+    print(proc)
+    if proc.returncode != 0:
+        raise MayflowerException("Build cmd '{}' failed".format(" ".join(args[0])))
+    return proc

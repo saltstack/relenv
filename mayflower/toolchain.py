@@ -2,8 +2,15 @@ import os
 import pathlib
 import sys
 
-from .build.common import download_url, extract_archive, runcmd
-from .common import MODULE_DIR, get_toolchain, work_dirs, work_root
+from .common import (
+    MODULE_DIR,
+    download_url,
+    extract_archive,
+    get_toolchain,
+    runcmd,
+    work_dirs,
+    work_root,
+)
 
 WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
