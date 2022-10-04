@@ -84,10 +84,12 @@ def print_ui(events, processes, fails, flipstat={}):
 
 def verify_checksum(file, checksum):
     if checksum is None:
-        return
+        log.error(f"Can't verify checksum because none was given")
+        return False
     with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
             raise MayflowerException("md5 checksum verification failed")
+    return True
 
 
 def all_dirs(root, recurse=True):
@@ -251,8 +253,8 @@ class Download:
         True when the archive's signature is valid
         """
         if signature is None:
-            log.debug(f"Not checking signature because none was given")
-            return
+            log.error(f"Can't check signature because none was given")
+            return False
         try:
             runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
             return True
@@ -275,10 +277,15 @@ class Download:
     def __call__(self):
         os.makedirs(self.filepath.parent, exist_ok=True)
         self.fetch_file()
-        valid_sig = self.validate_signature(self.filepath, self.signature)
-        valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
+        valid = True
+        if self.signature is not None:
+            valid_sig = self.validate_signature(self.filepath, self.signature)
+            valid = valid and valid_sig
+        if self.md5sum is not None:
+            valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
+            valid = valid and valid_md5
         log.debug(f"Checksum for {self.name}: {self.md5sum}")
-        return valid_sig and valid_md5
+        return valid
 
 
 class Dirs:
