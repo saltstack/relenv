@@ -36,7 +36,7 @@ def test_builder_defaults_linux():
 
 
 def test_verify_checksum(fake_download, fake_download_md5):
-    assert verify_checksum(fake_download, fake_download_md5) is None
+    assert verify_checksum(fake_download, fake_download_md5) is True
 
 
 def test_verify_checksum_failed(fake_download):
