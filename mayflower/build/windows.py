@@ -38,7 +38,7 @@ def build_python(env, dirs, logfp):
         "python.exe",
         "pythonw.exe",
         "python3.dll",
-        "python310.dll",
+        "python38.dll",
         "vcruntime140.dll",
         "venvlauncher.exe",
         "venvwlauncher.exe",
@@ -81,8 +81,8 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     shutil.copy(
-        src=str(build_dir / "python310.lib"),
-        dst=str(dirs.prefix / "libs" / "python310.lib"),
+        src=str(build_dir / "python38.lib"),
+        dst=str(dirs.prefix / "libs" / "python38.lib"),
     )
 
 
@@ -93,7 +93,7 @@ build.add(
     build_func=build_python,
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.10.7",
+        "version": "3.8.14",
     },
 )
 
@@ -136,7 +136,6 @@ def finalize(env, dirs, logfp):
             "install",
             str(pkg),
         ]
-        print(cmd)
         if target:
             cmd.append("--target={}".format(target))
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -148,11 +147,20 @@ def finalize(env, dirs, logfp):
         runpip(MODULE_DIR.parent)
     else:
         runpip("mayflower")
+
+    for root, _, files in os.walk(dirs.prefix):
+        for file in files:
+            if file.endswith(".pyc"):
+                os.remove(pathlib.Path(root) / file)
+
     globs = [
         "*.exe",
         "*.py",
         "*.pyd",
         "*.dll",
+        "*.lib",
+        "/Include/*",
+        "/Lib/site-packages/*",
     ]
     archive = dirs.prefix.with_suffix(".tar.xz")
     with tarfile.open(archive, mode="w:xz") as fp:

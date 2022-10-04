@@ -132,6 +132,8 @@ class BuildTimeVars(collections.abc.Mapping):
         debug(f"BuildTimeVars - getitem {name}")
         val = self._build_time_vars.__getitem__(key, *args, **kwargs)
         sys.stdout.flush()
+        if key == "BINDIR":
+            return self.buildroot
         if isinstance(val, str):
             return val.format(
                 BUILDROOT=self.buildroot,

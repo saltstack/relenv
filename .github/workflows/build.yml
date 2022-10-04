@@ -131,8 +131,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install VS Build Tools
+        run: mayflower/_scripts/install_vc_build.ps1
+
+      - name: Install pytest
+        run:  pip3 install pytest
+
       - name: Build Python with Mayflower
         run: python -m mayflower build --arch=x86_64
+
+      - name: Verify Build
+        run: python3 -m pytest tests/test_verify_build.py
 
       - name: Create Tarball Directory
         run: python3 -m mayflower create x86_64-windows
