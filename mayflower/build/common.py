@@ -840,6 +840,8 @@ def finalize(env, dirs, logfp):
         "/lib/*.so.*",
         "*.a",
         "*.py",
+        # Mac specific, factor this out
+        "*.dylib",
     ]
     archive = dirs.prefix.with_suffix(".tar.xz")
     with tarfile.open(archive, mode="w:xz") as fp:
