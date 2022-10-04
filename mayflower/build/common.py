@@ -500,6 +500,156 @@ class Builder:
             os.chdir(cwd)
             logfp.close()
 
+    def cleanup(self):
+        shutil.rmtree(self.prefix)
+
+    def clean(self):
+        # Clean directories
+        for _ in [self.prefix, self.sources]:
+            try:
+                shutil.rmtree(_)
+            except PermissionError:
+                sys.stderr.write(f"Unable to remove directory: {_}")
+            except FileNotFoundError:
+                pass
+        # Clean files
+        for _ in [self.prefix.with_suffix(".tar.xz")]:
+            try:
+                os.remove(_)
+            except FileNotFoundError:
+                pass
+
+    def download_files(self, steps=None):
+        if steps is None:
+            steps = list(self.recipies)
+
+        fails = []
+        processes = {}
+        events = {}
+        sys.stdout.write("Starting downloads \n")
+        print_ui(events, processes, fails)
+        for name in steps:
+            download = self.recipies[name]["download"]
+            if download is None:
+                continue
+            event = multiprocessing.Event()
+            event.set()
+            events[name] = event
+            proc = multiprocessing.Process(name=name, target=download)
+            proc.start()
+            processes[name] = proc
+
+        while processes:
+            for proc in list(processes.values()):
+                proc.join(0.3)
+                # DEBUG: Comment to debug
+                print_ui(events, processes, fails)
+                if proc.exitcode is None:
+                    continue
+                processes.pop(proc.name)
+                if proc.exitcode != 0:
+                    fails.append(proc.name)
+                    is_failure = True
+                else:
+                    is_failure = False
+        print_ui(events, processes, fails)
+        sys.stdout.write("\n")
+        if fails:
+            print_ui(events, processes, fails)
+            sys.stderr.write("The following failures were reported\n")
+            for fail in fails:
+                sys.stderr.write(fail + "\n")
+            sys.stderr.flush()
+            sys.exit(1)
+
+    def build(self, steps=None):
+        fails = []
+        futures = []
+        events = {}
+        waits = {}
+        processes = {}
+
+        sys.stdout.write("Starting builds\n")
+        # DEBUG: Comment to debug
+        print_ui(events, processes, fails)
+
+        for name in steps:
+            event = multiprocessing.Event()
+            events[name] = event
+            kwargs = dict(self.recipies[name])
+
+            # Determine needed dependency recipies.
+            wait_on = kwargs.pop("wait_on", [])
+            for _ in wait_on[:]:
+                if _ not in steps:
+                    wait_on.remove(_)
+
+            waits[name] = wait_on
+            if not waits[name]:
+                event.set()
+
+            proc = multiprocessing.Process(
+                name=name, target=self.run, args=(name, event), kwargs=kwargs
+            )
+            proc.start()
+            processes[name] = proc
+
+        # Wait for the processes to finish and check if we should send any
+        # dependency events.
+        while processes:
+            for proc in list(processes.values()):
+                proc.join(0.3)
+                # DEBUG: Comment to debug
+                print_ui(events, processes, fails)
+                if proc.exitcode is None:
+                    continue
+                processes.pop(proc.name)
+                if proc.exitcode != 0:
+                    fails.append(proc.name)
+                    is_failure = True
+                else:
+                    is_failure = False
+                for name in waits:
+                    if proc.name in waits[name]:
+                        if is_failure:
+                            if name in processes:
+                                processes[name].terminate()
+                                time.sleep(0.1)
+                        waits[name].remove(proc.name)
+                    if not waits[name] and not events[name].is_set():
+                        events[name].set()
+
+        if fails:
+            sys.stderr.write("The following failures were reported\n")
+            for fail in fails:
+                sys.stderr.write(fail + "\n")
+            sys.stderr.flush()
+            self.cleanup()
+            sys.exit(1)
+        time.sleep(0.1)
+        # DEBUG: Comment to debug
+        print_ui(events, processes, fails)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        self.cleanup()
+
+    def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
+        if arch:
+            self.set_arch(arch)
+
+        if steps is None:
+            steps = self.recipies
+
+        if clean:
+            self.clean()
+
+        # Start a process for each build passing it an event used to notify each
+        # process if it's dependencies have finished.
+        if download:
+            self.download_files(steps)
+
+        self.build(steps)
+
 
 SITECUSTOMIZE = """\"\"\"
 Mayflower site customize
@@ -777,140 +927,13 @@ def run_build(builder, argparser):
     if "CICD" in os.environ:
         CICD = True
     builder.set_arch(ns.arch)
+    steps = None
     if ns.steps:
-        ns.steps = [_.strip() for _ in ns.steps.split(",")]
-        run = ns.steps
-    else:
-        run = builder.recipies
-
-    if ns.clean:
-        # Clean directories
-        for _ in [builder.prefix, builder.sources]:
-            try:
-                shutil.rmtree(_)
-            except PermissionError:
-                sys.stderr.write(f"Unable to remove directory: {_}")
-            except FileNotFoundError:
-                pass
-        # Clean files
-        for _ in [builder.prefix.with_suffix(".tar.xz")]:
-            try:
-                os.remove(_)
-            except FileNotFoundError:
-                pass
-
-    # Start a process for each build passing it an event used to notify each
-    # process if it's dependencies have finished.
-    if not ns.no_download:
-        fails = []
-        processes = {}
-        events = {}
-        sys.stdout.write("Starting downloads \n")
-        print_ui(events, processes, fails)
-        for name in run:
-            download = builder.recipies[name]["download"]
-            if download is None:
-                continue
-            event = multiprocessing.Event()
-            event.set()
-            events[name] = event
-            proc = multiprocessing.Process(name=name, target=download)
-            proc.start()
-            processes[name] = proc
-
-        while processes:
-            for proc in list(processes.values()):
-                proc.join(0.3)
-                # DEBUG: Comment to debug
-                print_ui(events, processes, fails)
-                if proc.exitcode is None:
-                    continue
-                processes.pop(proc.name)
-                if proc.exitcode != 0:
-                    fails.append(proc.name)
-                    is_failure = True
-                else:
-                    is_failure = False
-        print_ui(events, processes, fails)
-        sys.stdout.write("\n")
-        if fails:
-            print_ui(events, processes, fails)
-            sys.stderr.write("The following failures were reported\n")
-            for fail in fails:
-                sys.stderr.write(fail + "\n")
-            sys.stderr.flush()
-            sys.exit(1)
-
-    fails = []
-    futures = []
-    events = {}
-    waits = {}
-    processes = {}
-
-    sys.stdout.write("Starting builds\n")
-    # DEBUG: Comment to debug
-    print_ui(events, processes, fails)
-
-    for name in run:
-        event = multiprocessing.Event()
-        events[name] = event
-        kwargs = dict(builder.recipies[name])
-
-        # Determine needed dependency recipies.
-        wait_on = kwargs.pop("wait_on", [])
-        for _ in wait_on[:]:
-            if _ not in run:
-                wait_on.remove(_)
-
-        waits[name] = wait_on
-        if not waits[name]:
-            event.set()
-
-        proc = multiprocessing.Process(
-            name=name, target=builder.run, args=(name, event), kwargs=kwargs
-        )
-        proc.start()
-        processes[name] = proc
-
-    # Wait for the processes to finish and check if we should send any
-    # dependency events.
-    while processes:
-        for proc in list(processes.values()):
-            proc.join(0.3)
-            # DEBUG: Comment to debug
-            print_ui(events, processes, fails)
-            if proc.exitcode is None:
-                continue
-            processes.pop(proc.name)
-            if proc.exitcode != 0:
-                fails.append(proc.name)
-                is_failure = True
-            else:
-                is_failure = False
-            for name in waits:
-                if proc.name in waits[name]:
-                    if is_failure:
-                        if name in processes:
-                            processes[name].terminate()
-                            time.sleep(0.1)
-                    waits[name].remove(proc.name)
-                if not waits[name] and not events[name].is_set():
-                    events[name].set()
-
-    def cleanup():
-        if not ns.no_cleanup:
-            shutil.rmtree(builder.prefix)
-
-    if fails:
-        sys.stderr.write("The following failures were reported\n")
-        for fail in fails:
-            sys.stderr.write(fail + "\n")
-        sys.stderr.flush()
-        cleanup()
-        sys.exit(1)
-    time.sleep(0.1)
-    # DEBUG: Comment to debug
-    print_ui(events, processes, fails)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
-    cleanup()
+        steps = [_.strip() for _ in ns.steps.split(",")]
+    builder(
+        steps=steps,
+        arch=ns.arch,
+        clean=ns.clean,
+        cleanup=ns.no_cleanup,
+        download=not ns.no_download,
+    )

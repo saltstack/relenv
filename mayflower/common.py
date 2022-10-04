@@ -153,7 +153,6 @@ def runcmd(*args, **kwargs):
     with a non zero exit code.
     """
     proc = subprocess.run(*args, **kwargs)
-    print(proc)
     if proc.returncode != 0:
         raise MayflowerException("Build cmd '{}' failed".format(" ".join(args[0])))
     return proc
