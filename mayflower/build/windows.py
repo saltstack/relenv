@@ -38,7 +38,7 @@ def build_python(env, dirs, logfp):
         "python.exe",
         "pythonw.exe",
         "python3.dll",
-        "python310.dll",
+        "python38.dll",
         "vcruntime140.dll",
         "venvlauncher.exe",
         "venvwlauncher.exe",
@@ -81,8 +81,8 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     shutil.copy(
-        src=str(build_dir / "python310.lib"),
-        dst=str(dirs.prefix / "libs" / "python310.lib"),
+        src=str(build_dir / "python38.lib"),
+        dst=str(dirs.prefix / "libs" / "python38.lib"),
     )
 
 
