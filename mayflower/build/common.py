@@ -22,6 +22,7 @@ import pprint
 
 from mayflower.common import (
     MODULE_DIR,
+    MayflowerException,
     work_root,
     work_dirs,
     get_toolchain,
@@ -83,10 +84,12 @@ def print_ui(events, processes, fails, flipstat={}):
 
 def verify_checksum(file, checksum):
     if checksum is None:
-        return
+        log.error(f"Can't verify checksum because none was given")
+        return False
     with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
-            raise Exception("md5 checksum verification failed")
+            raise MayflowerException("md5 checksum verification failed")
+    return True
 
 
 def all_dirs(root, recurse=True):
@@ -227,7 +230,7 @@ class Download:
 
     @property
     def formatted_url(self):
-        return self.url.format(version=version)
+        return self.url.format(version=self.version)
 
     def fetch_file(self):
         return download_url(self.url, self.destination)
@@ -249,19 +252,40 @@ class Download:
         """
         True when the archive's signature is valid
         """
-        pass
+        if signature is None:
+            log.error("Can't check signature because none was given")
+            return False
+        try:
+            runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
+            return True
+        except MayflowerException as exc:
+            log.error("Signature validation failed on %s: %s", archive, exc)
+            return False
 
     @staticmethod
     def validate_md5sum(archive, md5sum):
         """
         True when when the archive matches the md5 hash
         """
-        pass
+        try:
+            verify_checksum(archive, md5sum)
+            return True
+        except MayflowerException as exc:
+            log.error("md5 validation failed on %s: %s", archive, exc)
+            return False
 
     def __call__(self):
         os.makedirs(self.filepath.parent, exist_ok=True)
         self.fetch_file()
-        # XXX Verify the signature and log the checksum
+        valid = True
+        if self.signature is not None:
+            valid_sig = self.validate_signature(self.filepath, self.signature)
+            valid = valid and valid_sig
+        if self.md5sum is not None:
+            valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
+            valid = valid and valid_md5
+        log.debug("Checksum for %s: %s", self.name, self.md5sum)
+        return valid
 
 
 class Dirs:
