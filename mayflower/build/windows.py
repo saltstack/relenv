@@ -136,7 +136,6 @@ def finalize(env, dirs, logfp):
             "install",
             str(pkg),
         ]
-        print(cmd)
         if target:
             cmd.append("--target={}".format(target))
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -148,11 +147,20 @@ def finalize(env, dirs, logfp):
         runpip(MODULE_DIR.parent)
     else:
         runpip("mayflower")
+
+    for root, _, files in os.walk(dirs.prefix):
+        for file in files:
+            if file.endswith(".pyc"):
+                os.remove(pathlib.Path(root) / file)
+
     globs = [
         "*.exe",
         "*.py",
         "*.pyd",
         "*.dll",
+        "*.lib",
+        "/Include/*",
+        "/Lib/site-packages/*",
     ]
     archive = dirs.prefix.with_suffix(".tar.xz")
     with tarfile.open(archive, mode="w:xz") as fp:
