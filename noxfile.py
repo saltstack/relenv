@@ -1,15 +1,14 @@
 """
 Nox session definitions
 """
-
-
 import datetime
 import os
 import pathlib
-import sys
 
 import nox  # isort:skip
 
+CI_RUN = os.environ.get("CI") is not None
+PIP_INSTALL_SILENT = CI_RUN is False
 SKIP_REQUIREMENTS_INSTALL = os.environ.get("SKIP_REQUIREMENTS_INSTALL", "0") == "1"
 
 # Global Path Definitions
@@ -78,7 +77,11 @@ def run_pytest_session(session, *cmd_args):
     make_artifacts_directory()
 
     if not SKIP_REQUIREMENTS_INSTALL:
-        session.install("pytest")
+        session.install(
+            "-r",
+            str(REPO_ROOT / "tests" / "requirements.txt"),
+            silent=PIP_INSTALL_SILENT,
+        )
 
     default_args = [
         "-vv",
@@ -87,6 +90,7 @@ def run_pytest_session(session, *cmd_args):
         "-ra",
         "-s",
         "--log-file-level=debug",
+        "--strict-markers",
     ]
 
     # check for --log-file
@@ -96,7 +100,7 @@ def run_pytest_session(session, *cmd_args):
     else:
         default_args.append(f"--log-file={PYTEST_LOGFILE}")
 
-    pytest_args = default_args + list(cmd_args)
+    pytest_args = default_args + list(cmd_args) + session.posargs
     session.run("python", "-m", "pytest", *pytest_args)
 
 

@@ -1,6 +1,5 @@
 import pathlib
 import shutil
-import sys
 from textwrap import dedent
 from unittest.mock import MagicMock, call, patch
 
@@ -16,8 +15,9 @@ from mayflower.relocate import (
     patch_rpath,
 )
 
-if sys.platform.startswith("win"):
-    pytest.skip("Relocate not used on windows", allow_module_level=True)
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="Relocate not used on windows"),
+]
 
 
 class BaseProject:
