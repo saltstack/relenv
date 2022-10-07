@@ -13,6 +13,7 @@ import collections.abc
 import importlib
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -101,8 +102,7 @@ class MayflowerImporter:
             try:
                 maymod = importlib.import_module("mayflower-sysconfigdata")
             except ImportError:
-                if os.environ.get("MAYFLOWER_DEBUG"):
-                    print("Unable to import mayflower-sysconfigdata")
+                debug("Unable to import mayflower-sysconfigdata")
                 return mod
             buildroot = MODULE_DIR.parent.parent.parent.parent
             toolchain = MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
@@ -163,18 +163,27 @@ def bootstrap():
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
     if "SSL_CERT_DIR" not in os.environ and sys.platform != "win32":
-        try:
-            proc = subprocess.run(
-                ["openssl", "version", "-d"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except Exception as exc:
-            if os.environ.get("MAYFLOWER_DEBUG"):
-                print("Unable to configure openssl %s")
-        if proc.returncode != 0:
+        openssl_bin = shutil.which("openssl")
+        if not openssl_bin:
+            debug("Could not find the 'openssl' binary in the path")
             return
-        label, _ = proc.stdout.decode().split(":")
+
+        proc = subprocess.run(
+            [openssl_bin, "version", "-d"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            shell=False,
+            check=False,
+        )
+        if proc.returncode != 0:
+            msg = "Unable to get the certificates directory from openssl"
+            if proc.stderr:
+                msg += f": {proc.stderr}"
+            debug(msg)
+            return
+
+        label, _ = proc.stdout.split(":")
         path = pathlib.Path(_.strip().strip('"'))
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
     build_time_vars = BuildTimeVars()
