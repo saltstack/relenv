@@ -562,7 +562,7 @@ class Builder:
             sys.stderr.flush()
             sys.exit(1)
 
-    def build(self, steps=None):
+    def build(self, steps=None, cleanup=True):
         fails = []
         futures = []
         events = {}
@@ -624,14 +624,16 @@ class Builder:
             for fail in fails:
                 sys.stderr.write(fail + "\n")
             sys.stderr.flush()
-            self.cleanup()
+            if cleanup:
+                self.cleanup()
             sys.exit(1)
         time.sleep(0.1)
         # DEBUG: Comment to debug
         print_ui(events, processes, fails)
         sys.stdout.write("\n")
         sys.stdout.flush()
-        self.cleanup()
+        if cleanup:
+            self.cleanup()
 
     def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
         if arch:
@@ -648,7 +650,7 @@ class Builder:
         if download:
             self.download_files(steps)
 
-        self.build(steps)
+        self.build(steps, cleanup)
 
 
 SITECUSTOMIZE = """\"\"\"

@@ -186,6 +186,7 @@ def bootstrap():
         label, _ = proc.stdout.split(":")
         path = pathlib.Path(_.strip().strip('"'))
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
+        os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
     build_time_vars = BuildTimeVars()
     importer = MayflowerImporter()
     importer.build_time_vars = build_time_vars
