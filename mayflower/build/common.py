@@ -43,7 +43,7 @@ END = "\033[0m"
 MOVEUP = "\033[F"
 
 
-CICD = False
+CICD = "CI" in os.environ
 NODOWLOAD = False
 WORK_IN_CWD = False
 
@@ -72,7 +72,7 @@ def get_build():
 
 
 def print_ui(events, processes, fails, flipstat={}):
-    if "CICD" in os.environ:
+    if CICD:
         sys.stdout.flush()
         return
     uiline = []
@@ -928,9 +928,6 @@ def run_build(builder, argparser):
     if getattr(ns, "help", None):
         argparser.print_help()
         sys.exit(0)
-    global CICD
-    if "CICD" in os.environ:
-        CICD = True
     builder.set_arch(ns.arch)
     steps = None
     if ns.steps:
