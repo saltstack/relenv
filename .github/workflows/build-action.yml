@@ -45,6 +45,7 @@ jobs:
           python3 -m mayflower build --arch=${{ matrix.arch }}
 
       - name: Verify Build
+        if: ${{ matrix.arch != 'aarch64' }}
         run: |
           nox -e tests -- tests/test_verify_build.py
 
