@@ -1,0 +1,216 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+
+jobs:
+
+  build_linux:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+          - aarch64
+
+    name: "Linux"
+
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get install build-essential bison linux-headers-$(uname -r)
+          python3 -m pip install nox
+
+      - name: Fetch Toolchain
+        run: |
+          python3 -m mayflower toolchain download --arch=${{ matrix.arch }}
+
+      - name: Fetch Native Build
+        if: ${{ matrix.arch == 'aarch64' }}
+        run: |
+          python3 -m mayflower fetch
+
+      - name: Build
+        run: |
+          python3 -m mayflower build --arch=${{ matrix.arch }}
+
+      - name: Verify Build
+        if: ${{ matrix.arch != 'aarch64' }}
+        run: |
+          nox -e tests -- tests/test_verify_build.py
+
+      - name: Create Tarball Directory
+        run: |
+          python3 -m mayflower create ${{ matrix.arch }}-linux-gnu
+
+      - name: Create Tarball
+        run: |
+          tar -cJf python-${{ matrix.arch }}-linux-gnu.tar.xz  ${{ matrix.arch }}-linux-gnu
+
+      - name: Linux Logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.arch }}-linux-gnu-logs
+          path: mayflower/_logs/*
+          retention-days: 5
+
+      - name: Python build
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-${{ matrix.arch }}-linux-gnu.tar.xz
+          path: python-${{ matrix.arch }}-linux-gnu.tar.xz
+          retention-days: 5
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build_macos:
+    name: "macOS"
+
+    runs-on: macos-12
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install nox
+        run: |
+          pip3 install nox
+
+      - name: Build
+        run: |
+          python3 -m mayflower build
+
+      - name: Verify Build
+        run: |
+          nox -e tests -- tests/test_verify_build.py
+
+      - name: Create Tarball Directory
+        run: |
+          python3 -m mayflower create ${{ matrix.arch }}-macos
+
+      - name: Create Tarball
+        run: |
+          tar -cJf python-${{ matrix.arch }}-macos.tar.xz ${{ matrix.arch }}-macos
+
+      - name: MacOS Logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.arch }}-macos-logs
+          path: mayflower/_logs/*
+          retention-days: 5
+
+      - name: Python build
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-${{ matrix.arch }}-macos.tar.xz
+          path: python-${{ matrix.arch }}-macos.tar.xz
+          retention-days: 5
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
+
+  build_windows:
+    name: "Windows"
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86_64
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install VS Build Tools
+        run: |
+          mayflower/_scripts/install_vc_build.ps1
+
+      - name: Install nox
+        run: |
+          pip3 install nox
+
+      - name: Build Python with Mayflower
+        run: |
+          python -m mayflower build --arch=${{ matrix.arch }}
+
+      - name: Verify Build
+        run: |
+          nox -e tests -- tests/test_verify_build.py
+
+      - name: Create Tarball Directory
+        run: |
+          python3 -m mayflower create ${{ matrix.arch }}-windows
+
+      - name: Create Zipfile from build
+        run: |
+          Compress-Archive -Path ${{ matrix.arch }}-windows -DestinationPath .\python-${{ matrix.arch }}-windows.zip
+
+      - name: Upload Build Logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.arch }}-windows-logs
+          path: mayflower/_logs/*
+          retention-days: 5
+
+      - name: Upload Zipfile
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-${{ matrix.arch }}-windows.zip
+          path: python-${{ matrix.arch }}-windows.zip
+          retention-days: 5
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error
