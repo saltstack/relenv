@@ -58,7 +58,6 @@ try:
 except ImportError:
     if "MAYFLOWER_DEBUG" in os.environ:
         print("Unable to find mayflower.runtime for bootstrap.")
-    pass
 else:
     mayflower.runtime.bootstrap()
 """
