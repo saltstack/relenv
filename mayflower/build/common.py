@@ -48,6 +48,21 @@ NODOWLOAD = False
 WORK_IN_CWD = False
 
 
+SITECUSTOMIZE = """\"\"\"
+Mayflower site customize
+\"\"\"
+import site, os
+site.ENABLE_USER_SITE = False
+try:
+    import mayflower.runtime
+except ImportError:
+    if "MAYFLOWER_DEBUG" in os.environ:
+        print("Unable to find mayflower.runtime for bootstrap.")
+else:
+    mayflower.runtime.bootstrap()
+"""
+
+
 def get_build():
     if WORK_IN_CWD:
         base = pathlib.Path("build").resolve()
@@ -653,22 +668,6 @@ class Builder:
         self.build(steps, cleanup)
 
 
-SITECUSTOMIZE = """\"\"\"
-Mayflower site customize
-\"\"\"
-import site, os
-site.ENABLE_USER_SITE = False
-try:
-    import mayflower.runtime
-except ImportError:
-    if "MAYFLOWER_DEBUG" in os.environ:
-        print("Unable to find mayflower.runtime for bootstrap.")
-    pass
-else:
-    mayflower.runtime.bootstrap()
-"""
-
-
 def install_sysdata(mod, destfile, buildroot, toolchain):
     """
     Helper method used by the `finalize` build method to create a Mayflower
@@ -805,7 +804,7 @@ def finalize(env, dirs, logfp):
                 fp.write('"exec" "`dirname $0`/python3" "$0" "$@"')
                 fp.write(data)
 
-    def runpip(pkg):
+    def runpip(pkg, upgrade=False):
         target = None
         # XXX This needs to be more robust
         python = dirs.prefix / "bin" / "python3"
@@ -822,6 +821,8 @@ def finalize(env, dirs, logfp):
             "install",
             str(pkg),
         ]
+        if upgrade:
+            cmd.append("--upgrade")
         if target:
             cmd.append("--target={}".format(target))
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -830,9 +831,9 @@ def finalize(env, dirs, logfp):
     # This needs to handle running from the root of the git repo and also from
     # an installed Mayflower
     if (MODULE_DIR.parent / ".git").exists():
-        runpip(MODULE_DIR.parent)
+        runpip(MODULE_DIR.parent, upgrade=True)
     else:
-        runpip("mayflower")
+        runpip("mayflower", upgrade=True)
     globs = [
         "/bin/python*",
         "/bin/pip*",
