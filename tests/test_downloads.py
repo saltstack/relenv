@@ -58,9 +58,9 @@ def test_download_exists(tmp_path):
         version="1.0.0",
         destination=tmp_path,
     )
-    assert download.exists() == False
+    assert download.exists() is False
     (pathlib.Path(tmp_path) / "test-1.0.0.tar.xz").touch()
-    assert download.exists() == True
+    assert download.exists() is True
 
 
 def test_validate_md5sum(tmp_path):

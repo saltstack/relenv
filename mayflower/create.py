@@ -1,7 +1,6 @@
 import contextlib
 import os
 import pathlib
-import shutil
 import sys
 import tarfile
 import tempfile

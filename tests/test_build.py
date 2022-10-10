@@ -1,5 +1,4 @@
 import hashlib
-import sys
 
 import pytest
 
@@ -19,7 +18,7 @@ def fake_download_md5(fake_download):
     return hashlib.md5(fake_download.read_bytes()).hexdigest()
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="Only valid on linux")
+@pytest.mark.skip_unless_on_linux
 def test_builder_defaults_linux():
     builder = Builder()
     assert builder.arch == "x86_64"
@@ -31,7 +30,7 @@ def test_builder_defaults_linux():
     assert builder.toolchain == MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
     assert callable(builder.build_default)
     assert callable(builder.populate_env)
-    assert builder.no_download == False
+    assert builder.no_download is False
     assert builder.recipies == {}
 
 

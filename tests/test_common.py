@@ -10,7 +10,6 @@ from mayflower.common import (
     archived_build,
     get_triplet,
     runcmd,
-    work_dir,
     work_dirs,
     work_root,
 )
@@ -37,7 +36,7 @@ def test_get_triplet_default():
     elif platform == "linux":
         assert get_triplet() == "linux-gnu"
     else:
-        assert False, "Do not know how to test for '{}' platform".format(platform)
+        pytest.fail("Do not know how to test for '{}' platform".format(platform))
 
 
 def test_get_triplet_unknown():
@@ -51,7 +50,7 @@ def test_archived_build():
     try:
         _ = build.relative_to(dirs.build)
     except ValueError:
-        assert False, "Archived build value not relative to build dir"
+        pytest.fail("Archived build value not relative to build dir")
 
 
 def test_work_root_when_passed_relative_path():

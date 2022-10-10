@@ -25,7 +25,9 @@ jobs:
       run: CICD=true python3 -m mayflower build --arch=x86_64
 
     - name: Verify Build
-      run: python3 -m pytest tests/test_verify_build.py
+      run: |
+        python3 -m pip install nox
+        nox -e tests -- tests/test_verify_build.py
 
     - name: Create Tarball Directory
       run: python3 -m mayflower create x86_64-linux-gnu
@@ -104,7 +106,9 @@ jobs:
       run: CICD=true python3 -m mayflower build
 
     - name: Verify Build
-      run: python3 -m pytest tests/test_verify_build.py
+      run: |
+        python3 -m pip install nox
+        nox -e tests -- tests/test_verify_build.py
 
     - name: Create Tarball Directory
       run: python3 -m mayflower create x86_64-macos
@@ -147,7 +151,9 @@ jobs:
         run: python -m mayflower build --arch=x86_64
 
       - name: Verify Build
-        run: python3 -m pytest tests/test_verify_build.py
+        run: |
+          python3 -m pip install nox
+          nox -e tests -- tests/test_verify_build.py
 
       - name: Create Tarball Directory
         run: python3 -m mayflower create x86_64-windows

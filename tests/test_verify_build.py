@@ -4,16 +4,23 @@ Verify mayflower builds
 import pathlib
 import subprocess
 import sys
-import tempfile
 
 import pytest
 
 from mayflower.common import archived_build
 from mayflower.create import create
 
-pytestmark = pytest.mark.skipif(
-    not archived_build().exists(), reason="Build archive does not exist"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not archived_build().exists(), reason="Build archive does not exist"
+    ),
+]
+
+
+@pytest.fixture
+def build(tmpdir):
+    create("test", tmpdir)
+    yield pathlib.Path(tmpdir) / "test"
 
 
 @pytest.fixture
@@ -31,13 +38,7 @@ def pyexec(build):
     yield build / "bin" / "python3"
 
 
-@pytest.fixture
-def build(tmpdir):
-    create("test", tmpdir)
-    yield pathlib.Path(tmpdir) / "test"
-
-
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+@pytest.mark.skip_unless_on_windows
 def test_directories_win(build):
     assert (build / "Scripts").exists()
     assert (build / "DLLs").exists()
@@ -47,7 +48,7 @@ def test_directories_win(build):
     assert (build / "Include").exists()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Non windows only")
+@pytest.mark.skip_on_windows
 def test_directories(build):
     assert (build / "bin").exists()
     assert (build / "lib").exists()
@@ -57,7 +58,7 @@ def test_directories(build):
     assert (build / "include").exists()
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+@pytest.mark.skip_unless_on_windows
 def test_imports(pyexec):
     modules = [
         "asyncio",
@@ -77,7 +78,7 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Non windows only")
+@pytest.mark.skip_on_windows
 def test_imports(pyexec):
     modules = [
         "asyncio",
