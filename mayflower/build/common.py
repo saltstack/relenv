@@ -876,66 +876,18 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
                     logfp.write("Skipping {}\n".format(relpath))
 
 
-def run_build(builder, argparser):
+def run_build(builder, args):
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     random.seed()
-    argparser.descrption = "Build Mayflower Python Environments from source"
-    argparser.add_argument(
-        "--arch",
-        default="x86_64",
-        type=str,
-        help="The host architecture [default: x86_64]",
-    )
-    argparser.add_argument(
-        "--clean",
-        default=False,
-        action="store_true",
-        help=(
-            "Clean up before running the build. This option will remove the "
-            "logs, src, build, and previous tarball."
-        ),
-    )
-    argparser.add_argument(
-        "--no-cleanup",
-        default=False,
-        action="store_true",
-        help=(
-            "By default the build directory is removed after the build "
-            "tarball is created. Setting this option will leave the build "
-            "directory in place."
-        ),
-    )
-    # XXX We should automatically skip downloads that can be verified as not
-    # being corrupt and this can become --force-download
-    argparser.add_argument(
-        "--no-download",
-        default=False,
-        action="store_true",
-        help="Skip downloading source tarballs",
-    )
-    argparser.add_argument(
-        "--steps",
-        default=None,
-        help=(
-            "Comman separated list of steps to run. When this option is used to "
-            "invoke builds, depenencies of the steps are ignored.  This option "
-            "should be used with care, as it's easy to request a situation that "
-            "has no chance of being succesfull. "
-        ),
-    )
-    ns, argv = argparser.parse_known_args()
-    if getattr(ns, "help", None):
-        argparser.print_help()
-        sys.exit(0)
-    builder.set_arch(ns.arch)
+    builder.set_arch(args.arch)
     steps = None
-    if ns.steps:
-        steps = [_.strip() for _ in ns.steps.split(",")]
+    if args.steps:
+        steps = [_.strip() for _ in args.steps.split(",")]
     builder(
         steps=steps,
-        arch=ns.arch,
-        clean=ns.clean,
-        cleanup=ns.no_cleanup,
-        download=not ns.no_download,
+        arch=args.arch,
+        clean=args.clean,
+        cleanup=args.no_cleanup,
+        download=not args.no_download,
     )
