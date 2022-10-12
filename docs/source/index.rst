@@ -6,9 +6,13 @@
 Welcome to Mayflower's documentation!
 =====================================
 
+:doc:`toolchain`
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   
+   toolchain
 
 
 

@@ -1,4 +1,5 @@
 import pathlib
+import platform
 import sys
 from unittest.mock import Mock, patch
 
@@ -16,32 +17,33 @@ from mayflower.common import (
 
 
 def test_get_triplet_linux():
-    assert get_triplet("linux") == "linux-gnu"
+    assert get_triplet("aarch64", "linux") == "aarch64-linux-gnu"
 
 
 def test_get_triplet_darwin():
-    assert get_triplet("darwin") == "macos"
+    assert get_triplet("x86_64", "darwin") == "x86_64-macos"
 
 
 def test_get_triplet_windows():
-    assert get_triplet("win32") == "win"
+    assert get_triplet("amd64", "win32") == "amd64-win"
 
 
 def test_get_triplet_default():
-    platform = sys.platform
-    if platform == "win32":
-        assert get_triplet() == "win"
-    elif platform == "darwin":
-        assert get_triplet() == "macos"
-    elif platform == "linux":
-        assert get_triplet() == "linux-gnu"
+    machine = platform.machine().lower()
+    plat = sys.platform
+    if plat == "win32":
+        assert get_triplet() == f"{machine}-win"
+    elif plat == "darwin":
+        assert get_triplet() == f"{machine}-macos"
+    elif plat == "linux":
+        assert get_triplet() == f"{machine}-linux-gnu"
     else:
-        pytest.fail("Do not know how to test for '{}' platform".format(platform))
+        pytest.fail("Do not know how to test for '{}' platform".format(plat))
 
 
 def test_get_triplet_unknown():
     with pytest.raises(MayflowerException):
-        get_triplet("oijfsdf")
+        get_triplet("aarch64", "oijfsdf")
 
 
 def test_archived_build():
