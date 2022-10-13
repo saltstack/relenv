@@ -1,5 +1,6 @@
 import os
 import pathlib
+import platform
 import subprocess
 import sys
 import tarfile
@@ -75,27 +76,30 @@ def get_toolchain(arch=None, root=None):
     return dirs.toolchain
 
 
-def get_triplet(platform=None):
-    if not platform:
-        platform = sys.platform
-    if platform == "darwin":
-        return "macos"
-    elif platform == "win32":
-        return "win"
-    elif platform == "linux":
-        return "linux-gnu"
+def get_triplet(machine=None, plat=None):
+    if not plat:
+        plat = sys.platform
+    if not machine:
+        machine = platform.machine()
+    machine = machine.lower()
+    if plat == "darwin":
+        return f"{machine}-macos"
+    elif plat == "win32":
+        return f"{machine}-win"
+    elif plat == "linux":
+        return f"{machine}-linux-gnu"
     else:
         raise MayflowerException("Unknown platform {}".format(platform))
 
 
-def archived_build(arch="x86_64", triplet=None):
+def archived_build(triplet=None):
     """
     Returns a `Path` object pointing to the location of an archived build.
     """
     if not triplet:
         triplet = get_triplet()
     dirs = work_dirs()
-    return (dirs.build / "{}-{}".format(arch, triplet)).with_suffix(".tar.xz")
+    return (dirs.build / triplet).with_suffix(".tar.xz")
 
 
 def extract_archive(to_dir, archive):

@@ -17,9 +17,8 @@ docs/build
 !/mayflower/_build/README
 /mayflower/_download
 /mayflower/_toolchain/*
-!/mayflower/_toolchain/*-ct-ng.config
+!/mayflower/_toolchain/*/*-ct-ng.config
 !/mayflower/_toolchain/README
-!*/_toolchain/*ct-ng.config
 
 # Default log location for `mayflower build`
 /mayflower/_logs
