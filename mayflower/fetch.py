@@ -8,6 +8,17 @@ import tarfile
 from .common import MODULE_DIR, download_url, extract_archive, work_dir
 
 
+def setup_parser(subparsers):
+    fetch_subparser = subparsers.add_parser(
+        "fetch", description="Fetch mayflower builds"
+    )
+    fetch_subparser.set_defaults(func=main)
+
+    fetch_subparser.add_argument(
+        "--arch", default="x86_64", help="Architecture to download"
+    )
+
+
 def main(args):
     url = "https://woz.io/mayflower/{version}/build/{arch}-linux-gnu.tar.xz".format(
         version="0.0.0", arch=args.arch

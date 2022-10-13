@@ -24,6 +24,22 @@ class CreateException(MayflowerException):
     """
 
 
+def setup_parser(subparsers):
+    create_subparser = subparsers.add_parser(
+        "create",
+        description="Create a Mayflower environment. This will create a directory of the given name with newly created Mayflower environment.",
+    )
+    create_subparser.set_defaults(func=main)
+
+    create_subparser.add_argument("name", help="The name of the directory to create")
+    create_subparser.add_argument(
+        "--arch",
+        default="x86_64",
+        type=str,
+        help="The host architecture [default: x86_64]",
+    )
+
+
 def create(name, dest=None, arch="x86_64"):
 
     if dest:

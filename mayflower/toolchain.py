@@ -20,6 +20,36 @@ CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.t
 TC_URL = "https://woz.io/mayflower/{version}/toolchain/{arch}-linux-gnu.tar.xz"
 
 
+def setup_parser(subparsers):
+    toolchain_subparser = subparsers.add_parser(
+        "toolchain", description="Build Linux Toolchains"
+    )
+    toolchain_subparser.set_defaults(func=main)
+
+    toolchain_subparser.add_argument(
+        "command",
+        default="download",
+        help="What type of toolchain operation to perform: build or download",
+    )
+    toolchain_subparser.add_argument(
+        "--arch",
+        default="x86_64,aarch64",
+        help="Comma separated list of arches to build or download",
+    )
+    toolchain_subparser.add_argument(
+        "--clean",
+        default=False,
+        action="store_true",
+        help="Comma separated list of arches to build or download",
+    )
+    toolchain_subparser.add_argument(
+        "--crosstool-only",
+        default=False,
+        action="store_true",
+        help="When building only build Crosstool NG. Do not build toolchains",
+    )
+
+
 def main(args):
     args.arch = [_.strip() for _ in args.arch.split(",")]
     toolchain = get_toolchain()
