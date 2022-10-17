@@ -35,7 +35,7 @@ def setup_parser(subparsers):
     toolchain_subparser.add_argument(
         "--arch",
         action="append",
-        default=["x86_64," "aarch64"],
+        default=["x86_64", "aarch64"],
         help="Arches to build or download",
     )
     toolchain_subparser.add_argument(
