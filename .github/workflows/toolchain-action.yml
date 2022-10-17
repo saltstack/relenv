@@ -12,7 +12,7 @@ jobs:
 
   build_toolchain:
 
-    name: "${{ inputs.arch }}"
+    name: "${{ matrix.target }}"
 
     runs-on: ubuntu-22.04
 
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
+        target:
           - x86_64
           - aarch64
 
@@ -34,32 +34,32 @@ jobs:
 
       - name: Build toolchain
         run: |
-          python3 -m mayflower toolchain build --arch=${{ matrix.arch }}
+          python3 -m mayflower toolchain build --arch=${{ matrix.target }}
 
-      - name: Linux Logs
+      - name: Logs toolchain ${{ matrix.target }}
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.arch }}-linux-gnu-toolchain-logs
+          name: ${{ matrix.target }}-linux-gnu-toolchain-logs
           path: mayflower/_toolchain/build.log
           retention-days: 5
 
       - name: Create Tarball
         run: |
-          tar -C mayflower/_toolchain -cJf toolchain-${{ matrix.arch }}-linux-gnu.tar.xz  ${{ matrix.arch }}-linux-gnu
+          tar -C mayflower/_toolchain -cJf toolchain-${{ matrix.target }}-linux-gnu.tar.xz  ${{ matrix.target }}-linux-gnu
 
       - name: Toolchain build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: toolchain-${{ matrix.arch }}-linux-gnu.tar.xz
-          path: toolchain-${{ matrix.arch }}-linux-gnu.tar.xz
+          name: toolchain-${{ matrix.target }}-linux-gnu.tar.xz
+          path: toolchain-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ matrix.arch }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-${{ matrix.target }}
 
       - name: Upload Exit Status
         if: always()

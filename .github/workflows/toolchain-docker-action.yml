@@ -14,7 +14,7 @@ jobs:
 
     name: "${{ matrix.target }} on ${{ matrix.host }}"
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     if: fromJSON(inputs.changed-files)['toolchain'] == 'true'
 
@@ -32,12 +32,21 @@ jobs:
         id: docker_cmds
         with:
           arch: aarch64
-          distro: ubuntu18.04
+          distro: ubuntu22.04
 
           install: |
             apt-get update
-            apt-get install -y build-essential libtool-bin linux-headers-$(uname -r) help2man python3-all flex texinfo unzip
+            apt-get install -y build-essential libtool-bin linux-headers-$(uname -r)
+            apt-get install -y help2man python3-all flex bison texinfo unzip gawk libncurses-dev rsync
 
           run: |
             python3 -m mayflower toolchain build --arch=${{ matrix.target }}
 
+
+      - name: Logs toolchain docker ${{ matrix.target }}
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.target }}-linux-gnu-toolchain-logs
+          path: mayflower/_toolchain/build.log
+          retention-days: 5
