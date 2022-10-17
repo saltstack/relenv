@@ -105,6 +105,7 @@ def main(args):
             os.chdir(toolchain)
         if args.crosstool_only:
             sys.exit(0)
+        os.chdir(dirs.toolchain)
         ctng = ctngdir / "ct-ng"
         for arch in args.arches:
             triplet = get_triplet(arch)
@@ -121,6 +122,7 @@ def main(args):
                     wfp.write(rfp.read())
             env = os.environ.copy()
             env["CT_PREFIX"] = dirs.toolchain
+            #env["CT_LOG_DEBUG"] = "y"
             env["CT_ALLOW_BUILD_AS_ROOT"] = "yes"
             env["CT_ALLOW_BUILD_AS_ROOT_SURE"] = "yes"
             runcmd(

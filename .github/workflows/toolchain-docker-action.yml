@@ -36,8 +36,7 @@ jobs:
 
           install: |
             apt-get update
-            apt-get install -y build-essential libtool-bin linux-headers-$(uname -r)
-            apt-get install -y help2man python3-all flex bison texinfo unzip gawk libncurses-dev rsync
+            apt-get install -y build-essential libtool-bin linux-headers-$(uname -r) help2man python3-all flex bison texinfo unzip gawk libncurses-dev wget rsync
 
           run: |
             python3 -m mayflower toolchain build --arch=${{ matrix.target }}
