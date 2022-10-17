@@ -1,5 +1,6 @@
 import os
 import pathlib
+import platform
 import sys
 
 from .common import (
@@ -7,6 +8,7 @@ from .common import (
     download_url,
     extract_archive,
     get_toolchain,
+    get_triplet,
     runcmd,
     work_dirs,
     work_root,
@@ -16,8 +18,7 @@ WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
 
-# XXX This should be triplet not arch
-TC_URL = "https://woz.io/mayflower/{version}/toolchain/{arch}-linux-gnu.tar.xz"
+TC_URL = "https://woz.io/mayflower/{version}/toolchain/{host}/{triplet}.tar.xz"
 
 
 def setup_parser(subparsers):
@@ -52,17 +53,21 @@ def setup_parser(subparsers):
 
 def main(args):
     args.arch = [_.strip() for _ in args.arch.split(",")]
+    machine = platform.machine()
     toolchain = get_toolchain()
     if not toolchain.exists():
         os.makedirs(toolchain)
     if args.command == "download":
         for arch in args.arch:
+            triplet = get_triplet(arch)
             archdir = get_toolchain(arch)
             if args.clean:
                 shutil.rmtree(archdir)
             if archdir.exists():
                 print("Toolchain directory exists, skipping {}".format(arch))
-            url = TC_URL.format(version="0.0.0", arch=arch)
+            url = TC_URL.format(
+                version="0.0.0", host=platform.machine(), triplet=triplet
+            )
             print("Downloading {}".format(url))
             archive = download_url(url, toolchain)
             extract_archive(toolchain, archive)
@@ -79,15 +84,14 @@ def main(args):
             os.chdir(toolchain)
         if args.crosstool_only:
             sys.exit(0)
-
         ctng = ctngdir / "ct-ng"
         for arch in args.arch:
-            triplet = "{}-linux-gnu".format(arch)
+            triplet = get_triplet(arch)
             archdir = toolchain / triplet
             if archdir.exists():
                 print("Toolchain directory exists: {}".format(arch))
                 continue
-            config = toolchain / "{}-ct-ng.config".format(triplet)
+            config = toolchain / machine / "{}-ct-ng.config".format(triplet)
             if not config.exists():
                 print("Toolchain config missing: {}".format(config))
                 sys.exit(1)
