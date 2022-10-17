@@ -34,14 +34,15 @@ def setup_parser(subparsers):
     )
     toolchain_subparser.add_argument(
         "--arch",
-        default="x86_64,aarch64",
-        help="Comma separated list of arches to build or download",
+        action="append",
+        default=["x86_64," "aarch64"],
+        help="Arches to build or download",
     )
     toolchain_subparser.add_argument(
         "--clean",
         default=False,
         action="store_true",
-        help="Comma separated list of arches to build or download",
+        help="Whether or not to clean the toolchain directories",
     )
     toolchain_subparser.add_argument(
         "--crosstool-only",
@@ -52,7 +53,7 @@ def setup_parser(subparsers):
 
 
 def main(args):
-    args.arch = [_.strip() for _ in args.arch.split(",")]
+    args.arch = [_.lower() for _ in args.arch]
     machine = platform.machine()
     toolchain = get_toolchain()
     if not toolchain.exists():
