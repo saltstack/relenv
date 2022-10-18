@@ -122,7 +122,6 @@ def main(args):
                     wfp.write(rfp.read())
             env = os.environ.copy()
             env["CT_PREFIX"] = dirs.toolchain
-            #env["CT_LOG_DEBUG"] = "y"
             env["CT_ALLOW_BUILD_AS_ROOT"] = "yes"
             env["CT_ALLOW_BUILD_AS_ROOT_SURE"] = "yes"
             runcmd(
