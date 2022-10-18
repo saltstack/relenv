@@ -35,8 +35,11 @@ def setup_parser(subparsers):
     toolchain_subparser.add_argument(
         "--arch",
         action="append",
+        dest="arches",
+        metavar="ARCH",
         default=["x86_64", "aarch64"],
-        help="Arches to build or download",
+        choices=["x86_64", "aarch64"],
+        help="Arches to build or download, can be specified more than once for multiple arches",
     )
     toolchain_subparser.add_argument(
         "--clean",
@@ -53,13 +56,13 @@ def setup_parser(subparsers):
 
 
 def main(args):
-    args.arch = [_.lower() for _ in args.arch]
+    args.arches = {_.lower() for _ in args.arches}
     machine = platform.machine()
     toolchain = get_toolchain()
     if not toolchain.exists():
         os.makedirs(toolchain)
     if args.command == "download":
-        for arch in args.arch:
+        for arch in args.arches:
             triplet = get_triplet(arch)
             archdir = get_toolchain(arch)
             if args.clean:
@@ -86,7 +89,7 @@ def main(args):
         if args.crosstool_only:
             sys.exit(0)
         ctng = ctngdir / "ct-ng"
-        for arch in args.arch:
+        for arch in args.arches:
             triplet = get_triplet(arch)
             archdir = toolchain / triplet
             if archdir.exists():

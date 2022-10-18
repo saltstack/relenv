@@ -21,7 +21,7 @@ def setup_parser(subparsers):
 
 def main(args):
     url = "https://woz.io/mayflower/{version}/build/{arch}-linux-gnu.tar.xz".format(
-        version="0.0.0", arch=args.arch.lower()
+        version="0.0.0", arch=args.arch
     )
     builddir = work_dir("build")
     os.makedirs(builddir, exist_ok=True)
