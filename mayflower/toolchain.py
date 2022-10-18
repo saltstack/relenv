@@ -37,7 +37,7 @@ def setup_parser(subparsers):
         action="append",
         dest="arches",
         metavar="ARCH",
-        default=["x86_64", "aarch64"],
+        default=[],
         choices=["x86_64", "aarch64"],
         help="Arches to build or download, can be specified more than once for multiple arches",
     )
@@ -57,6 +57,8 @@ def setup_parser(subparsers):
 
 def main(args):
     args.arches = {_.lower() for _ in args.arches}
+    if not args.arches:
+        args.arches = {"x86_64", "aarch64"}
     machine = platform.machine()
     toolchain = get_toolchain()
     if not toolchain.exists():
