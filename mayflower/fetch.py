@@ -18,7 +18,7 @@ def setup_parser(subparsers):
         "--arch",
         default="x86_64",
         choices=["x86_64", "aarch64"],
-        help="Architecture to download",
+        help="Architecture to download. [default: %(default)s]",
     )
 
 

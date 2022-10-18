@@ -32,8 +32,8 @@ for mod in modules_to_setup:
 
 
 def main():
-    mayflower_args, argv = argparser.parse_known_args()
-    mayflower_args.func(mayflower_args)
+    args = argparser.parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":

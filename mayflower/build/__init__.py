@@ -12,7 +12,7 @@ def setup_parser(subparsers):
         default="x86_64",
         choices=["x86_64", "aarch64"],
         type=str,
-        help="The host architecture [default: x86_64]",
+        help="The host architecture [default: %(default)s]",
     )
     build_subparser.add_argument(
         "--clean",
@@ -42,8 +42,11 @@ def setup_parser(subparsers):
         help="Skip downloading source tarballs",
     )
     build_subparser.add_argument(
-        "--steps",
-        default=None,
+        "--step",
+        dest="steps",
+        metavar="STEP",
+        action="append",
+        default=[],
         help=(
             "Comman separated list of steps to run. When this option is used to "
             "invoke builds, depenencies of the steps are ignored.  This option "

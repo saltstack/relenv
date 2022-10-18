@@ -883,7 +883,7 @@ def run_build(builder, args):
     builder.set_arch(args.arch)
     steps = None
     if args.steps:
-        steps = [_.strip() for _ in args.steps.split(",")]
+        steps = [_.strip() for _ in args.steps]
     builder(
         steps=steps,
         arch=args.arch,
