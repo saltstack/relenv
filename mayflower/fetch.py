@@ -15,7 +15,10 @@ def setup_parser(subparsers):
     fetch_subparser.set_defaults(func=main)
 
     fetch_subparser.add_argument(
-        "--arch", default="x86_64", help="Architecture to download"
+        "--arch",
+        default="x86_64",
+        choices=["x86_64", "aarch64"],
+        help="Architecture to download",
     )
 
 
