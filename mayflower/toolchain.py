@@ -4,7 +4,6 @@ import platform
 import sys
 
 from .common import (
-    MODULE_DIR,
     download_url,
     extract_archive,
     get_toolchain,
