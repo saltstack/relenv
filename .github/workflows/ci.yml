@@ -60,14 +60,6 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
-  toolchain_docker:
-    name: Toolchain ( Docker )
-    uses: ./.github/workflows/toolchain-docker-action.yml
-    needs:
-      - get-changed-files
-    with:
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
   test:
     name: Test
     needs:
