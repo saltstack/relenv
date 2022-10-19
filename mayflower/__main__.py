@@ -11,8 +11,6 @@ class ArgParser(argparse.ArgumentParser):
     """
 
     def __init__(self, *args, **kwargs):
-        # if "formatter_class" not in kwargs:
-        #     kwargs["formatter_class"] = RawTextHelpFormatter
         super(ArgParser, self).__init__(*args, **kwargs)
         self._errors = []
 
