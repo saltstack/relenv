@@ -48,7 +48,7 @@ def setup_parser(subparsers):
         action="append",
         default=[],
         help=(
-            "Comman separated list of steps to run. When this option is used to "
+            "A step to run alone, can use multiple of this argument. When this option is used to "
             "invoke builds, depenencies of the steps are ignored.  This option "
             "should be used with care, as it's easy to request a situation that "
             "has no chance of being succesful. "
