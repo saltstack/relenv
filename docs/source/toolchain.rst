@@ -28,7 +28,19 @@ Running Mayflower's toolchain build command will do the following
 
    git clone git@github.com:saltstack/mayflower.git
    cd mayflower
-   python3 -m mayflower toolchain build --arch=x86_64,aarch64
+   python3 -m mayflower toolchain build --arch=x86_64 --arch=aarch64
 
 
 .. _crosstool-ng: https://crosstool-ng.github.io/
+
+
+Pre-Built Toolchains
+====================
+
+Under most circumstances using a pre-built toolchain is preffered over building the toolchain yourself.
+
+
+.. code-block:: bash
+
+   python3 -m mayflower toolchain download --arch=x86_64
+
