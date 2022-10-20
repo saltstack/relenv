@@ -16,6 +16,7 @@ WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
 TC_URL = "https://woz.io/mayflower/{version}/toolchain/{host}/{triplet}.tar.xz"
+CICD = "CI" in os.environ
 
 
 def setup_parser(subparsers):
@@ -113,8 +114,10 @@ def main(args):
                     wfp.write(rfp.read())
             env = os.environ.copy()
             env["CT_PREFIX"] = dirs.toolchain
-            env["CT_ALLOW_BUILD_AS_ROOT"] = "yes"
-            env["CT_ALLOW_BUILD_AS_ROOT_SURE"] = "yes"
+            env["CT_ALLOW_BUILD_AS_ROOT"] = "y"
+            env["CT_ALLOW_BUILD_AS_ROOT_SURE"] = "y"
+            if CICD:
+                env["CT_LOG_PROGRESS"] = "n"
             runcmd(
                 [
                     str(ctng),

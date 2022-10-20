@@ -22,6 +22,8 @@ jobs:
     name: "Linux"
 
     runs-on: ubuntu-22.04
+    env:
+      CI: yes
 
     steps:
       - uses: actions/checkout@v3
