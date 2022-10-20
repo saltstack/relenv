@@ -94,7 +94,6 @@ def main(args):
         if not ctng.exists():
             runcmd(["./configure", "--enable-local"])
             runcmd(["make"])
-            os.chdir(toolchain)
         if args.crosstool_only:
             sys.exit(0)
         os.chdir(dirs.toolchain)
