@@ -21,7 +21,7 @@ Building toolchains is a farily expensive and lengthy process. It's recommended 
 Running Mayflower's toolchain build command will do the following
 
 * Download crosstool-ng
-* Conigure and compile crosstool-ng
+* Configure and compile crosstool-ng
 * Use Mayflower's crosstool config files to compile the requests architectures
 
 .. code-block:: bash
