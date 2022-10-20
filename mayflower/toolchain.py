@@ -51,6 +51,7 @@ def setup_parser(subparsers):
         help="When building only build Crosstool NG. Do not build toolchains",
     )
 
+
 def download(arch, toolchain, clean=False):
     """
     Download a toolchain and extract it to the filesystem.
@@ -75,23 +76,14 @@ def main(args):
     if not args.arches:
         args.arches = {"x86_64", "aarch64"}
     machine = platform.machine()
-    toolchain = get_toolchain()
-    if not toolchain.exists():
-        os.makedirs(toolchain)
-    if args.command == "download":
-        for arch in args.arches:
-            download(arch, dirs.toolchain, ns.clean)
-        sys.exit(0)
-    elif args.command == "build":
-        ctngdir = toolchain / "crosstool-ng-{}".format(CT_NG_VER)
     dirs = work_dirs()
     if not dirs.toolchain.exists():
         os.makedirs(dirs.toolchain)
-    if ns.command == "download":
-        for arch in ns.arch:
-            download(arch, dirs.toolchain, ns.clean)
+    if args.command == "download":
+        for arch in args.arches:
+            download(arch, dirs.toolchain, args.clean)
         sys.exit(0)
-    elif ns.command == "build":
+    elif args.command == "build":
         ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
         if not ctngdir.exists():
             url = CT_URL.format(version=CT_NG_VER)
