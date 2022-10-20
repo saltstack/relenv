@@ -1,6 +1,4 @@
 import argparse
-import sys
-from argparse import RawTextHelpFormatter
 
 from . import build, create, fetch, toolchain
 
@@ -13,61 +11,27 @@ class ArgParser(argparse.ArgumentParser):
     """
 
     def __init__(self, *args, **kwargs):
-        if "formatter_class" not in kwargs:
-            kwargs["formatter_class"] = RawTextHelpFormatter
         super(ArgParser, self).__init__(*args, **kwargs)
         self._errors = []
 
     def error(self, err):
         self._errors.append(err)
 
-    def supress_positional(self, dest):
-        for i in self._positionals._group_actions:
-            if i.dest == dest:
-                i.help = argparse.SUPPRESS
 
-
+# Build the argparser with its subparsers
 argparser = ArgParser(
     description="Mayflower",
-    add_help=False,
 )
+subparsers = argparser.add_subparsers()
 
-
-def list_commands(argparser=argparser, show_help=False):
-    argparser.descrption = "List available auth commands"
-    ns, argv = argparser.parse_known_args()
-    if ns.help:
-        argparser.print_help()
-        sys.exit(0)
-    print("Available commands are:")
-    for i in COMMANDS:
-        print("  " + i)
-
-
-COMMANDS = {
-    "list": list_commands,
-    "build": build.main,
-    "toolchain": toolchain.main,
-    "create": create.main,
-    "fetch": fetch.main,
-}
+modules_to_setup = [build, toolchain, create, fetch]
+for mod in modules_to_setup:
+    mod.setup_parser(subparsers)
 
 
 def main():
-    argparser.add_argument("command", help="Run this command")
-    argparser.add_argument("--help", "-h", action="store_true")
-    argparser.epilog = "Run `mayflower list` to see a list of available commands."
-    ns, argv = argparser.parse_known_args()
-    if ns.command and ns.command in COMMANDS:
-        argparser.supress_positional("command")
-        argparser.prog = "{} {}".format(argparser.prog, ns.command)
-        argparser.epilog = ""
-        argparser.description = ""
-        nextmain = COMMANDS[ns.command]
-        nextmain(argparser)
-    else:
-        argparser.print_help()
-        sys.exit(0)
+    args = argparser.parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":
