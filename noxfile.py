@@ -72,6 +72,15 @@ def toolchain_aarch64(session):
     session.notify("toolchain(arch='aarch64')")
 
 
+@nox.session
+def docs(session):
+    if not SKIP_REQUIREMENTS_INSTALL:
+        session.install("sphinx", silent=PIP_INSTALL_SILENT)
+
+    os.chdir("docs")
+    session.run("sphinx-build", "-b", "html", "source", "build")
+
+
 # <---------------------- HELPERS ---------------------->
 def run_pytest_session(session, *cmd_args):
     make_artifacts_directory()
