@@ -17,10 +17,10 @@ docs/build
 !/mayflower/_build/README
 /mayflower/_download
 /mayflower/_toolchain/*
-!/mayflower/_toolchain/aarch64
-!/mayflower/_toolchain/aarch64/*-ct-ng.config
 !/mayflower/_toolchain/x86_64
 !/mayflower/_toolchain/x86_64/*-ct-ng.config
+!/mayflower/_toolchain/aarch64
+!/mayflower/_toolchain/aarch64/*-ct-ng.config
 !/mayflower/_toolchain/README
 
 # Default log location for `mayflower build`

@@ -4,21 +4,19 @@ import platform
 import sys
 
 from .common import (
-    MODULE_DIR,
     download_url,
     extract_archive,
     get_toolchain,
     get_triplet,
     runcmd,
     work_dirs,
-    work_root,
 )
 
 WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
-
 TC_URL = "https://woz.io/mayflower/{version}/toolchain/{host}/{triplet}.tar.xz"
+CICD = "CI" in os.environ
 
 
 def setup_parser(subparsers):
@@ -55,49 +53,59 @@ def setup_parser(subparsers):
     )
 
 
+def download(arch, toolchain, clean=False):
+    """
+    Download a toolchain and extract it to the filesystem.
+
+    :param str arch: the architecture of the toolchain
+    :param str toolchain: where to extract the toolchain
+    """
+    triplet = get_triplet(arch)
+    archdir = get_toolchain(arch)
+    if clean:
+        shutil.rmtree(archdir)
+    if archdir.exists():
+        print("Toolchain directory exists, skipping {}".format(arch))
+    url = TC_URL.format(version="0.0.0", host=platform.machine(), triplet=triplet)
+    print("Downloading {}".format(url))
+    archive = download_url(url, toolchain)
+    extract_archive(toolchain, archive)
+
+
 def main(args):
     args.arches = {_.lower() for _ in args.arches}
     if not args.arches:
         args.arches = {"x86_64", "aarch64"}
     machine = platform.machine()
-    toolchain = get_toolchain()
-    if not toolchain.exists():
-        os.makedirs(toolchain)
+    dirs = work_dirs()
+    if not dirs.toolchain.exists():
+        os.makedirs(dirs.toolchain)
     if args.command == "download":
         for arch in args.arches:
-            triplet = get_triplet(arch)
-            archdir = get_toolchain(arch)
-            if args.clean:
-                shutil.rmtree(archdir)
-            if archdir.exists():
-                print("Toolchain directory exists, skipping {}".format(arch))
-            url = TC_URL.format(
-                version="0.0.0", host=platform.machine(), triplet=triplet
-            )
-            print("Downloading {}".format(url))
-            archive = download_url(url, toolchain)
-            extract_archive(toolchain, archive)
+            download(arch, dirs.toolchain, args.clean)
         sys.exit(0)
     elif args.command == "build":
-        ctngdir = toolchain / "crosstool-ng-{}".format(CT_NG_VER)
+        ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
         if not ctngdir.exists():
             url = CT_URL.format(version=CT_NG_VER)
-            archive = download_url(url, toolchain)
-            extract_archive(toolchain, archive)
-            os.chdir(ctngdir)
+            archive = download_url(url, dirs.toolchain)
+            extract_archive(dirs.toolchain, archive)
+        os.chdir(ctngdir)
+        ctng = ctngdir / "ct-ng"
+        if not ctng.exists():
             runcmd(["./configure", "--enable-local"])
             runcmd(["make"])
-            os.chdir(toolchain)
         if args.crosstool_only:
             sys.exit(0)
+        os.chdir(dirs.toolchain)
         ctng = ctngdir / "ct-ng"
         for arch in args.arches:
             triplet = get_triplet(arch)
-            archdir = toolchain / triplet
+            archdir = dirs.toolchain / triplet
             if archdir.exists():
-                print("Toolchain directory exists: {}".format(arch))
+                print("Toolchain directory exists: {}".format(archdir))
                 continue
-            config = toolchain / machine / "{}-ct-ng.config".format(triplet)
+            config = dirs.toolchain / machine / "{}-ct-ng.config".format(triplet)
             if not config.exists():
                 print("Toolchain config missing: {}".format(config))
                 sys.exit(1)
@@ -105,10 +113,21 @@ def main(args):
                 with open(".config", "w") as wfp:
                     wfp.write(rfp.read())
             env = os.environ.copy()
-            env["CT_PREFIX"] = toolchain
+            env["CT_PREFIX"] = dirs.toolchain
+            env["CT_ALLOW_BUILD_AS_ROOT"] = "y"
+            env["CT_ALLOW_BUILD_AS_ROOT_SURE"] = "y"
+            if CICD:
+                env["CT_LOG_PROGRESS"] = "n"
             runcmd(
                 [
-                    ctng,
+                    str(ctng),
+                    "source",
+                ],
+                env=env,
+            )
+            runcmd(
+                [
+                    str(ctng),
                     "build",
                 ],
                 env=env,
