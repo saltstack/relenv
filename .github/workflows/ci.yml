@@ -68,6 +68,10 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  pre-commit:
+    name: Pre-Commit
+    uses: ./.github/workflows/docs-action.yml
+
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all

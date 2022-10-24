@@ -1,5 +1,4 @@
 import argparse
-from email import parser
 
 from . import build, create, fetch, toolchain
 
@@ -44,7 +43,7 @@ def main():
     try:
         args.func(args)
     except AttributeError:
-        print("No subcommand given...")
+        parser.exit(1, "No subcommand given...")
 
 
 if __name__ == "__main__":

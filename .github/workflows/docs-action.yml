@@ -1,4 +1,4 @@
-name: Docs
+name: docs-action
 
 on: [push, pull_request]
 
