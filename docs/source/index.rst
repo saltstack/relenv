@@ -40,6 +40,7 @@ Topics
    cli/index
    contributing
 
+
 Indices and tables
 ==================
 

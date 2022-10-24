@@ -20,17 +20,10 @@ The recommended way to run mayflower commands is to use the exposed scripts.
    create
    toolchain
 
-Comprehensive CLI documentation can be found here...
+Comprehensive CLI documentation can be found :doc:`here <mayflower>`.
 
 .. toctree::
    :maxdepth: 1
-
+   :hidden:
+   
    mayflower
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
