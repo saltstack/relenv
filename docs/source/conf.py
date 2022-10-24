@@ -26,6 +26,7 @@ author = "Daniel A. Wozniak"
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinxarg.ext",
 ]
 
 

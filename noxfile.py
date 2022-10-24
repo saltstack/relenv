@@ -76,6 +76,7 @@ def toolchain_aarch64(session):
 def docs(session):
     if not SKIP_REQUIREMENTS_INSTALL:
         session.install("sphinx", silent=PIP_INSTALL_SILENT)
+        session.install("sphinx-argparse", silent=PIP_INSTALL_SILENT)
 
     os.chdir("docs")
     session.run("sphinx-build", "-b", "html", "source", "build")

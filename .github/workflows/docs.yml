@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: mayflower-html-docs
-          path: docs/build/html
+          path: docs/build
 
       - name: Set Exit Status
         if: always()

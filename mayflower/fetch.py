@@ -1,9 +1,4 @@
-import contextlib
 import os
-import pathlib
-import shutil
-import sys
-import tarfile
 
 from .common import MODULE_DIR, download_url, extract_archive, work_dir
 
@@ -23,6 +18,9 @@ def setup_parser(subparsers):
 
 
 def main(args):
+    """
+    Fetch a Mayflower build
+    """
     url = "https://woz.io/mayflower/{version}/build/{arch}-linux-gnu.tar.xz".format(
         version="0.0.0", arch=args.arch
     )
