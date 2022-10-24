@@ -30,6 +30,9 @@ for mod in modules_to_setup:
 
 
 def main():
+    """
+    Run the mayflower cli and disbatch to subcommands
+    """
     args = argparser.parse_args()
     args.func(args)
 
