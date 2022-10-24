@@ -23,7 +23,7 @@ The recommended way to run mayflower commands is to use the exposed scripts.
 Comprehensive CLI documentation can be found here...
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    mayflower
 

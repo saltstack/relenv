@@ -38,6 +38,7 @@ Topics
    
    toolchain
    cli/index
+   contributing
 
 Indices and tables
 ==================
