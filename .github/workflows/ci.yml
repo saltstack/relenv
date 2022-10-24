@@ -68,8 +68,8 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
-  pre-commit:
-    name: Pre-Commit
+  docs:
+    name: Docs
     uses: ./.github/workflows/docs-action.yml
 
   set-pipeline-exit-status:
@@ -83,6 +83,7 @@ jobs:
       - build
       - toolchain
       - test
+      - docs
     steps:
     - name: Download Exit Status Files
       if: always()
