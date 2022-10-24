@@ -406,7 +406,7 @@ class Builder:
         self.populate_env = populate_env
         self.no_download = no_download
         self.toolchains = get_toolchain(root=self.dirs.root)
-        self.toolchain = get_toolchain(self.arch, self.dirs.root)
+        self.set_arch(self.arch)
 
     @property
     def native_python(self):
@@ -423,12 +423,12 @@ class Builder:
             self.triplet = "{}-macos".format(self.arch)
             self.prefix = self.dirs.build / "{}-macos".format(self.arch)
             # XXX Not used for MacOS
-            self.toolchain = get_toolchain(root=self.dirs.root)
+            self.toolchain = None
         elif sys.platform == "win32":
             self.triplet = "{}-win".format(self.arch)
             self.prefix = self.dirs.build / "{}-win".format(self.arch)
             # XXX Not used for Windows
-            self.toolchain = get_toolchain(root=self.dirs.root)
+            self.toolchain = None
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
             self.prefix = self.dirs.build / self.triplet
