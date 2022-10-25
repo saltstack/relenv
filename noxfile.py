@@ -72,6 +72,19 @@ def toolchain_aarch64(session):
     session.notify("toolchain(arch='aarch64')")
 
 
+@nox.session
+def docs(session):
+    if not SKIP_REQUIREMENTS_INSTALL:
+        session.install(
+            "-r",
+            str(REPO_ROOT / "requirements" / "docs.txt"),
+            silent=PIP_INSTALL_SILENT,
+        )
+
+    os.chdir("docs")
+    session.run("sphinx-build", "-b", "html", "source", "build")
+
+
 # <---------------------- HELPERS ---------------------->
 def run_pytest_session(session, *cmd_args):
     make_artifacts_directory()
@@ -79,7 +92,7 @@ def run_pytest_session(session, *cmd_args):
     if not SKIP_REQUIREMENTS_INSTALL:
         session.install(
             "-r",
-            str(REPO_ROOT / "tests" / "requirements.txt"),
+            str(REPO_ROOT / "requirements" / "tests.txt"),
             silent=PIP_INSTALL_SILENT,
         )
 

@@ -18,20 +18,32 @@ class ArgParser(argparse.ArgumentParser):
         self._errors.append(err)
 
 
-# Build the argparser with its subparsers
-argparser = ArgParser(
-    description="Mayflower",
-)
-subparsers = argparser.add_subparsers()
+def setup_cli():
+    """
+    Build the argparser with its subparsers
+    """
+    argparser = ArgParser(
+        description="Mayflower",
+    )
+    subparsers = argparser.add_subparsers()
 
-modules_to_setup = [build, toolchain, create, fetch]
-for mod in modules_to_setup:
-    mod.setup_parser(subparsers)
+    modules_to_setup = [build, toolchain, create, fetch]
+    for mod in modules_to_setup:
+        mod.setup_parser(subparsers)
+
+    return argparser
 
 
 def main():
-    args = argparser.parse_args()
-    args.func(args)
+    """
+    Run the mayflower cli and disbatch to subcommands
+    """
+    parser = setup_cli()
+    args = parser.parse_args()
+    try:
+        args.func(args)
+    except AttributeError:
+        parser.exit(1, "No subcommand given...")
 
 
 if __name__ == "__main__":

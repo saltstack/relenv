@@ -1,19 +1,44 @@
-.. Mayflower documentation master file, created by
-   sphinx-quickstart on Tue Sep 27 22:41:02 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Mayflower landing page
 
-Welcome to Mayflower's documentation!
-=====================================
+Mayflower - Build and use relocatable Python environments
+=========================================================
 
-:doc:`toolchain`
+The "standard" Python installation is not relocatable, nor is it 
+easily transferrable to other operating systems in the same family.
+
+Mayflower solves that problem and more.  Written entirely in Python, 
+it can build relocatable Python packages and use them to create environments 
+that pin all Python interaction to the build of your choice.
+
+Installation
+============
+
+TODO: During the first release of mayflower, replace this with the suggested installation process.
+
+You can install mayflower like any other python package using pip.  Using a virtual environment is recommended.
+
+.. code-block:: bash
+
+   pip install mayflower
+
+Usage
+=====
+
+After installing mayflower, you will have access to its CLI.  You can see all supported commands by running the following...
+
+.. code-block:: bash
+
+   mayflower --help
+
+Topics
+======
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
    
    toolchain
-
+   cli/index
+   contributing
 
 
 Indices and tables

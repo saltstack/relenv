@@ -1,0 +1,53 @@
+name: Docs
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+
+jobs:
+  docs:
+    name: Build Mayflower Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install System Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install Nox
+        run: |
+          python -m pip install --upgrade pip
+          pip install nox
+
+      - name: Build Docs
+        run: |
+          nox --forcecolor -e docs
+
+      - name: Store Generated Documentation
+        uses: actions/upload-artifact@v2
+        with:
+          name: mayflower-html-docs
+          path: docs/build
+
+      - name: Set Exit Status
+        if: always()
+        run: |
+          mkdir exitstatus
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}
+
+      - name: Upload Exit Status
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: exitstatus
+          path: exitstatus
+          if-no-files-found: error

@@ -1,5 +1,4 @@
 import os
-import pathlib
 import platform
 import sys
 
@@ -27,8 +26,9 @@ def setup_parser(subparsers):
 
     toolchain_subparser.add_argument(
         "command",
-        default="download",
-        help="What type of toolchain operation to perform: build or download",
+        default="fetch",
+        choices=["build", "fetch"],
+        help="What type of toolchain operation to perform: build or fetch",
     )
     toolchain_subparser.add_argument(
         "--arch",
@@ -37,7 +37,7 @@ def setup_parser(subparsers):
         metavar="ARCH",
         default=[],
         choices=["x86_64", "aarch64"],
-        help="Arches to build or download, can be specified more than once for multiple arches",
+        help="Arches to build or fetch, can be specified more than once for multiple arches",
     )
     toolchain_subparser.add_argument(
         "--clean",
@@ -53,9 +53,9 @@ def setup_parser(subparsers):
     )
 
 
-def download(arch, toolchain, clean=False):
+def fetch(arch, toolchain, clean=False):
     """
-    Download a toolchain and extract it to the filesystem.
+    Fetch a toolchain and extract it to the filesystem.
 
     :param str arch: the architecture of the toolchain
     :param str toolchain: where to extract the toolchain
@@ -67,7 +67,7 @@ def download(arch, toolchain, clean=False):
     if archdir.exists():
         print("Toolchain directory exists, skipping {}".format(arch))
     url = TC_URL.format(version="0.0.0", host=platform.machine(), triplet=triplet)
-    print("Downloading {}".format(url))
+    print("Fetching {}".format(url))
     archive = download_url(url, toolchain)
     extract_archive(toolchain, archive)
 
@@ -80,9 +80,9 @@ def main(args):
     dirs = work_dirs()
     if not dirs.toolchain.exists():
         os.makedirs(dirs.toolchain)
-    if args.command == "download":
+    if args.command == "fetch":
         for arch in args.arches:
-            download(arch, dirs.toolchain, args.clean)
+            fetch(arch, dirs.toolchain, args.clean)
         sys.exit(0)
     elif args.command == "build":
         ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
