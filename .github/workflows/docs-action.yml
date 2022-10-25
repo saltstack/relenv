@@ -1,20 +1,17 @@
 name: Docs
 
-on: [push, pull_request]
-
-permissions:
-  contents: read
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
 
 jobs:
-  mayflower-docs:
-    permissions:
-      contents: read  # for dorny/paths-filter to fetch a list of changed files
-      pull-requests: read  # for dorny/paths-filter to read pull requests
+  docs:
     name: Build Mayflower Documentation
     runs-on: ubuntu-latest
-
-    container:
-      image: python:3.8.6-slim-buster
 
     steps:
       - name: Install System Deps
