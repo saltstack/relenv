@@ -50,7 +50,7 @@ jobs:
 
       - name: Create Tarball
         run: |
-          tar -C mayflower/_toolchain -cJf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz  ${{ matrix.target }}-linux-gnu
+          tar -C ~/.local/mayflower/toolchain -cJf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz  ${{ matrix.target }}-linux-gnu
 
       - name: Toolchain build artifact
         uses: actions/upload-artifact@v3
