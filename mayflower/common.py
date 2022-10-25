@@ -13,7 +13,7 @@ WORK_IN_CWD = False
 PIPE = subprocess.PIPE
 
 TOOLCHAIN = os.environ.get(
-    "MAYFLOWER_TOOLCHAINS", pathlib.Path("~/.local/mayflower/toolchain").resolve()
+    "MAYFLOWER_TOOLCHAINS", pathlib.Path.home() / ".local" / "mayflower" / "toolchain"
 )
 
 
