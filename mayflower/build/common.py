@@ -650,12 +650,25 @@ class Builder:
         if cleanup:
             self.cleanup()
 
+    def check_prereqs(self):
+        fail = []
+        if self.toolchain and not self.toolchain.exists():
+            fail.append(f"Toolchain for {self.arch} does not exist")
+        return fail
+
     def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
         if arch:
             self.set_arch(arch)
 
         if steps is None:
             steps = self.recipies
+
+        failures = self.check_prereqs()
+        if failures:
+            for _ in failures:
+                sys.stderr.write(f"{_}\n")
+            sys.stderr.flush()
+            sys.exit(1)
 
         if clean:
             self.clean()

@@ -3,7 +3,7 @@ import hashlib
 import pytest
 
 from mayflower.build.common import Builder, verify_checksum
-from mayflower.common import MODULE_DIR, MayflowerException
+from mayflower.common import MODULE_DIR, TOOLCHAIN, MayflowerException
 
 
 @pytest.fixture
@@ -26,8 +26,8 @@ def test_builder_defaults_linux():
     assert builder.prefix == MODULE_DIR / "_build" / "x86_64-linux-gnu"
     assert builder.sources == MODULE_DIR / "_src"
     assert builder.downloads == MODULE_DIR / "_download"
-    assert builder.toolchains == MODULE_DIR / "_toolchain"
-    assert builder.toolchain == MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
+    assert builder.toolchains == TOOLCHAIN
+    assert builder.toolchain == TOOLCHAIN / "x86_64-linux-gnu"
     assert callable(builder.build_default)
     assert callable(builder.populate_env)
     assert builder.no_download is False
