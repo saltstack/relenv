@@ -493,7 +493,13 @@ class Builder:
             env["MAYFLOWER_CROSS"] = str(self.native_python.parent.parent)
             native_root = MODULE_DIR / "_native"
             if not native_root.exists():
-                create("_native", MODULE_DIR)
+                # XXX This needs to be more robust to handle running on arm
+                # too. Also, The check should only happen once per build, it
+                # makes more sense to happen in Builder.__call__.
+                try:
+                    create("_native", MODULE_DIR)
+                except FileExistsError:
+                    pass
             env["MAYFLOWER_NATIVE_PY"] = native_root / "bin" / "python3"
 
         self.populate_env(env, dirs)
