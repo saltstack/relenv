@@ -16,6 +16,10 @@ MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
 PIPE = subprocess.PIPE
 
+TOOLCHAIN = os.environ.get(
+    "MAYFLOWER_TOOLCHAINS", pathlib.Path.home() / ".local" / "mayflower" / "toolchain"
+)
+
 
 class MayflowerException(Exception):
     """
@@ -72,7 +76,8 @@ class WorkDirs:
 
     def __init__(self, root):
         self.root = root
-        self.toolchain = work_dir("toolchain", self.root)
+        self.toolchain_config = work_dir("toolchain", self.root)
+        self.toolchain = pathlib.Path(TOOLCHAIN)
         self.build = work_dir("build", self.root)
         self.src = work_dir("src", self.root)
         self.logs = work_dir("logs", self.root)
@@ -86,6 +91,7 @@ class WorkDirs:
         """
         return {
             "root": self.root,
+            "toolchain_config": self.toolchain_config,
             "toolchain": self.toolchain,
             "build": self.build,
             "src": self.src,
@@ -101,6 +107,7 @@ class WorkDirs:
         :type state: dict
         """
         self.root = state["root"]
+        self.toolchain_config = state["toolchain_config"]
         self.toolchain = state["toolchain"]
         self.build = state["build"]
         self.src = state["src"]
