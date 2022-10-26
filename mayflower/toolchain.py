@@ -3,6 +3,7 @@ import platform
 import sys
 
 from .common import (
+    TOOLCHAIN,
     download_url,
     extract_archive,
     get_toolchain,
@@ -19,18 +20,16 @@ CICD = "CI" in os.environ
 
 
 def setup_parser(subparsers):
-    toolchain_subparser = subparsers.add_parser(
-        "toolchain", description="Build Linux Toolchains"
-    )
-    toolchain_subparser.set_defaults(func=main)
+    subparser = subparsers.add_parser("toolchain", description="Build Linux Toolchains")
+    subparser.set_defaults(func=main)
 
-    toolchain_subparser.add_argument(
+    subparser.add_argument(
         "command",
         default="fetch",
         choices=["build", "fetch"],
         help="What type of toolchain operation to perform: build or fetch",
     )
-    toolchain_subparser.add_argument(
+    subparser.add_argument(
         "--arch",
         action="append",
         dest="arches",
@@ -39,13 +38,13 @@ def setup_parser(subparsers):
         choices=["x86_64", "aarch64"],
         help="Arches to build or fetch, can be specified more than once for multiple arches",
     )
-    toolchain_subparser.add_argument(
+    subparser.add_argument(
         "--clean",
         default=False,
         action="store_true",
         help="Whether or not to clean the toolchain directories",
     )
-    toolchain_subparser.add_argument(
+    subparser.add_argument(
         "--crosstool-only",
         default=False,
         action="store_true",
@@ -61,11 +60,12 @@ def fetch(arch, toolchain, clean=False):
     :param str toolchain: where to extract the toolchain
     """
     triplet = get_triplet(arch)
-    archdir = get_toolchain(arch)
+    archdir = get_toolchain(root=TOOLCHAIN, arch=arch)
     if clean:
         shutil.rmtree(archdir)
     if archdir.exists():
         print("Toolchain directory exists, skipping {}".format(arch))
+        return
     url = TC_URL.format(version="0.0.0", host=platform.machine(), triplet=triplet)
     print("Fetching {}".format(url))
     archive = download_url(url, toolchain)
@@ -78,6 +78,7 @@ def main(args):
         args.arches = {"x86_64", "aarch64"}
     machine = platform.machine()
     dirs = work_dirs()
+    print(dirs.toolchain)
     if not dirs.toolchain.exists():
         os.makedirs(dirs.toolchain)
     if args.command == "fetch":
@@ -105,7 +106,7 @@ def main(args):
             if archdir.exists():
                 print("Toolchain directory exists: {}".format(archdir))
                 continue
-            config = dirs.toolchain / machine / "{}-ct-ng.config".format(triplet)
+            config = dirs.toolchain_config / machine / "{}-ct-ng.config".format(triplet)
             if not config.exists():
                 print("Toolchain config missing: {}".format(config))
                 sys.exit(1)

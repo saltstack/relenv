@@ -406,7 +406,7 @@ class Builder:
         self.populate_env = populate_env
         self.no_download = no_download
         self.toolchains = get_toolchain(root=self.dirs.root)
-        self.toolchain = get_toolchain(self.arch, self.dirs.root)
+        self.set_arch(self.arch)
 
     @property
     def native_python(self):
@@ -423,12 +423,12 @@ class Builder:
             self.triplet = "{}-macos".format(self.arch)
             self.prefix = self.dirs.build / "{}-macos".format(self.arch)
             # XXX Not used for MacOS
-            self.toolchain = get_toolchain(root=self.dirs.root)
+            self.toolchain = None
         elif sys.platform == "win32":
             self.triplet = "{}-win".format(self.arch)
             self.prefix = self.dirs.build / "{}-win".format(self.arch)
             # XXX Not used for Windows
-            self.toolchain = get_toolchain(root=self.dirs.root)
+            self.toolchain = None
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
             self.prefix = self.dirs.build / self.triplet
@@ -493,7 +493,13 @@ class Builder:
             env["MAYFLOWER_CROSS"] = str(self.native_python.parent.parent)
             native_root = MODULE_DIR / "_native"
             if not native_root.exists():
-                create("_native", MODULE_DIR)
+                # XXX This needs to be more robust to handle running on arm
+                # too. Also, The check should only happen once per build, it
+                # makes more sense to happen in Builder.__call__.
+                try:
+                    create("_native", MODULE_DIR)
+                except FileExistsError:
+                    pass
             env["MAYFLOWER_NATIVE_PY"] = native_root / "bin" / "python3"
 
         self.populate_env(env, dirs)
@@ -650,12 +656,25 @@ class Builder:
         if cleanup:
             self.cleanup()
 
+    def check_prereqs(self):
+        fail = []
+        if self.toolchain and not self.toolchain.exists():
+            fail.append(f"Toolchain for {self.arch} does not exist")
+        return fail
+
     def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
         if arch:
             self.set_arch(arch)
 
         if steps is None:
             steps = self.recipies
+
+        failures = self.check_prereqs()
+        if failures:
+            for _ in failures:
+                sys.stderr.write(f"{_}\n")
+            sys.stderr.flush()
+            sys.exit(1)
 
         if clean:
             self.clean()
