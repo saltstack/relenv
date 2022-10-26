@@ -11,6 +11,10 @@ The recommended way to run mayflower commands is to use the exposed commands.
 
     mayflower <subcommand> <args>
 
+.. note::
+
+    You can suppress CLI output by setting ``CICD`` to anything truthy in your environment.
+
 .. toctree::
    :maxdepth: 1
    :caption: Commands:
