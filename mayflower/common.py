@@ -16,9 +16,7 @@ MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
 PIPE = subprocess.PIPE
 
-TOOLCHAIN = os.environ.get(
-    "MAYFLOWER_TOOLCHAINS", pathlib.Path.home() / ".local" / "mayflower" / "toolchain"
-)
+DATADIR = os.environ.get("MAYFLOWER_DATA", pathlib.Path.home() / ".local" / "mayflower")
 
 
 class MayflowerException(Exception):
@@ -77,11 +75,11 @@ class WorkDirs:
     def __init__(self, root):
         self.root = root
         self.toolchain_config = work_dir("toolchain", self.root)
-        self.toolchain = pathlib.Path(TOOLCHAIN)
-        self.build = work_dir("build", self.root)
-        self.src = work_dir("src", self.root)
-        self.logs = work_dir("logs", self.root)
-        self.download = work_dir("download", self.root)
+        self.toolchain = work_dir("toolchain", DATADIR)
+        self.build = work_dir("build", DATADIR)
+        self.src = work_dir("src", DATADIR)
+        self.logs = work_dir("logs", DATADIR)
+        self.download = work_dir("download", DATADIR)
 
     def __getstate__(self):
         """
@@ -189,7 +187,7 @@ def archived_build(triplet=None):
     """
     if not triplet:
         triplet = get_triplet()
-    dirs = work_dirs()
+    dirs = work_dirs(DATADIR)
     return (dirs.build / triplet).with_suffix(".tar.xz")
 
 

@@ -913,9 +913,18 @@ class Builder:
             self.cleanup()
 
     def check_prereqs(self):
+        """
+        Check pre-requsists for build. This method verifies all requrements for
+        a successful build are satisfied.
+
+        :return: Returns a list of string describing failed checks
+        :rtype: list
+        """
         fail = []
         if self.toolchain and not self.toolchain.exists():
-            fail.append(f"Toolchain for {self.arch} does not exist")
+            fail.append(
+                f"Toolchain for {self.arch} does not exist. Please use mayflower toolchain to obtain a toolchain."
+            )
         return fail
 
     def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
