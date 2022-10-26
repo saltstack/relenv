@@ -70,7 +70,11 @@ jobs:
 
   docs:
     name: Docs
+    needs:
+      - get-changed-files
     uses: ./.github/workflows/docs-action.yml
+    with:
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks

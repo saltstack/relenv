@@ -1,28 +1,23 @@
 name: Docs
 
-on: [push, pull_request]
-
-permissions:
-  contents: read
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
 
 jobs:
-  mayflower-docs:
-    permissions:
-      contents: read  # for dorny/paths-filter to fetch a list of changed files
-      pull-requests: read  # for dorny/paths-filter to read pull requests
+  docs:
     name: Build Mayflower Documentation
     runs-on: ubuntu-latest
-
-    container:
-      image: python:3.8.6-slim-buster
 
     steps:
       - name: Install System Deps
         run: |
-          echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
-          apt-get update
-          apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
-          apt-get install -y git/buster-backports
+          sudo apt-get update
+          sudo apt-get install -y enchant git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils
 
       - uses: actions/checkout@v2
         with:
