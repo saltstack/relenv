@@ -30,9 +30,7 @@ def setup_parser(subparsers):
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
-    subparser = subparsers.add_parser(
-        "toolchain", description="Build Linux Toolchains"
-    )
+    subparser = subparsers.add_parser("toolchain", description="Build Linux Toolchains")
     subparser.set_defaults(func=main)
 
     subparser.add_argument(
