@@ -12,11 +12,28 @@ if sys.platform == "win32":
 
 
 def populate_env(env, dirs):
+    """
+    Make sure we have the correct environment variables set.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    """
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
 def build_python(env, dirs, logfp):
-    # Build python
+    """
+    Run the commands to build Python.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
@@ -99,6 +116,16 @@ build.add(
 
 
 def finalize(env, dirs, logfp):
+    """
+    Finalize sitecustomize, mayflower runtime, and pip for Windows.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "Scripts"
     sitepackages = dirs.prefix / "Lib" / "site-packages"
@@ -174,8 +201,14 @@ build.add(
 )
 
 
-def main(argparse):
-    run_build(build, argparse)
+def main(args):
+    """
+    The entrypoint into the Windows build.
+
+    :param args: The arguments for the build
+    :type args: argparse.Namespace
+    """
+    run_build(build, args)
 
 
 if __name__ == "__main__":

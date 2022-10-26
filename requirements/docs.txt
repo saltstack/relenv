@@ -1,2 +1,3 @@
 sphinx
 sphinx-argparse
+furo

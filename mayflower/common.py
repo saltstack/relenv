@@ -1,3 +1,7 @@
+"""
+Common classes and values used around mayflower
+"""
+
 import os
 import pathlib
 import platform
@@ -20,6 +24,15 @@ class MayflowerException(Exception):
 
 
 def work_root(root=None):
+    """
+    Get the root directory that all other mayflower working directories should be based on.
+
+    :param root: An explicitly requested root directory
+    :type root: str
+
+    :return: An absolute path to the mayflower root working directory
+    :rtype: ``pathlib.Path``
+    """
     if root is not None:
         base = pathlib.Path(root).resolve()
     elif WORK_IN_CWD:
@@ -30,6 +43,17 @@ def work_root(root=None):
 
 
 def work_dir(name, root=None):
+    """
+    Get the absolute path to the mayflower working directory of the given name.
+
+    :param name: The name of the directory
+    :type name: str
+    :param root: The root directory that this working directory will be relative to
+    :type root: str
+
+    :return: An absolute path to the requested mayflower working directory
+    :rtype: ``pathlib.Path``
+    """
     root = work_root(root)
     if root == MODULE_DIR:
         base = root / "_{}".format(name)
@@ -39,6 +63,13 @@ def work_dir(name, root=None):
 
 
 class WorkDirs:
+    """
+    Simple class used to hold references to working directories mayflower uses relative to a given root.
+
+    :param root: The root of the working directories tree
+    :type root: str
+    """
+
     def __init__(self, root):
         self.root = root
         self.toolchain = work_dir("toolchain", self.root)
@@ -48,6 +79,11 @@ class WorkDirs:
         self.download = work_dir("download", self.root)
 
     def __getstate__(self):
+        """
+        Return an object used for pickling.
+
+        :return: The picklable state
+        """
         return {
             "root": self.root,
             "toolchain": self.toolchain,
@@ -58,6 +94,12 @@ class WorkDirs:
         }
 
     def __setstate__(self, state):
+        """
+        Unwrap the object returned from unpickling.
+
+        :param state: The state to unpickle
+        :type state: dict
+        """
         self.root = state["root"]
         self.toolchain = state["toolchain"]
         self.build = state["build"]
@@ -67,10 +109,30 @@ class WorkDirs:
 
 
 def work_dirs(root=None):
+    """
+    Returns a WorkDirs instance based on the given root.
+
+    :param root: The desired root of mayflower's working directories
+    :type root: str
+
+    :return: A WorkDirs instance based on the given root
+    :rtype: ``mayflower.common.WorkDirs``
+    """
     return WorkDirs(work_root(root))
 
 
 def get_toolchain(arch=None, root=None):
+    """
+    Get a the toolchain directory, specific to the arch if supplied.
+
+    :param arch: The architecture to get the toolchain for
+    :type arch: str
+    :param root: The root of the mayflower working directories to search in
+    :type root: str
+
+    :return: The directory holding the toolchain
+    :rtype: ``pathlib.Path``
+    """
     dirs = work_dirs(root)
     if arch:
         return dirs.toolchain / "{}-linux-gnu".format(arch)
@@ -78,6 +140,21 @@ def get_toolchain(arch=None, root=None):
 
 
 def get_triplet(machine=None, plat=None):
+    """
+    Get the target triplet for the specfied machine and platform.
+
+    If any of the args are None, it will try to deduce what they should be.
+
+    :param machine: The machine for the triplet
+    :type machine: str
+    :param plat: The platform for the triplet
+    :type plat: str
+
+    :raises MayflowerException: If the platform is unknown
+
+    :return: The target triplet
+    :rtype: str
+    """
     if not plat:
         plat = sys.platform
     if not machine:
@@ -95,7 +172,13 @@ def get_triplet(machine=None, plat=None):
 
 def archived_build(triplet=None):
     """
-    Returns a `Path` object pointing to the location of an archived build.
+    Finds a the location of an archived build.
+
+    :param triplet: The build triplet to find
+    :type triplet: str
+
+    :return: The location of the archived build
+    :rtype: ``pathlib.Path``
     """
     if not triplet:
         triplet = get_triplet()
@@ -106,6 +189,11 @@ def archived_build(triplet=None):
 def extract_archive(to_dir, archive):
     """
     Extract an archive to a specific location
+
+    :param to_dir: The directory to extract to
+    :type to_dir: str
+    :param archive: The archive to extract
+    :type archive: str
     """
     if archive.endswith("tgz"):
         read_type = "r:gz"
@@ -123,6 +211,16 @@ def download_url(url, dest):
     """
     Download the url to the provided destination. This method assumes the last
     part of the url is a filename. (https://foo.com/bar/myfile.tar.xz)
+
+    :param url: The url to download
+    :type url: str
+    :param dest: Where to download the url to
+    :type dest: str
+
+    :raises urllib.error.HTTPError: If the url was unable to be downloaded
+
+    :return: The path to the downloaded content
+    :rtype: str
     """
     local = os.path.join(dest, os.path.basename(url))
     n = 0
@@ -155,7 +253,12 @@ def download_url(url, dest):
 def runcmd(*args, **kwargs):
     """
     Run the provided command, raising an Exception when the command finishes
-    with a non zero exit code.
+    with a non zero exit code.  Arguments are passed through to ``subprocess.run``
+
+    :return: The process result
+    :rtype: ``subprocess.CompletedProcess``
+
+    :raises MayflowerException: If the command finishes with a non zero exit code
     """
     proc = subprocess.run(*args, **kwargs)
     if proc.returncode != 0:

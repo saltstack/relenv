@@ -23,11 +23,23 @@ SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
 
 
 def debug(string):
+    """
+    Prints the provided message if MAYFLOWER_DEBUG is truthy in the environment.
+
+    :param string: The message to print
+    :type string: str
+    """
     if os.environ.get("MAYFLOWER_DEBUG"):
         print(string)
 
 
 def _build_shebang(*args, **kwargs):
+    """
+    Build a shebang to point to the proper location
+
+    :return: The shebang
+    :rtype: bytes
+    """
     if sys.platform == "win32":
         if os.environ.get("MAYFLOWER_PIP_DIR"):
             return "#!<launch_dir>\\Scripts\\python.exe".encode()
@@ -56,6 +68,9 @@ def get_config_var_wrapper(func):
 
 
 class MayflowerImporter:
+    """
+    An importer to be added to ``sys.meta_path`` to handle importing into a mayflower environment.
+    """
 
     loading_pip_scripts = False
     loading_sysconfig_data = False
@@ -65,6 +80,16 @@ class MayflowerImporter:
     sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
 
     def find_module(self, module_name, package_path=None):
+        """
+        Find a module for importing into the mayflower environment
+
+        :param module_name: The name of the module
+        :type module_name: str
+        :param package_path: The path to the package, defaults to None
+        :type package_path: str, optional
+        :return: The instance that called this method if it found the module, or None if it didn't
+        :rtype: MayflowerImporter or None
+        """
         if module_name.startswith("sysconfig") and sys.platform == "win32":
             if self.loading_sysconfig:
                 return None
@@ -86,6 +111,14 @@ class MayflowerImporter:
         return None
 
     def load_module(self, name):
+        """
+        Load the given module
+
+        :param name: The module name to load
+        :type name: str
+        :return: The loaded module or the calling instance if importing sysconfigdata
+        :rtype: types.ModuleType or MayflowerImporter
+        """
         if name.startswith("sysconfig"):
             debug(f"MayflowerImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
@@ -124,6 +157,9 @@ class MayflowerImporter:
 
 
 class BuildTimeVars(collections.abc.Mapping):
+    """
+    A dictionary-like object holding build-time variables.
+    """
 
     # This is getting set in MayflowerImporter
     _build_time_vars = {}
@@ -149,6 +185,9 @@ class BuildTimeVars(collections.abc.Mapping):
 
 
 def bootstrap():
+    """
+    Bootstrap the mayflower environment.
+    """
     cross = os.environ.get("MAYFLOWER_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()

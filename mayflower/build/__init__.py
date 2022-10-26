@@ -1,7 +1,17 @@
+"""
+The ``mayflower build`` command.
+"""
+
 import sys
 
 
 def setup_parser(subparsers):
+    """
+    Setup the subparser for the ``build`` command.
+
+    :param subparsers: The subparsers object returned from ``add_subparsers``
+    :type subparsers: argparse._SubParsersAction
+    """
     build_subparser = subparsers.add_parser(
         "build", description="Build Mayflower Python Environments from source"
     )
@@ -56,19 +66,25 @@ def setup_parser(subparsers):
     )
 
 
-def main(argparse):
+def main(args):
+    """
+    The entrypoint to the ``build`` command.
+
+    :param args: The arguments to the command
+    :type args: ``argparse.Namespace``
+    """
     if sys.platform == "darwin":
         from .darwin import main
 
-        main(argparse)
+        main(args)
     elif sys.platform == "linux":
         from .linux import main
 
-        main(argparse)
+        main(args)
     elif sys.platform == "win32":
         from .windows import main
 
-        main(argparse)
+        main(args)
     else:
         print("Unsupported platform")
         sys.exit(1)

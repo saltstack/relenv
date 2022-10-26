@@ -1,3 +1,7 @@
+"""
+The ``mayflower toolchain`` command.
+"""
+
 import os
 import platform
 import sys
@@ -19,6 +23,12 @@ CICD = "CI" in os.environ
 
 
 def setup_parser(subparsers):
+    """
+    Setup the subparser for the ``toolchain`` command.
+
+    :param subparsers: The subparsers object returned from ``add_subparsers``
+    :type subparsers: argparse._SubParsersAction
+    """
     toolchain_subparser = subparsers.add_parser(
         "toolchain", description="Build Linux Toolchains"
     )
@@ -57,8 +67,12 @@ def fetch(arch, toolchain, clean=False):
     """
     Fetch a toolchain and extract it to the filesystem.
 
-    :param str arch: the architecture of the toolchain
-    :param str toolchain: where to extract the toolchain
+    :param arch: The architecture of the toolchain
+    :type arch: str
+    :param toolchain: Where to extract the toolchain
+    :type toolchain: str
+    :param clean: If true, clean the toolchain directories first
+    :type clean: bool
     """
     triplet = get_triplet(arch)
     archdir = get_toolchain(arch)
@@ -73,6 +87,12 @@ def fetch(arch, toolchain, clean=False):
 
 
 def main(args):
+    """
+    The entrypoint into the ``mayflower toolchain`` command.
+
+    :param args: The arguments for the command
+    :type args: ``argparse.Namespace``
+    """
     args.arches = {_.lower() for _ in args.arches}
     if not args.arches:
         args.arches = {"x86_64", "aarch64"}
