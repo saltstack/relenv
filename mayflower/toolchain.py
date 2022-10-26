@@ -3,11 +3,12 @@ The ``mayflower toolchain`` command.
 """
 
 import os
+import pathlib
 import platform
 import sys
 
 from .common import (
-    TOOLCHAIN,
+    DATADIR,
     download_url,
     extract_archive,
     get_toolchain,
@@ -74,7 +75,7 @@ def fetch(arch, toolchain, clean=False):
     :type clean: bool
     """
     triplet = get_triplet(arch)
-    archdir = get_toolchain(root=TOOLCHAIN, arch=arch)
+    archdir = get_toolchain(root=pathlib.Path(DATADIR) / "toolchain", arch=arch)
     if clean:
         shutil.rmtree(archdir)
     if archdir.exists():

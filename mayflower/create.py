@@ -9,7 +9,7 @@ import sys
 import tarfile
 import tempfile
 
-from .common import MODULE_DIR, MayflowerException
+from .common import MODULE_DIR, MayflowerException, archived_build
 
 
 @contextlib.contextmanager
@@ -102,7 +102,7 @@ def create(name, dest=None, arch="x86_64"):
     else:
         raise CreateException("Unknown platform")
 
-    tar = (MODULE_DIR / "_build" / triplet).with_suffix(".tar.xz")
+    tar = archived_build(triplet)
     if not tar.exists():
         raise CreateException(
             "Error, build archive for {} doesn't exist.\n"
