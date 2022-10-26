@@ -1,33 +1,33 @@
-import argparse
+"""
+The entrypoint into mayflower
+"""
+
+from argparse import ArgumentParser
 
 from . import build, create, fetch, toolchain
 
 
-class ArgParser(argparse.ArgumentParser):
-    """
-    Wrap default ArgParser implementation adding the ability to suppress
-    a positional argument from the example command output by the
-    print_help method.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(ArgParser, self).__init__(*args, **kwargs)
-        self._errors = []
-
-    def error(self, err):
-        self._errors.append(err)
-
-
 def setup_cli():
     """
-    Build the argparser with its subparsers
+    Build the argparser with its subparsers.
+
+    The modules with commands to add must specify a setup_parser function
+    that takes in the subparsers object from `argparse.add_subparsers()`
+
+    :return: The fully setup argument parser
+    :rtype: ``argparse.ArgumentParser``
     """
-    argparser = ArgParser(
+    argparser = ArgumentParser(
         description="Mayflower",
     )
     subparsers = argparser.add_subparsers()
 
-    modules_to_setup = [build, toolchain, create, fetch]
+    modules_to_setup = [
+        build,
+        toolchain,
+        create,
+        fetch,
+    ]
     for mod in modules_to_setup:
         mod.setup_parser(subparsers)
 

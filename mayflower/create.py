@@ -1,3 +1,7 @@
+"""
+The ``mayflower create`` command.
+"""
+
 import contextlib
 import os
 import pathlib
@@ -10,6 +14,12 @@ from .common import MODULE_DIR, MayflowerException
 
 @contextlib.contextmanager
 def chdir(path):
+    """
+    Context manager that changes to the specified directory and back.
+
+    :param path: The path to temporarily change to
+    :type path: str
+    """
     cwd = os.getcwd()
     try:
         os.chdir(path)
@@ -25,6 +35,12 @@ class CreateException(MayflowerException):
 
 
 def setup_parser(subparsers):
+    """
+    Setup the subparser for the ``create`` command.
+
+    :param subparsers: The subparsers object returned from ``add_subparsers``
+    :type subparsers: argparse._SubParsersAction
+    """
     create_subparser = subparsers.add_parser(
         "create",
         description="Create a Mayflower environment. This will create a directory of the given name with newly created Mayflower environment.",
@@ -42,7 +58,18 @@ def setup_parser(subparsers):
 
 
 def create(name, dest=None, arch="x86_64"):
+    """
+    Create a mayflower environment.
 
+    :param name: The name of the environment
+    :type name: str
+    :param dest: The path the environment should be created under
+    :type dest: str
+    :param arch: The architecture to create the environment for
+    :type arch: str
+
+    :raises CreateException: If there is a problem in creating the mayflower environment
+    """
     if dest:
         writeto = pathlib.Path(dest) / name
     else:
@@ -88,6 +115,12 @@ def create(name, dest=None, arch="x86_64"):
 
 
 def main(args):
+    """
+    The entrypoint into the ``mayflower create`` command.
+
+    :param args: The args passed to the command
+    :type args: argparse.Namespace
+    """
     name = args.name
     try:
         create(name, arch=args.arch)

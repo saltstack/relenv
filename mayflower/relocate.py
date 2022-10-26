@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-import argparse
-import json
+
+"""
+A script to ensure the proper rpaths are in place for the mayflower environment.
+"""
+
 import logging
 import os
 import pathlib
@@ -41,6 +44,15 @@ LC_RPATH = "LC_RPATH"
 
 
 def is_macho(path):
+    """
+    Determines whether the given file is a macho file
+
+    :param path: The path to the file to check
+    :type path: str
+
+    :return: Whether the file is a macho file
+    :rtype: bool
+    """
     with open(path, "rb") as fp:
         magic = fp.read(4)
     # XXX: Handle 64bit, 32bit, ppc, arm
@@ -48,12 +60,30 @@ def is_macho(path):
 
 
 def is_elf(path):
+    """
+    Determines whether the given file is an ELF file
+
+    :param path: The path to the file to check
+    :type path: str
+
+    :return: Whether the file is an ELF file
+    :rtype: bool
+    """
     with open(path, "rb") as fp:
         magic = fp.read(4)
     return magic == b"\x7f\x45\x4c\x46"
 
 
 def parse_otool_l(stdout):
+    """
+    Parse the output of ``otool -l <path>``.
+
+    :param stdout: The output of the ``otool -l <path>`` command
+    :type stdout: str
+
+    :return: The parsed relevant output with command keys and path values
+    :rtype: dict
+    """
     in_cmd = False
     cmd = None
     name = None
@@ -90,6 +120,15 @@ def parse_otool_l(stdout):
 
 
 def parse_readelf_d(stdout):
+    """
+    Parse the output of ``readelf -d <path>``.
+
+    :param stdout: The output of the ``readelf -d <path>`` command
+    :type stdout: str
+
+    :return: The RPATH values
+    :rtype: list
+    """
     for line in stdout.splitlines():
         # Find either RPATH or READPATH
         if line.find("PATH") == -1:
@@ -99,6 +138,15 @@ def parse_readelf_d(stdout):
 
 
 def parse_macho(path):
+    """
+    Run ``otool -l <path>`` and return its parsed output.
+
+    :param path: The path to the file
+    :type path: str
+
+    :return: The parsed relevant RPATH content, or None if it isn't an object file
+    :rtype: dict or None
+    """
     proc = subprocess.run(
         ["otool", "-l", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
@@ -109,6 +157,15 @@ def parse_macho(path):
 
 
 def parse_rpath(path):
+    """
+    Run ``readelf -d <path>`` and return its parsed output.
+
+    :param path: The path to the file
+    :type path: str
+
+    :return: The RPATH's found.
+    :rtype: list
+    """
     proc = subprocess.run(
         ["readelf", "-d", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
@@ -116,6 +173,18 @@ def parse_rpath(path):
 
 
 def handle_macho(path, root_dir, rpath_only):
+    """
+    Ensure the given macho file has the correct rpath and is in th correct location.
+
+    :param path: The path to a macho file
+    :type path: str
+    :param root_dir: The directory the file needs to reside under
+    :type root_dir: str
+    :param rpath_only: If true, only ensure the correct rpaths are present and don't copy the file
+    :type rpath_only: bool
+
+    :return: The information from ``parse_macho`` on the macho file.
+    """
     obj = parse_macho(path)
     log.info("Processing file %s %r", path, obj)
     if LC_LOAD_DYLIB in obj:
@@ -144,10 +213,34 @@ def handle_macho(path, root_dir, rpath_only):
 
 
 def is_in_dir(filepath, directory):
+    """
+    Determines whether a file is contained within a directory.
+
+    :param filepath: The path to the file to check
+    :type filepath: str
+    :param directory: The directory to check within
+    :type directory: str
+
+    :return: Whether the file is contained within the given directory
+    :rtype: bool
+    """
     return os.path.realpath(filepath).startswith(os.path.realpath(directory) + os.sep)
 
 
 def patch_rpath(path, new_rpath, only_relative=True):
+    """
+    Patch the rpath of a given ELF file
+
+    :param path: The path to an ELF file
+    :type path: str
+    :param new_rpath: The new rpath to add
+    :type new_rpath: str
+    :param only_relative: Whether or not to remove non-relative rpaths, defaults to True
+    :type only_relative: bool, optional
+
+    :return: The new rpath, or False if patching failed
+    :rtype: str or bool
+    """
     old_rpath = parse_rpath(path)
 
     # Remove non-relative rpaths if needed
@@ -170,6 +263,18 @@ def patch_rpath(path, new_rpath, only_relative=True):
 
 
 def handle_elf(path, libs, rpath_only, root=None):
+    """
+    Handle the parsing and pathcing of an ELF file
+
+    :param path: The path of the ELF file
+    :type path: str
+    :param libs: The libs directory
+    :type libs: str
+    :param rpath_only: If true, only ensure the correct rpaths are present and don't copy the file
+    :type rpath_only: bool
+    :param root: The directory to ensure the file is under, defaults to None
+    :type root: str, optional
+    """
     if root is None:
         root = libs
     proc = subprocess.run(["ldd", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -220,6 +325,18 @@ def handle_elf(path, libs, rpath_only, root=None):
 
 
 def main(root, libs_dir=None, rpath_only=True, log_level="INFO"):
+    """
+    The entrypoint into the relocate script.
+
+    :param root: The root directory to operate traverse for files to be patched
+    :type root: str
+    :param libs_dir: The directory to place the libraries in, defaults to None
+    :type libs_dir: str, optional
+    :param rpath_only: If true, only ensure the correct rpaths are present and don't copy the file, defaults to True
+    :type rpath_only: bool, optional
+    :param log_level: The level to log at, defaults to "INFO"
+    :type log_level: str, optional
+    """
     dirs = work_dirs()
     logging.basicConfig(
         level=logging.getLevelName(log_level.upper()),

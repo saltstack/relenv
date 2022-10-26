@@ -3,6 +3,14 @@ import textwrap
 
 
 def populate_env(env, dirs):
+    """
+    Make sure we have the correct environment variables set.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    """
     env["CC"] = "{}-gcc -no-pie".format(env["MAYFLOWER_HOST"])
     env["CXX"] = "{}-g++ -no-pie".format(env["MAYFLOWER_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
@@ -39,6 +47,16 @@ def populate_env(env, dirs):
 
 
 def build_bzip2(env, dirs, logfp):
+    """
+    Build bzip2.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     runcmd(
         [
             "make",
@@ -73,6 +91,16 @@ def build_bzip2(env, dirs, logfp):
 
 
 def build_gdbm(env, dirs, logfp):
+    """
+    Build gdbm.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     runcmd(
         [
             "./configure",
@@ -90,6 +118,16 @@ def build_gdbm(env, dirs, logfp):
 
 
 def build_ncurses(env, dirs, logfp):
+    """
+    Build ncurses.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     configure = pathlib.Path(dirs.source) / "configure"
     if env["MAYFLOWER_ARCH"] == "aarch64":
         os.chdir(dirs.tmpbuild)
@@ -130,6 +168,16 @@ def build_ncurses(env, dirs, logfp):
 
 
 def build_libffi(env, dirs, logfp):
+    """
+    Build libffi.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     runcmd(
         [
             "./configure",
@@ -151,6 +199,16 @@ def build_libffi(env, dirs, logfp):
 
 
 def build_zlib(env, dirs, logfp):
+    """
+    Build zlib.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
     runcmd(
         [
@@ -169,6 +227,16 @@ def build_zlib(env, dirs, logfp):
 
 
 def build_krb(env, dirs, logfp):
+    """
+    Build kerberos.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     if env["MAYFLOWER_ARCH"] == "aarch64":
         env["krb5_cv_attr_constructor_destructor"] = "yes,yes"
         env["ac_cv_func_regcomp"] = "yes"
@@ -205,6 +273,16 @@ PATCH = """--- ./setup.py
 
 
 def build_python(env, dirs, logfp):
+    """
+    Run the commands to build Python.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"]
     )
@@ -402,8 +480,14 @@ build.add(
 )
 
 
-def main(argparse):
-    run_build(build, argparse)
+def main(args):
+    """
+    The entrypoint into the linux build.
+
+    :param args: The arguments for the build
+    :type args: argparse.Namespace
+    """
+    run_build(build, args)
 
 
 if __name__ == "__main__":

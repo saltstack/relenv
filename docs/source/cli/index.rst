@@ -21,9 +21,3 @@ The recommended way to run mayflower commands is to use the exposed commands.
    toolchain
 
 Comprehensive CLI documentation can be found :doc:`here <mayflower>`.
-
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-   
-   mayflower

@@ -64,6 +64,12 @@ else:
 
 
 def get_build():
+    """
+    Get the build directory.
+
+    :return: The build directory
+    :rtype: ``pathlib.Path``
+    """
     if WORK_IN_CWD:
         base = pathlib.Path("build").resolve()
     else:
@@ -72,6 +78,18 @@ def get_build():
 
 
 def print_ui(events, processes, fails, flipstat={}):
+    """
+    Prints the UI during the mayflower building process.
+
+    :param events: A dictionary of events that are updated during the build process
+    :type events: dict
+    :param processes: A dictionary of build processes
+    :type processes: dict
+    :param fails: A list of processes that have failed
+    :type fails: list
+    :param flipstat: A dictionary of process statuses, defaults to {}
+    :type flipstat: dict, optional
+    """
     if CICD:
         sys.stdout.flush()
         return
@@ -98,6 +116,19 @@ def print_ui(events, processes, fails, flipstat={}):
 
 
 def verify_checksum(file, checksum):
+    """
+    Verify the checksum of a files.
+
+    :param file: The path to the file to check.
+    :type file: str
+    :param checksum: The checksum to verify against
+    :type checksum: str
+
+    :raises MayflowerException: If the checksum verification failed
+
+    :return: True if it succeeded, or False if the checksum was None
+    :rtype: bool
+    """
     if checksum is None:
         log.error(f"Can't verify checksum because none was given")
         return False
@@ -108,6 +139,17 @@ def verify_checksum(file, checksum):
 
 
 def all_dirs(root, recurse=True):
+    """
+    Get all directories under and including the given root.
+
+    :param root: The root directory to traverse
+    :type root: str
+    :param recurse: Whether to recursively search for directories, defaults to True
+    :type recurse: bool, optional
+
+    :return: A list of directories found
+    :rtype: list
+    """
     paths = [root]
     for root, dirs, files in os.walk(root):
         for name in dirs:
@@ -116,6 +158,15 @@ def all_dirs(root, recurse=True):
 
 
 def _parse_gcc_version(stdout):
+    """
+    Parse the gcc version.
+
+    :param stdout: The output of ``<C-compiler> --version``
+    :type stdout: str
+
+    :return: The gcc version
+    :rtype: str
+    """
     vline = stdout.splitlines()[0]
     vline, vstr = [_.strip() for _ in vline.rsplit(" ", 1)]
     if vstr.find(".") != -1:
@@ -124,16 +175,40 @@ def _parse_gcc_version(stdout):
 
 
 def gcc_version(cc):
+    """
+    Find the gcc version.
+
+    :param cc: The C-compiler to find the version of
+    :type cc: str
+
+    :return: The compiler version
+    :rtype: str
+    """
     proc = runcmd([cc, "--version"], stderr=PIPE, stdout=PIPE)
     return _parse_gcc_version(proc.stdout.decode())
 
 
 def _parse_kernel_version(stdout):
+    """
+    Parse the output of ``uname -r`` and return the kernel version.
+
+    :param stdout: The output of ``uname -r``
+    :type stdout: str
+
+    :return: The kernel version
+    :rtype: str
+    """
     stdout = stdout.split("-", 1)[0]
     return ".".join(stdout.split(".")[:3])
 
 
 def kernel_version():
+    """
+    Find the kernel version.
+
+    :return: The kernel version
+    :rtype: str
+    """
     proc = runcmd(["uname", "-r"], stderr=PIPE, stdout=PIPE)
     return _parse_kernel_version(proc.stdout.decode())
 
@@ -143,6 +218,16 @@ def populate_env(dirs, env):
 
 
 def build_default(env, dirs, logfp):
+    """
+    The default build function if none is given during the build process.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     cmd = [
         "./configure",
         "--prefix={}".format(dirs.prefix),
@@ -158,6 +243,16 @@ def build_default(env, dirs, logfp):
 
 
 def build_openssl(env, dirs, logfp):
+    """
+    Build openssl.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     arch = "aarch64"
     if sys.platform == "darwin":
         plat = "darwin64"
@@ -188,6 +283,16 @@ def build_openssl(env, dirs, logfp):
 
 
 def build_sqlite(env, dirs, logfp):
+    """
+    Build sqlite.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     # extra_cflags=('-Os '
     #              '-DSQLITE_ENABLE_FTS5 '
     #              '-DSQLITE_ENABLE_FTS4 '
@@ -224,6 +329,24 @@ def build_sqlite(env, dirs, logfp):
 
 
 class Download:
+    """
+    A utility that holds information about content to be downloaded.
+
+    :param name: The name of the download
+    :type name: str
+    :param url: The url of the download
+    :type url: str
+    :param signature: The signature of the download, defaults to None
+    :type signature: str
+    :param destination: The path to download the file to
+    :type destination: str
+    :param version: The version of the content to download
+    :type version: str
+    :param md5sum: The md5 sum of the download
+    :type md5sum: str
+
+    """
+
     def __init__(
         self, name, url, signature=None, destination="", version="", md5sum=None
     ):
@@ -248,14 +371,29 @@ class Download:
         return self.url.format(version=self.version)
 
     def fetch_file(self):
+        """
+        Download the file.
+
+        :return: The path to the downloaded content.
+        :rtype: str
+        """
         return download_url(self.url, self.destination)
 
     def fetch_signature(self, version):
+        """
+        Download the file signature.
+
+        :return: The path to the downloaded signature.
+        :rtype: str
+        """
         return download_url(self.url, self.destination)
 
     def exists(self):
         """
-        True when the artifact already exists on disk
+        True when the artifact already exists on disk.
+
+        :return: True when the artifact already exists on disk
+        :rtype: bool
         """
         return self.filepath.exists()
 
@@ -266,6 +404,14 @@ class Download:
     def validate_signature(archive, signature):
         """
         True when the archive's signature is valid
+
+        :param archive: The path to the archive to validate
+        :type archive: str
+        :param signature: The path to the signature to validate against
+        :type signature: str
+
+        :return: True if it validated properly, else False
+        :rtype: bool
         """
         if signature is None:
             log.error("Can't check signature because none was given")
@@ -280,7 +426,14 @@ class Download:
     @staticmethod
     def validate_md5sum(archive, md5sum):
         """
-        True when when the archive matches the md5 hash
+        True when when the archive matches the md5 hash.
+
+        :param archive: The path to the archive to validate
+        :type archive: str
+        :param md5sum: The md5 sum to validate against
+        :type md5sum: str
+        :return: True if the sums matched, else False
+        :rtype: bool
         """
         try:
             verify_checksum(archive, md5sum)
@@ -290,6 +443,12 @@ class Download:
             return False
 
     def __call__(self):
+        """
+        Downloads the url and validates the signature and md5 sum.
+
+        :return: Whether or not validation succeeded
+        :rtype: bool
+        """
         os.makedirs(self.filepath.parent, exist_ok=True)
         self.fetch_file()
         valid = True
@@ -304,6 +463,17 @@ class Download:
 
 
 class Dirs:
+    """
+    A container for directories during build time.
+
+    :param dirs: A collection of working directories
+    :type dirs: ``mayflower.common.WorkDirs``
+    :param name: The name of this collection
+    :type name: str
+    :param arch: The architecture being worked with
+    :type arch: str
+    """
+
     def __init__(self, dirs, name, arch):
         self.name = name
         self.arch = arch
@@ -337,6 +507,11 @@ class Dirs:
         return self.build / self._triplet
 
     def __getstate__(self):
+        """
+        Return an object used for pickling.
+
+        :return: The picklable state
+        """
         return {
             "name": self.name,
             "arch": self.arch,
@@ -349,6 +524,12 @@ class Dirs:
         }
 
     def __setstate__(self, state):
+        """
+        Unwrap the object returned from unpickling.
+
+        :param state: The state to unpickle
+        :type state: dict
+        """
         self.name = state["name"]
         self.arch = state["arch"]
         self.root = state["root"]
@@ -359,6 +540,12 @@ class Dirs:
         self.tmpbuild = state["tmpbuild"]
 
     def to_dict(self):
+        """
+        Get a dictionary representation of the directories in this collection.
+
+        :return: A dictionary of all the directories
+        :rtype: dict
+        """
         return {
             x: getattr(self, x)
             for x in [
@@ -374,6 +561,23 @@ class Dirs:
 
 
 class Builder:
+    """
+    Utility that handles the build process.
+
+    :param root: The root of the working directories for this build
+    :type root: str
+    :param recipies: The instructions for the build steps
+    :type recipes: list
+    :param build_default: The default build function, defaults to ``build_default``
+    :type build_default: types.FunctionType
+    :param populate_env: The default function to populate the build environment, defaults to ``populate_env``
+    :type populate_env: types.FunctionType
+    :param no_download: If True, doesn't download the archives first, defaults to False
+    :type no_download: bool
+    :param arch: The architecture being built
+    :type arch: str
+    """
+
     def __init__(
         self,
         root=None,
@@ -418,6 +622,12 @@ class Builder:
             return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
     def set_arch(self, arch):
+        """
+        Set the architecture for the build
+
+        :param arch: The arch to build
+        :type arch: str
+        """
         self.arch = arch
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
@@ -444,6 +654,18 @@ class Builder:
             return "{}-linux-gnu".format(self.arch)
 
     def add(self, name, build_func=None, wait_on=None, download=None):
+        """
+        Add a step to the build process.
+
+        :param name: The name of the step
+        :type name: str
+        :param build_func: The function that builds this step, defaults to None
+        :type build_func: types.FunctionType, optional
+        :param wait_on: Processes to wait on before running this step, defaults to None
+        :type wait_on: list, optional
+        :param download: A dictionary of download information, defaults to None
+        :type download: dict, optional
+        """
         if wait_on is None:
             wait_on = []
         if build_func is None:
@@ -457,6 +679,20 @@ class Builder:
         }
 
     def run(self, name, event, build_func, download):
+        """
+        Run a build step.
+
+        :param name: The name of the step to run
+        :type name: str
+        :param event: An event to track this process' status and alert waiting steps
+        :type event: ``multiprocessing.Event``
+        :param build_func: The function to use to build this step
+        :type build_func: types.FunctionType
+        :param download: The ``Download`` instance for this step
+        :type download: ``Download``
+
+        :return: The output of the build function
+        """
         while event.is_set() is False:
             time.sleep(0.3)
 
@@ -522,9 +758,15 @@ class Builder:
             logfp.close()
 
     def cleanup(self):
+        """
+        Clean up the build directories.
+        """
         shutil.rmtree(self.prefix)
 
     def clean(self):
+        """
+        Completely clean up the remnants of a mayflower build.
+        """
         # Clean directories
         for _ in [self.prefix, self.sources]:
             try:
@@ -541,6 +783,12 @@ class Builder:
                 pass
 
     def download_files(self, steps=None):
+        """
+        Download all of the needed archives.
+
+        :param steps: The steps to download archives for, defaults to None
+        :type steps: list, optional
+        """
         if steps is None:
             steps = list(self.recipies)
 
@@ -584,6 +832,14 @@ class Builder:
             sys.exit(1)
 
     def build(self, steps=None, cleanup=True):
+        """
+        Build!
+
+        :param steps: The steps to run, defaults to None
+        :type steps: list, optional
+        :param cleanup: Whether to clean up or not, defaults to True
+        :type cleanup: bool, optional
+        """
         fails = []
         futures = []
         events = {}
@@ -663,6 +919,20 @@ class Builder:
         return fail
 
     def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
+        """
+        Set the architecture, define the steps, clean if needed, download what is needed, and build.
+
+        :param steps: The steps to run, defaults to None
+        :type steps: list, optional
+        :param arch: The architecture to build, defaults to None
+        :type arch: str, optional
+        :param clean: If true, cleans the directories first, defaults to True
+        :type clean: bool, optional
+        :param cleanup: Cleans up after build if true, defaults to True
+        :type cleanup: bool, optional
+        :param download: Whether or not to download the content, defaults to True
+        :type download: bool, optional
+        """
         if arch:
             self.set_arch(arch)
 
@@ -691,6 +961,15 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
     """
     Helper method used by the `finalize` build method to create a Mayflower
     Python environment's sysconfigdata.
+
+    :param mod: The module to operate on
+    :type mod: ``types.ModuleType``
+    :param destfile: Path to the file to write the data to
+    :type destfile: str
+    :param buildroot: Path to the root of the build
+    :type buildroot: str
+    :param toolchain: Path to the root of the toolchain
+    :type toolchain: str
     """
     BUILDROOT = str(
         buildroot
@@ -734,6 +1013,13 @@ def finalize(env, dirs, logfp):
     """
     Run after we've fully built python. This method enhances the newly created
     python with Mayflower's runtime hacks.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
     """
     # Run relok8 to make sure the rpaths are relocatable.
     relocate_main(dirs.prefix)
@@ -872,7 +1158,16 @@ def finalize(env, dirs, logfp):
 
 def create_archive(tarfp, toarchive, globs, logfp=None):
     """
-    Create an archive
+    Create an archive.
+
+    :param tarfp: A pointer to the archive to be created
+    :type tarfp: file
+    :param toarchive: The path to the directory to archive
+    :type toarchive: str
+    :param globs: A list of filtering patterns to match against files to be added
+    :type globs: list
+    :param logfp: A pointer to the log file
+    :type logfp: file
     """
     logfp.write(f"CURRENT DIR {os.getcwd()}")
     if logfp:
@@ -896,6 +1191,14 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
 
 
 def run_build(builder, args):
+    """
+    Run the build process.
+
+    :param builder: The instance of ``Builder`` to use
+    :type builder: ``Builder``
+    :param args: The arguments to the build command
+    :type args: ``argparse.Namespace``
+    """
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     random.seed()

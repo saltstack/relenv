@@ -1,7 +1,19 @@
+"""
+The darwin build process.
+"""
+
 from .common import *
 
 
 def populate_env(env, dirs):
+    """
+    Make sure we have the correct environment variables set.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    """
     env["CC"] = "clang"
     ldflags = [
         "-Wl,-rpath,{prefix}/lib",
@@ -17,6 +29,16 @@ def populate_env(env, dirs):
 
 
 def build_python(env, dirs, logfp):
+    """
+    Run the commands to build Python.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``mayflower.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
     env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"]
     )
@@ -97,8 +119,14 @@ build.add(
 )
 
 
-def main(argparse):
-    run_build(build, argparse)
+def main(args):
+    """
+    The entrypoint into the darwin build.
+
+    :param args: The arguments for the build
+    :type args: argparse.Namespace
+    """
+    run_build(build, args)
 
 
 if __name__ == "__main__":

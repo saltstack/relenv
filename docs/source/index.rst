@@ -41,6 +41,8 @@ Topics
    contributing
 
 
+Mayflower has no public API, but you can find documentation for the internals of mayflower :doc:`here <developer/index>`.
+
 Indices and tables
 ==================
 
