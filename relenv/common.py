@@ -25,7 +25,7 @@ else:
 DATADIR = os.environ.get("RELENV_DATA", DEFAULT_DATADIR)
 
 
-class MayflowerException(Exception):
+class RelenvException(Exception):
     """
     Base class for exeptions generated from relenv
     """
@@ -161,7 +161,7 @@ def get_triplet(machine=None, plat=None):
     :param plat: The platform for the triplet
     :type plat: str
 
-    :raises MayflowerException: If the platform is unknown
+    :raises RelenvException: If the platform is unknown
 
     :return: The target triplet
     :rtype: str
@@ -178,7 +178,7 @@ def get_triplet(machine=None, plat=None):
     elif plat == "linux":
         return f"{machine}-linux-gnu"
     else:
-        raise MayflowerException("Unknown platform {}".format(platform))
+        raise RelenvException("Unknown platform {}".format(platform))
 
 
 def archived_build(triplet=None):
@@ -269,9 +269,9 @@ def runcmd(*args, **kwargs):
     :return: The process result
     :rtype: ``subprocess.CompletedProcess``
 
-    :raises MayflowerException: If the command finishes with a non zero exit code
+    :raises RelenvException: If the command finishes with a non zero exit code
     """
     proc = subprocess.run(*args, **kwargs)
     if proc.returncode != 0:
-        raise MayflowerException("Build cmd '{}' failed".format(" ".join(args[0])))
+        raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
     return proc
