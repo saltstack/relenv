@@ -1,29 +1,29 @@
-# Mayflower
+# Relenv
 
-Mayflower creates re-producable and re-locatable python builds. The builds
-created with Mayflower are re-producable in the sense that all binaries for the
+Relenv creates re-producable and re-locatable python builds. The builds
+created with Relenv are re-producable in the sense that all binaries for the
 builds are built from source. These builds are re-locatable meaning you can
 move the root directory around on the filesystem.
 
-# Installing Mayflower
+# Installing Relenv
 
 ```
-pip install git+https://github.com/dwoz/Mayflower.git
+pip install git+https://github.com/dwoz/Relenv.git
 ```
 
 
-# Pre-built Mayflower Python Environments
+# Pre-built Relenv Python Environments
 
-Mayflower can use pre-build Mayflower Python environments.
+Relenv can use pre-build Relenv Python environments.
 
 ```
-python3 -m mayflower fetch
-python3 -m mayflower create foo
+python3 -m relenv fetch
+python3 -m relenv create foo
 foo/bin/pip3 install myproject
 ```
 
 
-# Building a Mayflower Build
+# Building a Relenv Build
 
 **Currently building assumes your building on x86_64**
 
@@ -39,25 +39,25 @@ foo/bin/pip3 install myproject
 
 ## Building on Linux
 
-When using Mayflower to create builds on linux you first need a toolchain. You
+When using Relenv to create builds on linux you first need a toolchain. You
 can either build the toolchain or use a pre-built toolchain.
 
 Using a pre-built toolchain.
 
 ```
-python3 -m mayflower toolchain download
+python3 -m relenv toolchain download
 ```
 
 Building a toolchain from scratch.
 
 ```
-python3 -m mayflower toolchain build
+python3 -m relenv toolchain build
 ```
 
-After installing the Mayflower toolchain for the architecture you are targeting you build a Mayflower Python build.
+After installing the Relenv toolchain for the architecture you are targeting you build a Relenv Python build.
 
 ```
-python3 -m mayflower build --clean
+python3 -m relenv build --clean
 ```
 
 ## Mac OS Dependencies
@@ -66,7 +66,7 @@ python3 -m mayflower build --clean
 
 ## Building on Mac OS
 
-Run `python3 -m mayflower build --clean`
+Run `python3 -m relenv build --clean`
 
 
 # How it Works
@@ -89,18 +89,18 @@ should work just like any other python installation. The difference is this
 python can be moved around on the filesystem or even to other machines.
 
 ```/bin/sh
-python3 mayflower create myproject
+python3 relenv create myproject
 ./myproject/bin/pip3 install myproject
 zip myproject.zip myproject
 ```
 
-The newly created `myproject` mayflower environment can be sent to freind,
+The newly created `myproject` relenv environment can be sent to freind,
 co-worker, or customer.
 
 
-# Pre-Built Mayflower Builds
+# Pre-Built Relenv Builds
 
-Because Mayflower's builds are re-producable, a build on OS version should end
+Because Relenv's builds are re-producable, a build on OS version should end
 up being exactly the same as one built on another OS or version. Therefore the
 builds created by the CI/CD pipelines in this repository can be used in lue of
 building yourself.
