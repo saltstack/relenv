@@ -22,6 +22,7 @@ import pprint
 
 from relenv.common import (
     MODULE_DIR,
+    DATA_DIR,
     RelenvException,
     work_root,
     work_dirs,
@@ -29,13 +30,13 @@ from relenv.common import (
     extract_archive,
     download_url,
     runcmd,
-    PIPE,
 )
 from relenv.relocate import main as relocate_main
 from relenv.create import create
 
 
 log = logging.getLogger(__name__)
+
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -46,7 +47,6 @@ MOVEUP = "\033[F"
 
 CICD = "CI" in os.environ
 NODOWLOAD = False
-WORK_IN_CWD = False
 
 
 SITECUSTOMIZE = """\"\"\"
@@ -62,20 +62,6 @@ except ImportError:
 else:
     relenv.runtime.bootstrap()
 """
-
-
-def get_build():
-    """
-    Get the build directory.
-
-    :return: The build directory
-    :rtype: ``pathlib.Path``
-    """
-    if WORK_IN_CWD:
-        base = pathlib.Path("build").resolve()
-    else:
-        base = MODULE_DIR / "_build"
-    return base
 
 
 def print_ui(events, processes, fails, flipstat={}):
@@ -362,7 +348,11 @@ class Download:
             log.error("Can't check signature because none was given")
             return False
         try:
-            runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
+            runcmd(
+                ["gpg", "--verify", signature, archive],
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
             return True
         except RelenvException as exc:
             log.error("Signature validation failed on %s: %s", archive, exc)
@@ -671,14 +661,13 @@ class Builder:
         env["RELENV_HOST"] = self.triplet
         env["RELENV_ARCH"] = self.arch
         if self.arch != "x86_64":
-            env["RELENV_CROSS"] = str(self.native_python.parent.parent)
-            native_root = MODULE_DIR / "_native"
+            native_root = DATA_DIR / "native"
             if not native_root.exists():
                 # XXX This needs to be more robust to handle running on arm
                 # too. Also, The check should only happen once per build, it
                 # makes more sense to happen in Builder.__call__.
                 try:
-                    create("_native", MODULE_DIR)
+                    create("native", DATA_DIR)
                 except FileExistsError:
                     pass
             env["RELENV_NATIVE_PY"] = native_root / "bin" / "python3"
@@ -844,7 +833,12 @@ class Builder:
         if fails:
             sys.stderr.write("The following failures were reported\n")
             for fail in fails:
-                sys.stderr.write(fail + "\n")
+                with io.open(self.dirs.logs / f"{fail}.log") as fp:
+                    fp.seek(0, 2)
+                    end = fp.tell()
+                    fp.seek(end - 1024)
+                    sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
+                    sys.stderr.write(fp.read() + "\n\n")
             sys.stderr.flush()
             if cleanup:
                 self.cleanup()
@@ -925,34 +919,29 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
     :param toolchain: Path to the root of the toolchain
     :type toolchain: str
     """
-    BUILDROOT = str(
-        buildroot
-    )  # "/home/dan/src/Relenv/relenv/_build/x86_64-linux-gnu"
-    TOOLCHAIN = str(
-        toolchain
-    )  # "/home/dan/src/Relenv/relenv/_toolchain/x86_64-linux-gnu"
-    dest = "sysdata.py"
     data = {}
-    buildroot = lambda _: _.replace(BUILDROOT, "{BUILDROOT}")
-    toolchain = lambda _: _.replace(TOOLCHAIN, "{TOOLCHAIN}")
+    fbuildroot = lambda _: _.replace(str(buildroot), "{BUILDROOT}")
+    ftoolchain = lambda _: _.replace(str(toolchain), "{TOOLCHAIN}")
     keymap = {
-        "BINDIR": (buildroot,),
-        "BINLIBDEST": (buildroot,),
-        "CFLAGS": (buildroot, toolchain),
-        "CPPLAGS": (buildroot, toolchain),
-        "CXXFLAGS": (buildroot, toolchain),
-        "datarootdir": (buildroot,),
-        "exec_prefix": (buildroot,),
-        "LDFLAGS": (buildroot, toolchain),
-        "LDSHARED": (buildroot, toolchain),
-        "LIBDEST": (buildroot,),
-        "prefix": (buildroot,),
-        "SCRIPTDIR": (buildroot,),
+        "BINDIR": (fbuildroot,),
+        "BINLIBDEST": (fbuildroot,),
+        "CFLAGS": (fbuildroot, ftoolchain),
+        "CPPLAGS": (fbuildroot, ftoolchain),
+        "CXXFLAGS": (fbuildroot, ftoolchain),
+        "datarootdir": (fbuildroot,),
+        "exec_prefix": (fbuildroot,),
+        "LDFLAGS": (fbuildroot, ftoolchain),
+        "LDSHARED": (fbuildroot, ftoolchain),
+        "LIBDEST": (fbuildroot,),
+        "prefix": (fbuildroot,),
+        "SCRIPTDIR": (fbuildroot,),
     }
     for key in sorted(mod.build_time_vars):
         val = mod.build_time_vars[key]
-        for _ in keymap.get(key, []):
-            val = _(val)
+        if isinstance(val, str):
+            for _ in (fbuildroot, ftoolchain):
+                val = _(val)
+                print(f"SYSCONFIG {mod.build_time_vars[key]} => {val}")
         data[key] = val
 
     with open(destfile, "w", encoding="utf8") as f:
@@ -1028,7 +1017,7 @@ def finalize(env, dirs, logfp):
         env["RELENV_CROSS"] = dirs.prefix
         python = env["RELENV_NATIVE_PY"]
     runcmd(
-        [python, "-m", "ensurepip"],
+        [str(python), "-m", "ensurepip"],
         env=env,
         stderr=logfp,
         stdout=logfp,
@@ -1096,6 +1085,7 @@ def finalize(env, dirs, logfp):
     globs = [
         "/bin/python*",
         "/bin/pip*",
+        "/lib/python3.10/ensurepip/*",
         "/lib/python3.10/site-packages/*",
         "/include/*",
         "*.so",

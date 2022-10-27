@@ -18,7 +18,7 @@ def populate_env(env, dirs):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     """
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
@@ -30,7 +30,7 @@ def build_python(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -117,12 +117,12 @@ build.add(
 
 def finalize(env, dirs, logfp):
     """
-    Finalize sitecustomize, mayflower runtime, and pip for Windows.
+    Finalize sitecustomize, relenv runtime, and pip for Windows.
 
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -133,20 +133,20 @@ def finalize(env, dirs, logfp):
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
-    # Lay down mayflower.runtime, we'll pip install the rest later
-    mayflowerdir = sitepackages / "mayflower"
-    os.makedirs(mayflowerdir, exist_ok=True)
+    # Lay down relenv.runtime, we'll pip install the rest later
+    relenvdir = sitepackages / "relenv"
+    os.makedirs(relenvdir, exist_ok=True)
     runtime = MODULE_DIR / "runtime.py"
-    dest = mayflowerdir / "runtime.py"
+    dest = relenvdir / "runtime.py"
     with io.open(runtime, "r") as rfp:
         with io.open(dest, "w") as wfp:
             wfp.write(rfp.read())
     runtime = MODULE_DIR / "common.py"
-    dest = mayflowerdir / "common.py"
+    dest = relenvdir / "common.py"
     with io.open(runtime, "r") as rfp:
         with io.open(dest, "w") as wfp:
             wfp.write(rfp.read())
-    init = mayflowerdir / "__init__.py"
+    init = relenvdir / "__init__.py"
     init.touch()
 
     # Install pip
@@ -169,11 +169,11 @@ def finalize(env, dirs, logfp):
 
     runpip("wheel")
     # This needs to handle running from the root of the git repo and also from
-    # an installed Mayflower
+    # an installed Relenv
     if (MODULE_DIR.parent / ".git").exists():
         runpip(MODULE_DIR.parent)
     else:
-        runpip("mayflower")
+        runpip("relenv")
 
     for root, _, files in os.walk(dirs.prefix):
         for file in files:
@@ -195,7 +195,7 @@ def finalize(env, dirs, logfp):
 
 
 build.add(
-    "mayflower-finalize",
+    "relenv-finalize",
     build_func=finalize,
     wait_on=["python"],
 )

@@ -1,5 +1,5 @@
 Building on MacOS
 =================
 
-.. automodule:: mayflower.build.darwin
+.. automodule:: relenv.build.darwin
     :members:

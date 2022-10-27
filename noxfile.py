@@ -41,14 +41,14 @@ def tests(session):
 @nox.session
 @nox.parametrize("arch", ("x86_64", "aarch64"))
 def build(session, arch):
-    invoke_mayflower(session, "toolchain", "download", f"--arch={arch}")
-    invoke_mayflower(session, "build", f"--arch={arch}")
+    invoke_relenv(session, "toolchain", "download", f"--arch={arch}")
+    invoke_relenv(session, "build", f"--arch={arch}")
 
 
 @nox.session
 @nox.parametrize("arch", ("x86_64", "aarch64"))
 def toolchain(session, arch):
-    invoke_mayflower(session, "toolchain", "build", f"--arch={arch}")
+    invoke_relenv(session, "toolchain", "build", f"--arch={arch}")
 
 
 # Convenience sessions
@@ -114,11 +114,14 @@ def run_pytest_session(session, *cmd_args):
         default_args.append(f"--log-file={PYTEST_LOGFILE}")
 
     pytest_args = default_args + list(cmd_args) + session.posargs
+    env = {}
+    if "RELENV_DATA" in os.environ:
+        env["RELENV_DATA"] = os.environ["RELENV_DATA"]
     session.run("python", "-m", "pytest", *pytest_args)
 
 
-def invoke_mayflower(session, *cmd_args):
-    session.run("python", "-m", "mayflower", *cmd_args)
+def invoke_relenv(session, *cmd_args):
+    session.run("python", "-m", "relenv", *cmd_args)
 
 
 def make_artifacts_directory():

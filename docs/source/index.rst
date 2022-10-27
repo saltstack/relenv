@@ -1,13 +1,13 @@
 .. Relenv landing page
 
 Relenv - Build and use relocatable Python environments
-=========================================================
+======================================================
 
-The "standard" Python installation is not relocatable, nor is it 
+The "standard" Python installation is not relocatable, nor is it
 easily transferrable to other operating systems in the same family.
 
-Relenv solves that problem and more.  Written entirely in Python, 
-it can build relocatable Python packages and use them to create environments 
+Relenv solves that problem and more.  Written entirely in Python,
+it can build relocatable Python packages and use them to create environments
 that pin all Python interaction to the build of your choice.
 
 Installation
@@ -35,10 +35,11 @@ Topics
 
 .. toctree::
    :maxdepth: 2
-   
+
    toolchain
    cli/index
    contributing
+   developer/index
 
 
 Relenv has no public API, but you can find documentation for the internals of relenv :doc:`here <developer/index>`.

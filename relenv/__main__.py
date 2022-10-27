@@ -18,7 +18,7 @@ def setup_cli():
     :rtype: ``argparse.ArgumentParser``
     """
     argparser = ArgumentParser(
-        description="Mayflower",
+        description="Relenv",
     )
     subparsers = argparser.add_subparsers()
 

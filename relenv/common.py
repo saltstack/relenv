@@ -12,17 +12,17 @@ import time
 import urllib.error
 import urllib.request
 
-
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
-WORK_IN_CWD = False
-PIPE = subprocess.PIPE
 
 if sys.platform == "win32":
-    DEFAULT_DATADIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
+    DEFAULT_DATA_DIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
 else:
-    DEFAULT_DATADIR = pathlib.Path.home() / ".local" / "relenv"
+    DEFAULT_DATA_DIR = pathlib.Path.home() / ".local" / "relenv"
 
-DATADIR = os.environ.get("RELENV_DATA", DEFAULT_DATADIR)
+if "RELENV_DATA" in os.environ:
+    DATA_DIR = pathlib.Path(os.environ["RELENV_DATA"]).resolve()
+else:
+    DATA_DIR = DEFAULT_DATA_DIR
 
 
 class RelenvException(Exception):
@@ -43,8 +43,6 @@ def work_root(root=None):
     """
     if root is not None:
         base = pathlib.Path(root).resolve()
-    elif WORK_IN_CWD:
-        base = pathlib.Path(os.getcwd()).resolve()
     else:
         base = MODULE_DIR
     return base
@@ -81,11 +79,11 @@ class WorkDirs:
     def __init__(self, root):
         self.root = root
         self.toolchain_config = work_dir("toolchain", self.root)
-        self.toolchain = work_dir("toolchain", DATADIR)
-        self.build = work_dir("build", DATADIR)
-        self.src = work_dir("src", DATADIR)
-        self.logs = work_dir("logs", DATADIR)
-        self.download = work_dir("download", DATADIR)
+        self.toolchain = work_dir("toolchain", DATA_DIR)
+        self.build = work_dir("build", DATA_DIR)
+        self.src = work_dir("src", DATA_DIR)
+        self.logs = work_dir("logs", DATA_DIR)
+        self.download = work_dir("download", DATA_DIR)
 
     def __getstate__(self):
         """
@@ -193,7 +191,7 @@ def archived_build(triplet=None):
     """
     if not triplet:
         triplet = get_triplet()
-    dirs = work_dirs(DATADIR)
+    dirs = work_dirs(DATA_DIR)
     return (dirs.build / triplet).with_suffix(".tar.xz")
 
 

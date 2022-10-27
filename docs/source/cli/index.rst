@@ -1,9 +1,9 @@
-.. Mayflower CLI documentation
+.. Relenv CLI documentation
 
-Mayflower's CLI
-===============
+Relenv's CLI
+============
 
-Mayflower exposes the following subcommands.
+Relenv exposes the following subcommands.
 
 The recommended way to run relenv commands is to use the exposed commands.
 
@@ -18,7 +18,8 @@ The recommended way to run relenv commands is to use the exposed commands.
 .. toctree::
    :maxdepth: 1
    :caption: Commands:
-   
+
+   relenv
    build
    fetch
    create

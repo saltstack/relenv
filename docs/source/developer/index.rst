@@ -1,5 +1,5 @@
-Mayflower's Developer API
-=========================
+Relenv's Developer API
+======================
 
 This is documentation on the internals of relenv.
 
@@ -11,10 +11,10 @@ This is documentation on the internals of relenv.
     :maxdepth: 1
 
     entrypoint
-    build/index
     common
     create
     fetch
     relocate
     runtime
     toolchain
+    build/index

@@ -9,11 +9,12 @@ Common code can be found :doc:`here <common>`.
     :maxdepth: 1
     :caption: Build Platforms
 
+    common
     linux
     darwin
     windows
 
 The following is for the entrypoint into the build command.
 
-.. automodule:: mayflower.build
+.. automodule:: relenv.build
     :members:

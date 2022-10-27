@@ -2,6 +2,20 @@ from .common import *
 import textwrap
 
 
+# Patch for Python's setup.py
+PATCH = """--- ./setup.py
++++ ./setup.py
+@@ -664,6 +664,7 @@
+             self.failed.append(ext.name)
+
+     def add_multiarch_paths(self):
++        return
+         # Debian/Ubuntu multiarch support.
+         # https://wiki.ubuntu.com/MultiarchSpec
+         tmpfile = os.path.join(self.build_temp, 'multiarch')
+"""
+
+
 def populate_env(env, dirs):
     """
     Make sure we have the correct environment variables set.
@@ -9,10 +23,11 @@ def populate_env(env, dirs):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     """
-    env["CC"] = "{}-gcc -no-pie".format(env["RELENV_HOST"])
-    env["CXX"] = "{}-g++ -no-pie".format(env["RELENV_HOST"])
+    # CC and CXX need to be to have the full path to the executable
+    env["CC"] = "{}/bin/{}-gcc -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
+    env["CXX"] = "{}/bin/{}-g++ -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
         "-Wl,--rpath={prefix}/lib",
@@ -53,7 +68,7 @@ def build_bzip2(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -97,7 +112,7 @@ def build_gdbm(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -124,7 +139,7 @@ def build_ncurses(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -174,7 +189,7 @@ def build_libffi(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -205,7 +220,7 @@ def build_zlib(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -233,7 +248,7 @@ def build_krb(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -259,19 +274,6 @@ def build_krb(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-PATCH = """--- ./setup.py
-+++ ./setup.py
-@@ -664,6 +664,7 @@
-             self.failed.append(ext.name)
-
-     def add_multiarch_paths(self):
-+        return
-         # Debian/Ubuntu multiarch support.
-         # https://wiki.ubuntu.com/MultiarchSpec
-         tmpfile = os.path.join(self.build_temp, 'multiarch')
-"""
-
-
 def build_python(env, dirs, logfp):
     """
     Run the commands to build Python.
@@ -279,7 +281,7 @@ def build_python(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -333,7 +335,7 @@ def build_python(env, dirs, logfp):
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
-    # RELENVCROSS=mayflower/_build/aarch64-linux-gnu  mayflower/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
+    # RELENVCROSS=relenv/_build/aarch64-linux-gnu  relenv/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
     # python = dirs.prefix / "bin" / "python3"
     # if env["RELENV_ARCH"] == "aarch64":
     #    python = env["RELENV_NATIVE_PY"]
@@ -472,7 +474,7 @@ build.add(
 
 
 build.add(
-    "mayflower-finalize",
+    "relenv-finalize",
     build_func=finalize,
     wait_on=[
         "python",

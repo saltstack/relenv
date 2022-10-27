@@ -1,11 +1,11 @@
 """
-This code is run when initializing the python interperter in a Mayflower
+This code is run when initializing the python interperter in a Relenv
 environment.
 
-- Point Mayflower's Openssl to the system installed Openssl certificate path
+- Point Relenv's Openssl to the system installed Openssl certificate path
 - Make sure pip creates scripts with a shebang that points to the correct
   python using a relative path.
-- On linux, provide pip with the proper location of the Mayflower toolchain
+- On linux, provide pip with the proper location of the Relenv toolchain
   gcc. This ensures when using pip any c dependencies are compiled against the
   proper glibc version.
 """
@@ -17,9 +17,7 @@ import shutil
 import subprocess
 import sys
 
-from .common import MODULE_DIR
-
-SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
+from .common import DATA_DIR, MODULE_DIR
 
 
 def debug(string):
@@ -67,7 +65,7 @@ def get_config_var_wrapper(func):
     return wrapped
 
 
-class MayflowerImporter:
+class RelenvImporter:
     """
     An importer to be added to ``sys.meta_path`` to handle importing into a relenv environment.
     """
@@ -88,24 +86,24 @@ class MayflowerImporter:
         :param package_path: The path to the package, defaults to None
         :type package_path: str, optional
         :return: The instance that called this method if it found the module, or None if it didn't
-        :rtype: MayflowerImporter or None
+        :rtype: RelenvImporter or None
         """
         if module_name.startswith("sysconfig") and sys.platform == "win32":
             if self.loading_sysconfig:
                 return None
-            debug(f"MayflowerImporter - match {module_name}")
+            debug(f"RelenvImporter - match {module_name}")
             self.loading_sysconfig = True
             return self
         elif module_name == "pip._vendor.distlib.scripts":
             if self.loading_pip_scripts:
                 return None
-            debug(f"MayflowerImporter - match {module_name}")
+            debug(f"RelenvImporter - match {module_name}")
             self.loading_pip_scripts = True
             return self
         elif module_name == self.sysconfigdata:
             if self.loading_sysconfig_data:
                 return None
-            debug(f"MayflowerImporter - match {module_name}")
+            debug(f"RelenvImporter - match {module_name}")
             self.loading_sysconfig_data = True
             return self
         return None
@@ -117,28 +115,28 @@ class MayflowerImporter:
         :param name: The module name to load
         :type name: str
         :return: The loaded module or the calling instance if importing sysconfigdata
-        :rtype: types.ModuleType or MayflowerImporter
+        :rtype: types.ModuleType or RelenvImporter
         """
         if name.startswith("sysconfig"):
-            debug(f"MayflowerImporter - load_module {name}")
+            debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
             self.loading_sysconfig = False
         elif name == "pip._vendor.distlib.scripts":
-            debug(f"MayflowerImporter - load_module {name}")
+            debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module(name)
             mod.ScriptMaker._build_shebang = _build_shebang
             self.loading_pip_scripts = False
         elif name == self.sysconfigdata:
-            debug(f"MayflowerImporter - load_module {name}")
+            debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module(name)
             try:
                 maymod = importlib.import_module("relenv-sysconfigdata")
             except ImportError:
                 debug("Unable to import relenv-sysconfigdata")
                 return mod
-            buildroot = MODULE_DIR.parent.parent.parent.parent
-            toolchain = MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
+            buildroot = DATA_DIR.parent.parent.parent.parent
+            toolchain = DATA_DIR / "toolchain" / "x86_64-linux-gnu"
             build_time_vars = {}
             for key in maymod.build_time_vars:
                 val = maymod.build_time_vars[key]
@@ -161,7 +159,7 @@ class BuildTimeVars(collections.abc.Mapping):
     A dictionary-like object holding build-time variables.
     """
 
-    # This is getting set in MayflowerImporter
+    # This is getting set in RelenvImporter
     _build_time_vars = {}
 
     def __getitem__(self, key, *args, **kwargs):
@@ -227,6 +225,6 @@ def bootstrap():
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
         os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
     build_time_vars = BuildTimeVars()
-    importer = MayflowerImporter()
+    importer = RelenvImporter()
     importer.build_time_vars = build_time_vars
     sys.meta_path = [importer] + sys.meta_path

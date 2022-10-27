@@ -3,7 +3,7 @@ import hashlib
 import pytest
 
 from relenv.build.common import Builder, verify_checksum
-from relenv.common import DATADIR, MODULE_DIR, RelenvException
+from relenv.common import DATA_DIR, MODULE_DIR, RelenvException
 
 
 @pytest.fixture
@@ -23,11 +23,11 @@ def test_builder_defaults_linux():
     builder = Builder()
     assert builder.arch == "x86_64"
     assert builder.triplet == "x86_64-linux-gnu"
-    assert builder.prefix == DATADIR / "build" / "x86_64-linux-gnu"
-    assert builder.sources == DATADIR / "src"
-    assert builder.downloads == DATADIR / "download"
-    assert builder.toolchains == DATADIR / "toolchain"
-    assert builder.toolchain == DATADIR / "toolchain" / "x86_64-linux-gnu"
+    assert builder.prefix == DATA_DIR / "build" / "x86_64-linux-gnu"
+    assert builder.sources == DATA_DIR / "src"
+    assert builder.downloads == DATA_DIR / "download"
+    assert builder.toolchains == DATA_DIR / "toolchain"
+    assert builder.toolchain == DATA_DIR / "toolchain" / "x86_64-linux-gnu"
     assert callable(builder.build_default)
     assert callable(builder.populate_env)
     assert builder.no_download is False
