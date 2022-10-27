@@ -12,11 +12,12 @@ import time
 import urllib.error
 import urllib.request
 
+
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
 PIPE = subprocess.PIPE
 
-if sys.platform == 'win32':
+if sys.platform == "win32":
     DEFAULT_DATADIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
 else:
     DEFAULT_DATADIR = pathlib.Path.home() / ".local" / "relenv"

@@ -7,6 +7,7 @@ import os
 from .common import download_url, extract_archive, work_dir
 
 
+
 def setup_parser(subparsers):
     """
     Setup the subparser for the ``fetch`` command.

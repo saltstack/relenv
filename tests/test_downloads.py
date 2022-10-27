@@ -92,9 +92,7 @@ def test_validate_signature(tmp_path):
 
 def test_validate_signature_failed(tmp_path):
     sig = "fakesig"
-    with patch(
-        "relenv.build.common.runcmd", side_effect=RelenvException
-    ) as run_mock:
+    with patch("relenv.build.common.runcmd", side_effect=RelenvException) as run_mock:
         assert Download.validate_signature(str(tmp_path), sig) is False
         run_mock.assert_called_with(
             ["gpg", "--verify", sig, str(tmp_path)],
