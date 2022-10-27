@@ -96,7 +96,7 @@ build.add(
 )
 
 build.add(
-    "Python",
+    "python",
     build_func=build_python,
     wait_on=[
         "OpenSSL",
@@ -114,7 +114,7 @@ build.add(
     "mayflower-finalize",
     build_func=finalize,
     wait_on=[
-        "Python",
+        "python",
     ],
 )
 

@@ -16,7 +16,12 @@ MODULE_DIR = pathlib.Path(__file__).resolve().parent
 WORK_IN_CWD = False
 PIPE = subprocess.PIPE
 
-DATADIR = os.environ.get("MAYFLOWER_DATA", pathlib.Path.home() / ".local" / "mayflower")
+if sys.platform == 'win32':
+    DEFAULT_DATADIR = pathlib.Path.home() / "AppData" / "Local" / "mayflower"
+else:
+    DEFAULT_DATADIR = pathlib.Path.home() / ".local" / "mayflower"
+
+DATADIR = os.environ.get("MAYFLOWER_DATA", DEFAULT_DATADIR)
 
 
 class MayflowerException(Exception):

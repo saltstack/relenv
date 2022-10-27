@@ -157,62 +157,6 @@ def all_dirs(root, recurse=True):
     return paths
 
 
-def _parse_gcc_version(stdout):
-    """
-    Parse the gcc version.
-
-    :param stdout: The output of ``<C-compiler> --version``
-    :type stdout: str
-
-    :return: The gcc version
-    :rtype: str
-    """
-    vline = stdout.splitlines()[0]
-    vline, vstr = [_.strip() for _ in vline.rsplit(" ", 1)]
-    if vstr.find(".") != -1:
-        return vstr
-    return vline.rsplit(" ", 1)[1].strip()
-
-
-def gcc_version(cc):
-    """
-    Find the gcc version.
-
-    :param cc: The C-compiler to find the version of
-    :type cc: str
-
-    :return: The compiler version
-    :rtype: str
-    """
-    proc = runcmd([cc, "--version"], stderr=PIPE, stdout=PIPE)
-    return _parse_gcc_version(proc.stdout.decode())
-
-
-def _parse_kernel_version(stdout):
-    """
-    Parse the output of ``uname -r`` and return the kernel version.
-
-    :param stdout: The output of ``uname -r``
-    :type stdout: str
-
-    :return: The kernel version
-    :rtype: str
-    """
-    stdout = stdout.split("-", 1)[0]
-    return ".".join(stdout.split(".")[:3])
-
-
-def kernel_version():
-    """
-    Find the kernel version.
-
-    :return: The kernel version
-    :rtype: str
-    """
-    proc = runcmd(["uname", "-r"], stderr=PIPE, stdout=PIPE)
-    return _parse_kernel_version(proc.stdout.decode())
-
-
 def populate_env(dirs, env):
     pass
 

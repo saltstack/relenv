@@ -106,7 +106,7 @@ def build_python(env, dirs, logfp):
 build = Builder(populate_env=populate_env)
 
 build.add(
-    "Python",
+    "python",
     build_func=build_python,
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
@@ -197,7 +197,7 @@ def finalize(env, dirs, logfp):
 build.add(
     "mayflower-finalize",
     build_func=finalize,
-    wait_on=["Python"],
+    wait_on=["python"],
 )
 
 
