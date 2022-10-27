@@ -10,7 +10,7 @@ on:
 
 jobs:
   docs:
-    name: Build Mayflower Documentation
+    name: Build Relenv Documentation
     runs-on: ubuntu-latest
 
     steps:
@@ -35,7 +35,7 @@ jobs:
       - name: Store Generated Documentation
         uses: actions/upload-artifact@v2
         with:
-          name: mayflower-html-docs
+          name: relenv-html-docs
           path: docs/build
 
       - name: Set Exit Status

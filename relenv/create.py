@@ -1,5 +1,5 @@
 """
-The ``mayflower create`` command.
+The ``relenv create`` command.
 """
 
 import contextlib
@@ -30,7 +30,7 @@ def chdir(path):
 
 class CreateException(MayflowerException):
     """
-    Raised when there is an issue creating a new mayflower environment.
+    Raised when there is an issue creating a new relenv environment.
     """
 
 
@@ -59,7 +59,7 @@ def setup_parser(subparsers):
 
 def create(name, dest=None, arch="x86_64"):
     """
-    Create a mayflower environment.
+    Create a relenv environment.
 
     :param name: The name of the environment
     :type name: str
@@ -68,7 +68,7 @@ def create(name, dest=None, arch="x86_64"):
     :param arch: The architecture to create the environment for
     :type arch: str
 
-    :raises CreateException: If there is a problem in creating the mayflower environment
+    :raises CreateException: If there is a problem in creating the relenv environment
     """
     if dest:
         writeto = pathlib.Path(dest) / name
@@ -106,7 +106,7 @@ def create(name, dest=None, arch="x86_64"):
     if not tar.exists():
         raise CreateException(
             "Error, build archive for {} doesn't exist.\n"
-            "You might try mayflower fetch to resolve this.".format(arch)
+            "You might try relenv fetch to resolve this.".format(arch)
         )
     tmp = tempfile.mkdtemp()
     with tarfile.open(tar, "r:xz") as fp:
@@ -116,7 +116,7 @@ def create(name, dest=None, arch="x86_64"):
 
 def main(args):
     """
-    The entrypoint into the ``mayflower create`` command.
+    The entrypoint into the ``relenv create`` command.
 
     :param args: The args passed to the command
     :type args: argparse.Namespace

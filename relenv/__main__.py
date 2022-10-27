@@ -1,5 +1,5 @@
 """
-The entrypoint into mayflower
+The entrypoint into relenv
 """
 
 from argparse import ArgumentParser
@@ -36,7 +36,7 @@ def setup_cli():
 
 def main():
     """
-    Run the mayflower cli and disbatch to subcommands
+    Run the relenv cli and disbatch to subcommands
     """
     parser = setup_cli()
     args = parser.parse_args()

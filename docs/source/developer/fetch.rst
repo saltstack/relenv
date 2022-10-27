@@ -1,5 +1,5 @@
 Fetch
 =====
 
-.. automodule:: mayflower.fetch
+.. automodule:: relenv.fetch
     :members:

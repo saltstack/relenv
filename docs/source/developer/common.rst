@@ -1,6 +1,6 @@
 Common Code
 ===========
 
-.. automodule:: mayflower.common
+.. automodule:: relenv.common
     :members:
     

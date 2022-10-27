@@ -2,7 +2,7 @@
 Toolchains
 ##########
 
-Mayflower uses toolchains to compile Python (and it's dependencies) on Linux platforms. These toolchains consist of GCC, Binutils, and GLibc and are built using `crosstool-ng`_. Mayflower's toolchains are pre-built. Users of Mayflower will only need a toolchain when installing C extensions which need to re-main portable accross multiple Linux OSes. When working with pure python applications users should not need to concern themselves with toolchains.
+Relenv uses toolchains to compile Python (and it's dependencies) on Linux platforms. These toolchains consist of GCC, Binutils, and GLibc and are built using `crosstool-ng`_. Relenv's toolchains are pre-built. Users of Relenv will only need a toolchain when installing C extensions which need to re-main portable accross multiple Linux OSes. When working with pure python applications users should not need to concern themselves with toolchains.
 
 
 Building Toolchains
@@ -18,17 +18,17 @@ Building toolchains is a farily expensive and lengthy process. It's recommended 
    sudo yum -y --enablerepo=powertools install vim python3 texinfo help2man ncurses-devel
 
 
-Running Mayflower's toolchain build command will do the following
+Running Relenv's toolchain build command will do the following
 
 * Download crosstool-ng
 * Configure and compile crosstool-ng
-* Use Mayflower's crosstool config files to compile the requests architectures
+* Use Relenv's crosstool config files to compile the requests architectures
 
 .. code-block:: bash
 
-   git clone git@github.com:saltstack/mayflower.git
-   cd mayflower
-   python3 -m mayflower toolchain build --arch=x86_64 --arch=aarch64
+   git clone git@github.com:saltstack/relenv.git
+   cd relenv
+   python3 -m relenv toolchain build --arch=x86_64 --arch=aarch64
 
 
 .. _crosstool-ng: https://crosstool-ng.github.io/
@@ -42,5 +42,5 @@ Under most circumstances using a pre-built toolchain is preffered over building 
 
 .. code-block:: bash
 
-   python3 -m mayflower toolchain download --arch=x86_64
+   python3 -m relenv toolchain download --arch=x86_64
 

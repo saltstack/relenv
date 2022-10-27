@@ -37,7 +37,7 @@ def build_python(env, dirs, logfp):
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
-        "x64" if env["MAYFLOWER_ARCH"] == "x86_64" else "x86",
+        "x64" if env["RELENV_ARCH"] == "x86_64" else "x86",
         "--no-tkinter",
     ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)

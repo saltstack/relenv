@@ -1,5 +1,5 @@
 Toolchain
 =========
 
-.. automodule:: mayflower.toolchain
+.. automodule:: relenv.toolchain
     :members:

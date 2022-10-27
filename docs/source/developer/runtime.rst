@@ -1,5 +1,5 @@
 Runtime
 =======
 
-.. automodule:: mayflower.runtime
+.. automodule:: relenv.runtime
     :members:

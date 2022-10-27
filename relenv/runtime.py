@@ -24,12 +24,12 @@ SYSCONFIGDATA = "_sysconfigdata__linux_{arch}-linux-gnu"
 
 def debug(string):
     """
-    Prints the provided message if MAYFLOWER_DEBUG is truthy in the environment.
+    Prints the provided message if RELENV_DEBUG is truthy in the environment.
 
     :param string: The message to print
     :type string: str
     """
-    if os.environ.get("MAYFLOWER_DEBUG"):
+    if os.environ.get("RELENV_DEBUG"):
         print(string)
 
 
@@ -41,10 +41,10 @@ def _build_shebang(*args, **kwargs):
     :rtype: bytes
     """
     if sys.platform == "win32":
-        if os.environ.get("MAYFLOWER_PIP_DIR"):
+        if os.environ.get("RELENV_PIP_DIR"):
             return "#!<launch_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
-    if os.environ.get("MAYFLOWER_PIP_DIR"):
+    if os.environ.get("RELENV_PIP_DIR"):
         return ("#!/bin/sh\n" '"exec" "`dirname $0`/bin/python3" "$0" "$@"').encode()
     return ("#!/bin/sh\n" '"exec" "`dirname $0`/python3" "$0" "$@"').encode()
 
@@ -53,7 +53,7 @@ def get_config_var_wrapper(func):
     def wrapped(name):
         if name == "BINDIR":
             orig = func(name)
-            if os.environ.get("MAYFLOWER_PIP_DIR"):
+            if os.environ.get("RELENV_PIP_DIR"):
                 val = "../"
             else:
                 val = "./"
@@ -69,7 +69,7 @@ def get_config_var_wrapper(func):
 
 class MayflowerImporter:
     """
-    An importer to be added to ``sys.meta_path`` to handle importing into a mayflower environment.
+    An importer to be added to ``sys.meta_path`` to handle importing into a relenv environment.
     """
 
     loading_pip_scripts = False
@@ -81,7 +81,7 @@ class MayflowerImporter:
 
     def find_module(self, module_name, package_path=None):
         """
-        Find a module for importing into the mayflower environment
+        Find a module for importing into the relenv environment
 
         :param module_name: The name of the module
         :type module_name: str
@@ -133,9 +133,9 @@ class MayflowerImporter:
             debug(f"MayflowerImporter - load_module {name}")
             mod = importlib.import_module(name)
             try:
-                maymod = importlib.import_module("mayflower-sysconfigdata")
+                maymod = importlib.import_module("relenv-sysconfigdata")
             except ImportError:
-                debug("Unable to import mayflower-sysconfigdata")
+                debug("Unable to import relenv-sysconfigdata")
                 return mod
             buildroot = MODULE_DIR.parent.parent.parent.parent
             toolchain = MODULE_DIR / "_toolchain" / "x86_64-linux-gnu"
@@ -186,9 +186,9 @@ class BuildTimeVars(collections.abc.Mapping):
 
 def bootstrap():
     """
-    Bootstrap the mayflower environment.
+    Bootstrap the relenv environment.
     """
-    cross = os.environ.get("MAYFLOWER_CROSS", "")
+    cross = os.environ.get("RELENV_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()
         sys.prefix = str(crossroot)

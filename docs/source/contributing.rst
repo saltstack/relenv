@@ -2,7 +2,7 @@
 Contributing
 ############
 
-Mayflower is open source, and welcomes contributions from the community.
+Relenv is open source, and welcomes contributions from the community.
 
 Getting the Code
 ================
@@ -12,5 +12,5 @@ so once you've created your own fork, go ahead and clone it to start hacking!
 
 .. code-block:: bash
 
-    git clone git@github.com:<username>/mayflower.git
+    git clone git@github.com:<username>/relenv.git
 

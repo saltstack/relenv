@@ -1,5 +1,5 @@
 """
-Common classes and values used around mayflower
+Common classes and values used around relenv
 """
 
 import os
@@ -17,27 +17,27 @@ WORK_IN_CWD = False
 PIPE = subprocess.PIPE
 
 if sys.platform == 'win32':
-    DEFAULT_DATADIR = pathlib.Path.home() / "AppData" / "Local" / "mayflower"
+    DEFAULT_DATADIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
 else:
-    DEFAULT_DATADIR = pathlib.Path.home() / ".local" / "mayflower"
+    DEFAULT_DATADIR = pathlib.Path.home() / ".local" / "relenv"
 
-DATADIR = os.environ.get("MAYFLOWER_DATA", DEFAULT_DATADIR)
+DATADIR = os.environ.get("RELENV_DATA", DEFAULT_DATADIR)
 
 
 class MayflowerException(Exception):
     """
-    Base class for exeptions generated from mayflower
+    Base class for exeptions generated from relenv
     """
 
 
 def work_root(root=None):
     """
-    Get the root directory that all other mayflower working directories should be based on.
+    Get the root directory that all other relenv working directories should be based on.
 
     :param root: An explicitly requested root directory
     :type root: str
 
-    :return: An absolute path to the mayflower root working directory
+    :return: An absolute path to the relenv root working directory
     :rtype: ``pathlib.Path``
     """
     if root is not None:
@@ -51,14 +51,14 @@ def work_root(root=None):
 
 def work_dir(name, root=None):
     """
-    Get the absolute path to the mayflower working directory of the given name.
+    Get the absolute path to the relenv working directory of the given name.
 
     :param name: The name of the directory
     :type name: str
     :param root: The root directory that this working directory will be relative to
     :type root: str
 
-    :return: An absolute path to the requested mayflower working directory
+    :return: An absolute path to the requested relenv working directory
     :rtype: ``pathlib.Path``
     """
     root = work_root(root)
@@ -71,7 +71,7 @@ def work_dir(name, root=None):
 
 class WorkDirs:
     """
-    Simple class used to hold references to working directories mayflower uses relative to a given root.
+    Simple class used to hold references to working directories relenv uses relative to a given root.
 
     :param root: The root of the working directories tree
     :type root: str
@@ -122,11 +122,11 @@ def work_dirs(root=None):
     """
     Returns a WorkDirs instance based on the given root.
 
-    :param root: The desired root of mayflower's working directories
+    :param root: The desired root of relenv's working directories
     :type root: str
 
     :return: A WorkDirs instance based on the given root
-    :rtype: ``mayflower.common.WorkDirs``
+    :rtype: ``relenv.common.WorkDirs``
     """
     return WorkDirs(work_root(root))
 
@@ -137,7 +137,7 @@ def get_toolchain(arch=None, root=None):
 
     :param arch: The architecture to get the toolchain for
     :type arch: str
-    :param root: The root of the mayflower working directories to search in
+    :param root: The root of the relenv working directories to search in
     :type root: str
 
     :return: The directory holding the toolchain

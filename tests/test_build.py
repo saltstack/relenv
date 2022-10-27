@@ -2,8 +2,8 @@ import hashlib
 
 import pytest
 
-from mayflower.build.common import Builder, verify_checksum
-from mayflower.common import DATADIR, MODULE_DIR, MayflowerException
+from relenv.build.common import Builder, verify_checksum
+from relenv.common import DATADIR, MODULE_DIR, RelenvException
 
 
 @pytest.fixture
@@ -39,4 +39,4 @@ def test_verify_checksum(fake_download, fake_download_md5):
 
 
 def test_verify_checksum_failed(fake_download):
-    pytest.raises(MayflowerException, verify_checksum, fake_download, "no")
+    pytest.raises(RelenvException, verify_checksum, fake_download, "no")

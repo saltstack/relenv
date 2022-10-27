@@ -35,16 +35,16 @@ jobs:
 
       - name: Fetch Toolchain
         run: |
-          python3 -m mayflower toolchain fetch --arch=${{ matrix.arch }}
+          python3 -m relenv toolchain fetch --arch=${{ matrix.arch }}
 
       - name: Fetch Native Build
         if: ${{ matrix.arch == 'aarch64' }}
         run: |
-          python3 -m mayflower fetch
+          python3 -m relenv fetch
 
       - name: Build
         run: |
-          python3 -m mayflower build --arch=${{ matrix.arch }}
+          python3 -m relenv build --arch=${{ matrix.arch }}
 
       - name: Verify Build
         if: ${{ matrix.arch != 'aarch64' }}
@@ -53,7 +53,7 @@ jobs:
 
       - name: Create Tarball Directory
         run: |
-          python3 -m mayflower create ${{ matrix.arch }}-linux-gnu
+          python3 -m relenv create ${{ matrix.arch }}-linux-gnu
 
       - name: Create Tarball
         run: |
@@ -64,7 +64,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.arch }}-linux-gnu-logs
-          path: mayflower/_logs/*
+          path: relenv/_logs/*
           retention-days: 5
 
       - name: Python build
@@ -108,7 +108,7 @@ jobs:
 
       - name: Build
         run: |
-          python3 -m mayflower build
+          python3 -m relenv build
 
       - name: Verify Build
         run: |
@@ -116,7 +116,7 @@ jobs:
 
       - name: Create Tarball Directory
         run: |
-          python3 -m mayflower create ${{ matrix.arch }}-macos
+          python3 -m relenv create ${{ matrix.arch }}-macos
 
       - name: Create Tarball
         run: |
@@ -127,7 +127,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.arch }}-macos-logs
-          path: mayflower/_logs/*
+          path: relenv/_logs/*
           retention-days: 5
 
       - name: Python build
@@ -166,15 +166,15 @@ jobs:
 
       - name: Install VS Build Tools
         run: |
-          mayflower/_scripts/install_vc_build.ps1
+          relenv/_scripts/install_vc_build.ps1
 
       - name: Install nox
         run: |
           pip3 install nox
 
-      - name: Build Python with Mayflower
+      - name: Build Python with Relenv
         run: |
-          python -m mayflower build --arch=${{ matrix.arch }}
+          python -m relenv build --arch=${{ matrix.arch }}
 
       - name: Verify Build
         run: |
@@ -182,7 +182,7 @@ jobs:
 
       - name: Create Tarball Directory
         run: |
-          python3 -m mayflower create ${{ matrix.arch }}-windows
+          python3 -m relenv create ${{ matrix.arch }}-windows
 
       - name: Create Zipfile from build
         run: |
@@ -193,7 +193,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.arch }}-windows-logs
-          path: mayflower/_logs/*
+          path: relenv/_logs/*
           retention-days: 5
 
       - name: Upload Zipfile

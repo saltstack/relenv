@@ -1,15 +1,15 @@
 =============
-``mayflower``
+``relenv``
 =============
 
 .. code-block:: bash
 
-    mayflower
+    relenv
 
 Options
 =======
 
 .. argparse::
-   :module: mayflower.__main__
+   :module: relenv.__main__
    :func: setup_cli
-   :prog: mayflower
+   :prog: relenv

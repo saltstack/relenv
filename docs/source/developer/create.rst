@@ -1,5 +1,5 @@
 Create
 ======
 
-.. automodule:: mayflower.create
+.. automodule:: relenv.create
     :members:

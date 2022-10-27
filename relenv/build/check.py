@@ -52,8 +52,8 @@ def is_in_dir(filepath, directory):
 def handle_elf(path):
     print("> {}".format(path))
     print(get_rpath(path))
-    rootdir = "/home/dan/src/Mayflower/build"
-    glibcdir = "/home/dan/src/Mayflower/build/glibc"
+    rootdir = "/home/dan/src/Relenv/build"
+    glibcdir = "/home/dan/src/Relenv/build/glibc"
     errors = []
     for name, loc in get_libs(path):
         if loc is None:

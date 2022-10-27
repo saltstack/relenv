@@ -1,11 +1,11 @@
 Mayflower's Developer API
 =========================
 
-This is documentation on the internals of mayflower.
+This is documentation on the internals of relenv.
 
 .. note::
 
-    There is no public API for mayflower.  This documentation is intended for those developing on, and contributing to, mayflower.
+    There is no public API for relenv.  This documentation is intended for those developing on, and contributing to, relenv.
 
 .. toctree::
     :maxdepth: 1
