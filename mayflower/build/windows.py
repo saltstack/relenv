@@ -141,7 +141,7 @@ def finalize(env, dirs, logfp):
 
     # Lay down mayflower.runtime, we'll pip install the rest later
     mayflowerdir = sitepackages / "mayflower"
-    os.makedirs(mayflowerdir, exist_ok=True)
+    mayflowerdir.mkdir(exist_ok=True)
     runtime = MODULE_DIR / "runtime.py"
     dest = mayflowerdir / "runtime.py"
     with io.open(runtime, "r") as rfp:
@@ -156,7 +156,7 @@ def finalize(env, dirs, logfp):
     init.touch()
 
     # Install pip
-    python = dirs.prefix / "Scripts" / "python.exe"
+    python = bindir / "python.exe"
     runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
 
     def runpip(pkg):

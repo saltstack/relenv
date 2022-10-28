@@ -674,7 +674,7 @@ class Builder:
                     create("_native", MODULE_DIR)
                 except FileExistsError:
                     pass
-            env["MAYFLOWER_NATIVE_PY"] = native_root / "bin" / "python3"
+            env["MAYFLOWER_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
         self.populate_env(env, dirs)
 
