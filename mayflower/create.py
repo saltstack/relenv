@@ -9,7 +9,7 @@ import sys
 import tarfile
 import tempfile
 
-from .common import MODULE_DIR, MayflowerException, archived_build
+from .common import MayflowerException, archived_build
 
 
 @contextlib.contextmanager
@@ -51,7 +51,7 @@ def setup_parser(subparsers):
     create_subparser.add_argument(
         "--arch",
         default="x86_64",
-        choices=["x86_64", "aarch64"],
+        choices=["x86_64", "x86", "aarch64"],
         type=str,
         help="The host architecture [default: %(default)s]",
     )
@@ -79,10 +79,6 @@ def create(name, dest=None, arch="x86_64"):
         raise CreateException("The requested path already exists.")
 
     plat = sys.platform
-    # if plat == "win32":
-    #    arch = "x86_64"
-    # else:
-    #    arch = os.uname().machine
 
     if plat == "linux":
         if arch in ("x86_64", "aarch64"):
@@ -95,7 +91,7 @@ def create(name, dest=None, arch="x86_64"):
         else:
             raise CreateException("Unknown arch")
     elif plat == "win32":
-        if arch in ["x86_64"]:
+        if arch in ("x86_64", "x86", "arm64"):
             triplet = "{}-win".format(arch)
         else:
             raise CreateException("Unknown arch")

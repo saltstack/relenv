@@ -22,7 +22,7 @@ def setup_parser(subparsers):
     fetch_subparser.add_argument(
         "--arch",
         default="x86_64",
-        choices=["x86_64", "aarch64"],
+        choices=["x86_64", "x86", "aarch64"],
         help="Architecture to download. [default: %(default)s]",
     )
 

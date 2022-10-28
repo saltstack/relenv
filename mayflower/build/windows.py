@@ -1,7 +1,3 @@
-import glob
-import shutil
-import urllib.request
-import sys
 from .common import *
 
 if sys.platform == "win32":
@@ -34,17 +30,27 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    arch_switch = {
+        "x86_64": "x64",
+        "x86": "x86",
+        "arm64": "arm64",  # Not sure what this actually is yet
+    }
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
-        "x64" if env["MAYFLOWER_ARCH"] == "x86_64" else "x86",
+        arch_switch[env["MAYFLOWER_ARCH"]],
         "--no-tkinter",
     ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
     # This is where build.bat puts everything
     # TODO: For now we'll only support 64bit
-    build_dir = dirs.source / "PCbuild" / "amd64"
+    arch_dir = {
+        "x86_64": "amd64",
+        "x86": "win32",
+        "arm64": "arm64",  # Not sure what this actually is yet
+    }
+    build_dir = dirs.source / "PCbuild" / arch_dir[env["MAYFLOWER_ARCH"]]
     bin_dir = dirs.prefix / "Scripts"
     bin_dir.mkdir(parents=True, exist_ok=True)
 

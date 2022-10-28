@@ -9,21 +9,16 @@ import tarfile
 import tempfile
 import time
 import traceback
-import subprocess
 import random
 import sys
 import io
 import os
-import platform
-import urllib.request
-import urllib.error
 import multiprocessing
 import pprint
 
 from mayflower.common import (
     MODULE_DIR,
     MayflowerException,
-    work_root,
     work_dirs,
     get_toolchain,
     extract_archive,
@@ -533,6 +528,7 @@ class Builder:
     ):
         self.dirs = work_dirs(root)
         self.arch = arch
+        self.toolchain = None
 
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
@@ -561,7 +557,7 @@ class Builder:
         if sys.platform == "darwin":
             return self.dirs.build / "x86_64-macos" / "bin" / "python3"
         elif sys.platform == "win32":
-            return self.dirs.build / "x86_64-win" / "Scripts" / "python.exe"
+            return self.dirs.build / "{}-win".format(self.arch) / "Scripts" / "python.exe"
         else:
             return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
@@ -576,13 +572,11 @@ class Builder:
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
             self.prefix = self.dirs.build / "{}-macos".format(self.arch)
-            # XXX Not used for MacOS
-            self.toolchain = None
+            # Toolchain not used for MacOS
         elif sys.platform == "win32":
             self.triplet = "{}-win".format(self.arch)
             self.prefix = self.dirs.build / "{}-win".format(self.arch)
-            # XXX Not used for Windows
-            self.toolchain = None
+            # Toolchain not used for Windows
         else:
             self.triplet = "{}-linux-gnu".format(self.arch)
             self.prefix = self.dirs.build / self.triplet

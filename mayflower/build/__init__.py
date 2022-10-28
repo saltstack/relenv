@@ -20,7 +20,7 @@ def setup_parser(subparsers):
     build_subparser.add_argument(
         "--arch",
         default="x86_64",
-        choices=["x86_64", "aarch64"],
+        choices=["x86_64", "x86", "aarch64"],
         type=str,
         help="The host architecture [default: %(default)s]",
     )
