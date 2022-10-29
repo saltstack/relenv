@@ -131,21 +131,23 @@ class RelenvImporter:
             debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module(name)
             try:
-                maymod = importlib.import_module("relenv-sysconfigdata")
+                relmod = importlib.import_module("relenv-sysconfigdata")
             except ImportError:
                 debug("Unable to import relenv-sysconfigdata")
                 return mod
-            buildroot = DATA_DIR.parent.parent.parent.parent
+            buildroot = MODULE_DIR.parent.parent.parent.parent
             toolchain = DATA_DIR / "toolchain" / "x86_64-linux-gnu"
             build_time_vars = {}
-            for key in maymod.build_time_vars:
-                val = maymod.build_time_vars[key]
+            for key in relmod.build_time_vars:
+                val = relmod.build_time_vars[key]
+                orig = val
                 if isinstance(val, str):
                     val = val.format(
                         BUILDROOT=buildroot,
                         TOOLCHAIN=toolchain,
                     )
                 build_time_vars[key] = val
+                debug(f"{key} {orig} => {val}")
                 # self.build_time_vars.build_time_vars = build_time_vars
                 mod.build_time_vars = build_time_vars
             self.loading_sysconfig_data = False

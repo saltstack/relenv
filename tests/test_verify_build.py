@@ -4,6 +4,7 @@ Verify relenv builds
 import pathlib
 import subprocess
 import sys
+import os
 
 import pytest
 
@@ -105,8 +106,10 @@ def test_pip_install_salt(pipexec):
     packages = [
         "salt",
     ]
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"])
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 

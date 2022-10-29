@@ -6,7 +6,7 @@ on:
       changed-files:
         required: true
         type: string
-        description: JSON string containing information about changed files
+        description: Build relenv python builds
 
 jobs:
 

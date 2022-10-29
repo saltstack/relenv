@@ -117,7 +117,7 @@ def run_pytest_session(session, *cmd_args):
     env = {}
     if "RELENV_DATA" in os.environ:
         env["RELENV_DATA"] = os.environ["RELENV_DATA"]
-    session.run("python", "-m", "pytest", *pytest_args)
+    session.run("python", "-m", "pytest", *pytest_args, env=env)
 
 
 def invoke_relenv(session, *cmd_args):
