@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-A script to ensure the proper rpaths are in place for the mayflower environment.
+A script to ensure the proper rpaths are in place for the relenv environment.
 """
 
 import logging

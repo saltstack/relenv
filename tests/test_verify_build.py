@@ -1,5 +1,5 @@
 """
-Verify mayflower builds
+Verify relenv builds
 """
 import pathlib
 import subprocess
@@ -7,8 +7,8 @@ import sys
 
 import pytest
 
-from mayflower.common import archived_build
-from mayflower.create import create
+from relenv.common import archived_build
+from relenv.create import create
 
 pytestmark = [
     pytest.mark.skipif(

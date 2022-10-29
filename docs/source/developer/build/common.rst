@@ -1,5 +1,5 @@
 Common Build Operations
 =======================
 
-.. automodule:: mayflower.build.common
+.. automodule:: relenv.build.common
     :members:

@@ -1,6 +1,6 @@
 Entrypoint
 ==========
 
-.. automodule:: mayflower.__main__
+.. automodule:: relenv.__main__
     :members:
     

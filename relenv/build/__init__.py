@@ -1,5 +1,5 @@
 """
-The ``mayflower build`` command.
+The ``relenv build`` command.
 """
 
 import sys
@@ -13,7 +13,7 @@ def setup_parser(subparsers):
     :type subparsers: argparse._SubParsersAction
     """
     build_subparser = subparsers.add_parser(
-        "build", description="Build Mayflower Python Environments from source"
+        "build", description="Build Relenv Python Environments from source"
     )
     build_subparser.set_defaults(func=main)
 

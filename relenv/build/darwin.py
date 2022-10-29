@@ -12,7 +12,7 @@ def populate_env(env, dirs):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     """
     env["CC"] = "clang"
     ldflags = [
@@ -35,7 +35,7 @@ def build_python(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -111,7 +111,7 @@ build.add(
 
 
 build.add(
-    "mayflower-finalize",
+    "relenv-finalize",
     build_func=finalize,
     wait_on=[
         "python",

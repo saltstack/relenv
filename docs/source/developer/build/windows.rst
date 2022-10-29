@@ -1,5 +1,5 @@
 Building on Windows
 ===================
 
-.. automodule:: mayflower.build.windows
+.. automodule:: relenv.build.windows
     :members:

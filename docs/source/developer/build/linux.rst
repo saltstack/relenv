@@ -1,5 +1,5 @@
 Building on Linux
 =================
 
-.. automodule:: mayflower.build.linux
+.. automodule:: relenv.build.linux
     :members:

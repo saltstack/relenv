@@ -1,5 +1,5 @@
 """
-Common classes and values used around mayflower
+Common classes and values used around relenv
 """
 
 import os
@@ -13,37 +13,36 @@ import urllib.error
 import urllib.request
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
-WORK_IN_CWD = False
-PIPE = subprocess.PIPE
 
-if sys.platform == 'win32':
-    DEFAULT_DATADIR = pathlib.Path.home() / "AppData" / "Local" / "mayflower"
+if sys.platform == "win32":
+    DEFAULT_DATA_DIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
 else:
-    DEFAULT_DATADIR = pathlib.Path.home() / ".local" / "mayflower"
+    DEFAULT_DATA_DIR = pathlib.Path.home() / ".local" / "relenv"
 
-DATADIR = os.environ.get("MAYFLOWER_DATA", DEFAULT_DATADIR)
+if "RELENV_DATA" in os.environ:
+    DATA_DIR = pathlib.Path(os.environ["RELENV_DATA"]).resolve()
+else:
+    DATA_DIR = DEFAULT_DATA_DIR
 
 
-class MayflowerException(Exception):
+class RelenvException(Exception):
     """
-    Base class for exeptions generated from mayflower
+    Base class for exeptions generated from relenv
     """
 
 
 def work_root(root=None):
     """
-    Get the root directory that all other mayflower working directories should be based on.
+    Get the root directory that all other relenv working directories should be based on.
 
     :param root: An explicitly requested root directory
     :type root: str
 
-    :return: An absolute path to the mayflower root working directory
+    :return: An absolute path to the relenv root working directory
     :rtype: ``pathlib.Path``
     """
     if root is not None:
         base = pathlib.Path(root).resolve()
-    elif WORK_IN_CWD:
-        base = pathlib.Path(os.getcwd()).resolve()
     else:
         base = MODULE_DIR
     return base
@@ -51,14 +50,14 @@ def work_root(root=None):
 
 def work_dir(name, root=None):
     """
-    Get the absolute path to the mayflower working directory of the given name.
+    Get the absolute path to the relenv working directory of the given name.
 
     :param name: The name of the directory
     :type name: str
     :param root: The root directory that this working directory will be relative to
     :type root: str
 
-    :return: An absolute path to the requested mayflower working directory
+    :return: An absolute path to the requested relenv working directory
     :rtype: ``pathlib.Path``
     """
     root = work_root(root)
@@ -71,7 +70,7 @@ def work_dir(name, root=None):
 
 class WorkDirs:
     """
-    Simple class used to hold references to working directories mayflower uses relative to a given root.
+    Simple class used to hold references to working directories relenv uses relative to a given root.
 
     :param root: The root of the working directories tree
     :type root: str
@@ -80,11 +79,11 @@ class WorkDirs:
     def __init__(self, root):
         self.root = root
         self.toolchain_config = work_dir("toolchain", self.root)
-        self.toolchain = work_dir("toolchain", DATADIR)
-        self.build = work_dir("build", DATADIR)
-        self.src = work_dir("src", DATADIR)
-        self.logs = work_dir("logs", DATADIR)
-        self.download = work_dir("download", DATADIR)
+        self.toolchain = work_dir("toolchain", DATA_DIR)
+        self.build = work_dir("build", DATA_DIR)
+        self.src = work_dir("src", DATA_DIR)
+        self.logs = work_dir("logs", DATA_DIR)
+        self.download = work_dir("download", DATA_DIR)
 
     def __getstate__(self):
         """
@@ -122,11 +121,11 @@ def work_dirs(root=None):
     """
     Returns a WorkDirs instance based on the given root.
 
-    :param root: The desired root of mayflower's working directories
+    :param root: The desired root of relenv's working directories
     :type root: str
 
     :return: A WorkDirs instance based on the given root
-    :rtype: ``mayflower.common.WorkDirs``
+    :rtype: ``relenv.common.WorkDirs``
     """
     return WorkDirs(work_root(root))
 
@@ -137,7 +136,7 @@ def get_toolchain(arch=None, root=None):
 
     :param arch: The architecture to get the toolchain for
     :type arch: str
-    :param root: The root of the mayflower working directories to search in
+    :param root: The root of the relenv working directories to search in
     :type root: str
 
     :return: The directory holding the toolchain
@@ -160,7 +159,7 @@ def get_triplet(machine=None, plat=None):
     :param plat: The platform for the triplet
     :type plat: str
 
-    :raises MayflowerException: If the platform is unknown
+    :raises RelenvException: If the platform is unknown
 
     :return: The target triplet
     :rtype: str
@@ -177,7 +176,7 @@ def get_triplet(machine=None, plat=None):
     elif plat == "linux":
         return f"{machine}-linux-gnu"
     else:
-        raise MayflowerException("Unknown platform {}".format(platform))
+        raise RelenvException("Unknown platform {}".format(platform))
 
 
 def archived_build(triplet=None):
@@ -192,7 +191,7 @@ def archived_build(triplet=None):
     """
     if not triplet:
         triplet = get_triplet()
-    dirs = work_dirs(DATADIR)
+    dirs = work_dirs(DATA_DIR)
     return (dirs.build / triplet).with_suffix(".tar.xz")
 
 
@@ -268,9 +267,9 @@ def runcmd(*args, **kwargs):
     :return: The process result
     :rtype: ``subprocess.CompletedProcess``
 
-    :raises MayflowerException: If the command finishes with a non zero exit code
+    :raises RelenvException: If the command finishes with a non zero exit code
     """
     proc = subprocess.run(*args, **kwargs)
     if proc.returncode != 0:
-        raise MayflowerException("Build cmd '{}' failed".format(" ".join(args[0])))
+        raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
     return proc

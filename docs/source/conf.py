@@ -17,7 +17,7 @@ for addtl_path in addtl_paths:
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "Mayflower"
+project = "Relenv"
 copyright = "2022, Daniel A. Wozniak"
 author = "Daniel A. Wozniak"
 

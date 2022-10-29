@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from mayflower.common import (
+from relenv.common import (
     MODULE_DIR,
-    MayflowerException,
+    RelenvException,
     archived_build,
     get_triplet,
     runcmd,
@@ -42,7 +42,7 @@ def test_get_triplet_default():
 
 
 def test_get_triplet_unknown():
-    with pytest.raises(MayflowerException):
+    with pytest.raises(RelenvException):
         get_triplet("aarch64", "oijfsdf")
 
 
@@ -100,7 +100,7 @@ def test_runcmd_fail():
         ret = Mock()
         ret.returncode = 1
         moc.side_effect = [ret]
-        with pytest.raises(MayflowerException):
+        with pytest.raises(RelenvException):
             _ = runcmd(["echo", "foo"])
 
 
@@ -109,5 +109,5 @@ def test_verify_checksum():
         ret = Mock()
         ret.returncode = 1
         moc.side_effect = [ret]
-        with pytest.raises(MayflowerException):
+        with pytest.raises(RelenvException):
             _ = runcmd(["echo", "foo"])

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from mayflower.relocate import (
+from relenv.relocate import (
     handle_elf,
     is_elf,
     is_in_dir,
@@ -164,7 +164,7 @@ def test_patch_rpath(tmp_path):
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
         with patch(
-            "mayflower.relocate.parse_rpath",
+            "relenv.relocate.parse_rpath",
             return_value=[str(tmp_path / "old" / "lib")],
         ):
             assert patch_rpath(path, new_rpath) == new_rpath
@@ -175,7 +175,7 @@ def test_patch_rpath_failed(tmp_path):
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=1)):
         with patch(
-            "mayflower.relocate.parse_rpath",
+            "relenv.relocate.parse_rpath",
             return_value=[str(tmp_path / "old" / "lib")],
         ):
             assert patch_rpath(path, new_rpath) is False
@@ -185,7 +185,7 @@ def test_patch_rpath_no_change(tmp_path):
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
-        with patch("mayflower.relocate.parse_rpath", return_value=[new_rpath]):
+        with patch("relenv.relocate.parse_rpath", return_value=[new_rpath]):
             assert patch_rpath(path, new_rpath, only_relative=False) == new_rpath
 
 
@@ -194,7 +194,7 @@ def test_patch_rpath_remove_non_relative(tmp_path):
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
         with patch(
-            "mayflower.relocate.parse_rpath",
+            "relenv.relocate.parse_rpath",
             return_value=[str(tmp_path / "old" / "lib")],
         ):
             assert patch_rpath(path, new_rpath) == new_rpath
@@ -210,7 +210,7 @@ def test_main_linux(tmp_path):
         call(str(simple2), str(proj.libs_dir), True, str(proj.root_dir)),
     ]
     with proj:
-        with patch("mayflower.relocate.handle_elf") as elf_mock:
+        with patch("relenv.relocate.handle_elf") as elf_mock:
             main(proj.root_dir, proj.libs_dir)
             assert elf_mock.call_count == 2
             elf_mock.assert_has_calls(calls, any_order=True)
@@ -233,7 +233,7 @@ def test_handle_elf(tmp_path):
 
     with proj:
         with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
-            with patch("mayflower.relocate.patch_rpath") as patch_rpath_mock:
+            with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
                 handle_elf(str(pybin), str(proj.libs_dir), False, str(proj.root_dir))
                 assert not (proj.libs_dir / "linux-vdso.so.1").exists()
                 assert (proj.libs_dir / "libcrypt.so.2").exists()
@@ -263,7 +263,7 @@ def test_handle_elf_rpath_only(tmp_path):
     with proj:
         libcrypt.touch()
         with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
-            with patch("mayflower.relocate.patch_rpath") as patch_rpath_mock:
+            with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
                 handle_elf(str(pybin), str(proj.libs_dir), True, str(proj.root_dir))
                 assert not (proj.libs_dir / "fake.so.2").exists()
                 assert patch_rpath_mock.call_count == 1

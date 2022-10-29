@@ -27,6 +27,8 @@ jobs:
         target:
           - x86_64
           - aarch64
+    env:
+      RELENV_DATA: ${{ github.action_path }}
 
     steps:
       - uses: actions/checkout@v3
@@ -38,19 +40,19 @@ jobs:
 
       - name: Build toolchain
         run: |
-          python3 -m mayflower toolchain build --arch=${{ matrix.target }}
+          python3 -m relenv toolchain build --arch=${{ matrix.target }}
 
       - name: Logs toolchain ${{ matrix.target }} on ${{ matrix.host }}
         uses: actions/upload-artifact@v3
         if: always()
         with:
           name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu-toolchain-logs
-          path: mayflower/_toolchain/build.log
+          path: toolchain/build.log
           retention-days: 5
 
       - name: Create Tarball
         run: |
-          tar -C ~/.local/mayflower/toolchain -cJf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz  ${{ matrix.target }}-linux-gnu
+          tar -C toolchain -cJf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz  ${{ matrix.target }}-linux-gnu
 
       - name: Toolchain build artifact
         uses: actions/upload-artifact@v3

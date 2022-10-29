@@ -1,5 +1,5 @@
 Relocate
 ========
 
-.. automodule:: mayflower.relocate
+.. automodule:: relenv.relocate
     :members:

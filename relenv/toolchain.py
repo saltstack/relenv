@@ -1,5 +1,5 @@
 """
-The ``mayflower toolchain`` command.
+The ``relenv toolchain`` command.
 """
 
 import os
@@ -8,7 +8,7 @@ import platform
 import sys
 
 from .common import (
-    DATADIR,
+    DATA_DIR,
     download_url,
     extract_archive,
     get_toolchain,
@@ -17,10 +17,9 @@ from .common import (
     work_dirs,
 )
 
-WORK_IN_CWD = False
 CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
-TC_URL = "https://woz.io/mayflower/{version}/toolchain/{host}/{triplet}.tar.xz"
+TC_URL = "https://woz.io/relenv/{version}/toolchain/{host}/{triplet}.tar.xz"
 CICD = "CI" in os.environ
 
 
@@ -75,7 +74,7 @@ def fetch(arch, toolchain, clean=False):
     :type clean: bool
     """
     triplet = get_triplet(arch)
-    archdir = get_toolchain(root=pathlib.Path(DATADIR) / "toolchain", arch=arch)
+    archdir = get_toolchain(root=pathlib.Path(DATA_DIR) / "toolchain", arch=arch)
     if clean:
         shutil.rmtree(archdir)
     if archdir.exists():
@@ -89,7 +88,7 @@ def fetch(arch, toolchain, clean=False):
 
 def main(args):
     """
-    The entrypoint into the ``mayflower toolchain`` command.
+    The entrypoint into the ``relenv toolchain`` command.
 
     :param args: The arguments for the command
     :type args: ``argparse.Namespace``

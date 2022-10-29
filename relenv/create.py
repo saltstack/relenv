@@ -1,5 +1,5 @@
 """
-The ``mayflower create`` command.
+The ``relenv create`` command.
 """
 
 import contextlib
@@ -9,7 +9,7 @@ import sys
 import tarfile
 import tempfile
 
-from .common import MODULE_DIR, MayflowerException, archived_build
+from .common import MODULE_DIR, RelenvException, archived_build
 
 
 @contextlib.contextmanager
@@ -28,9 +28,9 @@ def chdir(path):
         os.chdir(cwd)
 
 
-class CreateException(MayflowerException):
+class CreateException(RelenvException):
     """
-    Raised when there is an issue creating a new mayflower environment.
+    Raised when there is an issue creating a new relenv environment.
     """
 
 
@@ -43,7 +43,7 @@ def setup_parser(subparsers):
     """
     create_subparser = subparsers.add_parser(
         "create",
-        description="Create a Mayflower environment. This will create a directory of the given name with newly created Mayflower environment.",
+        description="Create a Relenv environment. This will create a directory of the given name with newly created Relenv environment.",
     )
     create_subparser.set_defaults(func=main)
 
@@ -59,7 +59,7 @@ def setup_parser(subparsers):
 
 def create(name, dest=None, arch="x86_64"):
     """
-    Create a mayflower environment.
+    Create a relenv environment.
 
     :param name: The name of the environment
     :type name: str
@@ -68,7 +68,7 @@ def create(name, dest=None, arch="x86_64"):
     :param arch: The architecture to create the environment for
     :type arch: str
 
-    :raises CreateException: If there is a problem in creating the mayflower environment
+    :raises CreateException: If there is a problem in creating the relenv environment
     """
     if dest:
         writeto = pathlib.Path(dest) / name
@@ -105,8 +105,8 @@ def create(name, dest=None, arch="x86_64"):
     tar = archived_build(triplet)
     if not tar.exists():
         raise CreateException(
-            "Error, build archive for {} doesn't exist.\n"
-            "You might try mayflower fetch to resolve this.".format(arch)
+            f"Error, build archive for {arch} doesn't exist: {tar}\n"
+            "You might try relenv fetch to resolve this."
         )
     tmp = tempfile.mkdtemp()
     with tarfile.open(tar, "r:xz") as fp:
@@ -116,7 +116,7 @@ def create(name, dest=None, arch="x86_64"):
 
 def main(args):
     """
-    The entrypoint into the ``mayflower create`` command.
+    The entrypoint into the ``relenv create`` command.
 
     :param args: The args passed to the command
     :type args: argparse.Namespace

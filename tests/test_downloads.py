@@ -3,8 +3,8 @@ import subprocess
 import sys
 from unittest.mock import patch
 
-from mayflower.build.common import Download
-from mayflower.common import MayflowerException
+from relenv.build.common import Download
+from relenv.common import RelenvException
 
 
 def test_download_url():
@@ -65,7 +65,7 @@ def test_download_exists(tmp_path):
 
 def test_validate_md5sum(tmp_path):
     fake_md5 = "fakemd5"
-    with patch("mayflower.build.common.verify_checksum") as run_mock:
+    with patch("relenv.build.common.verify_checksum") as run_mock:
         assert Download.validate_md5sum(str(tmp_path), fake_md5) is True
         run_mock.assert_called_with(str(tmp_path), fake_md5)
 
@@ -73,7 +73,7 @@ def test_validate_md5sum(tmp_path):
 def test_validate_md5sum_failed(tmp_path):
     fake_md5 = "fakemd5"
     with patch(
-        "mayflower.build.common.verify_checksum", side_effect=MayflowerException
+        "relenv.build.common.verify_checksum", side_effect=RelenvException
     ) as run_mock:
         assert Download.validate_md5sum(str(tmp_path), fake_md5) is False
         run_mock.assert_called_with(str(tmp_path), fake_md5)
@@ -81,7 +81,7 @@ def test_validate_md5sum_failed(tmp_path):
 
 def test_validate_signature(tmp_path):
     sig = "fakesig"
-    with patch("mayflower.build.common.runcmd") as run_mock:
+    with patch("relenv.build.common.runcmd") as run_mock:
         assert Download.validate_signature(str(tmp_path), sig) is True
         run_mock.assert_called_with(
             ["gpg", "--verify", sig, str(tmp_path)],
@@ -92,9 +92,7 @@ def test_validate_signature(tmp_path):
 
 def test_validate_signature_failed(tmp_path):
     sig = "fakesig"
-    with patch(
-        "mayflower.build.common.runcmd", side_effect=MayflowerException
-    ) as run_mock:
+    with patch("relenv.build.common.runcmd", side_effect=RelenvException) as run_mock:
         assert Download.validate_signature(str(tmp_path), sig) is False
         run_mock.assert_called_with(
             ["gpg", "--verify", sig, str(tmp_path)],

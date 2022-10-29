@@ -10,7 +10,7 @@ on:
 
 jobs:
   Pre-Commit:
-    name: Mayflower
+    name: Relenv
 
     runs-on: ubuntu-latest
 

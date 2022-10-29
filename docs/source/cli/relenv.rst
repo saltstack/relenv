@@ -1,10 +1,10 @@
 ==========
-``create``
+``relenv``
 ==========
 
 .. code-block:: bash
 
-    relenv create
+    relenv
 
 Options
 =======
@@ -13,4 +13,3 @@ Options
    :module: relenv.__main__
    :func: setup_cli
    :prog: relenv
-   :path: create

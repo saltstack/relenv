@@ -20,21 +20,23 @@ import urllib.error
 import multiprocessing
 import pprint
 
-from mayflower.common import (
+from relenv.common import (
     MODULE_DIR,
-    MayflowerException,
+    DATA_DIR,
+    RelenvException,
     work_root,
     work_dirs,
     get_toolchain,
     extract_archive,
     download_url,
     runcmd,
-    PIPE,
 )
-from mayflower.relocate import main as relocate_main
-from mayflower.create import create
+from relenv.relocate import main as relocate_main
+from relenv.create import create
+
 
 log = logging.getLogger(__name__)
+
 
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -45,41 +47,26 @@ MOVEUP = "\033[F"
 
 CICD = "CI" in os.environ
 NODOWLOAD = False
-WORK_IN_CWD = False
 
 
 SITECUSTOMIZE = """\"\"\"
-Mayflower site customize
+Relenv site customize
 \"\"\"
 import site, os
 site.ENABLE_USER_SITE = False
 try:
-    import mayflower.runtime
+    import relenv.runtime
 except ImportError:
-    if "MAYFLOWER_DEBUG" in os.environ:
-        print("Unable to find mayflower.runtime for bootstrap.")
+    if "RELENV_DEBUG" in os.environ:
+        print("Unable to find relenv.runtime for bootstrap.")
 else:
-    mayflower.runtime.bootstrap()
+    relenv.runtime.bootstrap()
 """
-
-
-def get_build():
-    """
-    Get the build directory.
-
-    :return: The build directory
-    :rtype: ``pathlib.Path``
-    """
-    if WORK_IN_CWD:
-        base = pathlib.Path("build").resolve()
-    else:
-        base = MODULE_DIR / "_build"
-    return base
 
 
 def print_ui(events, processes, fails, flipstat={}):
     """
-    Prints the UI during the mayflower building process.
+    Prints the UI during the relenv building process.
 
     :param events: A dictionary of events that are updated during the build process
     :type events: dict
@@ -124,7 +111,7 @@ def verify_checksum(file, checksum):
     :param checksum: The checksum to verify against
     :type checksum: str
 
-    :raises MayflowerException: If the checksum verification failed
+    :raises RelenvException: If the checksum verification failed
 
     :return: True if it succeeded, or False if the checksum was None
     :rtype: bool
@@ -134,7 +121,7 @@ def verify_checksum(file, checksum):
         return False
     with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
-            raise MayflowerException("md5 checksum verification failed")
+            raise RelenvException("md5 checksum verification failed")
     return True
 
 
@@ -168,7 +155,7 @@ def build_default(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -176,10 +163,10 @@ def build_default(env, dirs, logfp):
         "./configure",
         "--prefix={}".format(dirs.prefix),
     ]
-    if env["MAYFLOWER_HOST"].find("linux") > -1:
+    if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
             "--build=x86_64-linux-gnu",
-            "--host={}".format(env["MAYFLOWER_HOST"]),
+            "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -193,20 +180,20 @@ def build_openssl(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
     arch = "aarch64"
     if sys.platform == "darwin":
         plat = "darwin64"
-        if env["MAYFLOWER_ARCH"] == "x86_64":
+        if env["RELENV_ARCH"] == "x86_64":
             arch = "x86_64-cc"
     else:
         plat = "linux"
-        if env["MAYFLOWER_ARCH"] == "x86_64":
+        if env["RELENV_ARCH"] == "x86_64":
             arch = "x86_64"
-        elif env["MAYFLOWER_ARCH"] == "aarch64":
+        elif env["RELENV_ARCH"] == "aarch64":
             arch = "aarch64"
     runcmd(
         [
@@ -233,7 +220,7 @@ def build_sqlite(env, dirs, logfp):
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
@@ -262,10 +249,10 @@ def build_sqlite(env, dirs, logfp):
         "--prefix={}".format(dirs.prefix),
         "--enable-add-ons=nptl,ports",
     ]
-    if env["MAYFLOWER_HOST"].find("linux") > -1:
+    if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
             "--build=x86_64-linux-gnu",
-            "--host={}".format(env["MAYFLOWER_HOST"]),
+            "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -361,9 +348,13 @@ class Download:
             log.error("Can't check signature because none was given")
             return False
         try:
-            runcmd(["gpg", "--verify", signature, archive], stderr=PIPE, stdout=PIPE)
+            runcmd(
+                ["gpg", "--verify", signature, archive],
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
             return True
-        except MayflowerException as exc:
+        except RelenvException as exc:
             log.error("Signature validation failed on %s: %s", archive, exc)
             return False
 
@@ -382,7 +373,7 @@ class Download:
         try:
             verify_checksum(archive, md5sum)
             return True
-        except MayflowerException as exc:
+        except RelenvException as exc:
             log.error("md5 validation failed on %s: %s", archive, exc)
             return False
 
@@ -411,7 +402,7 @@ class Dirs:
     A container for directories during build time.
 
     :param dirs: A collection of working directories
-    :type dirs: ``mayflower.common.WorkDirs``
+    :type dirs: ``relenv.common.WorkDirs``
     :param name: The name of this collection
     :type name: str
     :param arch: The architecture being worked with
@@ -667,20 +658,19 @@ class Builder:
                 "PATH": os.environ["PATH"],
             }
 
-        env["MAYFLOWER_HOST"] = self.triplet
-        env["MAYFLOWER_ARCH"] = self.arch
+        env["RELENV_HOST"] = self.triplet
+        env["RELENV_ARCH"] = self.arch
         if self.arch != "x86_64":
-            env["MAYFLOWER_CROSS"] = str(self.native_python.parent.parent)
-            native_root = MODULE_DIR / "_native"
+            native_root = DATA_DIR / "native"
             if not native_root.exists():
                 # XXX This needs to be more robust to handle running on arm
                 # too. Also, The check should only happen once per build, it
                 # makes more sense to happen in Builder.__call__.
                 try:
-                    create("_native", MODULE_DIR)
+                    create("native", DATA_DIR)
                 except FileExistsError:
                     pass
-            env["MAYFLOWER_NATIVE_PY"] = native_root / "bin" / "python3"
+            env["RELENV_NATIVE_PY"] = native_root / "bin" / "python3"
 
         self.populate_env(env, dirs)
 
@@ -709,7 +699,7 @@ class Builder:
 
     def clean(self):
         """
-        Completely clean up the remnants of a mayflower build.
+        Completely clean up the remnants of a relenv build.
         """
         # Clean directories
         for _ in [self.prefix, self.sources]:
@@ -843,7 +833,12 @@ class Builder:
         if fails:
             sys.stderr.write("The following failures were reported\n")
             for fail in fails:
-                sys.stderr.write(fail + "\n")
+                with io.open(self.dirs.logs / f"{fail}.log") as fp:
+                    fp.seek(0, 2)
+                    end = fp.tell()
+                    fp.seek(end - 1024)
+                    sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
+                    sys.stderr.write(fp.read() + "\n\n")
             sys.stderr.flush()
             if cleanup:
                 self.cleanup()
@@ -867,7 +862,7 @@ class Builder:
         fail = []
         if self.toolchain and not self.toolchain.exists():
             fail.append(
-                f"Toolchain for {self.arch} does not exist. Please use mayflower toolchain to obtain a toolchain."
+                f"Toolchain for {self.arch} does not exist. Please use relenv toolchain to obtain a toolchain."
             )
         return fail
 
@@ -912,7 +907,7 @@ class Builder:
 
 def install_sysdata(mod, destfile, buildroot, toolchain):
     """
-    Helper method used by the `finalize` build method to create a Mayflower
+    Helper method used by the `finalize` build method to create a Relenv
     Python environment's sysconfigdata.
 
     :param mod: The module to operate on
@@ -924,39 +919,34 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
     :param toolchain: Path to the root of the toolchain
     :type toolchain: str
     """
-    BUILDROOT = str(
-        buildroot
-    )  # "/home/dan/src/Mayflower/mayflower/_build/x86_64-linux-gnu"
-    TOOLCHAIN = str(
-        toolchain
-    )  # "/home/dan/src/Mayflower/mayflower/_toolchain/x86_64-linux-gnu"
-    dest = "sysdata.py"
     data = {}
-    buildroot = lambda _: _.replace(BUILDROOT, "{BUILDROOT}")
-    toolchain = lambda _: _.replace(TOOLCHAIN, "{TOOLCHAIN}")
+    fbuildroot = lambda _: _.replace(str(buildroot), "{BUILDROOT}")
+    ftoolchain = lambda _: _.replace(str(toolchain), "{TOOLCHAIN}")
     keymap = {
-        "BINDIR": (buildroot,),
-        "BINLIBDEST": (buildroot,),
-        "CFLAGS": (buildroot, toolchain),
-        "CPPLAGS": (buildroot, toolchain),
-        "CXXFLAGS": (buildroot, toolchain),
-        "datarootdir": (buildroot,),
-        "exec_prefix": (buildroot,),
-        "LDFLAGS": (buildroot, toolchain),
-        "LDSHARED": (buildroot, toolchain),
-        "LIBDEST": (buildroot,),
-        "prefix": (buildroot,),
-        "SCRIPTDIR": (buildroot,),
+        "BINDIR": (fbuildroot,),
+        "BINLIBDEST": (fbuildroot,),
+        "CFLAGS": (fbuildroot, ftoolchain),
+        "CPPLAGS": (fbuildroot, ftoolchain),
+        "CXXFLAGS": (fbuildroot, ftoolchain),
+        "datarootdir": (fbuildroot,),
+        "exec_prefix": (fbuildroot,),
+        "LDFLAGS": (fbuildroot, ftoolchain),
+        "LDSHARED": (fbuildroot, ftoolchain),
+        "LIBDEST": (fbuildroot,),
+        "prefix": (fbuildroot,),
+        "SCRIPTDIR": (fbuildroot,),
     }
     for key in sorted(mod.build_time_vars):
         val = mod.build_time_vars[key]
-        for _ in keymap.get(key, []):
-            val = _(val)
+        if isinstance(val, str):
+            for _ in (fbuildroot, ftoolchain):
+                val = _(val)
+                print(f"SYSCONFIG {mod.build_time_vars[key]} => {val}")
         data[key] = val
 
     with open(destfile, "w", encoding="utf8") as f:
         f.write(
-            "# system configuration generated and used by" " the mayflower at runtime\n"
+            "# system configuration generated and used by" " the relenv at runtime\n"
         )
         f.write("build_time_vars = ")
         pprint.pprint(data, stream=f)
@@ -965,18 +955,18 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
 def finalize(env, dirs, logfp):
     """
     Run after we've fully built python. This method enhances the newly created
-    python with Mayflower's runtime hacks.
+    python with Relenv's runtime hacks.
 
     :param env: The environment dictionary
     :type env: dict
     :param dirs: The working directories
-    :type dirs: ``mayflower.build.common.Dirs``
+    :type dirs: ``relenv.build.common.Dirs``
     :param logfp: A handle for the log file
     :type logfp: file
     """
     # Run relok8 to make sure the rpaths are relocatable.
     relocate_main(dirs.prefix)
-    # Install mayflower-sysconfigdata module
+    # Install relenv-sysconfigdata module
     pymodules = pathlib.Path(dirs.prefix) / "lib" / "python3.10"
 
     def find_sysconfigdata(pymodules):
@@ -994,7 +984,7 @@ def finalize(env, dirs, logfp):
     finally:
         os.chdir(cwd)
         sys.path = path
-    dest = pymodules / "site-packages" / "mayflower-sysconfigdata.py"
+    dest = pymodules / "site-packages" / "relenv-sysconfigdata.py"
     install_sysdata(mod, dest, dirs.prefix, dirs.toolchain)
 
     # Lay down site customize
@@ -1005,29 +995,29 @@ def finalize(env, dirs, logfp):
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
-    # Lay down mayflower.runtime, we'll pip install the rest later
-    mayflowerdir = bindir.parent / "lib" / "python3.10" / "site-packages" / "mayflower"
-    os.makedirs(mayflowerdir, exist_ok=True)
+    # Lay down relenv.runtime, we'll pip install the rest later
+    relenv = bindir.parent / "lib" / "python3.10" / "site-packages" / "relenv"
+    os.makedirs(relenv, exist_ok=True)
     runtime = MODULE_DIR / "runtime.py"
-    dest = mayflowerdir / "runtime.py"
+    dest = relenv / "runtime.py"
     with io.open(runtime, "r") as rfp:
         with io.open(dest, "w") as wfp:
             wfp.write(rfp.read())
     runtime = MODULE_DIR / "common.py"
-    dest = mayflowerdir / "common.py"
+    dest = relenv / "common.py"
     with io.open(runtime, "r") as rfp:
         with io.open(dest, "w") as wfp:
             wfp.write(rfp.read())
-    init = mayflowerdir / "__init__.py"
+    init = relenv / "__init__.py"
     init.touch()
 
     # Install pip
     python = dirs.prefix / "bin" / "python3"
-    if env["MAYFLOWER_ARCH"] != "x86_64":
-        env["MAYFLOWER_CROSS"] = dirs.prefix
-        python = env["MAYFLOWER_NATIVE_PY"]
+    if env["RELENV_ARCH"] != "x86_64":
+        env["RELENV_CROSS"] = dirs.prefix
+        python = env["RELENV_NATIVE_PY"]
     runcmd(
-        [python, "-m", "ensurepip"],
+        [str(python), "-m", "ensurepip"],
         env=env,
         stderr=logfp,
         stdout=logfp,
@@ -1068,10 +1058,10 @@ def finalize(env, dirs, logfp):
         python = dirs.prefix / "bin" / "python3"
         pip = dirs.prefix / "bin" / "pip3"
         if sys.platform == "linux":
-            if env["MAYFLOWER_ARCH"] != "x86_64":
+            if env["RELENV_ARCH"] != "x86_64":
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
-                python = env["MAYFLOWER_NATIVE_PY"]
-                # pip = pathlib.Path(env["MAYFLOWER_NATIVE_PY"]).parent / "pip3"
+                python = env["RELENV_NATIVE_PY"]
+                # pip = pathlib.Path(env["RELENV_NATIVE_PY"]).parent / "pip3"
                 # pip = dirs.prefix / "bin" / "pip3"
         cmd = [
             str(python),
@@ -1087,14 +1077,15 @@ def finalize(env, dirs, logfp):
 
     runpip("wheel")
     # This needs to handle running from the root of the git repo and also from
-    # an installed Mayflower
+    # an installed Relenv
     if (MODULE_DIR.parent / ".git").exists():
         runpip(MODULE_DIR.parent, upgrade=True)
     else:
-        runpip("mayflower", upgrade=True)
+        runpip("relenv", upgrade=True)
     globs = [
         "/bin/python*",
         "/bin/pip*",
+        "/lib/python3.10/ensurepip/*",
         "/lib/python3.10/site-packages/*",
         "/include/*",
         "*.so",
