@@ -25,10 +25,15 @@ jobs:
 
     env:
       CI: yes
-      RELENV_DATA: ${{ github.action_path }}
+      RELENV_DATA: ${{ github.workspace }}
 
     steps:
       - uses: actions/checkout@v3
+
+
+      - name: Install Dependencies
+        run: |
+          echo "$RELENV_DATA"
 
       - name: Install Dependencies
         run: |
