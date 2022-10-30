@@ -14,6 +14,24 @@ import urllib.request
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
+LINUX = "linux"
+WIN32 = "win32"
+DARWIN = "darwin"
+
+arches = {
+    LINUX: (
+        "x86_64",
+        "aarch64",
+    ),
+    DARWIN: ("x86_64",),
+    WIN32: (
+        "amd64",
+        "x86",
+        "arm64",
+    ),
+}
+
+
 if sys.platform == "win32":
     DEFAULT_DATA_DIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
 else:

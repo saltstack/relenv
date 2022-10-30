@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      CI: yes
       RELENV_DATA: ${{ github.workspace }}
 
     steps:
@@ -106,6 +105,9 @@ jobs:
         arch:
           - x86_64
 
+    env:
+      RELENV_DATA: ${{ github.workspace }}
+
     steps:
       - uses: actions/checkout@v3
 
@@ -166,7 +168,12 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          - x86_64
+          - amd64
+          - arm64
+          - x86
+
+    env:
+      RELENV_DATA: ${{ github.workspace }}
 
     steps:
       - uses: actions/checkout@v3
@@ -200,7 +207,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.arch }}-windows-logs
-          path: relenv/_logs/*
+          path: logs/*
           retention-days: 5
 
       - name: Upload Zipfile

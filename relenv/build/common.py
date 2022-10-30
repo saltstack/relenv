@@ -31,6 +31,10 @@ from relenv.common import (
     extract_archive,
     download_url,
     runcmd,
+    LINUX,
+    WIN32,
+    DARWIN,
+    arches,
 )
 from relenv.relocate import main as relocate_main
 from relenv.create import create
@@ -524,6 +528,7 @@ class Builder:
         arch="x86_64",
     ):
         self.dirs = work_dirs(root)
+        self.host_arch = host_arch()
         self.arch = arch
 
         if sys.platform == "darwin":
@@ -547,15 +552,6 @@ class Builder:
         self.no_download = no_download
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
-
-    @property
-    def native_python(self):
-        if sys.platform == "darwin":
-            return self.dirs.build / "x86_64-macos" / "bin" / "python3"
-        elif sys.platform == "win32":
-            return self.dirs.build / "x86_64-win" / "Scripts" / "python.exe"
-        else:
-            return self.dirs.build / "x86_64-linux-gnu" / "bin" / "python3"
 
     def set_arch(self, arch):
         """
@@ -659,18 +655,13 @@ class Builder:
                 "PATH": os.environ["PATH"],
             }
 
+        # This is a bit weird because RELENV_HOST is refering to the build
+        # target. Where as, RELENV_HOST_ARCH is the build host.
         env["RELENV_HOST"] = self.triplet
         env["RELENV_ARCH"] = self.arch
-        if self.arch != "x86_64":
+        env["RELENV_HOST_ARCH"] = self.host_arch
+        if self.host_arch != self.arch:
             native_root = DATA_DIR / "native"
-            if not native_root.exists():
-                # XXX This needs to be more robust to handle running on arm
-                # too. Also, The check should only happen once per build, it
-                # makes more sense to happen in Builder.__call__.
-                try:
-                    create("native", DATA_DIR)
-                except FileExistsError:
-                    pass
             env["RELENV_NATIVE_PY"] = native_root / "bin" / "python3"
 
         self.populate_env(env, dirs)
@@ -837,7 +828,11 @@ class Builder:
                 with io.open(self.dirs.logs / f"{fail}.log") as fp:
                     fp.seek(0, 2)
                     end = fp.tell()
-                    fp.seek(end - 1024)
+                    ind = end - 4096
+                    if ind > 0:
+                        fp.seek(ind)
+                    else:
+                        fp.seek(0)
                     sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
                     sys.stderr.write(fp.read() + "\n\n")
             sys.stderr.flush()
@@ -897,6 +892,13 @@ class Builder:
 
         if clean:
             self.clean()
+
+        if self.host_arch != self.arch:
+            print(self.host_arch)
+            print(self.arch)
+            native_root = DATA_DIR / "native"
+            if not native_root.exists():
+                create("native", DATA_DIR)
 
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
@@ -1014,7 +1016,7 @@ def finalize(env, dirs, logfp):
 
     # Install pip
     python = dirs.prefix / "bin" / "python3"
-    if env["RELENV_ARCH"] != "x86_64":
+    if env["RELENV_ARCH"] != env["RELENV_HOST_ARCH"]:
         env["RELENV_CROSS"] = dirs.prefix
         python = env["RELENV_NATIVE_PY"]
     runcmd(

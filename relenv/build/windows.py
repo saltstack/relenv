@@ -4,10 +4,7 @@ import urllib.request
 import sys
 from .common import *
 
-ARCHES = [
-    "x86_64",
-    "x86",
-]
+ARCHES = arches[WIN32]
 
 if sys.platform == "win32":
     import ctypes
@@ -39,10 +36,15 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    arch_to_plat = {
+        "amd64": "x64",
+        "x86": "win32",
+        "arm64": "arm64",
+    }
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
-        "x64" if env["RELENV_ARCH"] == "x86_64" else "x86",
+        arch_to_plat[env["RELENV_ARCH"]],
         "--no-tkinter",
     ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)

@@ -9,7 +9,7 @@ import sys
 import tarfile
 import tempfile
 
-from .common import MODULE_DIR, RelenvException, archived_build
+from .common import MODULE_DIR, RelenvException, arches, archived_build, host_arch
 
 
 @contextlib.contextmanager
@@ -50,14 +50,14 @@ def setup_parser(subparsers):
     create_subparser.add_argument("name", help="The name of the directory to create")
     create_subparser.add_argument(
         "--arch",
-        default="x86_64",
-        choices=["x86_64", "aarch64"],
+        default=host_arch(),
+        choices=arches[sys.platform],
         type=str,
         help="The host architecture [default: %(default)s]",
     )
 
 
-def create(name, dest=None, arch="x86_64"):
+def create(name, dest=None, arch=None):
     """
     Create a relenv environment.
 
@@ -70,6 +70,8 @@ def create(name, dest=None, arch="x86_64"):
 
     :raises CreateException: If there is a problem in creating the relenv environment
     """
+    if arch is None:
+        arch = host_arch()
     if dest:
         writeto = pathlib.Path(dest) / name
     else:
@@ -79,23 +81,19 @@ def create(name, dest=None, arch="x86_64"):
         raise CreateException("The requested path already exists.")
 
     plat = sys.platform
-    # if plat == "win32":
-    #    arch = "x86_64"
-    # else:
-    #    arch = os.uname().machine
 
     if plat == "linux":
-        if arch in ("x86_64", "aarch64"):
+        if arch in arches[plat]:
             triplet = "{}-{}-gnu".format(arch, plat)
         else:
             raise CreateException("Unknown arch")
     elif plat == "darwin":
-        if arch in ("x86_64"):
+        if arch in arches[plat]:
             triplet = "{}-macos".format(arch)
         else:
             raise CreateException("Unknown arch")
     elif plat == "win32":
-        if arch in ["x86_64"]:
+        if arch in arches[plat]:
             triplet = "{}-win".format(arch)
         else:
             raise CreateException("Unknown arch")

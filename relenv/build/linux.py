@@ -1,10 +1,7 @@
 from .common import *
 import textwrap
 
-ARCHES = [
-    "x86_64",
-    "aarch64",
-]
+ARCHES = arches[LINUX]
 
 # Patch for Python's setup.py
 PATCH = """--- ./setup.py
