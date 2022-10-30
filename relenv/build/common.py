@@ -24,6 +24,7 @@ from relenv.common import (
     MODULE_DIR,
     DATA_DIR,
     RelenvException,
+    host_arch,
     work_root,
     work_dirs,
     get_toolchain,

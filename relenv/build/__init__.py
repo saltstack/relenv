@@ -1,9 +1,17 @@
 """
 The ``relenv build`` command.
 """
+from . import linux, darwin, windows
 
 import sys
 
+def platform_module():
+    if sys.platform == "darwin":
+        return darwin
+    elif sys.platform == "linux":
+        return linux
+    elif sys.platform == "win32":
+        return windows
 
 def setup_parser(subparsers):
     """
@@ -12,15 +20,15 @@ def setup_parser(subparsers):
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
+    mod = platform_module()
     build_subparser = subparsers.add_parser(
         "build", description="Build Relenv Python Environments from source"
     )
     build_subparser.set_defaults(func=main)
-
     build_subparser.add_argument(
         "--arch",
         default="x86_64",
-        choices=["x86_64", "aarch64"],
+        choices=mod.ARCHES,
         type=str,
         help="The host architecture [default: %(default)s]",
     )
@@ -66,6 +74,7 @@ def setup_parser(subparsers):
     )
 
 
+
 def main(args):
     """
     The entrypoint to the ``build`` command.
@@ -73,18 +82,8 @@ def main(args):
     :param args: The arguments to the command
     :type args: ``argparse.Namespace``
     """
-    if sys.platform == "darwin":
-        from .darwin import main
-
-        main(args)
-    elif sys.platform == "linux":
-        from .linux import main
-
-        main(args)
-    elif sys.platform == "win32":
-        from .windows import main
-
-        main(args)
-    else:
+    mod = platform_module()
+    if not mod:
         print("Unsupported platform")
         sys.exit(1)
+    mod.main(args)
