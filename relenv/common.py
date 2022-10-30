@@ -31,6 +31,11 @@ class RelenvException(Exception):
     """
 
 
+def host_arch():
+    machine = platform.machine()
+    return machine.lower()
+
+
 def work_root(root=None):
     """
     Get the root directory that all other relenv working directories should be based on.
