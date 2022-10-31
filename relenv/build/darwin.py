@@ -5,8 +5,9 @@ The darwin build process.
 from .common import *
 
 ARCHES = [
-    'x86_64',
+    "x86_64",
 ]
+
 
 def populate_env(env, dirs):
     """

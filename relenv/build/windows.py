@@ -5,8 +5,8 @@ import sys
 from .common import *
 
 ARCHES = [
-    'x86_64',
-    'x86',
+    "x86_64",
+    "x86",
 ]
 
 if sys.platform == "win32":

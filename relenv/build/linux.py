@@ -2,8 +2,8 @@ from .common import *
 import textwrap
 
 ARCHES = [
-    'x86_64',
-    'aarch64',
+    "x86_64",
+    "aarch64",
 ]
 
 # Patch for Python's setup.py
