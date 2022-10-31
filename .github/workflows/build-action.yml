@@ -169,7 +169,6 @@ jobs:
       matrix:
         arch:
           - amd64
-          - arm64
           - x86
 
     env:
@@ -185,6 +184,11 @@ jobs:
       - name: Install nox
         run: |
           pip3 install nox
+
+      - name: Fetch Native Build
+        if: ${{ matrix.arch != 'amd64' }}
+        run: |
+          python3 -m relenv fetch
 
       - name: Build Python with Relenv
         run: |

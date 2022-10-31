@@ -12,6 +12,7 @@ from .common import (
     extract_archive,
     get_triplet,
     work_dir,
+    host_arch,
 )
 
 
@@ -27,7 +28,7 @@ def setup_parser(subparsers):
 
     fetch_subparser.add_argument(
         "--arch",
-        default="x86_64",
+        default=host_arch(),
         choices=arches[sys.platform],
         help="Architecture to download. [default: %(default)s]",
     )

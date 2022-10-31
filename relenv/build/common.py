@@ -649,7 +649,7 @@ class Builder:
             os.chdir(dirs.prefix)
 
         if sys.platform == "win32":
-            env = os.environ
+            env = os.environ.copy()
         else:
             env = {
                 "PATH": os.environ["PATH"],
@@ -662,7 +662,7 @@ class Builder:
         env["RELENV_HOST_ARCH"] = self.host_arch
         if self.host_arch != self.arch:
             native_root = DATA_DIR / "native"
-            env["RELENV_NATIVE_PY"] = native_root / "bin" / "python3"
+            env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
         self.populate_env(env, dirs)
 

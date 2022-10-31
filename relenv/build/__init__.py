@@ -3,7 +3,10 @@ The ``relenv build`` command.
 """
 from . import linux, darwin, windows
 
+from ..common import host_arch
+
 import sys
+
 
 def platform_module():
     if sys.platform == "darwin":
@@ -12,6 +15,7 @@ def platform_module():
         return linux
     elif sys.platform == "win32":
         return windows
+
 
 def setup_parser(subparsers):
     """
@@ -27,7 +31,7 @@ def setup_parser(subparsers):
     build_subparser.set_defaults(func=main)
     build_subparser.add_argument(
         "--arch",
-        default="x86_64",
+        default=host_arch(),
         choices=mod.ARCHES,
         type=str,
         help="The host architecture [default: %(default)s]",
@@ -72,7 +76,6 @@ def setup_parser(subparsers):
             "has no chance of being succesful. "
         ),
     )
-
 
 
 def main(args):

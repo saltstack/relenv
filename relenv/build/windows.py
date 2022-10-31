@@ -41,17 +41,22 @@ def build_python(env, dirs, logfp):
         "x86": "win32",
         "arm64": "arm64",
     }
+    arch = env["RELENV_ARCH"]
+    plat = arch_to_plat[arch]
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
-        arch_to_plat[env["RELENV_ARCH"]],
+        plat,
         "--no-tkinter",
     ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
     # This is where build.bat puts everything
     # TODO: For now we'll only support 64bit
-    build_dir = dirs.source / "PCbuild" / "amd64"
+    if arch == "amd64":
+        build_dir = dirs.source / "PCbuild" / arch
+    else:
+        build_dir = dirs.source / "PCbuild" / plat
     bin_dir = dirs.prefix / "Scripts"
     bin_dir.mkdir(parents=True, exist_ok=True)
 

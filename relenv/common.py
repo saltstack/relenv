@@ -27,7 +27,7 @@ arches = {
     WIN32: (
         "amd64",
         "x86",
-        "arm64",
+        #    "arm64",
     ),
 }
 
@@ -262,7 +262,7 @@ def download_url(url, dest):
         except urllib.error.HTTPError as exc:
             if n == 3:
                 raise
-            print("Unable to download: %s %r".format(url, exc))
+            print(f"Unable to download: {url} {exc}")
             time.sleep(n + 1 * 10)
     fout = open(local, "wb")
     block = fin.read(10240)
