@@ -190,8 +190,7 @@ def get_triplet(machine=None, plat=None):
     if not plat:
         plat = sys.platform
     if not machine:
-        machine = platform.machine()
-    machine = machine.lower()
+        machine = host_arch()
     if plat == "darwin":
         return f"{machine}-macos"
     elif plat == "win32":

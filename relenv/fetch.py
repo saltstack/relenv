@@ -3,8 +3,16 @@ The ``relenv fetch`` command.
 """
 
 import os
+import sys
 
-from .common import DATA_DIR, download_url, extract_archive, work_dir
+from .common import (
+    DATA_DIR,
+    arches,
+    download_url,
+    extract_archive,
+    get_triplet,
+    work_dir,
+)
 
 
 def setup_parser(subparsers):
@@ -20,7 +28,7 @@ def setup_parser(subparsers):
     fetch_subparser.add_argument(
         "--arch",
         default="x86_64",
-        choices=["x86_64", "aarch64"],
+        choices=arches[sys.platform],
         help="Architecture to download. [default: %(default)s]",
     )
 
@@ -32,8 +40,8 @@ def main(args):
     :param args: The args passed to the command
     :type args: argparse.Namespace
     """
-    url = "https://woz.io/relenv/{version}/build/{arch}-linux-gnu.tar.xz".format(
-        version="0.0.0", arch=args.arch
+    url = "https://woz.io/relenv/{version}/build/{platform}/{triplet}.tar.xz".format(
+        version="0.0.0", platform=sys.platform, triplet=get_triplet()
     )
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
