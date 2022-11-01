@@ -14,6 +14,24 @@ import urllib.request
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
+LINUX = "linux"
+WIN32 = "win32"
+DARWIN = "darwin"
+
+arches = {
+    LINUX: (
+        "x86_64",
+        "aarch64",
+    ),
+    DARWIN: ("x86_64",),
+    WIN32: (
+        "amd64",
+        "x86",
+        #    "arm64",
+    ),
+}
+
+
 if sys.platform == "win32":
     DEFAULT_DATA_DIR = pathlib.Path.home() / "AppData" / "Local" / "relenv"
 else:
@@ -172,8 +190,7 @@ def get_triplet(machine=None, plat=None):
     if not plat:
         plat = sys.platform
     if not machine:
-        machine = platform.machine()
-    machine = machine.lower()
+        machine = host_arch()
     if plat == "darwin":
         return f"{machine}-macos"
     elif plat == "win32":
@@ -245,7 +262,7 @@ def download_url(url, dest):
         except urllib.error.HTTPError as exc:
             if n == 3:
                 raise
-            print("Unable to download: %s %r".format(url, exc))
+            print(f"Unable to download: {url} {exc}")
             time.sleep(n + 1 * 10)
     fout = open(local, "wb")
     block = fin.read(10240)

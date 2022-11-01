@@ -4,9 +4,7 @@ The darwin build process.
 
 from .common import *
 
-ARCHES = [
-    "x86_64",
-]
+ARCHES = arches[DARWIN]
 
 
 def populate_env(env, dirs):

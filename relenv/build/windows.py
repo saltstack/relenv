@@ -4,10 +4,7 @@ import urllib.request
 import sys
 from .common import *
 
-ARCHES = [
-    "x86_64",
-    "x86",
-]
+ARCHES = arches[WIN32]
 
 if sys.platform == "win32":
     import ctypes
@@ -39,17 +36,27 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    arch_to_plat = {
+        "amd64": "x64",
+        "x86": "win32",
+        "arm64": "arm64",
+    }
+    arch = env["RELENV_ARCH"]
+    plat = arch_to_plat[arch]
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
         "-p",
-        "x64" if env["RELENV_ARCH"] == "x86_64" else "x86",
+        plat,
         "--no-tkinter",
     ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
     # This is where build.bat puts everything
     # TODO: For now we'll only support 64bit
-    build_dir = dirs.source / "PCbuild" / "amd64"
+    if arch == "amd64":
+        build_dir = dirs.source / "PCbuild" / arch
+    else:
+        build_dir = dirs.source / "PCbuild" / plat
     bin_dir = dirs.prefix / "Scripts"
     bin_dir.mkdir(parents=True, exist_ok=True)
 
