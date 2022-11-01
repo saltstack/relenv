@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 
-from .common import DATA_DIR, MODULE_DIR
+from .common import DATA_DIR, MODULE_DIR, get_triplet
 
 
 def debug(string):
@@ -29,6 +29,12 @@ def debug(string):
     """
     if os.environ.get("RELENV_DEBUG"):
         print(string)
+
+
+def root():
+    # /lib/pythonX.X/site-packages/relenv/
+    return MODULE_DIR.parent.paret.parent.parent
+    # rootdir / ".relenv"
 
 
 def _build_shebang(*args, **kwargs):
@@ -65,6 +71,17 @@ def get_config_var_wrapper(func):
     return wrapped
 
 
+def get_paths_wrapper(func, default_scheme):
+    def wrapped(scheme=default_scheme, vars=None, expand=True):
+        paths = func(scheme=scheme, vars=vars, expand=expand)
+        if "RELENV_PIP_DIR" in os.environ:
+            paths["scripts"] = str(get_root())
+            sys.exec_prefix = paths["scripts"]
+        return paths
+
+    return wrapped
+
+
 class RelenvImporter:
     """
     An importer to be added to ``sys.meta_path`` to handle importing into a relenv environment.
@@ -88,7 +105,7 @@ class RelenvImporter:
         :return: The instance that called this method if it found the module, or None if it didn't
         :rtype: RelenvImporter or None
         """
-        if module_name.startswith("sysconfig") and sys.platform == "win32":
+        if module_name.startswith("sysconfig"):  # and sys.platform == "win32":
             if self.loading_sysconfig:
                 return None
             debug(f"RelenvImporter - match {module_name}")
@@ -121,6 +138,7 @@ class RelenvImporter:
             debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
+            mod.get_paths = get_paths_wrapper(mod.get_paths, mod.get_default_scheme())
             self.loading_sysconfig = False
         elif name == "pip._vendor.distlib.scripts":
             debug(f"RelenvImporter - load_module {name}")
@@ -136,7 +154,7 @@ class RelenvImporter:
                 debug("Unable to import relenv-sysconfigdata")
                 return mod
             buildroot = MODULE_DIR.parent.parent.parent.parent
-            toolchain = DATA_DIR / "toolchain" / "x86_64-linux-gnu"
+            toolchain = DATA_DIR / "toolchain" / get_triplet()
             build_time_vars = {}
             for key in relmod.build_time_vars:
                 val = relmod.build_time_vars[key]
@@ -147,7 +165,6 @@ class RelenvImporter:
                         TOOLCHAIN=toolchain,
                     )
                 build_time_vars[key] = val
-                debug(f"{key} {orig} => {val}")
                 # self.build_time_vars.build_time_vars = build_time_vars
                 mod.build_time_vars = build_time_vars
             self.loading_sysconfig_data = False
@@ -167,14 +184,10 @@ class BuildTimeVars(collections.abc.Mapping):
     def __getitem__(self, key, *args, **kwargs):
         debug(f"BuildTimeVars - getitem {name}")
         val = self._build_time_vars.__getitem__(key, *args, **kwargs)
-        sys.stdout.flush()
-        if key == "BINDIR":
-            return self.buildroot
-        if isinstance(val, str):
-            return val.format(
-                BUILDROOT=self.buildroot,
-                TOOLCHAIN=self.toolchain,
-            )
+        return val.format(
+            BUILDROOT=self.buildroot,
+            TOOLCHAIN=self.toolchain,
+        )
         return val
 
     def __iter__(self):
@@ -188,6 +201,11 @@ def bootstrap():
     """
     Bootstrap the relenv environment.
     """
+    # XXX This was needed for python3.8, meaning the get_paths hack above
+    # doesn't work??
+    # if "RELENV_PIP_DIR" in os.environ:
+    #    sys.prefix = str(crossroot)
+    #    sys.exec_prefix = str(crossroot)
     cross = os.environ.get("RELENV_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()

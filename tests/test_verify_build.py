@@ -102,7 +102,7 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
-def test_pip_install_salt(pipexec):
+def test_pip_install_salt(pipexec, build):
     packages = [
         "salt",
     ]
@@ -111,6 +111,10 @@ def test_pip_install_salt(pipexec):
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
+
+    for _ in ["salt", "salt-call", "salt-master", "salt-minion"]:
+        script = pathlib.Path(build) / "bin" / _
+        assert script.exists()
 
 
 def test_pip_install_cryptography(pipexec):
@@ -129,3 +133,19 @@ def test_pip_install_idem(pipexec):
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"])
         assert p.returncode == 0, f"Failed to pip install {name}"
+
+
+def test_pip_install_salt_x(pipexec, build):
+    packages = [
+        "salt",
+    ]
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    env["RELENV_PIP_DIR"] = "yes"
+    for name in packages:
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        assert p.returncode == 0, f"Failed to pip install {name}"
+
+    for _ in ["salt", "salt-call", "salt-master", "salt-minion"]:
+        script = pathlib.Path(build) / _
+        assert script.exists()
