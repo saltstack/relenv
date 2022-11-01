@@ -11,8 +11,8 @@ from .common import (
     download_url,
     extract_archive,
     get_triplet,
-    work_dir,
     host_arch,
+    work_dir,
 )
 
 
