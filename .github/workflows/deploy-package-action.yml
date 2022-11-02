@@ -1,0 +1,27 @@
+name: Relenv Python Package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: false
+        type: string
+        description: Version to author
+    secrets:
+      PYPI_API_TOKEN:
+        required: true
+
+jobs:
+  build:
+    name: Publish Python Wheel
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download Python Package Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
+    - name: Publish distribution to PyPI
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}

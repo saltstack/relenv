@@ -1,0 +1,58 @@
+name: Deploy Artifacts
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: false
+        type: string
+        description: Version to author
+    secrets:
+      SSHKEY:
+        required: true
+
+
+jobs:
+  upload_artifacts:
+    name: Deploy Artifacts ${{ matrix.arch }}-${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux-gnu
+            arch: aarch64
+          - platform: linux-gnu
+            arch: x86_64
+          - platform: win
+            arch: x86
+          - platform: win
+            arch: amd64
+          - platform: macos
+            arch: x86_64
+    env:
+      SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      SSHKEY: ${{ secrets.SSHKEY }}
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+    - name: List Contents
+      run: |
+        ls -lah
+
+    - name: Test Secret
+      run: |
+        echo "${SSHKEY}" | wc
+
+    - name: Setup Private Key
+      run: |
+        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+        echo "${SSHKEY}" | tr -d '\r' | ssh-add -
+
+    - name: Setup Private Key
+      run: |
+        mkdir -p /home/runner/.ssh
+        touch /home/runner/.ssh/known_hosts
+        ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
+        scp ${{ matrix.arch }}-${{ matrix.platform }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/build/"

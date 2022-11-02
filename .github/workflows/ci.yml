@@ -4,9 +4,47 @@ on:
   push:
     branches:
       - main
+    inputs:
+      kind:
+        required: false
+        type: choise
+        description: Kind of build to run
+        options:
+          - dev
+          - nigthly
+          - release
+        default: dev
   pull_request:
     branches:
       - main
+    inputs:
+      kind:
+        required: false
+        type: choise
+        description: Kind of build to run
+        options:
+          - dev
+          - nigthly
+          - release
+        default: dev
+  workflow_dispatch:
+    branches:
+      - test
+    inputs:
+      kind:
+        required: false
+        type: choise
+        description: Kind of build to run
+        options:
+          - dev
+          - nigthly
+          - release
+        default: dev
+    inputs:
+      version:
+        required: false
+        type: string
+        description: Version to author
 
 permissions:
   contents: read
@@ -48,8 +86,17 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  build-python-package:
+    name: Python Package
+    uses: ./.github/workflows/package-action.yml
+    if: always()
+    needs:
+      - pre-commit
+    with:
+      version: "${{ inputs.version }}"
+
   build:
-    name: Build
+    name: Python Builds
     uses: ./.github/workflows/build-action.yml
     needs:
       - get-changed-files
@@ -57,7 +104,7 @@ jobs:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   toolchain:
-    name: Toolchain
+    name: Toolchain Builds
     uses: ./.github/workflows/toolchain-action.yml
     needs:
       - get-changed-files
@@ -80,6 +127,43 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  upload-build-artifacts:
+    name: Deploy Build
+    if: ${{ inputs.kind == "release" && success() }}
+    uses: ./.github/workflows/deploy-build-action.yml
+    needs:
+      - build
+    with:
+      version: "${{ inputs.version }}"
+    secrets:
+      SSHKEY: "${{ secrets.SSHKEY }}"
+
+  upload-toolchain-artifacts:
+    name: Deploy Toolchain
+    if: ${{ inputs.kind == "release" && success() }}
+    uses: ./.github/workflows/deploy-build-action.yml
+    needs:
+      - toolchain
+    with:
+      version: "${{ inputs.version }}"
+    secrets:
+      SSHKEY: "${{ secrets.SSHKEY }}"
+
+  deploy-python-package:
+    name: Deploy Python Package
+    uses: ./.github/workflows/deploy-package-action.yml
+    if: always()
+    needs:
+      - pre-commit
+      - build
+      - toolchain
+      - test
+      - docs
+      - upload-build-artifacts
+      - upload-toolchain-artifacts
+    with:
+      kind: "${{ inputs.kind }}"
+
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
@@ -92,6 +176,8 @@ jobs:
       - toolchain
       - test
       - docs
+      - upload-build-artifacts
+      - upload-toolchain-artifacts
     steps:
     - name: Download Exit Status Files
       if: always()
@@ -102,7 +188,7 @@ jobs:
 
     - name: Delete Exit Status Artifacts
       if: always()
-      uses: geekyeggo/delete-artifact@v1
+      uses: geekyeggo/delete-artifact@v2
       with:
         name: exitstatus
         failOnError: false
