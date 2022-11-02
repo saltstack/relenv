@@ -194,6 +194,25 @@ def finalize(env, dirs, logfp):
         create_archive(fp, dirs.prefix, globs, logfp)
 
 
+build = Builder("python-3.8.14", populate_env=populate_env)
+build.add(
+    "python",
+    build_func=build_python,
+    download={
+        "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+        "version": "3.8.14",
+    },
+)
+build.add(
+    "relenv-finalize",
+    build_func=finalize,
+    wait_on=["python"],
+)
+
+build = build.copy("python-3.10.4")
+build.recipes["python"]["download"]["version"] = "3.10.4"
+
+
 def main(args):
     """
     The entrypoint into the Windows build.
@@ -201,23 +220,7 @@ def main(args):
     :param args: The arguments for the build
     :type args: argparse.Namespace
     """
-    build = Builder(populate_env=populate_env)
-
-    build.add(
-        "python",
-        build_func=build_python,
-        download={
-            "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-            "version": args.version,
-        },
-    )
-
-    build.add(
-        "relenv-finalize",
-        build_func=finalize,
-        wait_on=["python"],
-    )
-
+    build = Builder.by_name(args.python)
     run_build(build, args)
 
 

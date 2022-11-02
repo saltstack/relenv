@@ -520,9 +520,15 @@ class Builder:
     :param version: The version being built
     :type version: str
     """
+    builds = {}
+
+    @classmethod
+    def by_name(cls, name):
+        return cls.builds[name]
 
     def __init__(
         self,
+        name,
         root=None,
         recipes=None,
         build_default=build_default,
@@ -530,7 +536,10 @@ class Builder:
         no_download=False,
         arch="x86_64",
         version=None,
+        _builds=Builds(),
     ):
+        self.name = name
+        self._root = root
         self.dirs = work_dirs(root)
         self.host_arch = host_arch()
         self.arch = arch
@@ -559,6 +568,24 @@ class Builder:
         self.no_download = no_download
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
+        self.builds[self.name] = self
+
+    def copy(self, name):
+        """
+        Copy this build creating a new build with the name provided
+
+        :param name: The name of the newly created build
+        """
+        return Builder(
+            name,
+            self._root,
+            self.recipes,
+            self.build_default,
+            self.populate_env,
+            self.no_download,
+            self.arch,
+            self.version,
+        )
 
     def set_arch(self, arch):
         """
