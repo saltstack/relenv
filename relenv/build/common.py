@@ -536,7 +536,6 @@ class Builder:
         no_download=False,
         arch="x86_64",
         version=None,
-        _builds=Builds(),
     ):
         self.name = name
         self._root = root
