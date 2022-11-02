@@ -54,6 +54,13 @@ def host_arch():
     return machine.lower()
 
 
+def python_version():
+    if sys.platform == "win32":
+        return "3.8.15"
+    else:
+        return "3.10.7"
+
+
 def work_root(root=None):
     """
     Get the root directory that all other relenv working directories should be based on.

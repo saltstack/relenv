@@ -2,6 +2,7 @@ __pycache__
 *.pyc
 .idea
 *.un~
+venv
 
 # These can be created when builds run
 /build

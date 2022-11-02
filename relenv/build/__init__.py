@@ -3,7 +3,7 @@ The ``relenv build`` command.
 """
 from . import linux, darwin, windows
 
-from ..common import host_arch
+from ..common import host_arch, python_version
 
 import sys
 
@@ -35,6 +35,12 @@ def setup_parser(subparsers):
         choices=mod.ARCHES,
         type=str,
         help="The host architecture [default: %(default)s]",
+    )
+    build_subparser.add_argument(
+        "--version",
+        default=python_version(),
+        type=str,
+        help="The version of python to build [default: %(default)s]",
     )
     build_subparser.add_argument(
         "--clean",

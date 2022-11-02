@@ -31,7 +31,7 @@ def test_builder_defaults_linux():
     assert callable(builder.build_default)
     assert callable(builder.populate_env)
     assert builder.no_download is False
-    assert builder.recipies == {}
+    assert builder.recipes == {}
 
 
 def test_verify_checksum(fake_download, fake_download_md5):

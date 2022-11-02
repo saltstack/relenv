@@ -115,18 +115,6 @@ def build_python(env, dirs, logfp):
     )
 
 
-build = Builder(populate_env=populate_env)
-
-build.add(
-    "python",
-    build_func=build_python,
-    download={
-        "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.8.14",
-    },
-)
-
-
 def finalize(env, dirs, logfp):
     """
     Finalize sitecustomize, relenv runtime, and pip for Windows.
@@ -206,13 +194,6 @@ def finalize(env, dirs, logfp):
         create_archive(fp, dirs.prefix, globs, logfp)
 
 
-build.add(
-    "relenv-finalize",
-    build_func=finalize,
-    wait_on=["python"],
-)
-
-
 def main(args):
     """
     The entrypoint into the Windows build.
@@ -220,6 +201,23 @@ def main(args):
     :param args: The arguments for the build
     :type args: argparse.Namespace
     """
+    build = Builder(populate_env=populate_env)
+
+    build.add(
+        "python",
+        build_func=build_python,
+        download={
+            "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+            "version": args.version,
+        },
+    )
+
+    build.add(
+        "relenv-finalize",
+        build_func=finalize,
+        wait_on=["python"],
+    )
+
     run_build(build, args)
 
 

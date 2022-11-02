@@ -25,6 +25,7 @@ from relenv.common import (
     DATA_DIR,
     RelenvException,
     host_arch,
+    python_version,
     work_root,
     work_dirs,
     get_toolchain,
@@ -506,7 +507,7 @@ class Builder:
 
     :param root: The root of the working directories for this build
     :type root: str
-    :param recipies: The instructions for the build steps
+    :param recipes: The instructions for the build steps
     :type recipes: list
     :param build_default: The default build function, defaults to ``build_default``
     :type build_default: types.FunctionType
@@ -516,21 +517,27 @@ class Builder:
     :type no_download: bool
     :param arch: The architecture being built
     :type arch: str
+    :param version: The version being built
+    :type version: str
     """
 
     def __init__(
         self,
         root=None,
-        recipies=None,
+        recipes=None,
         build_default=build_default,
         populate_env=populate_env,
         no_download=False,
         arch="x86_64",
+        version=None,
     ):
         self.dirs = work_dirs(root)
         self.host_arch = host_arch()
         self.arch = arch
+        if version is None:
+            self.version = python_version()
 
+        #TODO: Should we put a version here with the file name?
         if sys.platform == "darwin":
             self.triplet = "{}-macos".format(self.arch)
         elif sys.platform == "win32":
@@ -542,10 +549,10 @@ class Builder:
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
 
-        if recipies is None:
-            self.recipies = {}
+        if recipes is None:
+            self.recipes = {}
         else:
-            self.recipies = recipies
+            self.recipes = recipes
 
         self.build_default = build_default
         self.populate_env = populate_env
@@ -602,7 +609,7 @@ class Builder:
             wait_on = []
         if build_func is None:
             build_func = self.build_default
-        self.recipies[name] = {
+        self.recipes[name] = {
             "build_func": build_func,
             "wait_on": wait_on,
             "download": download
@@ -659,6 +666,7 @@ class Builder:
         # target. Where as, RELENV_HOST_ARCH is the build host.
         env["RELENV_HOST"] = self.triplet
         env["RELENV_ARCH"] = self.arch
+        env["RELENV_VERSION"] = self.version
         env["RELENV_HOST_ARCH"] = self.host_arch
         if self.host_arch != self.arch:
             native_root = DATA_DIR / "native"
@@ -716,7 +724,7 @@ class Builder:
         :type steps: list, optional
         """
         if steps is None:
-            steps = list(self.recipies)
+            steps = list(self.recipes)
 
         fails = []
         processes = {}
@@ -724,7 +732,7 @@ class Builder:
         sys.stdout.write("Starting downloads \n")
         print_ui(events, processes, fails)
         for name in steps:
-            download = self.recipies[name]["download"]
+            download = self.recipes[name]["download"]
             if download is None:
                 continue
             event = multiprocessing.Event()
@@ -779,9 +787,9 @@ class Builder:
         for name in steps:
             event = multiprocessing.Event()
             events[name] = event
-            kwargs = dict(self.recipies[name])
+            kwargs = dict(self.recipes[name])
 
-            # Determine needed dependency recipies.
+            # Determine needed dependency recipes.
             wait_on = kwargs.pop("wait_on", [])
             for _ in wait_on[:]:
                 if _ not in steps:
@@ -881,7 +889,7 @@ class Builder:
             self.set_arch(arch)
 
         if steps is None:
-            steps = self.recipies
+            steps = self.recipes
 
         failures = self.check_prereqs()
         if failures:
