@@ -142,7 +142,13 @@ class RelenvImporter:
             debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
-            mod.get_paths = get_paths_wrapper(mod.get_paths, mod.get_default_scheme())
+            try:
+                # Python >= 3.10
+                scheme = mod.get_default_scheme()
+            except AttributeError:
+                # Python < 3.10
+                scheme = mod._get_default_scheme()
+            mod.get_paths = get_paths_wrapper(mod.get_paths, scheme)
             self.loading_sysconfig = False
         elif name == "pip._vendor.distlib.scripts":
             debug(f"RelenvImporter - load_module {name}")
