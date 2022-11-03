@@ -121,7 +121,7 @@ jobs:
 
       - name: Verify Build
         run: |
-          nox -e tests -- tests/test_verify_build.py
+          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Create Tarball Directory
         run: |
