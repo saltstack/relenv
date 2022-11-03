@@ -32,9 +32,13 @@ def debug(string):
 
 
 def root():
-    # /lib/pythonX.X/site-packages/relenv/
-    return MODULE_DIR.parent.parent.parent.parent
-    # rootdir / ".relenv"
+    # XXX Look for rootdir / ".relenv"
+    if os.platform == "win32":
+        # /Lib/site-packages/relenv/
+        return MODULE_DIR.parent.parent.parent
+    else:
+        # /lib/pythonX.X/site-packages/relenv/
+        return MODULE_DIR.parent.parent.parent.parent
 
 
 def _build_shebang(*args, **kwargs):
