@@ -33,7 +33,7 @@ def debug(string):
 
 def root():
     # /lib/pythonX.X/site-packages/relenv/
-    return MODULE_DIR.parent.paret.parent.parent
+    return MODULE_DIR.parent.parent.parent.parent
     # rootdir / ".relenv"
 
 
@@ -75,7 +75,7 @@ def get_paths_wrapper(func, default_scheme):
     def wrapped(scheme=default_scheme, vars=None, expand=True):
         paths = func(scheme=scheme, vars=vars, expand=expand)
         if "RELENV_PIP_DIR" in os.environ:
-            paths["scripts"] = str(get_root())
+            paths["scripts"] = str(root())
             sys.exec_prefix = paths["scripts"]
         return paths
 

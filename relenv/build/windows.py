@@ -163,7 +163,7 @@ def finalize(env, dirs, logfp):
 
     # Install pip
     python = dirs.prefix / "Scripts" / "python.exe"
-    runcmd([python, "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
+    runcmd([str(python), "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
 
     def runpip(pkg):
         # XXX Support cross pip installs on windows
