@@ -75,11 +75,7 @@ def get_paths_wrapper(func, default_scheme):
     def wrapped(scheme=default_scheme, vars=None, expand=True):
         paths = func(scheme=scheme, vars=vars, expand=expand)
         if "RELENV_PIP_DIR" in os.environ:
-<<<<<<< HEAD
-            paths["scripts"] = str(get_root())
-=======
             paths["scripts"] = str(root())
->>>>>>> 80af0a9 (Fix pip root)
             sys.exec_prefix = paths["scripts"]
         return paths
 
