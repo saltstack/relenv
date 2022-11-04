@@ -33,7 +33,7 @@ def debug(string):
 
 def root():
     # XXX Look for rootdir / ".relenv"
-    if os.platform == "win32":
+    if sys.platform == "win32":
         # /Lib/site-packages/relenv/
         return MODULE_DIR.parent.parent.parent
     else:

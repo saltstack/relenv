@@ -27,16 +27,19 @@ def build(tmpdir):
 @pytest.fixture
 def pipexec(build):
     if sys.platform == "win32":
-        yield build / "Scripts" / "pip3.exe"
+        exc = build / "Scripts" / "pip3.exe"
     else:
-        yield build / "bin" / "pip3"
+        exc = build / "bin" / "pip3"
+    yield exc
 
 
 @pytest.fixture
 def pyexec(build):
     if sys.platform == "win32":
-        yield build / "Scripts" / "python.exe"
-    yield build / "bin" / "python3"
+        exc = build / "Scripts" / "python.exe"
+    else:
+        exc = build / "bin" / "python3"
+    yield exc
 
 
 @pytest.mark.skip_unless_on_windows
@@ -104,16 +107,24 @@ def test_imports(pyexec):
 
 def test_pip_install_salt(pipexec, build):
     packages = [
-        "salt",
+        "salt==3005",
     ]
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
+
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
-    for _ in ["salt", "salt-call", "salt-master", "salt-minion"]:
-        script = pathlib.Path(build) / "bin" / _
+    names = ["salt", "salt-call", "salt-master", "salt-minion"]
+    if sys.platform == "win32":
+        names = ["salt-call.exe", "salt-minion.exe"]
+
+    for _ in names:
+        if sys.platform == "win32":
+            script = pathlib.Path(build) / "Scripts" / _
+        else:
+            script = pathlib.Path(build) / "bin" / _
         assert script.exists()
 
 
@@ -146,6 +157,10 @@ def test_pip_install_salt_x(pipexec, build):
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
-    for _ in ["salt", "salt-call", "salt-master", "salt-minion"]:
+    names = ["salt", "salt-call", "salt-master", "salt-minion"]
+    if sys.platform == "win32":
+        names = ["salt-call.exe", "salt-minion.exe"]
+
+    for _ in names:
         script = pathlib.Path(build) / _
         assert script.exists()
