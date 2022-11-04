@@ -1,3 +1,5 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: Apache-2
 from .common import *
 import textwrap
 
