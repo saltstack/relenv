@@ -62,9 +62,9 @@ def get_config_var_wrapper(func):
         if name == "BINDIR":
             orig = func(name)
             if os.environ.get("RELENV_PIP_DIR"):
-                val = "../"
+                val = root()
             else:
-                val = "./"
+                val = root() / "Scripts"
             debug(f"get_config_var call {name} old: {orig} new: {val}")
             return val
         else:
@@ -213,9 +213,9 @@ def bootstrap():
     """
     # XXX This was needed for python3.8, meaning the get_paths hack above
     # doesn't work??
-    # if "RELENV_PIP_DIR" in os.environ:
-    #    sys.prefix = str(crossroot)
-    #    sys.exec_prefix = str(crossroot)
+    if "RELENV_PIP_DIR" in os.environ:
+        sys.prefix = str(root())
+        sys.exec_prefix = str(root())
     cross = os.environ.get("RELENV_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()

@@ -146,6 +146,7 @@ def test_pip_install_idem(pipexec):
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
+@pytest.mark.skip_on_windows
 def test_pip_install_salt_x(pipexec, build):
     packages = [
         "salt",
