@@ -1,3 +1,6 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: Apache-2
+
 <#
 Taken from: https://github.com/saltstack/salt-windows-nsis/blob/main/scripts/install_vs_buildtools.bat
 

@@ -27,6 +27,11 @@ jobs:
         target:
           - x86_64
           - aarch64
+
+    concurrency:
+      group: "${{ github.head_ref }}-${{ matrix.host }}-${{ matrix.target }}-toolchain"
+      cancel-in-progress: true
+
     env:
       RELENV_DATA: ${{ github.action_path }}
 

@@ -1,3 +1,5 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: Apache-2
 # Toying around with what sanity checks we might run during a build
 import logging
 import os

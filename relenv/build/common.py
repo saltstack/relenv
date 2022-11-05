@@ -1,3 +1,5 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: Apache-2
 import logging
 import os.path
 import codecs

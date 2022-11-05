@@ -1,7 +1,27 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: Apache-2
+
 default_language_version:
     python: python3
 
 repos:
+  # ----- Local Hooks ----------------------------------------------------------------------------------------------->
+  - repo: local
+    hooks:
+      - id: check-changelog-entries
+        name: Check Changelog Entries
+        entry: python .pre-commit-hooks/check_changelog_entries.py
+        language: system
+
+  - repo: local
+    hooks:
+      - id: check-copyright-headers
+        name: Check python modules for appropriate copyright headers
+        files: ^.*\.py$
+        entry: python .pre-commit-hooks/copyright_headers.py
+        language: system
+  # <---- Local Hooks ------------------------------------------------------------------------------------------------
+
   - repo: https://github.com/timothycrosley/isort
     rev: 5.10.1
     hooks:

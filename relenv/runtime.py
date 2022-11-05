@@ -1,3 +1,5 @@
+# Copyright 2022 VMware, Inc.
+# SPDX-License-Identifier: Apache-2
 """
 This code is run when initializing the python interperter in a Relenv
 environment.
