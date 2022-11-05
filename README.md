@@ -8,7 +8,7 @@ move the root directory around on the filesystem.
 # Installing Relenv
 
 ```
-pip install git+https://github.com/dwoz/Relenv.git
+pip install git+https://github.com/saltstack/relative-environment-for-python.git
 ```
 
 

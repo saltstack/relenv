@@ -32,9 +32,13 @@ def debug(string):
 
 
 def root():
-    # /lib/pythonX.X/site-packages/relenv/
-    return MODULE_DIR.parent.paret.parent.parent
-    # rootdir / ".relenv"
+    # XXX Look for rootdir / ".relenv"
+    if sys.platform == "win32":
+        # /Lib/site-packages/relenv/
+        return MODULE_DIR.parent.parent.parent
+    else:
+        # /lib/pythonX.X/site-packages/relenv/
+        return MODULE_DIR.parent.parent.parent.parent
 
 
 def _build_shebang(*args, **kwargs):
@@ -58,9 +62,9 @@ def get_config_var_wrapper(func):
         if name == "BINDIR":
             orig = func(name)
             if os.environ.get("RELENV_PIP_DIR"):
-                val = "../"
+                val = root()
             else:
-                val = "./"
+                val = root() / "Scripts"
             debug(f"get_config_var call {name} old: {orig} new: {val}")
             return val
         else:
@@ -75,7 +79,7 @@ def get_paths_wrapper(func, default_scheme):
     def wrapped(scheme=default_scheme, vars=None, expand=True):
         paths = func(scheme=scheme, vars=vars, expand=expand)
         if "RELENV_PIP_DIR" in os.environ:
-            paths["scripts"] = str(get_root())
+            paths["scripts"] = str(root())
             sys.exec_prefix = paths["scripts"]
         return paths
 
@@ -138,7 +142,13 @@ class RelenvImporter:
             debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
-            mod.get_paths = get_paths_wrapper(mod.get_paths, mod.get_default_scheme())
+            try:
+                # Python >= 3.10
+                scheme = mod.get_default_scheme()
+            except AttributeError:
+                # Python < 3.10
+                scheme = mod._get_default_scheme()
+            mod.get_paths = get_paths_wrapper(mod.get_paths, scheme)
             self.loading_sysconfig = False
         elif name == "pip._vendor.distlib.scripts":
             debug(f"RelenvImporter - load_module {name}")
@@ -203,9 +213,9 @@ def bootstrap():
     """
     # XXX This was needed for python3.8, meaning the get_paths hack above
     # doesn't work??
-    # if "RELENV_PIP_DIR" in os.environ:
-    #    sys.prefix = str(crossroot)
-    #    sys.exec_prefix = str(crossroot)
+    if "RELENV_PIP_DIR" in os.environ:
+        sys.prefix = str(root())
+        sys.exec_prefix = str(root())
     cross = os.environ.get("RELENV_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()

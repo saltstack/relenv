@@ -11,7 +11,7 @@ on:
 jobs:
   docs:
     name: Build Relenv Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Install System Deps
