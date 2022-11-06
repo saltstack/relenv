@@ -136,7 +136,7 @@ jobs:
         if: always()
         with:
           name: ${{ matrix.arch }}-macos-logs
-          path: relenv/_logs/*
+          path: logs/*
           retention-days: 5
 
       - name: Python build

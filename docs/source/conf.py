@@ -21,7 +21,7 @@ for addtl_path in addtl_paths:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Relenv"
-copyright = "2022, Daniel A. Wozniak"
+copyright = "2022 VMWare, Inc."
 author = "Daniel A. Wozniak"
 
 # -- General configuration ---------------------------------------------------
