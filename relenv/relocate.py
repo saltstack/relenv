@@ -1,7 +1,5 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
-#!/usr/bin/env python3
-
 """
 A script to ensure the proper rpaths are in place for the relenv environment.
 """

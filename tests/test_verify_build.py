@@ -149,7 +149,7 @@ def test_pip_install_idem(pipexec):
 
 
 @pytest.mark.skip_on_windows
-def test_pip_install_salt_x(pipexec, build):
+def test_pip_install_salt_pip_dir(pipexec, build):
     packages = [
         "salt",
     ]
