@@ -8,11 +8,12 @@ from unittest.mock import patch
 
 import pytest
 
-import relenv.create as create
+from relenv.common import arches
+from relenv.create import CreateException, chdir, create
 
 
 def test_chdir(tmp_path):
-    with create.chdir(str(tmp_path)):
+    with chdir(str(tmp_path)):
         assert pathlib.Path(os.getcwd()) == tmp_path
 
 
@@ -25,8 +26,8 @@ def test_create(tmp_path):
     with tarfile.open(str(tar_file), "w:xz") as tar:
         tar.add(str(to_be_archived), to_be_archived.name)
 
-    with patch.object(create, "archived_build", return_value=tar_file):
-        create.create("foo", dest=tmp_path)
+    with patch("relenv.create.archived_build", return_value=tar_file):
+        create("foo", dest=tmp_path)
 
     to_dir = tmp_path / "foo"
     assert (to_dir).exists()
@@ -35,19 +36,19 @@ def test_create(tmp_path):
 
 def test_create_tar_doesnt_exist(tmp_path):
     tar_file = tmp_path / "fake_archive"
-    with patch.object(create, "archived_build", return_value=tar_file):
-        with pytest.raises(create.CreateException):
-            create.create("foo", dest=tmp_path)
+    with patch("relenv.create.archived_build", return_value=tar_file):
+        with pytest.raises(CreateException):
+            create("foo", dest=tmp_path)
 
 
 def test_create_directory_exists(tmp_path):
     (tmp_path / "foo").mkdir()
-    with pytest.raises(create.CreateException):
-        create.create("foo", dest=tmp_path)
+    with pytest.raises(CreateException):
+        create("foo", dest=tmp_path)
 
 
 def test_create_directory_exists(tmp_path):
-    mocked_arches = {key: [] for key in create.arches.keys()}
-    with patch.object(create, "arches", mocked_arches):
-        with pytest.raises(create.CreateException):
-            create.create("foo", dest=tmp_path)
+    mocked_arches = {key: [] for key in arches.keys()}
+    with patch("relenv.create.arches", mocked_arches):
+        with pytest.raises(CreateException):
+            create("foo", dest=tmp_path)
