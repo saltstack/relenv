@@ -9,7 +9,6 @@ import os
 import pathlib
 import sys
 import tarfile
-import tempfile
 
 from .common import MODULE_DIR, RelenvException, arches, archived_build, host_arch
 
@@ -108,7 +107,6 @@ def create(name, dest=None, arch=None):
             f"Error, build archive for {arch} doesn't exist: {tar}\n"
             "You might try relenv fetch to resolve this."
         )
-    tmp = tempfile.mkdtemp()
     with tarfile.open(tar, "r:xz") as fp:
         for f in fp:
             fp.extract(f, writeto)
