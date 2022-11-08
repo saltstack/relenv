@@ -3,6 +3,7 @@
 import pathlib
 import platform
 import sys
+import tarfile
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,8 +12,11 @@ from relenv.common import (
     MODULE_DIR,
     RelenvException,
     archived_build,
+    extract_archive,
+    get_toolchain,
     get_triplet,
     runcmd,
+    work_dir,
     work_dirs,
     work_root,
 )
@@ -113,3 +117,42 @@ def test_verify_checksum():
         moc.side_effect = [ret]
         with pytest.raises(RelenvException):
             _ = runcmd(["echo", "foo"])
+
+
+def test_work_dir_with_root_module_dir():
+    ret = work_dir("fakedir")
+    assert ret == MODULE_DIR / "_fakedir"
+
+
+def test_work_dir_with_root_given(tmp_path):
+    ret = work_dir("fakedir", root=tmp_path)
+    assert ret == tmp_path / "fakedir"
+
+
+def test_get_toolchain(tmp_path):
+    data_dir = tmp_path / "data"
+    with patch("relenv.common.DATA_DIR", data_dir):
+        ret = get_toolchain(arch="aarch64")
+        assert ret == data_dir / "toolchain" / "aarch64-linux-gnu"
+
+
+def test_get_toolchain_no_arch(tmp_path):
+    data_dir = tmp_path / "data"
+    with patch("relenv.common.DATA_DIR", data_dir):
+        ret = get_toolchain()
+        assert ret == data_dir / "toolchain"
+
+
+@pytest.mark.parametrize("open_arg", (":gz", ":xz", ":bz2", ""))
+def test_extract_archive(tmp_path, open_arg):
+    to_be_archived = tmp_path / "to_be_archived"
+    to_be_archived.mkdir()
+    test_file = to_be_archived / "testfile"
+    test_file.touch()
+    tar_file = tmp_path / "fake_archive"
+    to_dir = tmp_path / "extracted"
+    with tarfile.open(str(tar_file), "w{}".format(open_arg)) as tar:
+        tar.add(str(to_be_archived), to_be_archived.name)
+    extract_archive(str(to_dir), str(tar_file))
+    assert to_dir.exists()
+    assert (to_dir / to_be_archived.name / test_file.name) in to_dir.glob("**/*")
