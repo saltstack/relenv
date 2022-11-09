@@ -43,7 +43,7 @@ def main(args):
     :param args: The args passed to the command
     :type args: argparse.Namespace
     """
-    url = "https://woz.io/relenv/{version}/build/{platform}/{triplet}.tar.xz".format(
+    url = "https://woz.io/relenv/{version}/build/{triplet}.tar.xz".format(
         version="0.0.0", platform=sys.platform, triplet=get_triplet()
     )
     builddir = work_dir("build", DATA_DIR)

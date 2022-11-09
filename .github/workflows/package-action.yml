@@ -1,0 +1,70 @@
+name: Relenv Python Package
+
+on:
+  workflow_call:
+    inputs:
+      kind:
+        required: false
+        type: string
+        default: dev
+      cmd:
+        required: false
+        type: string
+        description: Command used to build python package
+        default: >-
+          python -m
+          build
+          -C--global-option=egg_info
+          -C--global-option=--tag-build=dev$(git rev-parse --short HEAD)
+          --wheel
+          --outdir dist/
+    outputs:
+      version:
+        value: "${{ jobs.build.outputs.version }}"
+
+jobs:
+  build:
+    name: Build Python Wheel
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+    - uses: actions/checkout@master
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install pypa/build
+      run: >-
+        python -m
+        pip install
+        build
+        --user
+    - name: Install pypa/pkginffo
+      run: >-
+        python -m
+        pip install
+        pkginfo
+        --user
+
+    - name: Echo Build Wheel Command
+      run: echo "${{ inputs.cmd }}"
+
+    - name: Build Wheel
+      run: "${{ inputs.cmd }}"
+
+    - name: Python Build Artifact
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dist
+        path: dist/*
+        retention-days: 5
+    - name: Read Version
+      run: >-
+        python3
+        -c
+        "from pkginfo import Wheel; s = Wheel('dist/$(ls dist/)'); print(f'version={s.version}')"
+        >>
+        $GITHUB_OUTPUT
+      id: version

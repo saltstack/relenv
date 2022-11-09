@@ -14,6 +14,10 @@ import time
 import urllib.error
 import urllib.request
 
+
+# relenv package version
+__version__ = "0.0.1"
+
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
 LINUX = "linux"
@@ -261,7 +265,7 @@ def download_url(url, dest):
         n += 1
         try:
             fin = urllib.request.urlopen(url)
-        except urllib.error.HTTPError as exc:
+        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
             if n == 3:
                 raise
             print(f"Unable to download: {url} {exc}")

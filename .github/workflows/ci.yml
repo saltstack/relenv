@@ -1,17 +1,29 @@
 name: CI
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      kind:
+        required: false
+        type: string
+        default: dev
+      package_command:
+        required: false
+        type: string
+        description: Command used to build python package
+        default: >-
+          python -m
+          build
+          -C--global-option=egg_info
+          -C--global-option=--tag-build=dev$(git rev-parse --short HEAD)
+          --wheel
+          --outdir dist/
 
 permissions:
   contents: read
 
 jobs:
+
   get-changed-files:
     name: Get Changed Files
     runs-on: ubuntu-latest
@@ -37,6 +49,7 @@ jobs:
                 - '**'
             toolchain:
               - added|modified:
+                - '.github/workflows/*toolhcain*.yml'
                 - 'relenv/toolchain.py'
                 - 'relenv/_toolchain/**'
 
@@ -48,8 +61,18 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  build-python-package:
+    name: Python Package
+    uses: ./.github/workflows/package-action.yml
+    if: always()
+    needs:
+      - pre-commit
+    with:
+      kind: "${{ inputs.kind }}"
+      cmd: "${{ inputs.package_command }}"
+
   build:
-    name: Build
+    name: Python Builds
     uses: ./.github/workflows/build-action.yml
     needs:
       - get-changed-files
@@ -57,7 +80,7 @@ jobs:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
   toolchain:
-    name: Toolchain
+    name: Toolchain Builds
     uses: ./.github/workflows/toolchain-action.yml
     needs:
       - get-changed-files
@@ -80,10 +103,66 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  upload-build-artifacts:
+    name: Deploy Prebuilt Python Builds
+    if: ${{ inputs.kind == 'release' && success() }}
+    uses: ./.github/workflows/deploy-build-action.yml
+    needs:
+      - build-python-package
+      - build
+    with:
+      version: "${{ needs.build-python-package.outputs.version }}"
+    secrets:
+      SSHKEY: "${{ secrets.SSHKEY }}"
+
+  upload-toolchain-artifacts:
+    name: Deploy Toolchain
+    if: ${{ inputs.kind == 'release' && success() }}
+    uses: ./.github/workflows/deploy-build-action.yml
+    needs:
+      - build-python-package
+      - toolchain
+    with:
+      version: "${{ needs.build-python-package.outputs.version }}"
+    secrets:
+      SSHKEY: "${{ secrets.SSHKEY }}"
+
+  deploy-python-package:
+    name: Deploy Python Package
+    uses: ./.github/workflows/deploy-package-action.yml
+    if: ${{ inputs.kind == 'release' && success() }}
+    needs:
+      - pre-commit
+      - test
+      - docs
+      - build-python-package
+      - upload-build-artifacts
+      - upload-toolchain-artifacts
+    secrets:
+      PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
+    #with:
+    #  version: "${{ needs.build-python-package.outputs.version }}"
+
+  push-tag:
+    name: Push Version Tag
+    runs-on: ubuntu-latest
+    if: ${{ inputs.kind == 'release' && success() }}
+    needs:
+      - build-python-package
+      - deploy-python-package
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Push Tag
+        uses: actions-ecosystem/action-push-tag@v1
+        with:
+          tag: "v${{ needs.build-python-package.outputs.version }}"
+          message: "Version ${{ needs.build-python-package.outputs.version }}"
+
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
-    name: Set the ${{ github.workflow }} Pipeline Exit Status
+    name: Set the CI Pipeline Exit Status
     runs-on: ubuntu-latest
     if: always()
     needs:
@@ -92,6 +171,10 @@ jobs:
       - toolchain
       - test
       - docs
+      - upload-build-artifacts
+      - upload-toolchain-artifacts
+      - deploy-python-package
+      - push-tag
     steps:
     - name: Download Exit Status Files
       if: always()
@@ -102,7 +185,7 @@ jobs:
 
     - name: Delete Exit Status Artifacts
       if: always()
-      uses: geekyeggo/delete-artifact@v1
+      uses: geekyeggo/delete-artifact@v2
       with:
         name: exitstatus
         failOnError: false

@@ -57,14 +57,6 @@ jobs:
         run: |
           nox -e tests -- tests/test_verify_build.py
 
-      - name: Create Tarball Directory
-        run: |
-          python3 -m relenv create ${{ matrix.arch }}-linux-gnu
-
-      - name: Create Tarball
-        run: |
-          tar -cJf python-${{ matrix.arch }}-linux-gnu.tar.xz  ${{ matrix.arch }}-linux-gnu
-
       - name: Linux Logs
         uses: actions/upload-artifact@v3
         if: always()
@@ -73,11 +65,11 @@ jobs:
           path: logs/*
           retention-days: 5
 
-      - name: Python build
+      - name: "Upload artifact: build/${{ matrix.arch }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
         with:
-          name: python-${{ matrix.arch }}-linux-gnu.tar.xz
-          path: python-${{ matrix.arch }}-linux-gnu.tar.xz
+          name: ${{ matrix.arch }}-linux-gnu.tar.xz
+          path: build/${{ matrix.arch }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
@@ -123,14 +115,6 @@ jobs:
         run: |
           python3 -m nox -e tests -- tests/test_verify_build.py
 
-      - name: Create Tarball Directory
-        run: |
-          python3 -m relenv create ${{ matrix.arch }}-macos
-
-      - name: Create Tarball
-        run: |
-          tar -cJf python-${{ matrix.arch }}-macos.tar.xz ${{ matrix.arch }}-macos
-
       - name: MacOS Logs
         uses: actions/upload-artifact@v3
         if: always()
@@ -142,8 +126,8 @@ jobs:
       - name: Python build
         uses: actions/upload-artifact@v3
         with:
-          name: python-${{ matrix.arch }}-macos.tar.xz
-          path: python-${{ matrix.arch }}-macos.tar.xz
+          name: ${{ matrix.arch }}-macos.tar.xz
+          path: build/${{ matrix.arch }}-macos.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
@@ -198,14 +182,6 @@ jobs:
         run: |
           nox -e tests -- tests/test_verify_build.py
 
-      - name: Create Tarball Directory
-        run: |
-          python3 -m relenv create ${{ matrix.arch }}-windows
-
-      - name: Create Zipfile from build
-        run: |
-          Compress-Archive -Path ${{ matrix.arch }}-windows -DestinationPath .\python-${{ matrix.arch }}-windows.zip
-
       - name: Upload Build Logs
         uses: actions/upload-artifact@v3
         if: always()
@@ -217,8 +193,8 @@ jobs:
       - name: Upload Zipfile
         uses: actions/upload-artifact@v3
         with:
-          name: python-${{ matrix.arch }}-windows.zip
-          path: python-${{ matrix.arch }}-windows.zip
+          name: ${{ matrix.arch }}-win.tar.xz
+          path: build/${{ matrix.arch }}-win.tar.xz
           retention-days: 5
 
       - name: Set Exit Status

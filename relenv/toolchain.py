@@ -81,10 +81,10 @@ def fetch(arch, toolchain, clean=False):
     if clean:
         shutil.rmtree(archdir)
     if archdir.exists():
-        print("Toolchain directory exists, skipping {}".format(arch))
+        print(f"Toolchain directory exists, skipping {arch}")
         return
     url = TC_URL.format(version="0.0.0", host=platform.machine(), triplet=triplet)
-    print("Fetching {}".format(url))
+    print(f"Fetching {url}")
     archive = download_url(url, toolchain)
     extract_archive(toolchain, archive)
 
@@ -170,7 +170,7 @@ def main(args):
         args.arches = {"x86_64", "aarch64"}
     machine = platform.machine()
     dirs = work_dirs()
-    print(dirs.toolchain)
+    print(f"Toolchain directory: {dirs.toolchain}")
     if not dirs.toolchain.exists():
         os.makedirs(dirs.toolchain)
     if args.command == "fetch":
