@@ -51,7 +51,7 @@ jobs:
                 - '**'
             toolchain:
               - added|modified:
-                - '.github/workflows/*toolhcain*.yml'
+                - '.github/workflows/*toolchain*.yml'
                 - 'relenv/toolchain.py'
                 - 'relenv/_toolchain/**'
 
