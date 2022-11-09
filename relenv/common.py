@@ -3,7 +3,6 @@
 """
 Common classes and values used around relenv
 """
-
 import os
 import pathlib
 import platform
@@ -13,7 +12,6 @@ import tarfile
 import time
 import urllib.error
 import urllib.request
-
 
 # relenv package version
 __version__ = "0.0.1"
