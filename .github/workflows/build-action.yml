@@ -19,7 +19,7 @@ jobs:
           - x86_64
           - aarch64
 
-    name: "Linux"
+    name: "Python Linux"
 
     runs-on: ubuntu-22.04
 
@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get install build-essential bison linux-headers-$(uname -r)
+          sudo apt-get install build-essential bison
           python3 -m pip install nox
 
       - name: Fetch Toolchain
@@ -87,7 +87,7 @@ jobs:
           if-no-files-found: error
 
   build_macos:
-    name: "macOS"
+    name: "Python macOS"
 
     runs-on: macos-12
 
@@ -145,7 +145,7 @@ jobs:
           if-no-files-found: error
 
   build_windows:
-    name: "Windows"
+    name: "Python Windows"
     runs-on: windows-latest
 
     strategy:
