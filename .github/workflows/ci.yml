@@ -18,6 +18,11 @@ on:
           -C--global-option=--tag-build=dev$(git rev-parse --short HEAD)
           --wheel
           --outdir dist/
+    secrets:
+      SSHKEY:
+        required: false
+      PYPI_API_TOKEN:
+        required: false
 
 permissions:
   contents: read
