@@ -1,6 +1,21 @@
 name: Release
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      kind:
+        required: false
+        type: string
+        default: dev
+      package_command:
+        required: false
+        type: string
+        description: Command used to build python package
+        default: >-
+          python -m
+          build
+          --wheel
+          --outdir dist/
 
 permissions:
   contents: read
@@ -12,3 +27,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    with:
+      kind: "${{ inputes.kind }}"
+      package_command: "${{ inputes.package_command }}"
