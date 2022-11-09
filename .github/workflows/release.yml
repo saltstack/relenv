@@ -1,4 +1,4 @@
-name: Release
+name: Build and Release
 
 on:
   workflow_dispatch:
@@ -17,16 +17,10 @@ on:
           --wheel
           --outdir dist/
 
-permissions:
-  contents: read
-
 jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
-    permissions:
-      contents: read
-      pull-requests: read
     with:
       kind: "${{ inputs.kind }}"
       package_command: "${{ inputs.package_command }}"

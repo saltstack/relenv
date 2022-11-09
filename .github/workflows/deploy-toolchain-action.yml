@@ -34,14 +34,6 @@ jobs:
       with:
         name: toolchain-${{ matrix.host }}-${{ matrix.target }}.tar.xz
 
-    - name: List Contents
-      run: |
-        ls -lah
-
-    - name: Test Secret
-      run: |
-        echo "${SSHKEY}" | wc
-
     - name: Setup Private Key
       run: |
         ssh-agent -a $SSH_AUTH_SOCK > /dev/null
@@ -52,4 +44,11 @@ jobs:
         mkdir -p /home/runner/.ssh
         touch /home/runner/.ssh/known_hosts
         ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
+
+    - name: Ensure Toolchain Directory Exists
+      run: |
+        ssh cicd@d1.h4.mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/
+
+    - name: Deploy Toolchain: ${{ matrix.host }}-${{ matrix.target }}.tar.xz
+      run: |
         scp toolchain-${{ matrix.host }}-${{ matrix.target }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}.tar.xz"
