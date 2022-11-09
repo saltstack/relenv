@@ -28,5 +28,5 @@ jobs:
       contents: read
       pull-requests: read
     with:
-      kind: "${{ inputes.kind }}"
-      package_command: "${{ inputes.package_command }}"
+      kind: "${{ inputs.kind }}"
+      package_command: "${{ inputs.package_command }}"
