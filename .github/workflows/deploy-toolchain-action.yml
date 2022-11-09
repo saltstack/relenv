@@ -49,6 +49,6 @@ jobs:
       run: |
         ssh cicd@d1.h4.mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/
 
-    - name: Deploy Toolchain: ${{ matrix.host }}-${{ matrix.target }}.tar.xz
+    - name: "Deploy Toolchain: ${{ matrix.host }}-${{ matrix.target }}.tar.xz"
       run: |
         scp toolchain-${{ matrix.host }}-${{ matrix.target }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}.tar.xz"
