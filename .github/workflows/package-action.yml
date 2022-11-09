@@ -3,15 +3,24 @@ name: Relenv Python Package
 on:
   workflow_call:
     inputs:
-      version:
+      kind:
         required: false
         type: string
-        description: Version to author
-    secrets:
-      TEST_PYPI_API_TOKEN:
+        default: dev
+      cmd:
         required: false
-      PYPI_API_TOKEN:
-        required: false
+        type: string
+        description: Command used to build python package
+        default: >-
+          python -m
+          build
+          -C--global-option=egg_info
+          -C--global-option=--tag-build=dev$(git rev-parse --short HEAD)
+          --wheel
+          --outdir dist/
+    outputs:
+      version:
+        value: "${{ jobs.build.outputs.version }}"
 
 jobs:
   build:
@@ -31,14 +40,19 @@ jobs:
         pip install
         build
         --user
-    - name: Build a binary wheel and a source tarball
+    - name: Install pypa/pkginffo
       run: >-
         python -m
-        build
-        -C--global-option=egg_info
-        -C--global-option=--tag-build=dev$(git rev-parse --short HEAD)
-        --wheel
-        --outdir dist/
+        pip install
+        pkginfo
+        --user
+
+    - name: Echo Build Wheel Command
+      run: echo "${{ inputs.cmd }}"
+
+    - name: Build Wheel
+      run: "${{ inputs.cmd }}"
+
     - name: Python Build Artifact
       uses: actions/upload-artifact@v3
       if: always()
@@ -46,7 +60,7 @@ jobs:
         name: dist
         path: dist/*
         retention-days: 5
-    - name:
+    - name: Read Version
       run: >-
         python3
         -c

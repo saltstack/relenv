@@ -2,11 +2,6 @@ name: Relenv Python Package
 
 on:
   workflow_call:
-    inputs:
-      version:
-        required: false
-        type: string
-        description: Version to author
     secrets:
       PYPI_API_TOKEN:
         required: true
