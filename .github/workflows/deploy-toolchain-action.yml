@@ -47,7 +47,7 @@ jobs:
 
     - name: Ensure Toolchain Directory Exists
       run: |
-        ssh cicd@d1.h4.mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/
+        ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/
 
     - name: "Deploy Toolchain: ${{ matrix.host }}-${{ matrix.target }}.tar.xz"
       run: |
