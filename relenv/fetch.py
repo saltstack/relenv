@@ -26,10 +26,10 @@ def setup_parser(subparsers):
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
-    fetch_subparser = subparsers.add_parser("fetch", description="Fetch relenv builds")
-    fetch_subparser.set_defaults(func=main)
+    subparser = subparsers.add_parser("fetch", description="Fetch relenv builds")
+    subparser.set_defaults(func=main)
 
-    fetch_subparser.add_argument(
+    subparser.add_argument(
         "--arch",
         default=host_arch(),
         choices=arches[sys.platform],
