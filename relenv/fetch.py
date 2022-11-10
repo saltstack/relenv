@@ -15,6 +15,7 @@ from .common import (
     get_triplet,
     host_arch,
     work_dir,
+    __version__,
 )
 
 
@@ -34,6 +35,11 @@ def setup_parser(subparsers):
         choices=arches[sys.platform],
         help="Architecture to download. [default: %(default)s]",
     )
+    subparser.add_argument(
+        "--version",
+        default=__version__,
+        help="Version of relenv to fetch from, by default this is the latest relenv version"
+    )
 
 
 def main(args):
@@ -44,7 +50,7 @@ def main(args):
     :type args: argparse.Namespace
     """
     url = "https://woz.io/relenv/{version}/build/{triplet}.tar.xz".format(
-        version="0.0.0", platform=sys.platform, triplet=get_triplet()
+        version=args.version, platform=sys.platform, triplet=get_triplet()
     )
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
