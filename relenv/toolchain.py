@@ -12,13 +12,13 @@ import sys
 
 from .common import (
     DATA_DIR,
+    __version__,
     download_url,
     extract_archive,
     get_toolchain,
     get_triplet,
     runcmd,
     work_dirs,
-    __version__,
 )
 
 CT_NG_VER = "1.25.0"
@@ -57,11 +57,6 @@ def setup_parser(subparsers):
         default=False,
         action="store_true",
         help="Whether or not to clean the toolchain directories",
-    )
-    subparser.add_argument(
-        "--version",
-        default="latest",
-        help="Version of relenv to fetch from, by default this is the latest relenv version"
     )
     subparser.add_argument(
         "--crosstool-only",
@@ -171,6 +166,7 @@ def main(args):
     :param args: The arguments for the command
     :type args: ``argparse.Namespace``
     """
+    version = os.environ.get("RELENV_FETCH_VERSION", "latest")
     args.arches = {_.lower() for _ in args.arches}
     if not args.arches:
         args.arches = {"x86_64", "aarch64"}
@@ -181,7 +177,7 @@ def main(args):
         os.makedirs(dirs.toolchain)
     if args.command == "fetch":
         for arch in args.arches:
-            fetch(arch, dirs.toolchain, args.clean, args.version)
+            fetch(arch, dirs.toolchain, args.clean)
         sys.exit(0)
     elif args.command == "build":
         ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
