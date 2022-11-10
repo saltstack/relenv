@@ -13,9 +13,6 @@ that pin all Python interaction to the build of your choice.
 Installation
 ============
 
-.. note::
-   This is not accurate yet, currently the only install method is ``pip install git+https://github.com/saltstack/relative-environment-for-python.git``
-
 You can install relenv like any other python package using pip.  Using a virtual environment is recommended.
 
 .. code-block:: bash

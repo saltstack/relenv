@@ -12,7 +12,7 @@ on:
 jobs:
 
   build_toolchain:
-    name: "${{ matrix.target }} on ${{ matrix.host }}"
+    name: "Toolchain ${{ matrix.target }} on ${{ matrix.host }}"
 
     runs-on:  ${{ fromJSON('["ubuntu-22.04", "ARM64"]')[matrix.host == 'aarch64'] }}
 

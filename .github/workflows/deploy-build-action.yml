@@ -37,13 +37,6 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: ${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
-    - name: List Contents
-      run: |
-        ls -lah
-
-    - name: Test Secret
-      run: |
-        echo "${SSHKEY}" | wc
 
     - name: Setup Private Key
       run: |
@@ -55,4 +48,11 @@ jobs:
         mkdir -p /home/runner/.ssh
         touch /home/runner/.ssh/known_hosts
         ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
+
+    - name: Ensure Build Directory Exists
+      run: |
+        ssh cicd@d1.h4.mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
+
+    - name: "Deploy Python Build: ${{ matrix.host }}-${{ matrix.platform }}.tar.xz"
+      run: |
         scp ${{ matrix.arch }}-${{ matrix.platform }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/build/"

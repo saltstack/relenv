@@ -1,4 +1,4 @@
-name: Test
+name: Unit Tests
 
 on:
   workflow_call:
@@ -20,7 +20,7 @@ jobs:
           - macos-12
           - windows-latest
 
-    name: ${{ matrix.runs-on }}
+    name: Unit Test ${{ matrix.runs-on }}
     runs-on: ${{ matrix.runs-on }}
 
     steps:

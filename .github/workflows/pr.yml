@@ -8,13 +8,7 @@ on:
     branches:
       - main
 
-permissions:
-  contents: read
-
 jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
-    permissions:
-      contents: read
-      pull-requests: read

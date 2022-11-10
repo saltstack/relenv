@@ -24,9 +24,6 @@ on:
       PYPI_API_TOKEN:
         required: false
 
-permissions:
-  contents: read
-
 jobs:
 
   get-changed-files:
@@ -54,7 +51,7 @@ jobs:
                 - '**'
             toolchain:
               - added|modified:
-                - '.github/workflows/*toolhcain*.yml'
+                - '.github/workflows/*toolchain*.yml'
                 - 'relenv/toolchain.py'
                 - 'relenv/_toolchain/**'
 
@@ -151,6 +148,8 @@ jobs:
   push-tag:
     name: Push Version Tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: ${{ inputs.kind == 'release' && success() }}
     needs:
       - build-python-package
