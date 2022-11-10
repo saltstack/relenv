@@ -51,7 +51,7 @@ jobs:
 
     - name: Ensure Build Directory Exists
       run: |
-        ssh cicd@d1.h4.mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
+        ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
 
     - name: "Deploy Python Build: ${{ matrix.host }}-${{ matrix.platform }}.tar.xz"
       run: |

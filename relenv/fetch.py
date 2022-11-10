@@ -25,14 +25,19 @@ def setup_parser(subparsers):
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
-    fetch_subparser = subparsers.add_parser("fetch", description="Fetch relenv builds")
-    fetch_subparser.set_defaults(func=main)
+    subparser = subparsers.add_parser("fetch", description="Fetch relenv builds")
+    subparser.set_defaults(func=main)
 
-    fetch_subparser.add_argument(
+    subparser.add_argument(
         "--arch",
         default=host_arch(),
         choices=arches[sys.platform],
         help="Architecture to download. [default: %(default)s]",
+    )
+    subparser.add_argument(
+        "--version",
+        default="latest",
+        help="Version of relenv to fetch from, by default this is the latest relenv version"
     )
 
 
@@ -44,7 +49,7 @@ def main(args):
     :type args: argparse.Namespace
     """
     url = "https://woz.io/relenv/{version}/build/{triplet}.tar.xz".format(
-        version="0.0.0", platform=sys.platform, triplet=get_triplet()
+        version=args.version, platform=sys.platform, triplet=get_triplet()
     )
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)

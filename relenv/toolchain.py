@@ -18,6 +18,7 @@ from .common import (
     get_triplet,
     runcmd,
     work_dirs,
+    __version__,
 )
 
 CT_NG_VER = "1.25.0"
@@ -58,6 +59,11 @@ def setup_parser(subparsers):
         help="Whether or not to clean the toolchain directories",
     )
     subparser.add_argument(
+        "--version",
+        default="latest",
+        help="Version of relenv to fetch from, by default this is the latest relenv version"
+    )
+    subparser.add_argument(
         "--crosstool-only",
         default=False,
         action="store_true",
@@ -65,7 +71,7 @@ def setup_parser(subparsers):
     )
 
 
-def fetch(arch, toolchain, clean=False):
+def fetch(arch, toolchain, clean=False, version=__version__):
     """
     Fetch a toolchain and extract it to the filesystem.
 
@@ -83,7 +89,7 @@ def fetch(arch, toolchain, clean=False):
     if archdir.exists():
         print(f"Toolchain directory exists, skipping {arch}")
         return
-    url = TC_URL.format(version="0.0.0", host=platform.machine(), triplet=triplet)
+    url = TC_URL.format(version=version, host=platform.machine(), triplet=triplet)
     print(f"Fetching {url}")
     archive = download_url(url, toolchain)
     extract_archive(toolchain, archive)
@@ -175,7 +181,7 @@ def main(args):
         os.makedirs(dirs.toolchain)
     if args.command == "fetch":
         for arch in args.arches:
-            fetch(arch, dirs.toolchain, args.clean)
+            fetch(arch, dirs.toolchain, args.clean, args.version)
         sys.exit(0)
     elif args.command == "build":
         ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
