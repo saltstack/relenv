@@ -15,7 +15,6 @@ from .common import (
     get_triplet,
     host_arch,
     work_dir,
-    __version__,
 )
 
 
@@ -37,7 +36,7 @@ def setup_parser(subparsers):
     )
     subparser.add_argument(
         "--version",
-        default=__version__,
+        default="latest",
         help="Version of relenv to fetch from, by default this is the latest relenv version"
     )
 
