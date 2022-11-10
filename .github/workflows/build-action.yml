@@ -22,7 +22,7 @@ jobs:
           - x86_64
           - aarch64
 
-    name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
+    name: "Python Linux ${{ matrix.arch }} on ${{ matrix.host }}"
 
     runs-on: ${{ fromJSON('["ubuntu-22.04", "ARM64"]')[matrix.host == 'aarch64'] }}
 
