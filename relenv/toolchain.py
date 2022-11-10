@@ -177,7 +177,7 @@ def main(args):
         os.makedirs(dirs.toolchain)
     if args.command == "fetch":
         for arch in args.arches:
-            fetch(arch, dirs.toolchain, args.clean)
+            fetch(arch, dirs.toolchain, args.clean, version)
         sys.exit(0)
     elif args.command == "build":
         ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
