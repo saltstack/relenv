@@ -44,11 +44,16 @@ jobs:
 
       - name: Fetch Toolchain
         run: |
-          python3 -m relenv toolchain fetch --arch=${{ matrix.arch }}
+          python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
+
+      - name: Fetch Native Build
+        if: ${{ matrix.arch != matrix.target }}
+        run: |
+          python3 -m relenv fetch
 
       - name: Build
         run: |
-          python3 -m relenv build --arch=${{ matrix.arch }}
+          python3 -m relenv build --arch=${{ matrix.target }}
 
       - name: Verify Build
         run: |
@@ -58,22 +63,22 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.host }}-${{ matrix.arch }}-linux-gnu-logs
+          name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.host }}-${{ matrix.arch }}-linux-gnu.tar.xz"
+      - name: "Upload artifact: build/${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.host }}-${{ matrix.arch }}-linux-gnu.tar.xz
-          path: build/${{ matrix.host }}-${{ matrix.arch }}-linux-gnu.tar.xz
+          name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+          path: build/${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.host }}-${{ matrix.arch }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.host }}-${{ matrix.target }}
 
       - name: Upload Exit Status
         if: always()
