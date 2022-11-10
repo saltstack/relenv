@@ -18,7 +18,7 @@ jobs:
         host:
           - x86_64
           - aarch64
-        arch:
+        target:
           - x86_64
           - aarch64
 
@@ -49,7 +49,7 @@ jobs:
       - name: Fetch Native Build
         if: ${{ matrix.arch != matrix.target }}
         run: |
-          python3 -m relenv fetch
+          python3 -m relenv fetch --arch={{ matrix.target }}
 
       - name: Build
         run: |
