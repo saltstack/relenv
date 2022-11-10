@@ -49,7 +49,7 @@ jobs:
       - name: Fetch Native Build
         if: ${{ matrix.arch != matrix.target }}
         run: |
-          python3 -m relenv fetch --arch={{ matrix.target }}
+          python3 -m relenv fetch --arch=${{ matrix.target }}
 
       - name: Build
         run: |
