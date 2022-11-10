@@ -15,13 +15,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        host:
+          - x86_64
+          - aarch64
         arch:
           - x86_64
           - aarch64
 
-    name: "Python Linux"
+    name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
-    runs-on: ubuntu-22.04
+    runs-on: ${{ fromJSON('["ubuntu-22.04", "ARM64"]')[matrix.host == 'aarch64'] }}
 
     env:
       RELENV_DATA: ${{ github.workspace }}
@@ -43,17 +46,11 @@ jobs:
         run: |
           python3 -m relenv toolchain fetch --arch=${{ matrix.arch }}
 
-      - name: Fetch Native Build
-        if: ${{ matrix.arch == 'aarch64' }}
-        run: |
-          python3 -m relenv fetch
-
       - name: Build
         run: |
           python3 -m relenv build --arch=${{ matrix.arch }}
 
       - name: Verify Build
-        if: ${{ matrix.arch != 'aarch64' }}
         run: |
           nox -e tests -- tests/test_verify_build.py
 
@@ -61,22 +58,22 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.arch }}-linux-gnu-logs
+          name: ${{ matrix.host }}-${{ matrix.arch }}-linux-gnu-logs
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.arch }}-linux-gnu.tar.xz"
+      - name: "Upload artifact: build/${{ matrix.host }}-${{ matrix.arch }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.arch }}-linux-gnu.tar.xz
-          path: build/${{ matrix.arch }}-linux-gnu.tar.xz
+          name: ${{ matrix.host }}-${{ matrix.arch }}-linux-gnu.tar.xz
+          path: build/${{ matrix.host }}-${{ matrix.arch }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.host }}-${{ matrix.arch }}
 
       - name: Upload Exit Status
         if: always()
