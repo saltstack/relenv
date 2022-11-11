@@ -32,7 +32,7 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v3
       with:
-        name: toolchain-${{ matrix.host }}-${{ matrix.target }}.tar.xz
+        name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
 
     - name: Setup Private Key
       run: |
@@ -49,6 +49,6 @@ jobs:
       run: |
         ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/
 
-    - name: "Deploy Toolchain: ${{ matrix.host }}-${{ matrix.target }}.tar.xz"
+    - name: "Deploy Toolchain: ${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz"
       run: |
-        scp toolchain-${{ matrix.host }}-${{ matrix.target }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}.tar.xz"
+        scp toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz"
