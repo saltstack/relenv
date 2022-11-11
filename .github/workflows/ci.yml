@@ -120,7 +120,7 @@ jobs:
   upload-toolchain-artifacts:
     name: Deploy Toolchain
     if: ${{ inputs.kind == 'release' && success() }}
-    uses: ./.github/workflows/deploy-build-action.yml
+    uses: ./.github/workflows/deploy-toolchain-action.yml
     needs:
       - build-python-package
       - toolchain
