@@ -158,7 +158,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Push Tag
-        uses: actions-ecosystem/action-push-tag@v1
+        uses: rickstaa/action-create-tag@v1
         with:
           tag: "v${{ needs.build-python-package.outputs.version }}"
           message: "Version ${{ needs.build-python-package.outputs.version }}"
