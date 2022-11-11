@@ -21,6 +21,7 @@ jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
+    if: contains('["dwoz","MKLeb","s0undt3ch"]', github.actor)
     with:
       kind: "${{ inputs.kind }}"
       package_command: "${{ inputs.package_command }}"
