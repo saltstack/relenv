@@ -39,7 +39,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get install build-essential bison python3-all patchelf
+          sudo apt-get install -y build-essential bison python3-all patchelf
           python3 -m pip install nox
 
       - name: Fetch Toolchain
