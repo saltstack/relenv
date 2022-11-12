@@ -827,16 +827,19 @@ class Builder:
         if fails:
             sys.stderr.write("The following failures were reported\n")
             for fail in fails:
-                with io.open(self.dirs.logs / f"{fail}.log") as fp:
-                    fp.seek(0, 2)
-                    end = fp.tell()
-                    ind = end - 4096
-                    if ind > 0:
-                        fp.seek(ind)
-                    else:
-                        fp.seek(0)
-                    sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
-                    sys.stderr.write(fp.read() + "\n\n")
+                try:
+                    with io.open(self.dirs.logs / f"{fail}.log") as fp:
+                        fp.seek(0, 2)
+                        end = fp.tell()
+                        ind = end - 4096
+                        if ind > 0:
+                            fp.seek(ind)
+                        else:
+                            fp.seek(0)
+                        sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
+                        sys.stderr.write(fp.read() + "\n\n")
+                except FileNotFoundError:
+                    pass
             sys.stderr.flush()
             if cleanup:
                 self.cleanup()
