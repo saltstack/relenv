@@ -899,8 +899,6 @@ class Builder:
             self.clean()
 
         if self.host_arch != self.arch:
-            print(self.host_arch)
-            print(self.arch)
             native_root = DATA_DIR / "native"
             if not native_root.exists():
                 create("native", DATA_DIR)
@@ -1066,7 +1064,7 @@ def finalize(env, dirs, logfp):
         python = dirs.prefix / "bin" / "python3"
         pip = dirs.prefix / "bin" / "pip3"
         if sys.platform == "linux":
-            if env["RELENV_ARCH"] != "x86_64":
+            if env["RELENV_ARCH"] != env["RELENV_HOST_ARCH"]:
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
                 python = env["RELENV_NATIVE_PY"]
                 # pip = pathlib.Path(env["RELENV_NATIVE_PY"]).parent / "pip3"
