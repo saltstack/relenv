@@ -22,7 +22,7 @@ jobs:
           - x86_64
           - aarch64
 
-    name: "Python Linux ${{ matrix.arch }} on ${{ matrix.host }}"
+    name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
     runs-on: ${{ fromJSON('["ubuntu-22.04", "ARM64"]')[matrix.host == 'aarch64'] }}
 
@@ -47,7 +47,7 @@ jobs:
           python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
 
       - name: Fetch Native Build
-        if: ${{ matrix.arch != matrix.target }}
+        if: ${{ matrix.host != matrix.target }}
         run: |
           python3 -m relenv fetch --arch=${{ matrix.target }}
 
