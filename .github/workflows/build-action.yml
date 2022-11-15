@@ -43,7 +43,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get install -y build-essential bison python3-all patchelf
-          python3 -m pip install nox --no-cache
+          python3 -m pip install nox
 
       - name: Fetch Toolchain
         run: |
@@ -59,9 +59,9 @@ jobs:
           python3 -m relenv build --arch=${{ matrix.target }}
 
       - name: Verify Build
-        if: ${{ matrix.host != matrix.target }}
+        if: ${{ matrix.host == matrix.target }}
         run: |
-          nox -e tests -- tests/test_verify_build.py
+          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v3
