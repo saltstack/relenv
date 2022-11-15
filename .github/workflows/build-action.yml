@@ -21,6 +21,9 @@ jobs:
         target:
           - x86_64
           - aarch64
+        exclude:
+          - host: aarch64
+            target: x86_64
 
     name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
@@ -40,7 +43,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get install -y build-essential bison python3-all patchelf
-          python3 -m pip install nox
+          python3 -m pip install nox --no-cache
 
       - name: Fetch Toolchain
         run: |
@@ -56,6 +59,7 @@ jobs:
           python3 -m relenv build --arch=${{ matrix.target }}
 
       - name: Verify Build
+        if: ${{ matrix.host != matrix.target }}
         run: |
           nox -e tests -- tests/test_verify_build.py
 
