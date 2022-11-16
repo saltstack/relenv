@@ -21,9 +21,6 @@ jobs:
         target:
           - x86_64
           - aarch64
-        exclude:
-          - host: aarch64
-            target: x86_64
 
     name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
@@ -75,8 +72,8 @@ jobs:
         uses: actions/upload-artifact@v3
         if: ${{ matrix.host == matrix.target }}
         with:
-          name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
-          path: build/${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+          name: ${{ matrix.target }}-linux-gnu.tar.xz
+          path: build/${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
