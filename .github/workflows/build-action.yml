@@ -59,7 +59,6 @@ jobs:
           python3 -m relenv build --arch=${{ matrix.target }}
 
       - name: Verify Build
-        if: ${{ matrix.host == matrix.target }}
         run: |
           python3 -m nox -e tests -- tests/test_verify_build.py
 
