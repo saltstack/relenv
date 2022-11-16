@@ -49,10 +49,6 @@ jobs:
         run: |
           python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
 
-      - name: Check toolchain dir
-        run: |
-          ls -R $RELENV_DATA/toolchain
-
       - name: Fetch Native Build
         if: ${{ matrix.host != matrix.target }}
         run: |
@@ -63,6 +59,7 @@ jobs:
           python3 -m relenv build --arch=${{ matrix.target }}
 
       - name: Verify Build
+        if: ${{ matrix.host != matrix.target }}
         run: |
           python3 -m nox -e tests -- tests/test_verify_build.py
 
@@ -76,6 +73,7 @@ jobs:
 
       - name: "Upload artifact: build/${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.host == matrix.target }}
         with:
           name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
           path: build/${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
