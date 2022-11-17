@@ -29,6 +29,7 @@ from relenv.common import (
     build_arch,
     work_root,
     work_dirs,
+    get_triplet,
     get_toolchain,
     extract_archive,
     download_url,
@@ -531,15 +532,9 @@ class Builder:
     ):
         self.dirs = work_dirs(root)
         self.build_arch = build_arch()
+        self.build_triplet = get_triplet(self.build_arch)
         self.arch = arch
-
-        if sys.platform == "darwin":
-            self.triplet = "{}-macos".format(self.arch)
-        elif sys.platform == "win32":
-            self.triplet = "{}-win".format(self.arch)
-        else:
-            self.triplet = "{}-linux-gnu".format(self.arch)
-
+        self.triplet = get_triplet(self.arch)
         self.prefix = self.dirs.build / self.triplet
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
@@ -563,19 +558,11 @@ class Builder:
         :type arch: str
         """
         self.arch = arch
-        if sys.platform == "darwin":
-            self.triplet = "{}-macos".format(self.arch)
-            self.prefix = self.dirs.build / "{}-macos".format(self.arch)
-            # XXX Not used for MacOS
-            self.toolchain = None
-        elif sys.platform == "win32":
-            self.triplet = "{}-win".format(self.arch)
-            self.prefix = self.dirs.build / "{}-win".format(self.arch)
-            # XXX Not used for Windows
+        self.triplet = get_triplet(self.arch)
+        self.prefix = self.dirs.build / self.triplet
+        if sys.platform in ["darwin", "win32"]:
             self.toolchain = None
         else:
-            self.triplet = "{}-linux-gnu".format(self.arch)
-            self.prefix = self.dirs.build / self.triplet
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
 
     @property
@@ -659,6 +646,7 @@ class Builder:
 
         env["RELENV_HOST"] = self.triplet
         env["RELENV_HOST_ARCH"] = self.arch
+        env["RELENV_BUILD"] = self.build_triplet
         env["RELENV_BUILD_ARCH"] = self.build_arch
         if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"

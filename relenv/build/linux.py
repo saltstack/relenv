@@ -124,7 +124,7 @@ def build_gdbm(env, dirs, logfp):
             "./configure",
             "--prefix={}".format(dirs.prefix),
             "--enable-libgdbm-compat",
-            "--build={}".format(env["RELENV_BUILD_ARCH"]),
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -147,7 +147,7 @@ def build_ncurses(env, dirs, logfp):
     :type logfp: file
     """
     configure = pathlib.Path(dirs.source) / "configure"
-    if env["RELENV_BUILD_ARCH"] != env["RELENV_HOST_ARCH"]:
+    if env["RELENV_BUILD_ARCH"] == "aarch64":
         os.chdir(dirs.tmpbuild)
         runcmd([str(configure)], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
@@ -164,7 +164,7 @@ def build_ncurses(env, dirs, logfp):
             "--enable-widec",
             "--without-normal",
             "--disable-stripping",
-            "--build={}".format(env["RELENV_BUILD_ARCH"]),
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -201,7 +201,7 @@ def build_libffi(env, dirs, logfp):
             "./configure",
             "--prefix={}".format(dirs.prefix),
             "--disable-multi-os-directory",
-            "--build={}".format(env["RELENV_BUILD_ARCH"]),
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -266,7 +266,7 @@ def build_krb(env, dirs, logfp):
             "--prefix={}".format(dirs.prefix),
             "--without-system-verto",
             "--without-libedit",
-            "--build={}".format(env["RELENV_BUILD_ARCH"]),
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -321,7 +321,7 @@ def build_python(env, dirs, logfp):
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
         "--with-ensurepip=no",
-        "--build={}".format(env["RELENV_BUILD_ARCH"]),
+        "--build={}".format(env["RELENV_BUILD"]),
         "--host={}".format(env["RELENV_HOST"]),
     ]
 
