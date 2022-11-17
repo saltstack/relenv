@@ -1046,18 +1046,15 @@ def finalize(env, dirs, logfp):
 
     def runpip(pkg, upgrade=False):
         target = None
-        # XXX This needs to be more robust
         python = dirs.prefix / "bin" / "python3"
-        pip = dirs.prefix / "bin" / "pip3"
         if sys.platform == "linux":
             if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
                 python = env["RELENV_NATIVE_PY"]
-                # pip = pathlib.Path(env["RELENV_NATIVE_PY"]).parent / "pip3"
-                # pip = dirs.prefix / "bin" / "pip3"
         cmd = [
             str(python),
-            str(pip),
+            "-m",
+            "pip",
             "install",
             str(pkg),
         ]
