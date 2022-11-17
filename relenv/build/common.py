@@ -173,7 +173,7 @@ def build_default(env, dirs, logfp):
     ]
     if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
-            "--build={}".format(env["RELENV_BUILD_ARCH"]),
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)

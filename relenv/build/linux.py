@@ -60,8 +60,6 @@ def populate_env(env, dirs):
     ]
     env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
-    if env["RELENV_BUILD_ARCH"] != env["RELENV_HOST_ARCH"]:
-        env["LDFLAGS"] = "-Wl,--no-apply-dynamic-relocs {}".format(env["LDFLAGS"])
 
 
 def build_bzip2(env, dirs, logfp):
@@ -147,7 +145,7 @@ def build_ncurses(env, dirs, logfp):
     :type logfp: file
     """
     configure = pathlib.Path(dirs.source) / "configure"
-    if env["RELENV_BUILD_ARCH"] == "aarch64":
+    if env["RELENV_HOST_ARCH"] == "aarch64":
         os.chdir(dirs.tmpbuild)
         runcmd([str(configure)], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
