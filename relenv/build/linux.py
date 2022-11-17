@@ -145,7 +145,7 @@ def build_ncurses(env, dirs, logfp):
     :type logfp: file
     """
     configure = pathlib.Path(dirs.source) / "configure"
-    if env["RELENV_HOST_ARCH"] == "aarch64":
+    if env["RELENV_BUILD_ARCH"] == "aarch64" or env["RELENV_HOST_ARCH"] == "aarch64":
         os.chdir(dirs.tmpbuild)
         runcmd([str(configure)], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
