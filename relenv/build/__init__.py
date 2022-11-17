@@ -5,7 +5,7 @@ The ``relenv build`` command.
 """
 from . import linux, darwin, windows
 
-from ..common import host_arch
+from ..common import build_arch
 
 import sys
 
@@ -33,7 +33,7 @@ def setup_parser(subparsers):
     build_subparser.set_defaults(func=main)
     build_subparser.add_argument(
         "--arch",
-        default=host_arch(),
+        default=build_arch(),
         choices=mod.ARCHES,
         type=str,
         help="The host architecture [default: %(default)s]",

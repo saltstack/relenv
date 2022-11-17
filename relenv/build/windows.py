@@ -43,7 +43,7 @@ def build_python(env, dirs, logfp):
         "x86": "win32",
         "arm64": "arm64",
     }
-    arch = env["RELENV_ARCH"]
+    arch = env["RELENV_HOST_ARCH"]
     plat = arch_to_plat[arch]
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),

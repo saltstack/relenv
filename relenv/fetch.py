@@ -10,10 +10,10 @@ import sys
 from .common import (
     DATA_DIR,
     arches,
+    build_arch,
     download_url,
     extract_archive,
     get_triplet,
-    host_arch,
     work_dir,
 )
 
@@ -29,7 +29,7 @@ def setup_parser(subparsers):
     subparser.set_defaults(func=main)
     subparser.add_argument(
         "--arch",
-        default=host_arch(),
+        default=build_arch(),
         choices=arches[sys.platform],
         help="Architecture to download. [default: %(default)s]",
     )

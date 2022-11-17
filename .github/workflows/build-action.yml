@@ -15,13 +15,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch:
+        host:
+          - x86_64
+          - aarch64
+        target:
           - x86_64
           - aarch64
 
-    name: "Python Linux"
+    name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
-    runs-on: ubuntu-22.04
+    runs-on: ${{ fromJSON('["ubuntu-22.04", "ARM64"]')[matrix.host == 'aarch64'] }}
 
     env:
       RELENV_DATA: ${{ github.workspace }}
@@ -36,47 +39,48 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get install build-essential bison
+          sudo apt-get install -y build-essential bison python3-all patchelf
           python3 -m pip install nox
 
       - name: Fetch Toolchain
         run: |
-          python3 -m relenv toolchain fetch --arch=${{ matrix.arch }}
+          python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
 
       - name: Fetch Native Build
-        if: ${{ matrix.arch == 'aarch64' }}
+        if: ${{ matrix.host != matrix.target }}
         run: |
-          python3 -m relenv fetch
+          python3 -m relenv fetch --arch=${{ matrix.target }}
 
       - name: Build
         run: |
-          python3 -m relenv build --arch=${{ matrix.arch }}
+          python3 -m relenv build --arch=${{ matrix.target }}
 
       - name: Verify Build
-        if: ${{ matrix.arch != 'aarch64' }}
+        if: ${{ matrix.host == matrix.target }}
         run: |
-          nox -e tests -- tests/test_verify_build.py
+          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.arch }}-linux-gnu-logs
+          name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.arch }}-linux-gnu.tar.xz"
+      - name: "Upload artifact: build/${{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
+        if: ${{ matrix.host == matrix.target }}
         with:
-          name: ${{ matrix.arch }}-linux-gnu.tar.xz
-          path: build/${{ matrix.arch }}-linux-gnu.tar.xz
+          name: ${{ matrix.target }}-linux-gnu.tar.xz
+          path: build/${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.arch }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.host }}-${{ matrix.target }}
 
       - name: Upload Exit Status
         if: always()

@@ -26,9 +26,10 @@ from relenv.common import (
     MODULE_DIR,
     DATA_DIR,
     RelenvException,
-    host_arch,
+    build_arch,
     work_root,
     work_dirs,
+    get_triplet,
     get_toolchain,
     extract_archive,
     download_url,
@@ -172,7 +173,7 @@ def build_default(env, dirs, logfp):
     ]
     if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
-            "--build=x86_64-linux-gnu",
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -194,13 +195,13 @@ def build_openssl(env, dirs, logfp):
     arch = "aarch64"
     if sys.platform == "darwin":
         plat = "darwin64"
-        if env["RELENV_ARCH"] == "x86_64":
+        if env["RELENV_HOST_ARCH"] == "x86_64":
             arch = "x86_64-cc"
     else:
         plat = "linux"
-        if env["RELENV_ARCH"] == "x86_64":
+        if env["RELENV_HOST_ARCH"] == "x86_64":
             arch = "x86_64"
-        elif env["RELENV_ARCH"] == "aarch64":
+        elif env["RELENV_HOST_ARCH"] == "aarch64":
             arch = "aarch64"
     runcmd(
         [
@@ -258,7 +259,7 @@ def build_sqlite(env, dirs, logfp):
     ]
     if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
-            "--build=x86_64-linux-gnu",
+            "--build={}".format(env["RELENV_BUILD_ARCH"]),
             "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -530,16 +531,10 @@ class Builder:
         arch="x86_64",
     ):
         self.dirs = work_dirs(root)
-        self.host_arch = host_arch()
+        self.build_arch = build_arch()
+        self.build_triplet = get_triplet(self.build_arch)
         self.arch = arch
-
-        if sys.platform == "darwin":
-            self.triplet = "{}-macos".format(self.arch)
-        elif sys.platform == "win32":
-            self.triplet = "{}-win".format(self.arch)
-        else:
-            self.triplet = "{}-linux-gnu".format(self.arch)
-
+        self.triplet = get_triplet(self.arch)
         self.prefix = self.dirs.build / self.triplet
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
@@ -563,19 +558,11 @@ class Builder:
         :type arch: str
         """
         self.arch = arch
-        if sys.platform == "darwin":
-            self.triplet = "{}-macos".format(self.arch)
-            self.prefix = self.dirs.build / "{}-macos".format(self.arch)
-            # XXX Not used for MacOS
-            self.toolchain = None
-        elif sys.platform == "win32":
-            self.triplet = "{}-win".format(self.arch)
-            self.prefix = self.dirs.build / "{}-win".format(self.arch)
-            # XXX Not used for Windows
+        self.triplet = get_triplet(self.arch)
+        self.prefix = self.dirs.build / self.triplet
+        if sys.platform in ["darwin", "win32"]:
             self.toolchain = None
         else:
-            self.triplet = "{}-linux-gnu".format(self.arch)
-            self.prefix = self.dirs.build / self.triplet
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
 
     @property
@@ -657,12 +644,11 @@ class Builder:
                 "PATH": os.environ["PATH"],
             }
 
-        # This is a bit weird because RELENV_HOST is refering to the build
-        # target. Where as, RELENV_HOST_ARCH is the build host.
         env["RELENV_HOST"] = self.triplet
-        env["RELENV_ARCH"] = self.arch
-        env["RELENV_HOST_ARCH"] = self.host_arch
-        if self.host_arch != self.arch:
+        env["RELENV_HOST_ARCH"] = self.arch
+        env["RELENV_BUILD"] = self.build_triplet
+        env["RELENV_BUILD_ARCH"] = self.build_arch
+        if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
@@ -827,16 +813,19 @@ class Builder:
         if fails:
             sys.stderr.write("The following failures were reported\n")
             for fail in fails:
-                with io.open(self.dirs.logs / f"{fail}.log") as fp:
-                    fp.seek(0, 2)
-                    end = fp.tell()
-                    ind = end - 4096
-                    if ind > 0:
-                        fp.seek(ind)
-                    else:
-                        fp.seek(0)
-                    sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
-                    sys.stderr.write(fp.read() + "\n\n")
+                try:
+                    with io.open(self.dirs.logs / f"{fail}.log") as fp:
+                        fp.seek(0, 2)
+                        end = fp.tell()
+                        ind = end - 4096
+                        if ind > 0:
+                            fp.seek(ind)
+                        else:
+                            fp.seek(0)
+                        sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
+                        sys.stderr.write(fp.read() + "\n\n")
+                except FileNotFoundError:
+                    pass
             sys.stderr.flush()
             if cleanup:
                 self.cleanup()
@@ -895,9 +884,7 @@ class Builder:
         if clean:
             self.clean()
 
-        if self.host_arch != self.arch:
-            print(self.host_arch)
-            print(self.arch)
+        if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"
             if not native_root.exists():
                 create("native", DATA_DIR)
@@ -1018,7 +1005,7 @@ def finalize(env, dirs, logfp):
 
     # Install pip
     python = dirs.prefix / "bin" / "python3"
-    if env["RELENV_ARCH"] != env["RELENV_HOST_ARCH"]:
+    if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
         env["RELENV_CROSS"] = dirs.prefix
         python = env["RELENV_NATIVE_PY"]
     runcmd(
@@ -1059,18 +1046,15 @@ def finalize(env, dirs, logfp):
 
     def runpip(pkg, upgrade=False):
         target = None
-        # XXX This needs to be more robust
         python = dirs.prefix / "bin" / "python3"
-        pip = dirs.prefix / "bin" / "pip3"
         if sys.platform == "linux":
-            if env["RELENV_ARCH"] != "x86_64":
+            if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
                 target = dirs.prefix / "lib" / "python3.10" / "site-packages"
                 python = env["RELENV_NATIVE_PY"]
-                # pip = pathlib.Path(env["RELENV_NATIVE_PY"]).parent / "pip3"
-                # pip = dirs.prefix / "bin" / "pip3"
         cmd = [
             str(python),
-            str(pip),
+            "-m",
+            "pip",
             "install",
             str(pkg),
         ]

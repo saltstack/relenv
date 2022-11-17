@@ -53,7 +53,7 @@ class RelenvException(Exception):
     """
 
 
-def host_arch():
+def build_arch():
     machine = platform.machine()
     return machine.lower()
 
@@ -194,7 +194,7 @@ def get_triplet(machine=None, plat=None):
     if not plat:
         plat = sys.platform
     if not machine:
-        machine = host_arch()
+        machine = build_arch()
     if plat == "darwin":
         return f"{machine}-macos"
     elif plat == "win32":

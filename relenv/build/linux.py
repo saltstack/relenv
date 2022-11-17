@@ -60,8 +60,6 @@ def populate_env(env, dirs):
     ]
     env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
-    if env["RELENV_ARCH"] == "aarch64":
-        env["LDFLAGS"] = "-Wl,--no-apply-dynamic-relocs {}".format(env["LDFLAGS"])
 
 
 def build_bzip2(env, dirs, logfp):
@@ -124,7 +122,7 @@ def build_gdbm(env, dirs, logfp):
             "./configure",
             "--prefix={}".format(dirs.prefix),
             "--enable-libgdbm-compat",
-            "--build=x86_64-linux-gnu",
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -147,7 +145,7 @@ def build_ncurses(env, dirs, logfp):
     :type logfp: file
     """
     configure = pathlib.Path(dirs.source) / "configure"
-    if env["RELENV_ARCH"] == "aarch64":
+    if env["RELENV_BUILD_ARCH"] == "aarch64" or env["RELENV_HOST_ARCH"] == "aarch64":
         os.chdir(dirs.tmpbuild)
         runcmd([str(configure)], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
@@ -164,7 +162,7 @@ def build_ncurses(env, dirs, logfp):
             "--enable-widec",
             "--without-normal",
             "--disable-stripping",
-            "--build=x86_64-linux-gnu",
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -201,7 +199,7 @@ def build_libffi(env, dirs, logfp):
             "./configure",
             "--prefix={}".format(dirs.prefix),
             "--disable-multi-os-directory",
-            "--build=x86_64-linux-gnu",
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -234,7 +232,7 @@ def build_zlib(env, dirs, logfp):
             "--prefix={}".format(dirs.prefix),
             "--libdir={}/lib".format(dirs.prefix),
             "--shared",
-            '--archs="-arch {}"'.format(env["RELENV_ARCH"]),
+            '--archs="-arch {}"'.format(env["RELENV_BUILD_ARCH"]),
         ],
         env=env,
         stderr=logfp,
@@ -255,7 +253,7 @@ def build_krb(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    if env["RELENV_ARCH"] == "aarch64":
+    if env["RELENV_BUILD_ARCH"] != env["RELENV_HOST_ARCH"]:
         env["krb5_cv_attr_constructor_destructor"] = "yes,yes"
         env["ac_cv_func_regcomp"] = "yes"
         env["ac_cv_printf_positional"] = "yes"
@@ -266,7 +264,7 @@ def build_krb(env, dirs, logfp):
             "--prefix={}".format(dirs.prefix),
             "--without-system-verto",
             "--without-libedit",
-            "--build=x86_64-linux-gnu",
+            "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
         env=env,
@@ -321,7 +319,7 @@ def build_python(env, dirs, logfp):
         "--with-openssl={}".format(dirs.prefix),
         "--enable-optimizations",
         "--with-ensurepip=no",
-        "--build={}".format(env["RELENV_ARCH"]),
+        "--build={}".format(env["RELENV_BUILD"]),
         "--host={}".format(env["RELENV_HOST"]),
     ]
 
@@ -340,7 +338,7 @@ def build_python(env, dirs, logfp):
 
     # RELENVCROSS=relenv/_build/aarch64-linux-gnu  relenv/_build/x86_64-linux-gnu/bin/python3 -m ensurepip
     # python = dirs.prefix / "bin" / "python3"
-    # if env["RELENV_ARCH"] == "aarch64":
+    # if env["RELENV_BUILD_ARCH"] == "aarch64":
     #    python = env["RELENV_NATIVE_PY"]
     # env["PYTHONUSERBASE"] = dirs.prefix
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)

@@ -10,7 +10,7 @@ import pathlib
 import sys
 import tarfile
 
-from .common import MODULE_DIR, RelenvException, arches, archived_build, host_arch
+from .common import MODULE_DIR, RelenvException, arches, archived_build, build_arch
 
 
 @contextlib.contextmanager
@@ -51,7 +51,7 @@ def setup_parser(subparsers):
     create_subparser.add_argument("name", help="The name of the directory to create")
     create_subparser.add_argument(
         "--arch",
-        default=host_arch(),
+        default=build_arch(),
         choices=arches[sys.platform],
         type=str,
         help="The host architecture [default: %(default)s]",
@@ -72,7 +72,7 @@ def create(name, dest=None, arch=None):
     :raises CreateException: If there is a problem in creating the relenv environment
     """
     if arch is None:
-        arch = host_arch()
+        arch = build_arch()
     if dest:
         writeto = pathlib.Path(dest) / name
     else:
