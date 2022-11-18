@@ -33,6 +33,7 @@ from relenv.common import (
     get_toolchain,
     extract_archive,
     download_url,
+    get_download_location,
     runcmd,
     LINUX,
     WIN32,
@@ -316,6 +317,14 @@ class Download:
         :return: The path to the downloaded content.
         :rtype: str
         """
+        dest = get_download_location(self.url, self.destination)
+        file_is_valid = False
+        if self.md5sum and os.path.exists(dest):
+            file_is_valid = self.validate_md5sum(dest, self.md5sum)
+        if file_is_valid:
+            log.debug("%s already downloaded, skipping.", self.url)
+            return dest
+
         return download_url(self.url, self.destination)
 
     def fetch_signature(self, version):
