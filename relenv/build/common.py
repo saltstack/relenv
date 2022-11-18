@@ -288,7 +288,14 @@ class Download:
     """
 
     def __init__(
-        self, name, url, signature=None, destination="", version="", md5sum=None
+        self,
+        name,
+        url,
+        signature=None,
+        destination="",
+        version="",
+        md5sum=None,
+        force_download=False,
     ):
         self.name = name
         self.url_tpl = url
@@ -296,6 +303,7 @@ class Download:
         self.destination = destination
         self.version = version
         self.md5sum = md5sum
+        self.force_download = force_download
 
     @property
     def url(self):
@@ -310,20 +318,22 @@ class Download:
     def formatted_url(self):
         return self.url.format(version=self.version)
 
-    def fetch_file(self):
+    def fetch_file(self, force_download=False):
         """
         Download the file.
 
         :return: The path to the downloaded content.
         :rtype: str
         """
-        dest = get_download_location(self.url, self.destination)
-        file_is_valid = False
-        if self.md5sum and os.path.exists(dest):
-            file_is_valid = self.validate_md5sum(dest, self.md5sum)
-        if file_is_valid:
-            log.debug("%s already downloaded, skipping.", self.url)
-            return dest
+        if not force_download:
+            file_is_valid = False
+            dest = get_download_location(self.url, self.destination)
+            if self.md5sum and os.path.exists(dest):
+                file_is_valid = self.validate_md5sum(dest, self.md5sum)
+            if file_is_valid:
+                log.debug("%s already downloaded, skipping.", self.url)
+                print("%s already downloaded, skipping." % self.url)
+                return dest
 
         return download_url(self.url, self.destination)
 
@@ -394,7 +404,7 @@ class Download:
             log.error("md5 validation failed on %s: %s", archive, exc)
             return False
 
-    def __call__(self):
+    def __call__(self, force_download=False):
         """
         Downloads the url and validates the signature and md5 sum.
 
@@ -402,7 +412,9 @@ class Download:
         :rtype: bool
         """
         os.makedirs(self.filepath.parent, exist_ok=True)
-        self.fetch_file()
+        if not force_download:
+            force_download = self.force_download
+        self.fetch_file(force_download=force_download)
         valid = True
         if self.signature is not None:
             valid_sig = self.validate_signature(self.filepath, self.signature)
