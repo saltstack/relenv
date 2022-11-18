@@ -13,6 +13,7 @@ from relenv.common import (
     RelenvException,
     archived_build,
     extract_archive,
+    get_download_location,
     get_toolchain,
     get_triplet,
     runcmd,
@@ -156,3 +157,9 @@ def test_extract_archive(tmp_path, open_arg):
     extract_archive(str(to_dir), str(tar_file))
     assert to_dir.exists()
     assert (to_dir / to_be_archived.name / test_file.name) in to_dir.glob("**/*")
+
+
+def test_get_download_location(tmp_path):
+    url = "https://test.com/1.0.0/test-1.0.0.tar.xz"
+    loc = get_download_location(url, str(tmp_path))
+    assert loc == str(tmp_path / "test-1.0.0.tar.xz")

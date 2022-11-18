@@ -60,10 +60,10 @@ def setup_parser(subparsers):
     # XXX We should automatically skip downloads that can be verified as not
     # being corrupt and this can become --force-download
     build_subparser.add_argument(
-        "--no-download",
+        "--force-download",
         default=False,
         action="store_true",
-        help="Skip downloading source tarballs",
+        help="Force downloading source tarballs even if they exist",
     )
     build_subparser.add_argument(
         "--step",

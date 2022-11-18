@@ -33,6 +33,7 @@ from relenv.common import (
     get_toolchain,
     extract_archive,
     download_url,
+    get_download_location,
     runcmd,
     LINUX,
     WIN32,
@@ -287,11 +288,17 @@ class Download:
     """
 
     def __init__(
-        self, name, url, signature=None, destination="", version="", md5sum=None
+        self,
+        name,
+        url,
+        signature=None,
+        destination="",
+        version="",
+        md5sum=None,
     ):
         self.name = name
         self.url_tpl = url
-        self.signature = signature
+        self.signature_tpl = signature
         self.destination = destination
         self.version = version
         self.md5sum = md5sum
@@ -299,6 +306,10 @@ class Download:
     @property
     def url(self):
         return self.url_tpl.format(version=self.version)
+
+    @property
+    def signature_url(self):
+        return self.signature_tpl.format(version=self.version)
 
     @property
     def filepath(self):
@@ -313,10 +324,10 @@ class Download:
         """
         Download the file.
 
-        :return: The path to the downloaded content.
-        :rtype: str
+        :return: The path to the downloaded content, and whether it was downloaded.
+        :rtype: tuple(str, bool)
         """
-        return download_url(self.url, self.destination)
+        return download_url(self.url, self.destination), True
 
     def fetch_signature(self, version):
         """
@@ -325,7 +336,7 @@ class Download:
         :return: The path to the downloaded signature.
         :rtype: str
         """
-        return download_url(self.url, self.destination)
+        return download_url(self.signature_url, self.destination)
 
     def exists(self):
         """
@@ -385,7 +396,7 @@ class Download:
             log.error("md5 validation failed on %s: %s", archive, exc)
             return False
 
-    def __call__(self):
+    def __call__(self, force_download=False):
         """
         Downloads the url and validates the signature and md5 sum.
 
@@ -393,15 +404,28 @@ class Download:
         :rtype: bool
         """
         os.makedirs(self.filepath.parent, exist_ok=True)
-        self.fetch_file()
+        downloaded = False
+        if force_download:
+            _, downloaded = self.fetch_file()
+        else:
+            file_is_valid = False
+            dest = get_download_location(self.url, self.destination)
+            if self.md5sum and os.path.exists(dest):
+                file_is_valid = self.validate_md5sum(dest, self.md5sum)
+            if file_is_valid:
+                log.debug("%s already downloaded, skipping.", self.url)
+            else:
+                _, downloaded = self.fetch_file()
         valid = True
-        if self.signature is not None:
-            valid_sig = self.validate_signature(self.filepath, self.signature)
-            valid = valid and valid_sig
-        if self.md5sum is not None:
-            valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
-            valid = valid and valid_md5
-        log.debug("Checksum for %s: %s", self.name, self.md5sum)
+        if downloaded:
+            if self.signature_tpl is not None:
+                sig, _ = self.fetch_signature()
+                valid_sig = self.validate_signature(self.filepath, sig)
+                valid = valid and valid_sig
+            if self.md5sum is not None:
+                valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
+                valid = valid and valid_md5
+            log.debug("Checksum for %s: %s", self.name, self.md5sum)
         return valid
 
 
@@ -515,8 +539,8 @@ class Builder:
     :type build_default: types.FunctionType
     :param populate_env: The default function to populate the build environment, defaults to ``populate_env``
     :type populate_env: types.FunctionType
-    :param no_download: If True, doesn't download the archives first, defaults to False
-    :type no_download: bool
+    :param force_download: If True, forces downloading the archives even if they exist, defaults to False
+    :type force_download: bool
     :param arch: The architecture being built
     :type arch: str
     """
@@ -527,7 +551,7 @@ class Builder:
         recipies=None,
         build_default=build_default,
         populate_env=populate_env,
-        no_download=False,
+        force_download=False,
         arch="x86_64",
     ):
         self.dirs = work_dirs(root)
@@ -546,7 +570,7 @@ class Builder:
 
         self.build_default = build_default
         self.populate_env = populate_env
-        self.no_download = no_download
+        self.force_download = force_download
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
@@ -696,7 +720,7 @@ class Builder:
             except FileNotFoundError:
                 pass
 
-    def download_files(self, steps=None):
+    def download_files(self, steps=None, force_download=False):
         """
         Download all of the needed archives.
 
@@ -718,7 +742,9 @@ class Builder:
             event = multiprocessing.Event()
             event.set()
             events[name] = event
-            proc = multiprocessing.Process(name=name, target=download)
+            proc = multiprocessing.Process(
+                name=name, target=download, kwargs={"force_download": force_download}
+            )
             proc.start()
             processes[name] = proc
 
@@ -853,7 +879,9 @@ class Builder:
             )
         return fail
 
-    def __call__(self, steps=None, arch=None, clean=True, cleanup=True, download=True):
+    def __call__(
+        self, steps=None, arch=None, clean=True, cleanup=True, force_download=False
+    ):
         """
         Set the architecture, define the steps, clean if needed, download what is needed, and build.
 
@@ -865,8 +893,8 @@ class Builder:
         :type clean: bool, optional
         :param cleanup: Cleans up after build if true, defaults to True
         :type cleanup: bool, optional
-        :param download: Whether or not to download the content, defaults to True
-        :type download: bool, optional
+        :param force_download: Whether or not to download the content if it already exists, defaults to True
+        :type force_download: bool, optional
         """
         if arch:
             self.set_arch(arch)
@@ -891,9 +919,7 @@ class Builder:
 
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
-        if download:
-            self.download_files(steps)
-
+        self.download_files(steps, force_download=force_download)
         self.build(steps, cleanup)
 
 
@@ -1144,5 +1170,5 @@ def run_build(builder, args):
         arch=args.arch,
         clean=args.clean,
         cleanup=args.no_cleanup,
-        download=not args.no_download,
+        force_download=args.force_download,
     )

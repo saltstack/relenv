@@ -32,7 +32,7 @@ def test_builder_defaults_linux():
     assert builder.toolchain == DATA_DIR / "toolchain" / "x86_64-linux-gnu"
     assert callable(builder.build_default)
     assert callable(builder.populate_env)
-    assert builder.no_download is False
+    assert builder.force_download is False
     assert builder.recipies == {}
 
 

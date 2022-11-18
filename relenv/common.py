@@ -242,6 +242,21 @@ def extract_archive(to_dir, archive):
         t.extractall(to_dir)
 
 
+def get_download_location(url, dest):
+    """
+    Get the full path to where the url will be downloaded to.
+
+    :param url: The url to donwload
+    :type url: str
+    :param dest: Where to download the url to
+    :type dest: str
+
+    :return: The path to where the url will be downloaded to
+    :rtype: str
+    """
+    return os.path.join(dest, os.path.basename(url))
+
+
 def download_url(url, dest):
     """
     Download the url to the provided destination. This method assumes the last
@@ -257,7 +272,7 @@ def download_url(url, dest):
     :return: The path to the downloaded content
     :rtype: str
     """
-    local = os.path.join(dest, os.path.basename(url))
+    local = get_download_location(url, dest)
     n = 0
     while n < 3:
         n += 1
