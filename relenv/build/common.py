@@ -295,19 +295,21 @@ class Download:
         destination="",
         version="",
         md5sum=None,
-        force_download=False,
     ):
         self.name = name
         self.url_tpl = url
-        self.signature = signature
+        self.signature_tpl = signature
         self.destination = destination
         self.version = version
         self.md5sum = md5sum
-        self.force_download = force_download
 
     @property
     def url(self):
         return self.url_tpl.format(version=self.version)
+
+    @property
+    def signature_url(self):
+        return self.signature_tpl.format(version=self.version)
 
     @property
     def filepath(self):
@@ -318,22 +320,13 @@ class Download:
     def formatted_url(self):
         return self.url.format(version=self.version)
 
-    def fetch_file(self, force_download=False):
+    def fetch_file(self):
         """
         Download the file.
 
         :return: The path to the downloaded content, and whether it was downloaded.
         :rtype: tuple(str, bool)
         """
-        if not force_download:
-            file_is_valid = False
-            dest = get_download_location(self.url, self.destination)
-            if self.md5sum and os.path.exists(dest):
-                file_is_valid = self.validate_md5sum(dest, self.md5sum)
-            if file_is_valid:
-                log.debug("%s already downloaded, skipping.", self.url)
-                return dest, False
-
         return download_url(self.url, self.destination), True
 
     def fetch_signature(self, version):
@@ -343,7 +336,7 @@ class Download:
         :return: The path to the downloaded signature.
         :rtype: str
         """
-        return download_url(self.url, self.destination)
+        return download_url(self.signature_url, self.destination)
 
     def exists(self):
         """
@@ -411,13 +404,23 @@ class Download:
         :rtype: bool
         """
         os.makedirs(self.filepath.parent, exist_ok=True)
-        if not force_download:
-            force_download = self.force_download
-        _, downloaded = self.fetch_file(force_download=force_download)
+        downloaded = False
+        if force_download:
+            _, downloaded = self.fetch_file()
+        else:
+            file_is_valid = False
+            dest = get_download_location(self.url, self.destination)
+            if self.md5sum and os.path.exists(dest):
+                file_is_valid = self.validate_md5sum(dest, self.md5sum)
+            if file_is_valid:
+                log.debug("%s already downloaded, skipping.", self.url)
+            else:
+                _, downloaded = self.fetch_file()
         valid = True
         if downloaded:
-            if self.signature is not None:
-                valid_sig = self.validate_signature(self.filepath, self.signature)
+            if self.signature_tpl is not None:
+                sig, _ = self.fetch_signature()
+                valid_sig = self.validate_signature(self.filepath, sig)
                 valid = valid and valid_sig
             if self.md5sum is not None:
                 valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
