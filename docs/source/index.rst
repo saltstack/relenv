@@ -89,10 +89,11 @@ Topics
 .. toctree::
    :maxdepth: 2
 
-   toolchain
    cli/index
+   toolchain
    contributing
    developer/index
+   changelog
 
 
 Relenv has no public API, but you can find documentation for the internals of relenv :doc:`here <developer/index>`.

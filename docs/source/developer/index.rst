@@ -1,7 +1,7 @@
 Relenv's Developer API
 ======================
 
-This is documentation on the internals of relenv.
+Relenv has no stable programable API and is only intended to be used from the command line. This is documentation on the internals of relenv.
 
 .. note::
 
