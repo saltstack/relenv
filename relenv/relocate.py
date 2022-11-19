@@ -281,7 +281,7 @@ def handle_elf(path, libs, rpath_only, root=None):
     needs_rpath = False
     for line in proc.stdout.decode().splitlines():
         if line.find("=>") == -1:
-            log.debug("Skip ldd output line: %s", lin)
+            log.debug("Skip ldd output line: %s", line)
             continue
 
         lib_name, location_info = [_.strip() for _ in line.split("=>", 1)]
