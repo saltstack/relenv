@@ -328,7 +328,6 @@ def handle_elf(path, libs, rpath_only, root=None):
         log.info("Do not adjust rpath of %s", path)
 
 
-
 def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
     """
     The entrypoint into the relocate script.
