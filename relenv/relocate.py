@@ -281,6 +281,7 @@ def handle_elf(path, libs, rpath_only, root=None):
     needs_rpath = False
     for line in proc.stdout.decode().splitlines():
         if line.find("=>") == -1:
+            log.debug("Skip ldd output line: %s", lin)
             continue
 
         lib_name, location_info = [_.strip() for _ in line.split("=>", 1)]
@@ -321,10 +322,14 @@ def handle_elf(path, libs, rpath_only, root=None):
         else:
             relpath = str(pathlib.Path("$ORIGIN") / relpart)
 
+        log.info("Adjust rpath of %s to %s", path, relpath)
         patch_rpath(path, relpath)
+    else:
+        log.info("Do not adjust rpath of %s", path)
 
 
-def main(root, libs_dir=None, rpath_only=True, log_level="INFO"):
+
+def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
     """
     The entrypoint into the relocate script.
 
