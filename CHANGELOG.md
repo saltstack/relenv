@@ -2,7 +2,9 @@
 =====
 
 * Skip downloads that exist and are valid.
-* Inlude changelog in documentation
+* Inlude changelog in documentation.
+* Better help when no sub-command given.
+* Add some debuging or relocate module.
 
 0.1.0
 =====
@@ -13,7 +15,7 @@
 0.0.3
 =====
 
-* Build pipeline improvements
+* Build pipeline improvements.
 
 
 0.0.2
