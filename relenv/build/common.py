@@ -615,12 +615,12 @@ class Builder:
             wait_on = []
         if build_func is None:
             build_func = self.build_default
+        if download is not None:
+            download = Download(name, destination=self.downloads, **download)
         self.recipies[name] = {
             "build_func": build_func,
             "wait_on": wait_on,
-            "download": download
-            if download is None
-            else Download(name, destination=self.downloads, **download),
+            "download": download,
         }
 
     def run(self, name, event, build_func, download):

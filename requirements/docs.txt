@@ -4,3 +4,4 @@
 sphinx
 sphinx-argparse
 furo
+myst-parser
