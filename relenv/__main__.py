@@ -45,7 +45,8 @@ def main():
     try:
         args.func(args)
     except AttributeError:
-        parser.exit(1, "No subcommand given...")
+        parser.print_help()
+        parser.exit(1, "\nNo subcommand given...\n\n")
 
 
 if __name__ == "__main__":
