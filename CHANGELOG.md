@@ -1,3 +1,9 @@
+0.2.0
+=====
+
+* Skip downloads that exist and are valid.
+* Inlude changelog in documentation
+
 0.1.0
 =====
 
