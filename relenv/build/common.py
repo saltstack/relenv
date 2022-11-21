@@ -959,7 +959,7 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
         if isinstance(val, str):
             for _ in (fbuildroot, ftoolchain):
                 val = _(val)
-                print(f"SYSCONFIG {mod.build_time_vars[key]} => {val}")
+                print(f"SYSCONFIG [{key}] {mod.build_time_vars[key]} => {val}")
         data[key] = val
 
     with open(destfile, "w", encoding="utf8") as f:
@@ -985,7 +985,16 @@ def finalize(env, dirs, logfp):
     # Run relok8 to make sure the rpaths are relocatable.
     relocate_main(dirs.prefix)
     # Install relenv-sysconfigdata module
-    pymodules = pathlib.Path(dirs.prefix) / "lib" / "python3.10"
+    libdir = pathlib.Path(dirs.prefix) / "lib"
+
+    def find_pythonlib(libdir):
+        for root, dirs, files in os.walk(libdir):
+            for _ in dirs:
+                if _.startswith("python"):
+                    return _
+
+
+    pymodules = libdir / find_pythonlib(libdir)
 
     def find_sysconfigdata(pymodules):
         for root, dirs, files in os.walk(pymodules):
@@ -1008,13 +1017,13 @@ def finalize(env, dirs, logfp):
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "bin"
     sitecustomize = (
-        bindir.parent / "lib" / "python3.10" / "site-packages" / "sitecustomize.py"
+        pymodules / "site-packages" / "sitecustomize.py"
     )
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
     # Lay down relenv.runtime, we'll pip install the rest later
-    relenv = bindir.parent / "lib" / "python3.10" / "site-packages" / "relenv"
+    relenv = pymodules / "site-packages" / "relenv"
     os.makedirs(relenv, exist_ok=True)
     runtime = MODULE_DIR / "runtime.py"
     dest = relenv / "runtime.py"
@@ -1075,7 +1084,7 @@ def finalize(env, dirs, logfp):
         python = dirs.prefix / "bin" / "python3"
         if sys.platform == "linux":
             if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
-                target = dirs.prefix / "lib" / "python3.10" / "site-packages"
+                target = pymodules / "site-packages"
                 python = env["RELENV_NATIVE_PY"]
         cmd = [
             str(python),
@@ -1100,8 +1109,8 @@ def finalize(env, dirs, logfp):
     globs = [
         "/bin/python*",
         "/bin/pip*",
-        "/lib/python3.10/ensurepip/*",
-        "/lib/python3.10/site-packages/*",
+        "/lib/python*/ensurepip/*",
+        "/lib/python*/site-packages/*",
         "/include/*",
         "*.so",
         "/lib/*.so.*",

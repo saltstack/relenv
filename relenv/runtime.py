@@ -144,6 +144,7 @@ class RelenvImporter:
             debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
+            mod._PIP_USE_SYSCONFIG = True
             try:
                 # Python >= 3.10
                 scheme = mod.get_default_scheme()
@@ -213,11 +214,6 @@ def bootstrap():
     """
     Bootstrap the relenv environment.
     """
-    # XXX This was needed for python3.8, meaning the get_paths hack above
-    # doesn't work??
-    if "RELENV_PIP_DIR" in os.environ:
-        sys.prefix = str(root())
-        sys.exec_prefix = str(root())
     cross = os.environ.get("RELENV_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()
