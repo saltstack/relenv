@@ -214,11 +214,6 @@ def bootstrap():
     """
     Bootstrap the relenv environment.
     """
-    # XXX This was needed for python3.8, meaning the get_paths hack above
-    # doesn't work??
-    if "RELENV_PIP_DIR" in os.environ:
-        sys.prefix = str(root())
-        sys.exec_prefix = str(root())
     cross = os.environ.get("RELENV_CROSS", "")
     if cross:
         crossroot = pathlib.Path(cross).resolve()
