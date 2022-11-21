@@ -144,6 +144,7 @@ class RelenvImporter:
             debug(f"RelenvImporter - load_module {name}")
             mod = importlib.import_module("sysconfig")
             mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
+            mod._PIP_USE_SYSCONFIG = True
             try:
                 # Python >= 3.10
                 scheme = mod.get_default_scheme()
