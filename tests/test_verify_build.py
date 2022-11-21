@@ -163,6 +163,9 @@ def test_pip_install_salt_pip_dir(pipexec, build):
     if sys.platform == "win32":
         names = ["salt-call.exe", "salt-minion.exe"]
 
+    for root, dirs, files in os.walk(build):
+        for file in files:
+            print(file)
     for _ in names:
         script = pathlib.Path(build) / _
         assert script.exists()
