@@ -1053,7 +1053,7 @@ def finalize(env, dirs, logfp):
     # XXX Is fixing shebangs still needed?
     # Fix the shebangs in python's scripts.
     bindir = pathlib.Path(dirs.prefix) / "bin"
-    pyex = bindir / "python3"
+    pyex = bindir / "python3.10"
     shebang = "#!{}".format(str(pyex))
     for root, _dirs, files in os.walk(str(bindir)):
         # print(root), print(dirs), print(files)
