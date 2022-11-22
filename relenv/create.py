@@ -47,7 +47,6 @@ def setup_parser(subparsers):
         description="Create a Relenv environment. This will create a directory of the given name with newly created Relenv environment.",
     )
     create_subparser.set_defaults(func=main)
-
     create_subparser.add_argument("name", help="The name of the directory to create")
     create_subparser.add_argument(
         "--arch",

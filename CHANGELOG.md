@@ -1,3 +1,8 @@
+0.2.1
+=====
+
+* Fix 'RELENV_PIP_DIR' environment variable on python <= 3.10 (Windows)
+
 0.2.0
 =====
 
