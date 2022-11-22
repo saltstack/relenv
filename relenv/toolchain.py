@@ -13,6 +13,8 @@ import sys
 from .common import (
     DATA_DIR,
     __version__,
+    arches,
+    build_arch,
     download_url,
     extract_archive,
     get_toolchain,
@@ -45,12 +47,9 @@ def setup_parser(subparsers):
     )
     subparser.add_argument(
         "--arch",
-        action="append",
-        dest="arches",
-        metavar="ARCH",
-        default=[],
-        choices=["x86_64", "aarch64"],
-        help="Arches to build or fetch, can be specified more than once for multiple arches",
+        default=build_arch(),
+        choices=arches[sys.platform],
+        help="Architecture to build or fetch",
     )
     subparser.add_argument(
         "--clean",
@@ -167,25 +166,20 @@ def main(args):
     :type args: ``argparse.Namespace``
     """
     version = os.environ.get("RELENV_FETCH_VERSION", "latest")
-    args.arches = {_.lower() for _ in args.arches}
-    if not args.arches:
-        args.arches = {"x86_64", "aarch64"}
     machine = platform.machine()
     dirs = work_dirs()
     print(f"Toolchain directory: {dirs.toolchain}")
     if not dirs.toolchain.exists():
         os.makedirs(dirs.toolchain)
     if args.command == "fetch":
-        for arch in args.arches:
-            fetch(arch, dirs.toolchain, args.clean, version)
+        fetch(args.arch, dirs.toolchain, args.clean, version)
         sys.exit(0)
     elif args.command == "build":
         ctngdir = dirs.toolchain / "crosstool-ng-{}".format(CT_NG_VER)
         _configure_ctng(ctngdir, dirs)
         if args.crosstool_only:
             sys.exit(0)
-        for arch in args.arches:
-            build(arch, dirs, machine, ctngdir)
+        build(args.arch, dirs, machine, ctngdir)
 
 
 if __name__ == "__main__":
