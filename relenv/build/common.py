@@ -993,7 +993,6 @@ def finalize(env, dirs, logfp):
                 if _.startswith("python"):
                     return _
 
-
     pymodules = libdir / find_pythonlib(libdir)
 
     def find_sysconfigdata(pymodules):
@@ -1016,9 +1015,7 @@ def finalize(env, dirs, logfp):
 
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "bin"
-    sitecustomize = (
-        pymodules / "site-packages" / "sitecustomize.py"
-    )
+    sitecustomize = pymodules / "site-packages" / "sitecustomize.py"
     with io.open(str(sitecustomize), "w") as fp:
         fp.write(SITECUSTOMIZE)
 
