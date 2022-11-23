@@ -118,6 +118,7 @@ jobs:
 
       - name: Build
         run: |
+          env
           python3 -m relenv build
 
       - name: Verify Build
