@@ -118,7 +118,7 @@ jobs:
 
       - name: Build
         run: |
-          env
+          brew uninstall gettext
           python3 -m relenv build
 
       - name: Verify Build
