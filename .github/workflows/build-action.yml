@@ -118,7 +118,7 @@ jobs:
 
       - name: Build
         run: |
-          brew uninstall gettext
+          brew uninstall --ignore-dependencies gettext
           python3 -m relenv build
 
       - name: Verify Build
