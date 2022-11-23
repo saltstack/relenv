@@ -1,3 +1,9 @@
+0.3.0
+=====
+
+* The toolchain command defaults to the build box architecture
+* Build macos on catalinia for now
+
 0.2.1
 =====
 
