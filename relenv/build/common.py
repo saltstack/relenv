@@ -1218,28 +1218,3 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
             else:
                 if logfp:
                     logfp.write("Skipping {}\n".format(relpath))
-
-
-def run_build(builder, args):
-    """
-    Run the build process.
-
-    :param builder: The instance of ``Builder`` to use
-    :type builder: ``Builder``
-    :param args: The arguments to the build command
-    :type args: ``argparse.Namespace``
-    """
-    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
-    random.seed()
-    builder.set_arch(args.arch)
-    steps = None
-    if args.steps:
-        steps = [_.strip() for _ in args.steps]
-    builder(
-        steps=steps,
-        arch=args.arch,
-        clean=args.clean,
-        cleanup=args.no_cleanup,
-        force_download=args.force_download,
-    )

@@ -131,9 +131,3 @@ def main(args):
     :type args: argparse.Namespace
     """
     run_build(build, args)
-
-
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-
-    main(ArgumentParser())
