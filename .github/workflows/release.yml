@@ -20,6 +20,9 @@ on:
 jobs:
   ci:
     name: CI
+    permissions:
+      contents: write
+      pull-requests: read
     uses: ./.github/workflows/ci.yml
     if: contains('["dwoz","MKLeb","s0undt3ch"]', github.actor)
     with:
