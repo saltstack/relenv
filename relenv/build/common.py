@@ -16,9 +16,6 @@ import random
 import sys
 import io
 import os
-import platform
-import urllib.request
-import urllib.error
 import multiprocessing
 import pprint
 
@@ -126,7 +123,7 @@ def verify_checksum(file, checksum):
     :rtype: bool
     """
     if checksum is None:
-        log.error(f"Can't verify checksum because none was given")
+        log.error("Can't verify checksum because none was given")
         return False
     with open(file, "rb") as fp:
         if checksum != hashlib.md5(fp.read()).hexdigest():
@@ -688,7 +685,7 @@ class Builder:
         logfp.write("*" * 80 + "\n")
         try:
             return build_func(env, dirs, logfp)
-        except Exception as exc:
+        except Exception:
             logfp.write(traceback.format_exc() + "\n")
             sys.exit(1)
         finally:
@@ -758,9 +755,6 @@ class Builder:
                 processes.pop(proc.name)
                 if proc.exitcode != 0:
                     fails.append(proc.name)
-                    is_failure = True
-                else:
-                    is_failure = False
         print_ui(events, processes, fails)
         sys.stdout.write("\n")
         if fails:
@@ -781,7 +775,6 @@ class Builder:
         :type cleanup: bool, optional
         """
         fails = []
-        futures = []
         events = {}
         waits = {}
         processes = {}
@@ -1058,7 +1051,7 @@ def finalize(env, dirs, logfp):
             with open(os.path.join(root, file), "rb") as fp:
                 try:
                     data = fp.read(len(shebang.encode())).decode()
-                except UnicodeError as exc:
+                except UnicodeError:
                     continue
                 except Exception as exc:
                     print("Unhandled exception: {}".format(exc))
