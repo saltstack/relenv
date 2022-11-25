@@ -113,6 +113,7 @@ def test_pip_install_salt(pipexec, build):
     ]
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
+    env["USE_STATIC_REQUIREMENTS"] = "1"
 
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
@@ -155,6 +156,7 @@ def test_pip_install_salt_pip_dir(pipexec, build):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_PIP_DIR"] = "yes"
+    env["USE_STATIC_REQUIREMENTS"] = "1"
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
