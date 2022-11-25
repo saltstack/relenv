@@ -166,6 +166,7 @@ class RelenvImporter:
             except ImportError:
                 debug("Unable to import relenv-sysconfigdata")
                 return mod
+            debug(f"RelenvImporter - MODULE_DIR {MODULE_DIR}")
             buildroot = MODULE_DIR.parent.parent.parent.parent
             toolchain = DATA_DIR / "toolchain" / get_triplet()
             build_time_vars = {}
