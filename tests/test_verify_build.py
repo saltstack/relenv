@@ -129,6 +129,26 @@ def test_pip_install_salt(pipexec, build):
             script = pathlib.Path(build) / "bin" / _
         assert script.exists()
 
+def test_pip_install_salt_w_static_requirements(pipexec, build):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    env["USE_STATIC_REQUIREMENTS"] = "1"
+    p = subprocess.run(["git", "clone", "git@github.com:saltstack/salt.git"])
+
+    p = subprocess.run([str(pipexec), "install", "./salt", "--no-cache"], env=env)
+    assert p.returncode == 0, f"Failed to pip install ./salt"
+
+    names = ["salt", "salt-call", "salt-master", "salt-minion"]
+    if sys.platform == "win32":
+        names = ["salt-call.exe", "salt-minion.exe"]
+
+    for _ in names:
+        if sys.platform == "win32":
+            script = pathlib.Path(build) / "Scripts" / _
+        else:
+            script = pathlib.Path(build) / "bin" / _
+        assert script.exists()
+
 
 def test_pip_install_cryptography(pipexec):
     packages = [
