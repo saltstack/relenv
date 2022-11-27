@@ -129,6 +129,7 @@ def test_pip_install_salt(pipexec, build):
             script = pathlib.Path(build) / "bin" / _
         assert script.exists()
 
+
 def test_pip_install_salt_w_static_requirements(pipexec, build):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
