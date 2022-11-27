@@ -97,7 +97,6 @@ class RelenvImporter:
     loading_sysconfig_data = False
     loading_sysconfig = False
 
-    build_time_vars = None
     sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
 
     def find_module(self, module_name, package_path=None):
@@ -122,12 +121,6 @@ class RelenvImporter:
                 return None
             debug(f"RelenvImporter - match {module_name}")
             self.loading_pip_scripts = True
-            return self
-        elif module_name == self.sysconfigdata:
-            if self.loading_sysconfig_data:
-                return None
-            debug(f"RelenvImporter - match {module_name}")
-            self.loading_sysconfig_data = True
             return self
         return None
 
@@ -158,56 +151,8 @@ class RelenvImporter:
             mod = importlib.import_module(name)
             mod.ScriptMaker._build_shebang = _build_shebang
             self.loading_pip_scripts = False
-        elif name == self.sysconfigdata:
-            debug(f"RelenvImporter - load_module {name}")
-            mod = importlib.import_module(name)
-            try:
-                relmod = importlib.import_module("relenv-sysconfigdata")
-            except ImportError:
-                debug("Unable to import relenv-sysconfigdata")
-                return mod
-            buildroot = MODULE_DIR.parent.parent.parent.parent
-            toolchain = DATA_DIR / "toolchain" / get_triplet()
-            build_time_vars = {}
-            for key in relmod.build_time_vars:
-                val = relmod.build_time_vars[key]
-                orig = val
-                if isinstance(val, str):
-                    val = val.format(
-                        BUILDROOT=buildroot,
-                        TOOLCHAIN=toolchain,
-                    )
-                build_time_vars[key] = val
-                # self.build_time_vars.build_time_vars = build_time_vars
-                mod.build_time_vars = build_time_vars
-            self.loading_sysconfig_data = False
-            return self
         sys.modules[name] = mod
         return mod
-
-
-class BuildTimeVars(collections.abc.Mapping):
-    """
-    A dictionary-like object holding build-time variables.
-    """
-
-    # This is getting set in RelenvImporter
-    _build_time_vars = {}
-
-    def __getitem__(self, key, *args, **kwargs):
-        debug(f"BuildTimeVars - getitem {name}")
-        val = self._build_time_vars.__getitem__(key, *args, **kwargs)
-        return val.format(
-            BUILDROOT=self.buildroot,
-            TOOLCHAIN=self.toolchain,
-        )
-        return val
-
-    def __iter__(self):
-        return iter(self._build_time_vars)
-
-    def __len__(self):
-        return len(self._build_time_vars)
 
 
 def bootstrap():
@@ -252,7 +197,5 @@ def bootstrap():
         path = pathlib.Path(_.strip().strip('"'))
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
         os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
-    build_time_vars = BuildTimeVars()
     importer = RelenvImporter()
-    importer.build_time_vars = build_time_vars
     sys.meta_path = [importer] + sys.meta_path
