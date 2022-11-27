@@ -41,10 +41,7 @@ if sys.platform == "win32":
 else:
     DEFAULT_DATA_DIR = pathlib.Path.home() / ".local" / "relenv"
 
-if "RELENV_DATA" in os.environ:
-    DATA_DIR = pathlib.Path(os.environ["RELENV_DATA"]).resolve()
-else:
-    DATA_DIR = DEFAULT_DATA_DIR
+DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve()
 
 
 class RelenvException(Exception):

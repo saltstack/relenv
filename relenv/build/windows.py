@@ -2,13 +2,18 @@
 # SPDX-License-Identifier: Apache-2
 import glob
 import shutil
-import urllib.request
 import sys
-from .common import *
+import io
+import os
+import pathlib
+import tarfile
+
+from .common import Builder, runcmd, create_archive, MODULE_DIR, SITECUSTOMIZE
+from ..common import arches, WIN32
 
 ARCHES = arches[WIN32]
 
-if sys.platform == "win32":
+if sys.platform == WIN32:
     import ctypes
 
     kernel32 = ctypes.windll.kernel32
@@ -213,13 +218,3 @@ build.add(
     build_func=finalize,
     wait_on=["python"],
 )
-
-
-def main(args):
-    """
-    The entrypoint into the Windows build.
-
-    :param args: The arguments for the build
-    :type args: argparse.Namespace
-    """
-    run_build(build, args)

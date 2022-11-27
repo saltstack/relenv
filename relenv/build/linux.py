@@ -1,6 +1,7 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 from .common import *
+from ..common import arches, LINUX
 import textwrap
 
 ARCHES = arches[LINUX]
@@ -303,7 +304,10 @@ def build_python(env, dirs, logfp):
         [
             "sed",
             "-i",
-            "s/ac_cv_enable_implicit_function_declaration_error=yes/ac_cv_enable_implicit_function_declaration_error=no/g",
+            (
+                "s/ac_cv_enable_implicit_function_declaration_error=yes/"
+                "ac_cv_enable_implicit_function_declaration_error=no/g"
+            ),
             "configure",
         ]
     )
