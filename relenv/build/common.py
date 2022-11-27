@@ -58,7 +58,7 @@ NODOWLOAD = False
 SITECUSTOMIZE = """\"\"\"
 Relenv site customize
 \"\"\"
-import site, os
+import os, pathlib, site, sys
 
 # Remove any paths not relative to relenv's root directory.
 path = []
