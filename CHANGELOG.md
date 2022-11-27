@@ -1,3 +1,12 @@
+0.4.0
+=====
+
+* Fix issue where relenv runtime was being imported from user site packages
+* Added test to install salt with USE_STATIC_PACAKGES environment set
+* Switch CI/CD to use saltstack hosted runners
+* General code cleanup
+
+
 0.3.0
 =====
 
