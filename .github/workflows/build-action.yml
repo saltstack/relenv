@@ -24,7 +24,11 @@ jobs:
 
     name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
-    runs-on: ${{ fromJSON('["ubuntu-22.04", "ARM64"]')[matrix.host == 'aarch64'] }}
+    runs-on:
+      - self-hosted
+      - linux
+      - src-build
+      - ${{ matrix.host }}
 
     env:
       RELENV_DATA: ${{ github.workspace }}
