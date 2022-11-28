@@ -97,8 +97,7 @@ jobs:
   build_macos:
     name: "Python macOS"
 
-    #runs-on: macos-12
-    runs-on: macos-10.15
+    runs-on: macos-12
 
     strategy:
       fail-fast: false
@@ -118,6 +117,7 @@ jobs:
 
       - name: Build
         run: |
+          brew uninstall --ignore-dependencies gettext
           python3 -m relenv build
 
       - name: Verify Build
