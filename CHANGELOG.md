@@ -1,3 +1,9 @@
+0.4.1
+=====
+
+* Work around issue on Mac where Python is linking to /usr/local
+  [Issue #46](https://github.com/saltstack/relative-environment-for-python/issues/46)
+
 0.4.0
 =====
 
