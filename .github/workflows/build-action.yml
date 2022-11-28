@@ -97,8 +97,7 @@ jobs:
   build_macos:
     name: "Python macOS"
 
-    #runs-on: macos-12
-    runs-on: macos-10.15
+    runs-on: macos-12
 
     strategy:
       fail-fast: false
