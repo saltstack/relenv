@@ -163,11 +163,12 @@ def bootstrap():
         crossroot = pathlib.Path(cross).resolve()
         sys.prefix = str(crossroot)
         sys.exec_prefix = str(crossroot)
+        # XXX What about dist-packages
         sys.path = [
             str(crossroot / "lib" / "python3.10"),
             str(crossroot / "lib" / "python3.10" / "lib-dynload"),
             str(crossroot / "lib" / "python3.10" / "site-packages"),
-        ] + [_ for _ in sys.path if _.find("site-packages") == -1]
+        ] + [_ for _ in sys.path if "site-packages" not in _]
 
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
