@@ -1,3 +1,8 @@
+0.4.2
+=====
+
+* General code clean up based on pylint results 
+
 0.4.1
 =====
 
