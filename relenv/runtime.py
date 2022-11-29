@@ -19,7 +19,7 @@ import shutil
 import subprocess
 import sys
 
-from .common import DATA_DIR, MODULE_DIR, get_triplet
+from .common import MODULE_DIR
 
 
 def debug(string):
@@ -38,9 +38,8 @@ def root():
     if sys.platform == "win32":
         # /Lib/site-packages/relenv/
         return MODULE_DIR.parent.parent.parent
-    else:
-        # /lib/pythonX.X/site-packages/relenv/
-        return MODULE_DIR.parent.parent.parent.parent
+    # /lib/pythonX.X/site-packages/relenv/
+    return MODULE_DIR.parent.parent.parent.parent
 
 
 def _build_shebang(*args, **kwargs):
@@ -164,11 +163,13 @@ def bootstrap():
         crossroot = pathlib.Path(cross).resolve()
         sys.prefix = str(crossroot)
         sys.exec_prefix = str(crossroot)
+        # XXX What about dist-packages
         sys.path = [
             str(crossroot / "lib" / "python3.10"),
             str(crossroot / "lib" / "python3.10" / "lib-dynload"),
             str(crossroot / "lib" / "python3.10" / "site-packages"),
-        ] + [x for x in sys.path if x.find("site-packages") == -1]
+        ] + [_ for _ in sys.path if "site-packages" not in _]
+
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
@@ -193,9 +194,10 @@ def bootstrap():
             debug(msg)
             return
 
-        label, _ = proc.stdout.split(":")
-        path = pathlib.Path(_.strip().strip('"'))
+        _, directory = proc.stdout.split(":")
+        path = pathlib.Path(directory.strip().strip('"'))
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
         os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
+
     importer = RelenvImporter()
     sys.meta_path = [importer] + sys.meta_path

@@ -3,8 +3,10 @@
 """
 The darwin build process.
 """
+import io
 
-from .common import *
+from ..common import arches, DARWIN
+from .common import Builder, runcmd, finalize, build_openssl, build_sqlite
 
 ARCHES = arches[DARWIN]
 
@@ -121,19 +123,3 @@ build.add(
         "python",
     ],
 )
-
-
-def main(args):
-    """
-    The entrypoint into the darwin build.
-
-    :param args: The arguments for the build
-    :type args: argparse.Namespace
-    """
-    run_build(build, args)
-
-
-if __name__ == "__main__":
-    from argparse import ArgumentParser
-
-    main(ArgumentParser())

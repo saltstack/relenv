@@ -33,9 +33,6 @@ from relenv.common import (
     get_download_location,
     runcmd,
     LINUX,
-    WIN32,
-    DARWIN,
-    arches,
 )
 from relenv.relocate import main as relocate_main
 from relenv.create import create
@@ -130,7 +127,7 @@ for key in _build_time_vars:
 """
 
 
-def print_ui(events, processes, fails, flipstat={}):
+def print_ui(events, processes, fails, flipstat=None):
     """
     Prints the UI during the relenv building process.
 
@@ -143,6 +140,8 @@ def print_ui(events, processes, fails, flipstat={}):
     :param flipstat: A dictionary of process statuses, defaults to {}
     :type flipstat: dict, optional
     """
+    if flipstat is None:
+        flipstat = {}
     if CICD:
         sys.stdout.flush()
         return
@@ -1144,7 +1143,7 @@ def finalize(env, dirs, logfp):
     def runpip(pkg, upgrade=False):
         target = None
         python = dirs.prefix / "bin" / "python3"
-        if sys.platform == "linux":
+        if sys.platform == LINUX:
             if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
                 target = pymodules / "site-packages"
                 python = env["RELENV_NATIVE_PY"]
@@ -1218,28 +1217,3 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
             else:
                 if logfp:
                     logfp.write("Skipping {}\n".format(relpath))
-
-
-def run_build(builder, args):
-    """
-    Run the build process.
-
-    :param builder: The instance of ``Builder`` to use
-    :type builder: ``Builder``
-    :param args: The arguments to the build command
-    :type args: ``argparse.Namespace``
-    """
-    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
-    random.seed()
-    builder.set_arch(args.arch)
-    steps = None
-    if args.steps:
-        steps = [_.strip() for _ in args.steps]
-    builder(
-        steps=steps,
-        arch=args.arch,
-        clean=args.clean,
-        cleanup=args.no_cleanup,
-        force_download=args.force_download,
-    )

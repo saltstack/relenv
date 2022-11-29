@@ -3,11 +3,13 @@
 """
 The ``relenv build`` command.
 """
+import sys
+import random
+import codecs
+
 from . import linux, darwin, windows
 
 from ..common import build_arch
-
-import sys
 
 
 def platform_module():
@@ -91,4 +93,17 @@ def main(args):
     if not mod:
         print("Unsupported platform")
         sys.exit(1)
-    mod.main(args)
+    random.seed()
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+    mod.build.set_arch(args.arch)
+    steps = None
+    if args.steps:
+        steps = [_.strip() for _ in args.steps]
+    mod.build(
+        steps=steps,
+        arch=args.arch,
+        clean=args.clean,
+        cleanup=args.no_cleanup,
+        force_download=args.force_download,
+    )
