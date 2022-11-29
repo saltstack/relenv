@@ -16,7 +16,6 @@ import urllib.request
 # relenv package version
 __version__ = "0.4.2"
 
-CICD = "CI" in os.environ
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
 LINUX = "linux"
@@ -282,7 +281,7 @@ def download_url(url, dest, verbose=True):
             fin = urllib.request.urlopen(url)
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
             if n == 3:
-                print(f"Unable to download: {url} {exc}", file=sys.stderr)
+                print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
                 raise
             time.sleep(n * 10)
     fout = open(local, "wb")

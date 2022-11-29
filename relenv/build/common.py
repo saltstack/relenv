@@ -20,7 +20,6 @@ import multiprocessing
 import pprint
 
 from relenv.common import (
-    CICD,
     DATA_DIR,
     LINUX,
     MODULE_DIR,
