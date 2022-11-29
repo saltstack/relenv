@@ -115,10 +115,17 @@ jobs:
         run: |
           pip3 install nox
 
-      - name: Build
+      - name: Uninstall gettext
         run: |
           brew uninstall --ignore-dependencies gettext
+
+      - name: Build
+        run: |
           python3 -m relenv build
+
+      - name: Re-install gettext
+        run: |
+          brew install gettext
 
       - name: Verify Build
         run: |
