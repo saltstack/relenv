@@ -20,19 +20,19 @@ import multiprocessing
 import pprint
 
 from relenv.common import (
-    MODULE_DIR,
     DATA_DIR,
+    LINUX,
+    MODULE_DIR,
     RelenvException,
     build_arch,
+    download_url,
+    extract_archive,
+    get_download_location,
+    get_toolchain,
+    get_triplet,
+    runcmd,
     work_root,
     work_dirs,
-    get_triplet,
-    get_toolchain,
-    extract_archive,
-    download_url,
-    get_download_location,
-    runcmd,
-    LINUX,
 )
 from relenv.relocate import main as relocate_main
 from relenv.create import create
@@ -383,7 +383,7 @@ class Download:
         :return: The path to the downloaded content, and whether it was downloaded.
         :rtype: tuple(str, bool)
         """
-        return download_url(self.url, self.destination), True
+        return download_url(self.url, self.destination, CICD), True
 
     def fetch_signature(self, version):
         """
@@ -392,7 +392,7 @@ class Download:
         :return: The path to the downloaded signature.
         :rtype: str
         """
-        return download_url(self.signature_url, self.destination)
+        return download_url(self.signature_url, self.destination, CICD)
 
     def exists(self):
         """
