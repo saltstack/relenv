@@ -52,31 +52,37 @@ CICD = "CI" in os.environ
 NODOWLOAD = False
 
 
-SITECUSTOMIZE = """\"\"\"
+SITECUSTOMIZE = '''"""
 Relenv site customize
-\"\"\"
-import os, pathlib, site, sys
+"""
+import os
+import site
+import sys
 
-# Remove any paths not relative to relenv's root directory.
-path = []
-root = pathlib.Path(__file__).parent.parent.parent.parent
-for _ in sys.path:
-    try:
-        if pathlib.Path(_).relative_to(root):
-            path.append(_)
-    except ValueError:
-        continue
-sys.path = path
+# Remove any paths not relative to relenv's root directory, or a virtualenv's
+# root directory if one was created from the relenv python
+
+# On non virtualenv scenarios, sys.prefix is the same as sys.base_prefix,
+# while on virtualenv scenarios, they differ. Both of these prefixes should not
+# be removed from sys.path
+__valid_path_prefixes = tuple({sys.prefix, sys.base_prefix})
+__sys_path = []
+for __path in sys.path:
+    if __path.startswith(__valid_path_prefixes):
+        __sys_path.append(__path)
+
+# Replace sys.path
+sys.path[:] = __sys_path
 site.ENABLE_USER_SITE = False
 
 try:
     import relenv.runtime
 except ImportError:
     if "RELENV_DEBUG" in os.environ:
-        print("Unable to find relenv.runtime for bootstrap.")
+        print("Unable to find relenv.runtime for bootstrap.", file=sys.stderr, flush=True)
 else:
     relenv.runtime.bootstrap()
-"""
+'''
 
 SYSCONFIGDATA = """
 import pathlib, sys, platform, os
