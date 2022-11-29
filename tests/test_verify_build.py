@@ -236,4 +236,3 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
         assert (session / "Scripts" / "nox.exe").exists()
     else:
         assert (session / "bin" / "nox").exists()
-    print(list((session / "bin").iterdir()))
