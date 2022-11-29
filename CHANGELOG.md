@@ -1,3 +1,9 @@
+0.4.3
+=====
+
+* Fix virtualenvs created from relenvs
+* The fetch and toolchain always show download urls and destinations
+
 0.4.2
 =====
 
