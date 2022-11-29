@@ -26,6 +26,7 @@ def populate_env(env, dirs):
         "-L{prefix}/lib",
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
+    env["MACOSX_DEPLOYMENT_TARGET"] = "10.15"
     cflags = [
         "-L{prefix}/lib",
         "-I{prefix}/include",
