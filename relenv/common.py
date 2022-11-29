@@ -16,6 +16,7 @@ import urllib.request
 # relenv package version
 __version__ = "0.4.2"
 
+CICD = "CI" in os.environ
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
 LINUX = "linux"
@@ -254,7 +255,7 @@ def get_download_location(url, dest):
     return os.path.join(dest, os.path.basename(url))
 
 
-def download_url(url, dest):
+def download_url(url, dest, verbose=True):
     """
     Download the url to the provided destination. This method assumes the last
     part of the url is a filename. (https://foo.com/bar/myfile.tar.xz)
@@ -263,6 +264,8 @@ def download_url(url, dest):
     :type url: str
     :param dest: Where to download the url to
     :type dest: str
+    :param verbose: Print download url and destination to stdout
+    :type verbose: bool
 
     :raises urllib.error.HTTPError: If the url was unable to be downloaded
 
@@ -270,7 +273,8 @@ def download_url(url, dest):
     :rtype: str
     """
     local = get_download_location(url, dest)
-    print(f"Downloading {url} -> {local}")
+    if verbose:
+        print(f"Downloading {url} -> {local}")
     n = 0
     while n < 3:
         n += 1
@@ -278,8 +282,8 @@ def download_url(url, dest):
             fin = urllib.request.urlopen(url)
         except (urllib.error.HTTPError, urllib.error.URLError) as exc:
             if n == 3:
+                print(f"Unable to download: {url} {exc}", file=sys.stderr)
                 raise
-            print(f"Unable to download: {url} {exc}")
             time.sleep(n * 10)
     fout = open(local, "wb")
     block = fin.read(10240)
