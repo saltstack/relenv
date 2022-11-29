@@ -84,7 +84,6 @@ def fetch(arch, toolchain, clean=False, version=__version__):
         print(f"Toolchain directory exists, skipping {arch}")
         return
     url = TC_URL.format(version=version, host=platform.machine(), triplet=triplet)
-    print(f"Fetching {url}")
     archive = download_url(url, toolchain)
     extract_archive(toolchain, archive)
 

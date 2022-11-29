@@ -270,6 +270,7 @@ def download_url(url, dest):
     :rtype: str
     """
     local = get_download_location(url, dest)
+    print(f"Downloading {url} -> {local}")
     n = 0
     while n < 3:
         n += 1
