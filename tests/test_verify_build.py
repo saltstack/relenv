@@ -7,6 +7,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import textwrap
 
 import pytest
 
@@ -187,3 +188,52 @@ def test_pip_install_salt_pip_dir(pipexec, build):
     for _ in names:
         script = pathlib.Path(build) / _
         assert script.exists()
+
+
+def test_nox_virtualenvs(pipexec, build, tmp_path):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    name = "nox"
+
+    p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+    assert p.returncode == 0, f"Failed to pip install {name}"
+
+    names = [name]
+    if sys.platform == "win32":
+        names = [f"{name}.exe"]
+
+    if sys.platform == "win32":
+        script = pathlib.Path(build) / "Scripts" / name
+    else:
+        script = pathlib.Path(build) / "bin" / name
+
+    assert script.exists()
+
+    session = "fake_session"
+    nox_contents = textwrap.dedent(
+        """
+    import nox
+    
+    @nox.session()
+    def {}(session):
+        session.install("nox")
+    """.format(
+            session
+        )
+    )
+    noxfile = tmp_path / "tmp_noxfile.py"
+    noxfile.write_text(nox_contents)
+    nox_venvs = tmp_path / ".tmpnox"
+    nox_venvs.mkdir()
+
+    p = subprocess.run(
+        [str(script), "-f", str(noxfile), "--envdir", str(nox_venvs), "-e", session],
+        env=env,
+    )
+    session = nox_venvs / session
+    assert session.exists()
+    if sys.platform == "win32":
+        assert (session / "Scripts" / "nox.exe").exists()
+    else:
+        assert (session / "bin" / "nox").exists()
+    print(list((session / "bin").iterdir()))
