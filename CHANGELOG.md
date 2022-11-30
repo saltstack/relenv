@@ -3,6 +3,7 @@
 
 * Fix arch flag when fetching builds
 * Cleanup changelog syntax
+* Add test for virtual environments based on relenv environments
 
 
 0.4.2
