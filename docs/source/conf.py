@@ -30,7 +30,7 @@ author = "Daniel A. Wozniak"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinxarg.ext",
-    "myst_parser",
+    "sphinx_mdinclude",
 ]
 
 
