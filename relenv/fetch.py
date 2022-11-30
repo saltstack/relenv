@@ -8,13 +8,7 @@ import os
 import sys
 
 from .build import platform_module
-from .common import (
-    DATA_DIR,
-    build_arch,
-    download_url,
-    get_triplet,
-    work_dir,
-)
+from .common import DATA_DIR, build_arch, download_url, get_triplet, work_dir
 
 
 def setup_parser(subparsers):
