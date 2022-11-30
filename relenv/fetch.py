@@ -7,15 +7,23 @@ The ``relenv fetch`` command.
 import os
 import sys
 
+from .build import linux, darwin, windows
 from .common import (
     DATA_DIR,
-    arches,
     build_arch,
     download_url,
-    extract_archive,
     get_triplet,
     work_dir,
 )
+
+
+def platform_module():
+    if sys.platform == "darwin":
+        return darwin
+    elif sys.platform == "linux":
+        return linux
+    elif sys.platform == "win32":
+        return windows
 
 
 def setup_parser(subparsers):
@@ -25,12 +33,14 @@ def setup_parser(subparsers):
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
+    mod = platform_module()
     subparser = subparsers.add_parser("fetch", description="Fetch relenv builds")
     subparser.set_defaults(func=main)
     subparser.add_argument(
         "--arch",
         default=build_arch(),
-        choices=arches[sys.platform],
+        choices=mod.ARCHES,
+        type=str,
         help="Architecture to download. [default: %(default)s]",
     )
 
@@ -43,7 +53,7 @@ def main(args):
     :type args: argparse.Namespace
     """
     version = os.environ.get("RELENV_FETCH_VERSION", "latest")
-    triplet = get_triplet()
+    triplet = get_triplet(machine=args.arch)
     url = f"https://woz.io/relenv/{version}/build/{triplet}.tar.xz"
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
