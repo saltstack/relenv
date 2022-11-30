@@ -1,3 +1,10 @@
+0.4.3
+=====
+
+* Fix arch flag when fetching builds
+* Cleanup changelog syntax
+
+
 0.4.2
 =====
 
@@ -14,6 +21,7 @@
 * Work around issue on Mac where Python is linking to /usr/local
   [Issue #46](https://github.com/saltstack/relative-environment-for-python/issues/46)
 
+
 0.4.0
 =====
 
@@ -29,10 +37,12 @@
 * The toolchain command defaults to the build box architecture
 * Build macos on catalinia for now
 
+
 0.2.1
 =====
 
 * Fix 'RELENV_PIP_DIR' environment variable on python <= 3.10 (Windows)
+
 
 0.2.0
 =====
@@ -41,6 +51,7 @@
 * Inlude changelog in documentation.
 * Better help when no sub-command given.
 * Add some debuging or relocate module.
+
 
 0.1.0
 =====
