@@ -1,15 +1,12 @@
-0.4.3
+0.4.2
 =====
 
+* General code clean up based on pylint results
 * Fix virtualenvs created from relenvs
 * The fetch and toolchain always show download urls and destinations
 * Fix oldest supported Mac OS version (10.5)
 * Docs improvements
 
-0.4.2
-=====
-
-* General code clean up based on pylint results 
 
 0.4.1
 =====
