@@ -7,7 +7,7 @@ The ``relenv fetch`` command.
 import os
 import sys
 
-from .build import linux, darwin, windows
+from .build import platform_module
 from .common import (
     DATA_DIR,
     build_arch,
@@ -15,15 +15,6 @@ from .common import (
     get_triplet,
     work_dir,
 )
-
-
-def platform_module():
-    if sys.platform == "darwin":
-        return darwin
-    elif sys.platform == "linux":
-        return linux
-    elif sys.platform == "win32":
-        return windows
 
 
 def setup_parser(subparsers):
