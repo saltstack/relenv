@@ -198,12 +198,8 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
     p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
     assert p.returncode == 0, f"Failed to pip install {name}"
 
-    names = [name]
     if sys.platform == "win32":
-        names = [f"{name}.exe"]
-
-    if sys.platform == "win32":
-        script = pathlib.Path(build) / "Scripts" / name
+        script = pathlib.Path(build) / "Scripts" / f"{name}.exe"
     else:
         script = pathlib.Path(build) / "bin" / name
 
