@@ -174,7 +174,7 @@ def get_toolchain(arch=None, root=None):
 
 def get_triplet(machine=None, plat=None):
     """
-    Get the target triplet for the specfied machine and platform.
+    Get the target triplet for the specified machine and platform.
 
     If any of the args are None, it will try to deduce what they should be.
 
