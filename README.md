@@ -20,3 +20,5 @@ around and shared with others.
 * [Issue Tracker](https://github.com/saltstack/relative-environment-for-python/issues)
 
 * [Source Code](https://github.com/saltstack/relative-environment-for-python)
+
+* [Python Packages](https://pypi.org/project/relenv/)
