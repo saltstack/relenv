@@ -1,8 +1,10 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
+"""
+The linux build process.
+"""
 from .common import *
 from ..common import arches, LINUX
-import textwrap
 
 ARCHES = arches[LINUX]
 

@@ -226,9 +226,9 @@ def test_handle_elf(tmp_path):
 
     ldd_ret = """
     linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
-	libcrypt.so.2 => {libcrypt} (0x0123456789)
-	libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
-	libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
+    libcrypt.so.2 => {libcrypt} (0x0123456789)
+    libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
+    libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
     """.format(
         libcrypt=libcrypt
     ).encode()
@@ -254,10 +254,10 @@ def test_handle_elf_rpath_only(tmp_path):
 
     ldd_ret = """
     linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
-	libcrypt.so.2 => {libcrypt} (0x0123456789)
-	fake.so.2 => {fake} (0x0123456789)
-	libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
-	libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
+    libcrypt.so.2 => {libcrypt} (0x0123456789)
+    fake.so.2 => {fake} (0x0123456789)
+    libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
+    libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
     """.format(
         libcrypt=libcrypt, fake=fake
     ).encode()

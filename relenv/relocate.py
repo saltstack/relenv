@@ -45,7 +45,7 @@ LC_RPATH = "LC_RPATH"
 
 def is_macho(path):
     """
-    Determines whether the given file is a macho file
+    Determines whether the given file is a macho file.
 
     :param path: The path to the file to check
     :type path: str
@@ -61,7 +61,7 @@ def is_macho(path):
 
 def is_elf(path):
     """
-    Determines whether the given file is an ELF file
+    Determines whether the given file is an ELF file.
 
     :param path: The path to the file to check
     :type path: str
@@ -229,7 +229,7 @@ def is_in_dir(filepath, directory):
 
 def patch_rpath(path, new_rpath, only_relative=True):
     """
-    Patch the rpath of a given ELF file
+    Patch the rpath of a given ELF file.
 
     :param path: The path to an ELF file
     :type path: str
@@ -264,7 +264,7 @@ def patch_rpath(path, new_rpath, only_relative=True):
 
 def handle_elf(path, libs, rpath_only, root=None):
     """
-    Handle the parsing and pathcing of an ELF file
+    Handle the parsing and pathcing of an ELF file.
 
     :param path: The path of the ELF file
     :type path: str

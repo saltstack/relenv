@@ -10,7 +10,7 @@ import pathlib
 import sys
 import tarfile
 
-from .common import MODULE_DIR, RelenvException, arches, archived_build, build_arch
+from .common import RelenvException, arches, archived_build, build_arch
 
 
 @contextlib.contextmanager
@@ -44,7 +44,10 @@ def setup_parser(subparsers):
     """
     create_subparser = subparsers.add_parser(
         "create",
-        description="Create a Relenv environment. This will create a directory of the given name with newly created Relenv environment.",
+        description=(
+            "Create a Relenv environment. This will create a directory of the given "
+            "name with newly created Relenv environment.",
+        ),
     )
     create_subparser.set_defaults(func=main)
     create_subparser.add_argument("name", help="The name of the directory to create")
