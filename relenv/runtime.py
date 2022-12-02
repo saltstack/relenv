@@ -1,8 +1,7 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
-This code is run when initializing the python interperter in a Relenv
-environment.
+This code is run when initializing the python interperter in a Relenv environment.
 
 - Point Relenv's Openssl to the system installed Openssl certificate path
 - Make sure pip creates scripts with a shebang that points to the correct
@@ -11,7 +10,6 @@ environment.
   gcc. This ensures when using pip any c dependencies are compiled against the
   proper glibc version.
 """
-import collections.abc
 import importlib
 import os
 import pathlib
@@ -34,6 +32,9 @@ def debug(string):
 
 
 def root():
+    """
+    Return the relenv module root.
+    """
     # XXX Look for rootdir / ".relenv"
     if sys.platform == "win32":
         # /Lib/site-packages/relenv/
@@ -44,7 +45,7 @@ def root():
 
 def _build_shebang(*args, **kwargs):
     """
-    Build a shebang to point to the proper location
+    Build a shebang to point to the proper location.
 
     :return: The shebang
     :rtype: bytes
@@ -59,6 +60,10 @@ def _build_shebang(*args, **kwargs):
 
 
 def get_config_var_wrapper(func):
+    """
+    Return a wrapper to resolve paths relative to the relenv root.
+    """
+
     def wrapped(name):
         if name == "BINDIR":
             orig = func(name)
@@ -77,6 +82,10 @@ def get_config_var_wrapper(func):
 
 
 def get_paths_wrapper(func, default_scheme):
+    """
+    Return a wrapper to resolve paths relative to the relenv root.
+    """
+
     def wrapped(scheme=default_scheme, vars=None, expand=True):
         paths = func(scheme=scheme, vars=vars, expand=expand)
         if "RELENV_PIP_DIR" in os.environ:
@@ -100,7 +109,7 @@ class RelenvImporter:
 
     def find_module(self, module_name, package_path=None):
         """
-        Find a module for importing into the relenv environment
+        Find a module for importing into the relenv environment.
 
         :param module_name: The name of the module
         :type module_name: str
@@ -125,7 +134,7 @@ class RelenvImporter:
 
     def load_module(self, name):
         """
-        Load the given module
+        Load the given module.
 
         :param name: The module name to load
         :type name: str

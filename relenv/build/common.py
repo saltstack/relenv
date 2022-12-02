@@ -1,8 +1,10 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
+"""
+Build process common methods.
+"""
 import logging
 import os.path
-import codecs
 import hashlib
 import pathlib
 import glob
@@ -31,7 +33,6 @@ from relenv.common import (
     get_toolchain,
     get_triplet,
     runcmd,
-    work_root,
     work_dirs,
 )
 from relenv.relocate import main as relocate_main
@@ -415,7 +416,7 @@ class Download:
     @staticmethod
     def validate_signature(archive, signature):
         """
-        True when the archive's signature is valid
+        True when the archive's signature is valid.
 
         :param archive: The path to the archive to validate
         :type archive: str
@@ -638,7 +639,7 @@ class Builder:
 
     def set_arch(self, arch):
         """
-        Set the architecture for the build
+        Set the architecture for the build.
 
         :param arch: The arch to build
         :type arch: str
@@ -838,7 +839,7 @@ class Builder:
         :type steps: list, optional
         :param cleanup: Whether to clean up or not, defaults to True
         :type cleanup: bool, optional
-        """
+        """  # noqa: D400
         fails = []
         events = {}
         waits = {}
@@ -924,8 +925,9 @@ class Builder:
 
     def check_prereqs(self):
         """
-        Check pre-requsists for build. This method verifies all requrements for
-        a successful build are satisfied.
+        Check pre-requsists for build.
+
+        This method verifies all requrements for a successful build are satisfied.
 
         :return: Returns a list of string describing failed checks
         :rtype: list
@@ -983,6 +985,8 @@ class Builder:
 
 def install_sysdata(mod, destfile, buildroot, toolchain):
     """
+    Create a Relenv Python environment's sysconfigdata.
+
     Helper method used by the `finalize` build method to create a Relenv
     Python environment's sysconfigdata.
 
@@ -996,22 +1000,23 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
     :type toolchain: str
     """
     data = {}
-    fbuildroot = lambda _: _.replace(str(buildroot), "{BUILDROOT}")
-    ftoolchain = lambda _: _.replace(str(toolchain), "{TOOLCHAIN}")
-    keymap = {
-        "BINDIR": (fbuildroot,),
-        "BINLIBDEST": (fbuildroot,),
-        "CFLAGS": (fbuildroot, ftoolchain),
-        "CPPLAGS": (fbuildroot, ftoolchain),
-        "CXXFLAGS": (fbuildroot, ftoolchain),
-        "datarootdir": (fbuildroot,),
-        "exec_prefix": (fbuildroot,),
-        "LDFLAGS": (fbuildroot, ftoolchain),
-        "LDSHARED": (fbuildroot, ftoolchain),
-        "LIBDEST": (fbuildroot,),
-        "prefix": (fbuildroot,),
-        "SCRIPTDIR": (fbuildroot,),
-    }
+    fbuildroot = lambda _: _.replace(str(buildroot), "{BUILDROOT}")  # noqa: E731
+    ftoolchain = lambda _: _.replace(str(toolchain), "{TOOLCHAIN}")  # noqa: E731
+    # XXX: keymap is not used, remove it?
+    # keymap = {
+    #    "BINDIR": (fbuildroot,),
+    #    "BINLIBDEST": (fbuildroot,),
+    #    "CFLAGS": (fbuildroot, ftoolchain),
+    #    "CPPLAGS": (fbuildroot, ftoolchain),
+    #    "CXXFLAGS": (fbuildroot, ftoolchain),
+    #    "datarootdir": (fbuildroot,),
+    #    "exec_prefix": (fbuildroot,),
+    #    "LDFLAGS": (fbuildroot, ftoolchain),
+    #    "LDSHARED": (fbuildroot, ftoolchain),
+    #    "LIBDEST": (fbuildroot,),
+    #    "prefix": (fbuildroot,),
+    #    "SCRIPTDIR": (fbuildroot,),
+    # }
     for key in sorted(mod.build_time_vars):
         val = mod.build_time_vars[key]
         if isinstance(val, str):
@@ -1031,7 +1036,7 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
 
 def find_sysconfigdata(pymodules):
     """
-    Find sysconfigdata directory for python installation
+    Find sysconfigdata directory for python installation.
 
     :param pymodules: Path to python modules (e.g. lib/python3.10)
     :type pymodules: str
@@ -1047,8 +1052,9 @@ def find_sysconfigdata(pymodules):
 
 def finalize(env, dirs, logfp):
     """
-    Run after we've fully built python. This method enhances the newly created
-    python with Relenv's runtime hacks.
+    Run after we've fully built python.
+
+    This method enhances the newly created python with Relenv's runtime hacks.
 
     :param env: The environment dictionary
     :type env: dict

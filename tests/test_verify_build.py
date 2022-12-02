@@ -1,7 +1,7 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
-Verify relenv builds
+Verify relenv builds.
 """
 import os
 import pathlib
@@ -66,7 +66,7 @@ def test_directories(build):
 
 
 @pytest.mark.skip_unless_on_windows
-def test_imports(pyexec):
+def test_imports_windows(pyexec):
     modules = [
         "asyncio",
         "binascii",
@@ -138,7 +138,7 @@ def test_pip_install_salt_w_static_requirements(pipexec, build):
     p = subprocess.run(["git", "clone", "https://github.com/saltstack/salt.git"])
 
     p = subprocess.run([str(pipexec), "install", "./salt", "--no-cache"], env=env)
-    assert p.returncode == 0, f"Failed to pip install ./salt"
+    assert p.returncode == 0, "Failed to pip install ./salt"
 
     names = ["salt", "salt-call", "salt-master", "salt-minion"]
     if sys.platform == "win32":
@@ -209,7 +209,7 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
     nox_contents = textwrap.dedent(
         """
     import nox
-    
+
     @nox.session()
     def {}(session):
         session.install("nox")

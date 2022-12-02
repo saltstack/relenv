@@ -5,7 +5,7 @@ import hashlib
 import pytest
 
 from relenv.build.common import Builder, verify_checksum
-from relenv.common import DATA_DIR, MODULE_DIR, RelenvException
+from relenv.common import DATA_DIR, RelenvException
 
 
 @pytest.fixture

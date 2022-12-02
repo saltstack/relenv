@@ -5,7 +5,6 @@ The ``relenv fetch`` command.
 """
 
 import os
-import sys
 
 from .build import platform_module
 from .common import DATA_DIR, build_arch, download_url, get_triplet, work_dir
@@ -42,4 +41,4 @@ def main(args):
     url = f"https://woz.io/relenv/{version}/build/{triplet}.tar.xz"
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
-    archive = download_url(url, builddir)
+    download_url(url, builddir)

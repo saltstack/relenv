@@ -47,7 +47,7 @@ def test_create_directory_exists(tmp_path):
         create("foo", dest=tmp_path)
 
 
-def test_create_directory_exists(tmp_path):
+def test_create_arches_directory_exists(tmp_path):
     mocked_arches = {key: [] for key in arches.keys()}
     with patch("relenv.create.arches", mocked_arches):
         with pytest.raises(CreateException):

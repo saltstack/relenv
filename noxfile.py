@@ -1,7 +1,7 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
-Nox session definitions
+Nox session definitions.
 """
 import datetime
 import os

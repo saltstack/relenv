@@ -1,7 +1,7 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
-Common classes and values used around relenv
+Common classes and values used around relenv.
 """
 import os
 import pathlib
@@ -46,11 +46,14 @@ DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve
 
 class RelenvException(Exception):
     """
-    Base class for exeptions generated from relenv
+    Base class for exeptions generated from relenv.
     """
 
 
 def build_arch():
+    """
+    Return the current machine.
+    """
     machine = platform.machine()
     return machine.lower()
 
@@ -199,7 +202,7 @@ def get_triplet(machine=None, plat=None):
     elif plat == "linux":
         return f"{machine}-linux-gnu"
     else:
-        raise RelenvException("Unknown platform {}".format(platform))
+        raise RelenvException(f"Unknown platform {plat}")
 
 
 def archived_build(triplet=None):
@@ -220,7 +223,7 @@ def archived_build(triplet=None):
 
 def extract_archive(to_dir, archive):
     """
-    Extract an archive to a specific location
+    Extract an archive to a specific location.
 
     :param to_dir: The directory to extract to
     :type to_dir: str
@@ -256,8 +259,9 @@ def get_download_location(url, dest):
 
 def download_url(url, dest, verbose=True):
     """
-    Download the url to the provided destination. This method assumes the last
-    part of the url is a filename. (https://foo.com/bar/myfile.tar.xz)
+    Download the url to the provided destination.
+
+    This method assumes the last part of the url is a filename. (https://foo.com/bar/myfile.tar.xz)
 
     :param url: The url to download
     :type url: str
@@ -292,7 +296,7 @@ def download_url(url, dest, verbose=True):
             block = fin.read(10240)
         fin.close()
         fout.close()
-    except:
+    except Exception:
         try:
             os.unlink(local)
         except OSError:
@@ -303,6 +307,8 @@ def download_url(url, dest, verbose=True):
 
 def runcmd(*args, **kwargs):
     """
+    Run a command.
+
     Run the provided command, raising an Exception when the command finishes
     with a non zero exit code.  Arguments are passed through to ``subprocess.run``
 

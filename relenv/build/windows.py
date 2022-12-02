@@ -1,5 +1,8 @@
 # Copyright 2022 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
+"""
+The windows build process.
+"""
 import glob
 import shutil
 import sys

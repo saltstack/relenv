@@ -13,6 +13,9 @@ from ..common import build_arch
 
 
 def platform_module():
+    """
+    Return the right module based on `sys.platform`.
+    """
     if sys.platform == "darwin":
         return darwin
     elif sys.platform == "linux":
