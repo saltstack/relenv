@@ -4,6 +4,8 @@
 The ``relenv toolchain`` command.
 """
 
+# DGM dumb comment to generate test build
+
 import os
 import pathlib
 import platform
