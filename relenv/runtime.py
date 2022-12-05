@@ -52,7 +52,7 @@ def _build_shebang(*args, **kwargs):
     """
     if sys.platform == "win32":
         if os.environ.get("RELENV_PIP_DIR"):
-            return "#!<launch_dir>\\Scripts\\python.exe".encode()
+            return "#!<launcher_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
     if os.environ.get("RELENV_PIP_DIR"):
         return ("#!/bin/sh\n" '"exec" "`dirname $0`/bin/python3" "$0" "$@"').encode()
