@@ -1,3 +1,10 @@
+0.4.4
+=====
+
+* Fix scripts relative to launcher_dir on windows using RELENV_PIP_DIR
+* Add flake8 for linting
+
+
 0.4.3
 =====
 
