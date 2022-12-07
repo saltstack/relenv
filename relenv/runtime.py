@@ -206,7 +206,9 @@ def bootstrap():
         _, directory = proc.stdout.split(":")
         path = pathlib.Path(directory.strip().strip('"'))
         os.environ["SSL_CERT_DIR"] = str(path / "certs")
-        os.environ["SSL_CERT_FILE"] = str(path / "cert.pem")
+        cert_file = path / "cert.pem"
+        if cert_file.exists():
+            os.environ["SSL_CERT_FILE"] = str(cert_file)
 
     importer = RelenvImporter()
     sys.meta_path = [importer] + sys.meta_path
