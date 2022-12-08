@@ -108,7 +108,7 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
-def test_pip_install_salt(pipexec, build):
+def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     packages = [
         "salt==3005",
     ]
@@ -129,6 +129,13 @@ def test_pip_install_salt(pipexec, build):
         else:
             script = pathlib.Path(build) / "bin" / _
         assert script.exists()
+
+    # Make sure symlinks work with our custom shebang in the scripts
+    link = tmp_path / "links" / "pylink"
+    link.parent.mkdir()
+    link.symlink_to(pyexec)
+    p = subprocess.run([str(link), "-c", "import salt"])
+    assert p.returncode == 0
 
 
 def test_pip_install_salt_w_static_requirements(pipexec, build):

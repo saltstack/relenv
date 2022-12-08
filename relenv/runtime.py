@@ -55,8 +55,12 @@ def _build_shebang(*args, **kwargs):
             return "#!<launcher_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
     if os.environ.get("RELENV_PIP_DIR"):
-        return ("#!/bin/sh\n" '"exec" "`dirname $0`/bin/python3" "$0" "$@"').encode()
-    return ("#!/bin/sh\n" '"exec" "`dirname $0`/python3" "$0" "$@"').encode()
+        return (
+            "#!/bin/sh\n" '"exec" "`dirname $(realpath $0)`/bin/python3" "$0" "$@"'
+        ).encode()
+    return (
+        "#!/bin/sh\n" '"exec" "`dirname $(realpath $0)`/python3" "$0" "$@"'
+    ).encode()
 
 
 def get_config_var_wrapper(func):
