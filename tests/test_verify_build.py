@@ -170,6 +170,18 @@ def test_pip_install_idem(pipexec):
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
+def test_pip_install_and_import_libcloud(pipexec, pyexec):
+    name = "apache-libcloud"
+    p = subprocess.run([str(pipexec), "install", name, "--no-cache"])
+    assert p.returncode == 0, f"Failed to pip install {name}"
+
+    import_name = "libcloud.security"
+    import_ret = subprocess.run(
+        [str(pyexec), "-c", f"import {import_name}", "--no-cache"]
+    )
+    assert import_ret.returncode == 0, f"Failed to import {import_name}"
+
+
 def test_pip_install_salt_pip_dir(pipexec, build):
     packages = [
         "salt",
