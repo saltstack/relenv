@@ -112,7 +112,7 @@ build.add(
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.10.7",
+        "version": "3.10.9",
     },
 )
 
