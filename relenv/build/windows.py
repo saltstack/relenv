@@ -132,7 +132,7 @@ build.add(
     build_func=build_python,
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.8.15",
+        "version": "3.8.16",
     },
 )
 
