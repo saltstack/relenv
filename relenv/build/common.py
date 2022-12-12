@@ -1149,7 +1149,7 @@ def finalize(env, dirs, logfp):
                 data = fp.read().decode()
             with open(os.path.join(root, file), "w") as fp:
                 fp.write("#!/bin/sh\n")
-                fp.write('"exec" "`dirname $(realpath $0)`/python3" "$0" "$@"')
+                fp.write('"exec" "`dirname $(readlink -f $0)`/python3" "$0" "$@"')
                 fp.write(data)
 
     def runpip(pkg, upgrade=False):
