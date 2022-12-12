@@ -132,7 +132,7 @@ def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
 
 
 @pytest.mark.skip_on_windows
-def test_symlinked_scripts(pipexec, tmp_path, pyexec):
+def test_symlinked_scripts(pipexec, tmp_path, build):
     name = "chardet==5.1.0"
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
