@@ -43,6 +43,8 @@ else:
 
 DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve()
 
+SHEBANG_TPL = "#!/bin/sh\n" '"exec" "`dirname $(readlink -f $0)`{}" "$0" "$@"'
+
 
 class RelenvException(Exception):
     """

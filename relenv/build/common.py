@@ -25,6 +25,7 @@ from relenv.common import (
     DATA_DIR,
     LINUX,
     MODULE_DIR,
+    SHEBANG_TPL,
     RelenvException,
     build_arch,
     download_url,
@@ -1148,8 +1149,7 @@ def finalize(env, dirs, logfp):
                     continue
                 data = fp.read().decode()
             with open(os.path.join(root, file), "w") as fp:
-                fp.write("#!/bin/sh\n")
-                fp.write('"exec" "`dirname $(readlink -f $0)`/python3" "$0" "$@"')
+                fp.write(SHEBANG_TPL.format("/python3"))
                 fp.write(data)
 
     def runpip(pkg, upgrade=False):
