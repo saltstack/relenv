@@ -1,3 +1,11 @@
+0.4.5
+=====
+
+* Build newest python release
+* Do not define SSL_CERT_FILE when file does not exit
+* Only define ssl environment variables if not already set
+
+
 0.4.4
 =====
 
