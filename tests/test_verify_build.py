@@ -133,21 +133,25 @@ def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
 
 @pytest.mark.skip_on_windows
 def test_symlinked_scripts(pipexec, tmp_path, pyexec):
-    name = "requests"
+    name = "chardet==5.1.0"
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
 
     p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
     assert p.returncode == 0, f"Failed to pip install {name}"
 
-    # Make sure symlinks work with our custom shebang in the scripts
-    link = tmp_path / "links" / "pylink"
+    script = pathlib.Path(build) / "bin" / "chardetect"
+
+    # make the link to pip
+    link = tmp_path / "links" / "chardetectlink"
     link.parent.mkdir()
-    link.symlink_to(pyexec)
-    p = subprocess.run([str(link), "-c", f"import {name}"])
+    link.symlink_to(script)
+
+    # Make sure symlinks work with our custom shebang in the scripts
+    p = subprocess.run([str(script), "--version"])
     assert (
         p.returncode == 0
-    ), f"Could not import {name}, likely not pinning to the correct python"
+    ), f"Could not run script for {name}, likely not pinning to the correct python"
 
 
 def test_pip_install_salt_w_static_requirements(pipexec, build):
