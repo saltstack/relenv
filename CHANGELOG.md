@@ -1,3 +1,9 @@
+0.4.6
+=====
+
+* Script shebangs now work when symlinked
+
+
 0.4.5
 =====
 
