@@ -210,6 +210,10 @@ def bootstrap():
         cert_file = path / "cert.pem"
         if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
             os.environ["SSL_CERT_FILE"] = str(cert_file)
+        if not os.environ.get("SWIG_FEATURES"):
+            os.environ["SWIG_FEATURES"] = f"-I{root()}/include"
+        else:
+            os.environ["SWIG_FEATURES"] = f"-I{root()}/include {os.environ['SWIG_FEATURES']}"
 
     importer = RelenvImporter()
     sys.meta_path = [importer] + sys.meta_path
