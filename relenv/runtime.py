@@ -96,6 +96,20 @@ def get_paths_wrapper(func, default_scheme):
     return wrapped
 
 
+def finalize_options_wrapper(func):
+    """
+    Wrapper around build_ext.finalize_options. Used to add the relenv
+    environment's include path.
+    """
+
+    def wrapper(self, *args, **kwargs):
+        print(args)
+        func(self, *args, **kwargs)
+        self.include_dirs.append(f"{root()}/include")
+
+    return wrapper
+
+
 class RelenvImporter:
     """
     An importer to be added to ``sys.meta_path`` to handle importing into a relenv environment.
@@ -104,6 +118,7 @@ class RelenvImporter:
     loading_pip_scripts = False
     loading_sysconfig_data = False
     loading_sysconfig = False
+    loading_distutils = False
 
     sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
 
@@ -129,6 +144,12 @@ class RelenvImporter:
                 return None
             debug(f"RelenvImporter - match {module_name}")
             self.loading_pip_scripts = True
+            return self
+        elif module_name == "distutils.command.build_ext":
+            if self.loading_distutils:
+                return None
+            debug(f"RelenvImporter - match {module_name}")
+            self.loading_distutils = True
             return self
         return None
 
@@ -159,6 +180,12 @@ class RelenvImporter:
             mod = importlib.import_module(name)
             mod.ScriptMaker._build_shebang = _build_shebang
             self.loading_pip_scripts = False
+        elif name == "distutils.command.build_ext":
+            debug(f"RelenvImporter - load_module {name}")
+            mod = importlib.import_module(name)
+            mod.build_ext.finalize_options = finalize_options_wrapper(
+                mod.build_ext.finalize_options
+            )
         sys.modules[name] = mod
         return mod
 
@@ -210,10 +237,6 @@ def bootstrap():
         cert_file = path / "cert.pem"
         if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
             os.environ["SSL_CERT_FILE"] = str(cert_file)
-        if not os.environ.get("SWIG_FEATURES"):
-            os.environ["SWIG_FEATURES"] = f"-I{root()}/include"
-        else:
-            os.environ["SWIG_FEATURES"] = f"-I{root()}/include {os.environ['SWIG_FEATURES']}"
 
     importer = RelenvImporter()
     sys.meta_path = [importer] + sys.meta_path

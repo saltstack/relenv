@@ -11,7 +11,7 @@ import textwrap
 
 import pytest
 
-from relenv.common import archived_build
+from relenv.common import DATA_DIR, archived_build, get_triplet
 from relenv.create import create
 
 pytestmark = [
@@ -267,3 +267,34 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
         assert (session / "Scripts" / "nox.exe").exists()
     else:
         assert (session / "bin" / "nox").exists()
+
+
+def test_pip_install_m2crypto(pipexec, build, tmpdir):
+    packages = [
+        "salt",
+    ]
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    p = subprocess.run(
+        [str(pipexec), "install", "m2crypto", "--no-cache", "-v"],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert p.returncode == 0, f"Failed to pip install m2crypto"
+    gcc = str(
+        pathlib.Path(DATA_DIR)
+        / "toolchain"
+        / f"{get_triplet()}"
+        / "bin"
+        / f"{get_triplet()}-gcc"
+    )
+    include = str(pathlib.Path(build) / "include")
+    found_include = False
+    for _ in p.stderr.splitlines():
+        line = _.decode()
+        if gcc in line:
+            for arg in line.split():
+                if arg == f"-I{include}":
+                    found_include = True
+    assert found_include
