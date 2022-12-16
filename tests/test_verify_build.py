@@ -271,9 +271,6 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
 
 @pytest.mark.skip_unless_on_linux
 def test_pip_install_m2crypto(pipexec, build, tmpdir):
-    packages = [
-        "salt",
-    ]
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     p = subprocess.run(
@@ -282,7 +279,7 @@ def test_pip_install_m2crypto(pipexec, build, tmpdir):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    assert p.returncode == 0, f"Failed to pip install m2crypto"
+    assert p.returncode == 0, "Failed to pip install m2crypto"
     gcc = str(
         pathlib.Path(DATA_DIR)
         / "toolchain"

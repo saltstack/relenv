@@ -98,8 +98,9 @@ def get_paths_wrapper(func, default_scheme):
 
 def finalize_options_wrapper(func):
     """
-    Wrapper around build_ext.finalize_options. Used to add the relenv
-    environment's include path.
+    Wrapper around build_ext.finalize_options.
+
+    Used to add the relenv environment's include path.
     """
 
     def wrapper(self, *args, **kwargs):
