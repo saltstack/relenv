@@ -984,6 +984,41 @@ class Builder:
         self.build(steps, cleanup)
 
 
+def patch_shebang(path, old, new):
+    """
+    Replace a file's shebang.
+
+    :param name: The path of the file to patch
+    :type name: str
+    :param old: The old shebang, will only patch when this is found
+    :type old: str
+    :param name: The new shebang to be written
+    :type name: str
+    """
+    with open(path, "rb") as fp:
+        try:
+            data = fp.read(len(old.encode())).decode()
+        except UnicodeError:
+            return False
+        except Exception as exc:
+            log.warning("Unhandled exception: %r", exc)
+            return False
+        if data != old:
+            log.warning("Shebang doesn't match: %s %r != %r", path, old, data)
+            return False
+        data = fp.read().decode()
+    with open(path, "w") as fp:
+        fp.write(new)
+        fp.write(data)
+    return True
+
+
+def patch_shebangs(path, old, new):
+    for root, _dirs, files in os.walk(str(path)):
+        for file in files:
+            patch_shebang(os.path.join(root, file), old, new)
+
+
 def install_sysdata(mod, destfile, buildroot, toolchain):
     """
     Create a Relenv Python environment's sysconfigdata.
@@ -1124,33 +1159,24 @@ def finalize(env, dirs, logfp):
         stdout=logfp,
     )
 
-    # XXX Is fixing shebangs still needed?
-    # Fix the shebangs in python's scripts.
-    bindir = pathlib.Path(dirs.prefix) / "bin"
-    pyex = bindir / "python3.10"
-    shebang = "#!{}".format(str(pyex))
-    for root, _dirs, files in os.walk(str(bindir)):
-        # print(root), print(dirs), print(files)
-        for file in files:
-            with open(os.path.join(root, file), "rb") as fp:
-                try:
-                    data = fp.read(len(shebang.encode())).decode()
-                except UnicodeError:
-                    continue
-                except Exception as exc:
-                    print("Unhandled exception: {}".format(exc))
-                    continue
-                if data == shebang:
-                    pass
-                    # print(file)
-                    # print(repr(data))
-                else:
-                    # print("skip: {}".format(file))
-                    continue
-                data = fp.read().decode()
-            with open(os.path.join(root, file), "w") as fp:
-                fp.write(SHEBANG_TPL.format("/python3"))
-                fp.write(data)
+    # Fix the shebangs in the scripts python layed down.
+    patch_shebangs(
+        str(pathlib.Path(dirs.prefix) / "bin"),
+        "#!{}".format(str(bindir / "python3.10")),
+        SHEBANG_TPL.format("/python3"),
+    )
+
+    patch_shebang(
+        str(pymodules / "config-3.10-x86_64-linux-gnu" / "python-config.py"),
+        "#!{}".format(str(bindir / "python3.10")),
+        SHEBANG_TPL.format("../../../bin/python3"),
+    )
+
+    patch_shebang(
+        str(pymodules / "cgi.py"),
+        "#! /usr/local/bin/python",
+        SHEBANG_TPL.format("../../bin/python3"),
+    )
 
     def runpip(pkg, upgrade=False):
         target = None

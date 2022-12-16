@@ -107,6 +107,6 @@ def main(args):
         steps=steps,
         arch=args.arch,
         clean=args.clean,
-        cleanup=args.no_cleanup,
+        cleanup=not args.no_cleanup,
         force_download=args.force_download,
     )
