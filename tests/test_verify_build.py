@@ -269,6 +269,7 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
         assert (session / "bin" / "nox").exists()
 
 
+@pytest.mark.skip_unless_on_linux
 def test_pip_install_m2crypto(pipexec, build, tmpdir):
     packages = [
         "salt",
