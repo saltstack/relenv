@@ -103,7 +103,6 @@ def finalize_options_wrapper(func):
     """
 
     def wrapper(self, *args, **kwargs):
-        print(args)
         func(self, *args, **kwargs)
         self.include_dirs.append(f"{root()}/include")
 
