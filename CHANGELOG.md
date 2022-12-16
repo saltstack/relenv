@@ -1,3 +1,10 @@
+0.4.7
+=====
+
+* Wrap build_ext finalize_options method to add relenv include directory
+* Add tests that installs m2crypto on linux
+
+
 0.4.6
 =====
 
