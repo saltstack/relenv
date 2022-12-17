@@ -988,8 +988,8 @@ def patch_shebang(path, old, new):
     """
     Replace a file's shebang.
 
-    :param name: The path of the file to patch
-    :type name: str
+    :param path: The path of the file to patch
+    :type path: str
     :param old: The old shebang, will only patch when this is found
     :type old: str
     :param name: The new shebang to be written
@@ -1014,6 +1014,16 @@ def patch_shebang(path, old, new):
 
 
 def patch_shebangs(path, old, new):
+    """
+    Traverse directory and patch shebangs.
+
+    :param path: The of the directory to traverse
+    :type path: str
+    :param old: The old shebang, will only patch when this is found
+    :type old: str
+    :param name: The new shebang to be written
+    :type name: str
+    """
     for root, _dirs, files in os.walk(str(path)):
         for file in files:
             patch_shebang(os.path.join(root, file), old, new)

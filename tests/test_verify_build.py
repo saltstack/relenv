@@ -296,3 +296,27 @@ def test_pip_install_m2crypto(pipexec, build, tmpdir):
                 if arg == f"-I{include}":
                     found_include = True
     assert found_include
+
+
+@pytest.mark.skip_on_windows
+def test_shabangs(pipexec, build):
+    def validate_shebang(path):
+        with open(path, "r") as fp:
+            return fp.read(9) == "#!/bin/sh"
+
+    path = build / "bin" / "pip3"
+    assert path.exists()
+    assert validate_shebang(path)
+    path = build / "lib" / "python3.10" / "cgi.py"
+    assert path.exists()
+    assert validate_shebang(path)
+    if sys.platform == "linux":
+        path = (
+            build
+            / "lib"
+            / "python3.10"
+            / f"config-3.10-{get_triplet()}"
+            / "python-config.py"
+        )
+        assert path.exists()
+        assert validate_shebang(path)
