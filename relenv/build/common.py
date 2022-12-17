@@ -1167,7 +1167,7 @@ def finalize(env, dirs, logfp):
     )
 
     patch_shebang(
-        str(pymodules / "config-3.10-x86_64-linux-gnu" / "python-config.py"),
+        str(pymodules / f"config-3.10-{env['RELENV_HOST']}" / "python-config.py"),
         "#!{}".format(str(bindir / "python3.10")),
         SHEBANG_TPL.format("../../../bin/python3"),
     )
