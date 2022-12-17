@@ -1,3 +1,9 @@
+0.4.8
+=====
+
+* Statically link aarch64 toolchains for portability
+
+
 0.4.7
 =====
 
