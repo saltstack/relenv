@@ -1,3 +1,9 @@
+0.4.9
+=====
+
+* Make shebangs in Python's modules relative.
+
+
 0.4.8
 =====
 
