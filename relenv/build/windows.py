@@ -77,7 +77,7 @@ def build_python(env, dirs, logfp):
         "python.exe",
         "pythonw.exe",
         "python3.dll",
-        "python38.dll",
+        "python310.dll",
         "vcruntime140.dll",
         "venvlauncher.exe",
         "venvwlauncher.exe",
@@ -120,8 +120,8 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     shutil.copy(
-        src=str(build_dir / "python38.lib"),
-        dst=str(dirs.prefix / "libs" / "python38.lib"),
+        src=str(build_dir / "python310.lib"),
+        dst=str(dirs.prefix / "libs" / "python310.lib"),
     )
 
 
@@ -132,7 +132,7 @@ build.add(
     build_func=build_python,
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.8.16",
+        "version": "3.10.9",
     },
 )
 
