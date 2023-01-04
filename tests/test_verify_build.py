@@ -108,6 +108,30 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
+def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
+    packages = [
+        "salt@git+https://github.com/saltstack/salt",
+    ]
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+
+    for name in packages:
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        assert p.returncode == 0, f"Failed to pip install {name}"
+
+    names = ["salt", "salt-call", "salt-master", "salt-minion"]
+    if sys.platform == "win32":
+        names = ["salt-call.exe", "salt-minion.exe"]
+
+    for _ in names:
+        if sys.platform == "win32":
+            script = pathlib.Path(build) / "Scripts" / _
+        else:
+            script = pathlib.Path(build) / "bin" / _
+        assert script.exists()
+
+
+@pytest.mark.skip_on_windows
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     packages = [
         "salt==3005",
