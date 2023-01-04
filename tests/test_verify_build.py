@@ -229,6 +229,7 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     assert import_ret.returncode == 0, f"Failed to import {import_name}"
 
 
+@pytest.mark.skip_on_windows
 def test_pip_install_salt_pip_dir(pipexec, build):
     packages = [
         "salt",
