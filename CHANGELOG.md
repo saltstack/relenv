@@ -1,3 +1,9 @@
+0.4.10
+======
+
+* Update windows python to 3.10.x
+
+
 0.4.9
 =====
 
