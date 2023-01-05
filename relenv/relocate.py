@@ -1,4 +1,4 @@
-# Copyright 2022 VMware, Inc.
+# Copyright 2022-2023 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
 A script to ensure the proper rpaths are in place for the relenv environment.
