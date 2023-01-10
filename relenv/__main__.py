@@ -7,6 +7,7 @@ The entrypoint into relenv.
 from argparse import ArgumentParser
 
 from . import build, create, fetch, toolchain
+from .common import __version__
 
 
 def setup_cli():
@@ -20,8 +21,10 @@ def setup_cli():
     :rtype: ``argparse.ArgumentParser``
     """
     argparser = ArgumentParser(
+        prog="relenv",
         description="Relenv",
     )
+    argparser.add_argument("--version", action="version", version=__version__)
     subparsers = argparser.add_subparsers()
 
     modules_to_setup = [
