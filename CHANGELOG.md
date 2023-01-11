@@ -1,3 +1,10 @@
+0.5.0
+=====
+
+* Add '--version' option to cli
+* Support symlinks on OSes without coreutils installed
+
+
 0.4.10
 ======
 

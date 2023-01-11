@@ -182,10 +182,15 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
-    p = subprocess.run(["git", "clone", "https://github.com/saltstack/salt.git", f"{tmpdir / 'salt'}"])
+
+    p = subprocess.run(
+        ["git", "clone", "https://github.com/saltstack/salt.git", f"{tmpdir / 'salt'}"]
+    )
     assert p.returncode == 0, "Failed clone salt repo"
 
-    p = subprocess.run([str(pipexec), "install", f"{tmpdir / 'salt'}", "--no-cache"], env=env)
+    p = subprocess.run(
+        [str(pipexec), "install", f"{tmpdir / 'salt'}", "--no-cache"], env=env
+    )
     assert p.returncode == 0, "Failed to pip install ./salt"
 
     names = ["salt", "salt-call", "salt-master", "salt-minion"]
