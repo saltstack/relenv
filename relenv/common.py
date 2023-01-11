@@ -63,7 +63,7 @@ else:
     done
     PHYS_DIR=`pwd -P`
     REALPATH=$PHYS_DIR/$TARGET_FILE
-    "exec" "`dirname $REALPATH`/python3" "$REALPATH" "$@"
+    "exec" "`dirname $REALPATH`{}" "$REALPATH" "$@"
     '''"""
     )
 
