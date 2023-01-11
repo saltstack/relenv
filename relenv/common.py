@@ -9,6 +9,7 @@ import platform
 import subprocess
 import sys
 import tarfile
+import textwrap
 import time
 import urllib.error
 import urllib.request
@@ -43,7 +44,28 @@ else:
 
 DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve()
 
-SHEBANG_TPL = "#!/bin/sh\n" '"exec" "`dirname $(readlink -f $0)`{}" "$0" "$@"'
+if sys.platform == "linux":
+    SHEBANG_TPL = "#!/bin/sh\n" '"exec" "`dirname $(readlink -f $0)`{}" "$0" "$@"'
+else:
+    SHEBANG_TPL = textwrap.dedent(
+        """\
+    #!/bin/sh
+    "true" '''\'
+    TARGET_FILE=$0
+    cd `dirname $TARGET_FILE`
+    TARGET_FILE=`basename $TARGET_FILE`
+    # Iterate down a (possible) chain of symlinks
+    while [ -L "$TARGET_FILE" ]
+    do
+        TARGET_FILE=`readlink $TARGET_FILE`
+        cd `dirname $TARGET_FILE`
+        TARGET_FILE=`basename $TARGET_FILE`
+    done
+    PHYS_DIR=`pwd -P`
+    REALPATH=$PHYS_DIR/$TARGET_FILE
+    "exec" "`dirname $REALPATH`/python3" "$REALPATH" "$@"
+    '''"""
+    )
 
 
 class RelenvException(Exception):
