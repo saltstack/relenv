@@ -235,7 +235,6 @@ def build_zlib(env, dirs, logfp):
             "--prefix={}".format(dirs.prefix),
             "--libdir={}/lib".format(dirs.prefix),
             "--shared",
-            '--archs="-arch {}"'.format(env["RELENV_BUILD_ARCH"]),
         ],
         env=env,
         stderr=logfp,
@@ -356,8 +355,8 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "1.1.1q",
-        # "md5sum": "2aad5635f9bb338bc2c6b7d19cbc9676",
+        "version": "1.1.1s",
+        "md5sum": "fba062bea4c734de7ad81864cf07e6ab",
     },
 )
 
@@ -365,8 +364,8 @@ build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "version": "5.2.3",
-        "md5sum": "ef68674fb47a8b8e741b34e429d86e9d",
+        "version": "5.2.10",
+        "md5sum": "eae070cfcfec883a91866b4fe37cce17",
     },
 )
 
@@ -375,7 +374,8 @@ build.add(
     build_func=build_sqlite,
     download={
         "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
-        "version": "3390300",
+        "version": "3400100",
+        "md5sum": "8a3af7943a6eb6db7a3fe02d1837b1ce",
     },
 )
 
@@ -383,7 +383,7 @@ build.add(
     name="bzip2",
     build_func=build_bzip2,
     download={
-        "url": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+        "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
         "version": "1.0.8",
         "md5sum": "67e051268d0c475ea773822f7500d0e5",
     },
@@ -394,8 +394,8 @@ build.add(
     build_func=build_gdbm,
     download={
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
-        "version": "1.21",
-        "md5sum": "a285c6e2dfed78668664c0555a7d202b",
+        "version": "1.23",
+        "md5sum": "8551961e36bf8c70b7500d255d3658ec",
     },
 )
 
@@ -405,7 +405,8 @@ build.add(
     wait_on=["readline"],
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
-        "version": "6.3",
+        "version": "6.4",
+        "md5sum": "d41d8cd98f00b204e9800998ecf8427e",
     },
 )
 
@@ -414,8 +415,8 @@ build.add(
     build_libffi,
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
-        "version": "3.3",
-        "md5sum": "6313289e32f1d38a9df4770b014a2ca7",
+        "version": "3.4.4",
+        "md5sum": "0da1a5ed7786ac12dcbaf0d499d8a049",
     },
 )
 
@@ -424,8 +425,8 @@ build.add(
     build_zlib,
     download={
         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
-        "version": "1.2.12",
-        "md5sum": "5fc414a9726be31427b440b434d05f78",
+        "version": "1.2.13",
+        "md5sum": "9b8aa094c4e5765dabf4da391f00d15c",
     },
 )
 
@@ -445,6 +446,7 @@ build.add(
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
         "version": "1.20",
+        "md5sum": "2a40daeb23f7414f843bb4f00ab1f666",
     },
 )
 
@@ -452,8 +454,8 @@ build.add(
     "readline",
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
-        "version": "8.1.2",
-        "md5sum": "12819fa739a78a6172400f399ab34f81",
+        "version": "8.2",
+        "md5sum": "4aa1b31be779e6b84f9a96cb66bc50f6",
     },
 )
 
@@ -476,6 +478,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": "3.10.9",
+        "md5sum": "0029ded93651a6894c6a3962ba168de1",
     },
 )
 
