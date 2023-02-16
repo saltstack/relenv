@@ -9,6 +9,7 @@ import os
 import pathlib
 import sys
 import tarfile
+from .build import platform_versions
 
 from .common import RelenvException, arches, archived_build, build_arch
 
@@ -42,25 +43,32 @@ def setup_parser(subparsers):
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
-    create_subparser = subparsers.add_parser(
+    subparser = subparsers.add_parser(
         "create",
         description=(
             "Create a Relenv environment. This will create a directory of the given "
             "name with newly created Relenv environment.",
         ),
     )
-    create_subparser.set_defaults(func=main)
-    create_subparser.add_argument("name", help="The name of the directory to create")
-    create_subparser.add_argument(
+    subparser.set_defaults(func=main)
+    subparser.add_argument("name", help="The name of the directory to create")
+    subparser.add_argument(
         "--arch",
         default=build_arch(),
         choices=arches[sys.platform],
         type=str,
         help="The host architecture [default: %(default)s]",
     )
+    subparser.add_argument(
+        "--python",
+        default=platform_versions()[0],
+        choices=platform_versions(),
+        type=str,
+        help="The python version [default: %(default)s]",
+    )
 
 
-def create(name, dest=None, arch=None):
+def create(name, dest=None, arch=None, version=None):
     """
     Create a relenv environment.
 
@@ -103,7 +111,8 @@ def create(name, dest=None, arch=None):
     else:
         raise CreateException("Unknown platform")
 
-    tar = archived_build(triplet)
+    # XXX refactor
+    tar = archived_build(f"{version}-{triplet}")
     if not tar.exists():
         raise CreateException(
             f"Error, build archive for {arch} doesn't exist: {tar}\n"
@@ -123,7 +132,7 @@ def main(args):
     """
     name = args.name
     try:
-        create(name, arch=args.arch)
+        create(name, arch=args.arch, version=args.python)
     except CreateException as exc:
         print(exc)
         sys.exit(1)

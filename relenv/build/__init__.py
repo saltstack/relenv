@@ -8,6 +8,7 @@ import random
 import codecs
 
 from . import linux, darwin, windows
+from .common import builds
 
 from ..common import build_arch
 
@@ -22,6 +23,12 @@ def platform_module():
         return linux
     elif sys.platform == "win32":
         return windows
+
+def platform_versions():
+    """
+    Return the right module based on `sys.platform`.
+    """
+    return list(builds.builds[sys.platform].keys())
 
 
 def setup_parser(subparsers):
@@ -51,6 +58,13 @@ def setup_parser(subparsers):
             "Clean up before running the build. This option will remove the "
             "logs, src, build, and previous tarball."
         ),
+    )
+    build_subparser.add_argument(
+        "--python",
+        default=platform_versions()[0],
+        choices=platform_versions(),
+        type=str,
+        help="The python version [default: %(default)s]",
     )
     build_subparser.add_argument(
         "--no-cleanup",
@@ -92,18 +106,22 @@ def main(args):
     :param args: The arguments to the command
     :type args: ``argparse.Namespace``
     """
-    mod = platform_module()
-    if not mod:
-        print("Unsupported platform")
-        sys.exit(1)
     random.seed()
+
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
-    mod.build.set_arch(args.arch)
+
+    if sys.platform not in builds.builds:
+        print(f"Unsupported platform: {sys.platform}")
+        sys.exit(1)
+
+    # XXX
+    build = builds.builds[sys.platform][args.python]
+    build.set_arch(args.arch)
     steps = None
     if args.steps:
         steps = [_.strip() for _ in args.steps]
-    mod.build(
+    build(
         steps=steps,
         arch=args.arch,
         clean=args.clean,

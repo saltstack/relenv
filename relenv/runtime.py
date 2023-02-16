@@ -201,9 +201,9 @@ def bootstrap():
         sys.exec_prefix = str(crossroot)
         # XXX What about dist-packages
         sys.path = [
-            str(crossroot / "lib" / "python3.10"),
-            str(crossroot / "lib" / "python3.10" / "lib-dynload"),
-            str(crossroot / "lib" / "python3.10" / "site-packages"),
+            str(crossroot / "lib" / f"python{sys.version_info.major}.(sys.version_info.minor}"),
+            str(crossroot / "lib" / f"python{sys.version_info.major}.(sys.version_info.minor}" / "lib-dynload"),
+            str(crossroot / "lib" / "python{sys.version_info.major}.(sys.version_info.minor}" / "site-packages"),
         ] + [_ for _ in sys.path if "site-packages" not in _]
 
     # Use system openssl dirs
@@ -213,30 +213,28 @@ def bootstrap():
         openssl_bin = shutil.which("openssl")
         if not openssl_bin:
             debug("Could not find the 'openssl' binary in the path")
-            return
-
-        proc = subprocess.run(
-            [openssl_bin, "version", "-d"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-            shell=False,
-            check=False,
-        )
-        if proc.returncode != 0:
-            msg = "Unable to get the certificates directory from openssl"
-            if proc.stderr:
-                msg += f": {proc.stderr}"
-            debug(msg)
-            return
-
-        _, directory = proc.stdout.split(":")
-        path = pathlib.Path(directory.strip().strip('"'))
-        if not os.environ.get("SSL_CERT_DIR"):
-            os.environ["SSL_CERT_DIR"] = str(path / "certs")
-        cert_file = path / "cert.pem"
-        if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
-            os.environ["SSL_CERT_FILE"] = str(cert_file)
+        else:
+            proc = subprocess.run(
+                [openssl_bin, "version", "-d"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                shell=False,
+                check=False,
+            )
+            if proc.returncode != 0:
+                msg = "Unable to get the certificates directory from openssl"
+                if proc.stderr:
+                    msg += f": {proc.stderr}"
+                debug(msg)
+            else:
+                _, directory = proc.stdout.split(":")
+                path = pathlib.Path(directory.strip().strip('"'))
+                if not os.environ.get("SSL_CERT_DIR"):
+                    os.environ["SSL_CERT_DIR"] = str(path / "certs")
+                cert_file = path / "cert.pem"
+                if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
+                    os.environ["SSL_CERT_FILE"] = str(cert_file)
 
     importer = RelenvImporter()
     sys.meta_path = [importer] + sys.meta_path

@@ -320,14 +320,20 @@ def build_python(env, dirs, logfp):
     cmd = [
         "./configure",
         "-v",
-        "--prefix={}".format(dirs.prefix),
-        "--with-openssl={}".format(dirs.prefix),
+        f"--prefix={dirs.prefix}",
+        f"--with-openssl={dirs.prefix}",
         "--enable-optimizations",
         "--with-ensurepip=no",
-        "--build={}".format(env["RELENV_BUILD"]),
-        "--host={}".format(env["RELENV_HOST"]),
+        f"--build={env['RELENV_BUILD']}",
+        f"--host={env['RELENV_HOST']}",
+
     ]
 
+    if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
+        #env["RELENV_CROSS"] = dirs.prefix
+        cmd += [
+            f"--with-build-python={env['RELENV_NATIVE_PY']}",
+        ]
     # Needed when using a toolchain even if build and host match.
     cmd += [
         "ac_cv_file__dev_ptmx=yes",
@@ -349,7 +355,8 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = Builder(populate_env=populate_env)
+build = builds.add("linux", populate_env=populate_env, version="3.10.9")
+
 build.add(
     "OpenSSL",
     build_func=build_openssl,
@@ -477,7 +484,7 @@ build.add(
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.10.9",
+        "version": build.version,
         "md5sum": "0029ded93651a6894c6a3962ba168de1",
     },
 )
@@ -491,12 +498,5 @@ build.add(
     ],
 )
 
-
-def main(args):
-    """
-    The entrypoint into the linux build.
-
-    :param args: The arguments for the build
-    :type args: argparse.Namespace
-    """
-    run_build(build, args)
+build = build.copy(version="3.11.2")
+builds.add("linux", builder=build)

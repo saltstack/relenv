@@ -14,10 +14,13 @@ on:
 
 jobs:
   upload_artifacts:
-    name: Deploy Artifacts ${{ matrix.arch }}-${{ matrix.platform }}
+    name: Deploy Artifacts ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        python:
+            - 3.10.9
+            - 3.11.1
         include:
           - platform: linux-gnu
             arch: aarch64
@@ -36,7 +39,7 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v3
       with:
-        name: ${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+        name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
 
     - name: Setup Private Key
       run: |
@@ -53,6 +56,6 @@ jobs:
       run: |
         ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
 
-    - name: "Deploy Python Build: ${{ matrix.host }}-${{ matrix.platform }}.tar.xz"
+    - name: "Deploy Python Build: ${{ matrix.python }}-${{ matrix.host }}-${{ matrix.platform }}.tar.xz"
       run: |
-        scp ${{ matrix.arch }}-${{ matrix.platform }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/build/"
+        scp ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/build/"
