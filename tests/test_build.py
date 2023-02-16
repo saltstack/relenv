@@ -22,10 +22,11 @@ def fake_download_md5(fake_download):
 
 @pytest.mark.skip_unless_on_linux
 def test_builder_defaults_linux():
-    builder = Builder()
+    builder = Builder(version="3.10.10")
+    assert builder.arch == "x86_64"
     assert builder.arch == "x86_64"
     assert builder.triplet == "x86_64-linux-gnu"
-    assert builder.prefix == DATA_DIR / "build" / "x86_64-linux-gnu"
+    assert builder.prefix == DATA_DIR / "build" / "3.10.10-x86_64-linux-gnu"
     assert builder.sources == DATA_DIR / "src"
     assert builder.downloads == DATA_DIR / "download"
     assert builder.toolchains == DATA_DIR / "toolchain"

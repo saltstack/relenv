@@ -45,6 +45,7 @@ def main():
     """
     parser = setup_cli()
     args = parser.parse_args()
+    # args.func(args)
     try:
         args.func(args)
     except AttributeError:

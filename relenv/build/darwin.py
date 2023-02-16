@@ -6,7 +6,7 @@ The darwin build process.
 import io
 
 from ..common import arches, DARWIN
-from .common import Builder, runcmd, finalize, build_openssl, build_sqlite
+from .common import runcmd, finalize, build_openssl, build_sqlite, builds
 
 ARCHES = arches[DARWIN]
 
@@ -71,7 +71,7 @@ def build_python(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = Builder(populate_env=populate_env)
+build = builds.add("darwin", populate_env=populate_env, version="3.10.9")
 
 build.add(
     "OpenSSL",
@@ -112,7 +112,7 @@ build.add(
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.10.9",
+        "version": build.version,
     },
 )
 
@@ -124,3 +124,6 @@ build.add(
         "python",
     ],
 )
+
+build = build.copy(version="3.11.2")
+builds.add("darwin", builder=build)

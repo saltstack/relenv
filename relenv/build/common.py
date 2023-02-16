@@ -37,7 +37,6 @@ from relenv.common import (
     work_dirs,
 )
 from relenv.relocate import main as relocate_main
-from relenv.create import create
 
 
 log = logging.getLogger(__name__)
@@ -72,6 +71,8 @@ __sys_path = []
 for __path in sys.path:
     if __path.startswith(__valid_path_prefixes):
         __sys_path.append(__path)
+for __path in os.environ.get('PYTHONPATH', '').split(':'):
+    __sys_path.append(__path)
 
 # Replace sys.path
 sys.path[:] = __sys_path
@@ -367,6 +368,16 @@ class Download:
         self.version = version
         self.md5sum = md5sum
 
+    def copy(self):
+        return Download(
+            self.name,
+            self.url_tpl,
+            self.signature_tpl,
+            self.destination,
+            self.version,
+            self.md5sum,
+        )
+
     @property
     def url(self):
         return self.url_tpl.format(version=self.version)
@@ -505,8 +516,11 @@ class Dirs:
     :type arch: str
     """
 
-    def __init__(self, dirs, name, arch):
+    def __init__(self, dirs, name, arch, version):
+        # XXX name is the specific to a step where as everything
+        # else here is generalized to the entire build
         self.name = name
+        self.version = version
         self.arch = arch
         self.root = dirs.root
         self.build = dirs.build
@@ -535,7 +549,7 @@ class Dirs:
 
     @property
     def prefix(self):
-        return self.build / self._triplet
+        return self.build / f"{self.version}-{self._triplet}"
 
     def __getstate__(self):
         """
@@ -591,6 +605,33 @@ class Dirs:
         }
 
 
+class Builds:
+    """
+    Collection of builds.
+    """
+
+    def __init__(self):
+        self.builds = {}
+
+    def add(self, platform, *args, **kwargs):
+        if "builder" in kwargs:
+            build = kwargs.pop("builder")
+            if args or kwargs:
+                raise RuntimeError(
+                    "builder keyword can not be used with other kwargs or args"
+                )
+        else:
+            build = Builder(*args, **kwargs)
+        if platform not in self.builds:
+            self.builds[platform] = {build.version: build}
+        else:
+            self.builds[platform][build.version] = build
+        return build
+
+
+builds = Builds()
+
+
 class Builder:
     """
     Utility that handles the build process.
@@ -617,13 +658,17 @@ class Builder:
         populate_env=populate_env,
         force_download=False,
         arch="x86_64",
+        version="",
     ):
+        self.root = root
         self.dirs = work_dirs(root)
         self.build_arch = build_arch()
         self.build_triplet = get_triplet(self.build_arch)
         self.arch = arch
         self.triplet = get_triplet(self.arch)
-        self.prefix = self.dirs.build / self.triplet
+        self.version = version
+        # XXX Refactor WorkDirs, Dirs and Builder so as not to duplicate logic
+        self.prefix = self.dirs.build / f"{self.version}-{self.triplet}"
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
 
@@ -638,6 +683,27 @@ class Builder:
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
+    def copy(self, version):
+        recipies = {}
+        for name in self.recipies:
+            _ = self.recipies[name]
+            recipies[name] = {
+                "build_func": _["build_func"],
+                "wait_on": _["wait_on"],
+                "download": _["download"].copy() if _["download"] else None
+            }
+        build = Builder(
+            self.root,
+            recipies,
+            self.build_default,
+            self.populate_env,
+            self.force_download,
+            self.arch,
+            version,
+        )
+        build.recipies["python"]["download"].version = version
+        return build
+
     def set_arch(self, arch):
         """
         Set the architecture for the build.
@@ -647,7 +713,7 @@ class Builder:
         """
         self.arch = arch
         self.triplet = get_triplet(self.arch)
-        self.prefix = self.dirs.build / self.triplet
+        self.prefix = self.dirs.build / f"{self.version}-{self.triplet}"
         if sys.platform in ["darwin", "win32"]:
             self.toolchain = None
         else:
@@ -708,7 +774,7 @@ class Builder:
         if not self.dirs.build.exists():
             os.makedirs(self.dirs.build, exist_ok=True)
 
-        dirs = Dirs(self.dirs, name, self.arch)
+        dirs = Dirs(self.dirs, name, self.arch, self.version)
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.logs, exist_ok=True)
         os.makedirs(dirs.prefix, exist_ok=True)
@@ -736,6 +802,8 @@ class Builder:
         env["RELENV_HOST_ARCH"] = self.arch
         env["RELENV_BUILD"] = self.build_triplet
         env["RELENV_BUILD_ARCH"] = self.build_arch
+        env["RELENV_PY_VERSION"] = self.recipies["python"]["download"].version
+        env["RELENV_PY_MAJOR_VERSION"] = env["RELENV_PY_VERSION"].rsplit(".", 1)[0]
         if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
@@ -778,7 +846,8 @@ class Builder:
             except FileNotFoundError:
                 pass
         # Clean files
-        for _ in [self.prefix.with_suffix(".tar.xz")]:
+        archive = f"{self.prefix}.tar.xz"
+        for _ in [archive]:
             try:
                 os.remove(_)
             except FileNotFoundError:
@@ -976,7 +1045,8 @@ class Builder:
         if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"
             if not native_root.exists():
-                create("native", DATA_DIR)
+                from relenv.create import create
+                create("native", DATA_DIR, version=self.version)
 
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
@@ -1172,14 +1242,15 @@ def finalize(env, dirs, logfp):
     # Fix the shebangs in the scripts python layed down.
     patch_shebangs(
         str(pathlib.Path(dirs.prefix) / "bin"),
-        "#!{}".format(str(bindir / "python3.10")),
+        "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}")),
         SHEBANG_TPL.format("/python3"),
     )
 
     if sys.platform == "linux":
+        pyconf = f"config-{env['RELENV_PY_MAJOR_VERSION']}-{env['RELENV_HOST']}"
         patch_shebang(
-            str(pymodules / f"config-3.10-{env['RELENV_HOST']}" / "python-config.py"),
-            "#!{}".format(str(bindir / "python3.10")),
+            str(pymodules / pyconf / "python-config.py"),
+            "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}")),
             SHEBANG_TPL.format("../../../bin/python3"),
         )
 
@@ -1229,7 +1300,8 @@ def finalize(env, dirs, logfp):
         # Mac specific, factor this out
         "*.dylib",
     ]
-    archive = dirs.prefix.with_suffix(".tar.xz")
+    archive = f"{ dirs.prefix }.tar.xz"
+    print(f"Archive is { archive }")
     with tarfile.open(archive, mode="w:xz") as fp:
         create_archive(fp, dirs.prefix, globs, logfp)
 

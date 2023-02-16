@@ -11,7 +11,7 @@ import os
 import pathlib
 import tarfile
 
-from .common import Builder, runcmd, create_archive, MODULE_DIR, SITECUSTOMIZE
+from .common import runcmd, create_archive, MODULE_DIR, SITECUSTOMIZE, builds
 from ..common import arches, WIN32
 
 ARCHES = arches[WIN32]
@@ -77,7 +77,7 @@ def build_python(env, dirs, logfp):
         "python.exe",
         "pythonw.exe",
         "python3.dll",
-        "python310.dll",
+        f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.dll",
         "vcruntime140.dll",
         "venvlauncher.exe",
         "venvwlauncher.exe",
@@ -120,19 +120,19 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     shutil.copy(
-        src=str(build_dir / "python310.lib"),
-        dst=str(dirs.prefix / "libs" / "python310.lib"),
+        src=str(build_dir / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"),
+        dst=str(dirs.prefix / "libs" / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"),
     )
 
 
-build = Builder(populate_env=populate_env)
+build = builds.add("win32", populate_env=populate_env, version="3.10.9")
 
 build.add(
     "python",
     build_func=build_python,
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        "version": "3.10.9",
+        "version": build.version,
     },
 )
 
@@ -211,7 +211,7 @@ def finalize(env, dirs, logfp):
         "/Include/*",
         "/Lib/site-packages/*",
     ]
-    archive = dirs.prefix.with_suffix(".tar.xz")
+    archive = f"{dirs.prefix}.tar.xz"
     with tarfile.open(archive, mode="w:xz") as fp:
         create_archive(fp, dirs.prefix, globs, logfp)
 
@@ -221,3 +221,6 @@ build.add(
     build_func=finalize,
     wait_on=["python"],
 )
+
+build = build.copy(version="3.11.2")
+builds.add("win32", builder=build)

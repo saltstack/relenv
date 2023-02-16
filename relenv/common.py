@@ -229,6 +229,19 @@ def get_triplet(machine=None, plat=None):
         raise RelenvException(f"Unknown platform {plat}")
 
 
+def list_archived_builds():
+    builds = []
+    dirs = work_dirs(DATA_DIR)
+    for root, dirs, files in os.walk(dirs.build):
+        for file in files:
+            if file.endswith(".tar.xz"):
+                file = file[:-7]
+                version, triplet = file.split('-', 1)
+                arch, plat = triplet.split('-', 1)
+                builds.append((version, arch, plat))
+    return builds
+
+
 def archived_build(triplet=None):
     """
     Finds a the location of an archived build.
@@ -242,7 +255,8 @@ def archived_build(triplet=None):
     if not triplet:
         triplet = get_triplet()
     dirs = work_dirs(DATA_DIR)
-    return (dirs.build / triplet).with_suffix(".tar.xz")
+    archive = f"{triplet}.tar.xz"
+    return dirs.build / archive
 
 
 def extract_archive(to_dir, archive):

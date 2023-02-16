@@ -15,6 +15,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        version:
+          - 3.10.9
+          - 3.11.2
         host:
           - x86_64
           - aarch64
@@ -22,7 +25,7 @@ jobs:
           - x86_64
           - aarch64
 
-    name: "Python Linux ${{ matrix.target }} on ${{ matrix.host }}"
+    name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
     runs-on:
       - self-hosted
@@ -53,11 +56,11 @@ jobs:
       - name: Fetch Native Build
         if: ${{ matrix.host != matrix.target }}
         run: |
-          python3 -m relenv fetch
+          python3 -m relenv fetch --python=${{ matrix.version }}
 
       - name: Build
         run: |
-          python3 -m relenv build --arch=${{ matrix.target }}
+          python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
 
       - name: Verify Build
         if: ${{ matrix.host == matrix.target }}
@@ -68,23 +71,23 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
+          name: ${{ matrix.version }}-${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.target }}-linux-gnu.tar.xz"
+      - name: "Upload artifact: build/${{ matrix.version }}-{{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
         if: ${{ matrix.host == matrix.target }}
         with:
-          name: ${{ matrix.target }}-linux-gnu.tar.xz
-          path: build/${{ matrix.target }}-linux-gnu.tar.xz
+          name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
+          path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.host }}-${{ matrix.target }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.version }}-${{ matrix.host }}-${{ matrix.target }}
 
       - name: Upload Exit Status
         if: always()
@@ -102,6 +105,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        version:
+          - 3.10.9
+          - 3.11.2
         arch:
           - x86_64
 
@@ -121,7 +127,7 @@ jobs:
 
       - name: Build
         run: |
-          python3 -m relenv build
+          python3 -m relenv build --python=${{ matrix.version }}
 
       - name: Re-install gettext
         run: |
@@ -135,22 +141,22 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.arch }}-macos-logs
+          name: ${{ matrix.version }}-${{ matrix.arch }}-macos-logs
           path: logs/*
           retention-days: 5
 
       - name: Python build
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.arch }}-macos.tar.xz
-          path: build/${{ matrix.arch }}-macos.tar.xz
+          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.arch }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.version }}-${{ matrix.arch }}
 
       - name: Upload Exit Status
         if: always()
@@ -167,6 +173,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        version:
+          - 3.10.9
+          - 3.11.2
         arch:
           - amd64
           - x86
@@ -188,11 +197,11 @@ jobs:
       - name: Fetch Native Build
         if: ${{ matrix.arch != 'amd64' }}
         run: |
-          python3 -m relenv fetch
+          python3 -m relenv fetch --python=${{ matrix.version }}
 
       - name: Build Python with Relenv
         run: |
-          python -m relenv build --arch=${{ matrix.arch }}
+          python -m relenv build --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
       - name: Verify Build
         if: ${{ matrix.arch == 'amd64' }}
@@ -203,22 +212,22 @@ jobs:
         uses: actions/upload-artifact@v3
         if: always()
         with:
-          name: ${{ matrix.arch }}-windows-logs
+          name: ${{ matrix.version }}-${{ matrix.arch }}-windows-logs
           path: logs/*
           retention-days: 5
 
       - name: Upload Zipfile
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.arch }}-win.tar.xz
-          path: build/${{ matrix.arch }}-win.tar.xz
+          name: ${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
+          path: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
           retention-days: 5
 
       - name: Set Exit Status
         if: always()
         run: |
           mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.arch }}
+          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.version }}-${{ matrix.arch }}
 
       - name: Upload Exit Status
         if: always()

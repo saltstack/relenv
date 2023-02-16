@@ -6,7 +6,7 @@ The ``relenv fetch`` command.
 
 import os
 
-from .build import platform_module
+from .build import platform_module, platform_versions
 from .common import DATA_DIR, build_arch, download_url, get_triplet, work_dir
 
 
@@ -27,6 +27,13 @@ def setup_parser(subparsers):
         type=str,
         help="Architecture to download. [default: %(default)s]",
     )
+    subparser.add_argument(
+        "--python",
+        default=platform_versions()[0],
+        choices=platform_versions(),
+        type=str,
+        help="The python version [default: %(default)s]",
+    )
 
 
 def main(args):
@@ -38,7 +45,7 @@ def main(args):
     """
     version = os.environ.get("RELENV_FETCH_VERSION", "latest")
     triplet = get_triplet(machine=args.arch)
-    url = f"https://woz.io/relenv/{version}/build/{triplet}.tar.xz"
+    url = f"https://woz.io/relenv/{version}/build/{args.python}-{triplet}.tar.xz"
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
     download_url(url, builddir)
