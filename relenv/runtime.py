@@ -200,10 +200,11 @@ def bootstrap():
         sys.prefix = str(crossroot)
         sys.exec_prefix = str(crossroot)
         # XXX What about dist-packages
+        pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
         sys.path = [
-            str(crossroot / "lib" / f"python{sys.version_info.major}.(sys.version_info.minor}"),
-            str(crossroot / "lib" / f"python{sys.version_info.major}.(sys.version_info.minor}" / "lib-dynload"),
-            str(crossroot / "lib" / "python{sys.version_info.major}.(sys.version_info.minor}" / "site-packages"),
+            str(crossroot / "lib" / pyver),
+            str(crossroot / "lib" / pyver / "lib-dynload"),
+            str(crossroot / "lib" / pyver / "site-packages"),
         ] + [_ for _ in sys.path if "site-packages" not in _]
 
     # Use system openssl dirs
