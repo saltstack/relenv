@@ -11,7 +11,7 @@ import os
 import pathlib
 import tarfile
 
-from .common import runcmd, create_archive, MODULE_DIR, SITECUSTOMIZE, builds
+from .common import runcmd, create_archive, MODULE_DIR, builds, write_relenv_pth_file
 from ..common import arches, WIN32
 
 ARCHES = arches[WIN32]
@@ -120,8 +120,14 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     shutil.copy(
-        src=str(build_dir / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"),
-        dst=str(dirs.prefix / "libs" / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"),
+        src=str(
+            build_dir / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"
+        ),
+        dst=str(
+            dirs.prefix
+            / "libs"
+            / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"
+        ),
     )
 
 
@@ -148,12 +154,11 @@ def finalize(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "Scripts"
     sitepackages = dirs.prefix / "Lib" / "site-packages"
-    sitecustomize = sitepackages / "sitecustomize.py"
-    with io.open(str(sitecustomize), "w") as fp:
-        fp.write(SITECUSTOMIZE)
+
+    # Lay down the relenv pth file
+    write_relenv_pth_file(sitepackages)
 
     # Lay down relenv.runtime, we'll pip install the rest later
     relenvdir = sitepackages / "relenv"
