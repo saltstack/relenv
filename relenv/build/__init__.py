@@ -24,6 +24,7 @@ def platform_module():
     elif sys.platform == "win32":
         return windows
 
+
 def platform_versions():
     """
     Return the right module based on `sys.platform`.
