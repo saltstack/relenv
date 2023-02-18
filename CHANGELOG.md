@@ -1,3 +1,11 @@
+0.6.0
+=====
+
+* Add python 3.11.2
+* Upgrade linux python depenencies
+* Add version check script
+
+
 0.5.0
 =====
 
