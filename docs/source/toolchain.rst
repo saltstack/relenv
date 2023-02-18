@@ -42,5 +42,5 @@ Under most circumstances using a pre-built toolchain is preffered over building 
 
 .. code-block:: bash
 
-   python3 -m relenv toolchain download --arch=x86_64
+   python3 -m relenv toolchain fetch --arch=x86_64
 
