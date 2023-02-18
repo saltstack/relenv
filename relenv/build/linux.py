@@ -6,6 +6,7 @@ The linux build process.
 from .common import *
 from ..common import arches, LINUX
 
+
 ARCHES = arches[LINUX]
 
 # Patch for Python's setup.py
@@ -326,11 +327,10 @@ def build_python(env, dirs, logfp):
         "--with-ensurepip=no",
         f"--build={env['RELENV_BUILD']}",
         f"--host={env['RELENV_HOST']}",
-
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
-        #env["RELENV_CROSS"] = dirs.prefix
+        # env["RELENV_CROSS"] = dirs.prefix
         cmd += [
             f"--with-build-python={env['RELENV_NATIVE_PY']}",
         ]

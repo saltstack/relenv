@@ -690,7 +690,7 @@ class Builder:
             recipies[name] = {
                 "build_func": _["build_func"],
                 "wait_on": _["wait_on"],
-                "download": _["download"].copy() if _["download"] else None
+                "download": _["download"].copy() if _["download"] else None,
             }
         build = Builder(
             self.root,
@@ -1046,6 +1046,7 @@ class Builder:
             native_root = DATA_DIR / "native"
             if not native_root.exists():
                 from relenv.create import create
+
                 create("native", DATA_DIR, version=self.version)
 
         # Start a process for each build passing it an event used to notify each

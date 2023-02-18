@@ -11,6 +11,7 @@ import os
 import pathlib
 import tarfile
 
+
 from .common import runcmd, create_archive, MODULE_DIR, SITECUSTOMIZE, builds
 from ..common import arches, WIN32
 
@@ -119,9 +120,10 @@ def build_python(env, dirs, logfp):
         src=str(build_dir / "python3.lib"),
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
+    pylib = f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"
     shutil.copy(
-        src=str(build_dir / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"),
-        dst=str(dirs.prefix / "libs" / f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"),
+        src=str(build_dir / pylib),
+        dst=str(dirs.prefix / "libs" / pylib),
     )
 
 

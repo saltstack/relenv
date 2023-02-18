@@ -230,14 +230,17 @@ def get_triplet(machine=None, plat=None):
 
 
 def list_archived_builds():
+    """
+    Return a list of version, architecture and platforms for builds.
+    """
     builds = []
     dirs = work_dirs(DATA_DIR)
     for root, dirs, files in os.walk(dirs.build):
         for file in files:
             if file.endswith(".tar.xz"):
                 file = file[:-7]
-                version, triplet = file.split('-', 1)
-                arch, plat = triplet.split('-', 1)
+                version, triplet = file.split("-", 1)
+                arch, plat = triplet.split("-", 1)
                 builds.append((version, arch, plat))
     return builds
 

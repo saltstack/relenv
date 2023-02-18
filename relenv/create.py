@@ -9,8 +9,8 @@ import os
 import pathlib
 import sys
 import tarfile
-from .build import platform_versions
 
+from .build import platform_versions
 from .common import RelenvException, arches, archived_build, build_arch
 
 
