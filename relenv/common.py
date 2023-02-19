@@ -3,6 +3,7 @@
 """
 Common classes and values used around relenv.
 """
+import http.client
 import os
 import pathlib
 import platform
@@ -328,7 +329,11 @@ def download_url(url, dest, verbose=True):
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
+<<<<<<< Updated upstream
             http.client.RemoteDisconnect,
+=======
+            http.client.RemoteDisconnected,
+>>>>>>> Stashed changes
         ) as exc:
             if n == 3:
                 print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
