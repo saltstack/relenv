@@ -1,14 +1,16 @@
+# flake8: noqa
 # XXX Merge this into relenv.build.common.Download
-import requests
-from html.parser import HTMLParser
 import re
-from packaging.version import parse, Version, InvalidVersion
+from html.parser import HTMLParser
+
+import requests
+from packaging.version import InvalidVersion, Version, parse
 
 
 def tarball_version(href):
     if href.endswith("tar.gz"):
         try:
-            x = href.split('-', 1)[1][:-7]
+            x = href.split("-", 1)[1][:-7]
             if x != "latest":
                 return x
         except IndexError:
@@ -17,25 +19,29 @@ def tarball_version(href):
 
 def sqlite_version(href):
     if "releaselog" in href:
-        link = href.split('/')[1][:-5]
-        return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split('_')])
+        link = href.split("/")[1][:-5]
+        return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split("_")])
 
 
 def ffi_version(href):
     if "tag/" in href:
         return href.split("/v")[-1]
 
+
 def krb_version(href):
     if re.match("\d\.\d\d/", href):
         return href[:-1]
+
 
 def python_version(href):
     if re.match("(\d+\.)+\d/", href):
         return href[:-1]
 
+
 def uuid_version(href):
     if "download" in href and "latest" not in href:
-        return href[:-16].rsplit('/')[-1].replace('libuuid-', '')
+        return href[:-16].rsplit("/")[-1].replace("libuuid-", "")
+
 
 def parse_links(text):
     class HrefParser(HTMLParser):
@@ -58,31 +64,35 @@ def check_files(location, func, current):
     for _ in parse_links(resp.text):
         version = func(_)
         if version:
-            #print('*' * 10)
-            #print(repr(version))
-            #print('*' * 10)
+            # print('*' * 10)
+            # print(repr(version))
+            # print('*' * 10)
             try:
                 versions.append(parse(version))
             except InvalidVersion:
                 pass
-    #print([i for i in versions])
+    # print([i for i in versions])
     versions.sort()
     compare_versions(current, versions)
 
+
 NOOP = object()
+
 
 def compare_versions(current, versions):
     current = parse(current)
     for version in versions:
-        #if s == "latest":
+        # if s == "latest":
         #    continue
-        #version = Version(s)
+        # version = Version(s)
         try:
             if version > current:
                 print(f"Found new version {version} > {current}")
-#                return (version, current)
+        #                return (version, current)
         except TypeError:
             print(f"Unable to compare versions {version}")
+
+
 #            raise
 #    return NOOP, NOOP
 
@@ -110,7 +120,7 @@ print("libffi")
 check_files("https://github.com/libffi/libffi/releases/", ffi_version, "3.4.4")
 print("zlib")
 check_files("https://zlib.net/fossils/", tarball_version, "1.2.13")
-print('krb')
+print("krb")
 check_files("https://kerberos.org/dist/krb5/", krb_version, "1.20")
 print("libuuid")
 check_files("https://sourceforge.net/projects/libuuid/files/", uuid_version, "1.0.3")
