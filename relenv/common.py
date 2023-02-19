@@ -13,6 +13,7 @@ import textwrap
 import time
 import urllib.error
 import urllib.request
+import http.client
 
 # relenv package version
 __version__ = "0.6.0"
@@ -324,7 +325,11 @@ def download_url(url, dest, verbose=True):
         n += 1
         try:
             fin = urllib.request.urlopen(url)
-        except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+        except (
+            urllib.error.HTTPError,
+            urllib.error.URLError,
+            http.client.RemoteDisconnect,
+        ) as exc:
             if n == 3:
                 print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
                 raise

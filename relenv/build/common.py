@@ -71,8 +71,12 @@ __sys_path = []
 for __path in sys.path:
     if __path.startswith(__valid_path_prefixes):
         __sys_path.append(__path)
-for __path in os.environ.get('PYTHONPATH', '').split(':'):
-    __sys_path.append(__path)
+if 'PYTHONPATH' in os.environ:
+    sep = ':'
+    if sys.platform == 'win32':
+       sep = ';'
+    for __path in os.environ['PYTHONPATH'].split(sep):
+        __sys_path.append(__path)
 
 # Replace sys.path
 sys.path[:] = __sys_path

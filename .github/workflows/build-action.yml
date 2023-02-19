@@ -75,7 +75,7 @@ jobs:
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.version }}-{{ matrix.target }}-linux-gnu.tar.xz"
+      - name: "Upload artifact: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v3
         if: ${{ matrix.host == matrix.target }}
         with:
