@@ -71,15 +71,15 @@ def build_python(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("darwin", populate_env=populate_env, version="3.10.9")
+build = builds.add("darwin", populate_env=populate_env, version="3.10.10")
 
 build.add(
     "OpenSSL",
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "1.1.1n",
-        "md5sum": "2aad5635f9bb338bc2c6b7d19cbc9676",
+        "version": "1.1.1t",
+        "md5sum": "1cfee919e0eac6be62c88c5ae8bcd91e",
     },
 )
 
@@ -87,8 +87,8 @@ build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "version": "5.2.3",
-        "md5sum": "ef68674fb47a8b8e741b34e429d86e9d",
+        "version": "5.4.1",
+        "md5sum": "7e7454778b4cfae238a7660521b29b38",
     },
 )
 
@@ -97,8 +97,8 @@ build.add(
     build_func=build_sqlite,
     download={
         "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
-        "version": "3370200",
-        "md5sum": "683cc5312ee74e71079c14d24b7a6d27",
+        "version": "3400100",
+        "md5sum": "42175b1a1d23529cb133bbd2b5900afd",
     },
 )
 

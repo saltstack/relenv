@@ -355,15 +355,15 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("linux", populate_env=populate_env, version="3.10.9")
+build = builds.add("linux", populate_env=populate_env, version="3.10.10")
 
 build.add(
     "OpenSSL",
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "1.1.1s",
-        "md5sum": "fba062bea4c734de7ad81864cf07e6ab",
+        "version": "1.1.1t",
+        "md5sum": "1cfee919e0eac6be62c88c5ae8bcd91e",
     },
 )
 
@@ -371,8 +371,8 @@ build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "version": "5.2.10",
-        "md5sum": "eae070cfcfec883a91866b4fe37cce17",
+        "version": "5.4.1",
+        "md5sum": "7e7454778b4cfae238a7660521b29b38",
     },
 )
 
@@ -382,7 +382,7 @@ build.add(
     download={
         "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
         "version": "3400100",
-        "md5sum": "8a3af7943a6eb6db7a3fe02d1837b1ce",
+        "md5sum": "42175b1a1d23529cb133bbd2b5900afd",
     },
 )
 
@@ -413,7 +413,7 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
         "version": "6.4",
-        "md5sum": "d41d8cd98f00b204e9800998ecf8427e",
+        "md5sum": "5a62487b5d4ac6b132fe2bf9f8fad29b",
     },
 )
 
@@ -453,7 +453,7 @@ build.add(
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
         "version": "1.20",
-        "md5sum": "2a40daeb23f7414f843bb4f00ab1f666",
+        "md5sum": "e88657aca6e6b0528c11a78643498bd5",
     },
 )
 
@@ -485,7 +485,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": build.version,
-        "md5sum": "0029ded93651a6894c6a3962ba168de1",
+        "md5sum": "7bf85df71bbe7f95e5370b983e6ae684",
     },
 )
 

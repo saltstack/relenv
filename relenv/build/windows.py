@@ -127,7 +127,7 @@ def build_python(env, dirs, logfp):
     )
 
 
-build = builds.add("win32", populate_env=populate_env, version="3.10.9")
+build = builds.add("win32", populate_env=populate_env, version="3.10.10")
 
 build.add(
     "python",
