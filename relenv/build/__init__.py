@@ -8,7 +8,7 @@ import random
 import codecs
 
 from . import linux, darwin, windows
-from .common import builds
+from .common import builds, CHECK_VERSIONS_SUPPORT
 
 from ..common import build_arch
 
@@ -98,6 +98,12 @@ def setup_parser(subparsers):
             "has no chance of being succesful. "
         ),
     )
+    build_subparser.add_argument(
+        "--check-versions",
+        default=False,
+        action="store_true",
+        help="Check for new version of python and it's depenencies, then exit.",
+    )
 
 
 def main(args):
@@ -118,6 +124,17 @@ def main(args):
 
     # XXX
     build = builds.builds[sys.platform][args.python]
+
+    if args.check_versions:
+        if not CHECK_VERSIONS_SUPPORT:
+            print(
+                "Check versions not supported. Please install the "
+                "packagig and looseversion python packages."
+            )
+            sys.exit(2)
+        build.check_versions()
+        sys.exit()
+
     build.set_arch(args.arch)
     steps = None
     if args.steps:
