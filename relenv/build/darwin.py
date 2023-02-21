@@ -56,6 +56,7 @@ def build_python(env, dirs, logfp):
             "--prefix={}".format(dirs.prefix),
             "--with-openssl={}".format(dirs.prefix),
             "--enable-optimizations",
+            "--disable-test-modules",
         ],
         env=env,
         stderr=logfp,

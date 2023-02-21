@@ -327,6 +327,7 @@ def build_python(env, dirs, logfp):
         "--with-ensurepip=no",
         f"--build={env['RELENV_BUILD']}",
         f"--host={env['RELENV_HOST']}",
+        "--disable-test-modules",
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
