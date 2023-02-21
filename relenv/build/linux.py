@@ -363,8 +363,11 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
         "version": "1.1.1t",
         "md5sum": "1cfee919e0eac6be62c88c5ae8bcd91e",
+        "checkfunc": tarball_version,
+        "checkurl": "https://www.openssl.org/source/",
     },
 )
 
@@ -372,8 +375,10 @@ build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
         "version": "5.4.1",
         "md5sum": "7e7454778b4cfae238a7660521b29b38",
+        "checkfunc": tarball_version,
     },
 )
 
@@ -382,8 +387,11 @@ build.add(
     build_func=build_sqlite,
     download={
         "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
         "version": "3400100",
         "md5sum": "42175b1a1d23529cb133bbd2b5900afd",
+        "checkfunc": sqlite_version,
+        "checkurl": "https://sqlite.org/",
     },
 )
 
@@ -392,8 +400,10 @@ build.add(
     build_func=build_bzip2,
     download={
         "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/bzip2-{version}.tar.gz",
         "version": "1.0.8",
         "md5sum": "67e051268d0c475ea773822f7500d0e5",
+        "checkfunc": tarball_version,
     },
 )
 
@@ -402,8 +412,10 @@ build.add(
     build_func=build_gdbm,
     download={
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/gdbm-{version}.tar.gz",
         "version": "1.23",
         "md5sum": "8551961e36bf8c70b7500d255d3658ec",
+        "checkfunc": tarball_version,
     },
 )
 
@@ -413,8 +425,10 @@ build.add(
     wait_on=["readline"],
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/ncurses-{version}.tar.gz",
         "version": "6.4",
         "md5sum": "5a62487b5d4ac6b132fe2bf9f8fad29b",
+        "checkfunc": tarball_version,
     },
 )
 
@@ -423,8 +437,11 @@ build.add(
     build_libffi,
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
         "version": "3.4.4",
         "md5sum": "0da1a5ed7786ac12dcbaf0d499d8a049",
+        "checkfunc": ffi_version,
+        "checkurl": "https://github.com/libffi/libffi/releases/",
     },
 )
 
@@ -433,8 +450,10 @@ build.add(
     build_zlib,
     download={
         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/zlib-{version}.tar.gz",
         "version": "1.2.13",
         "md5sum": "9b8aa094c4e5765dabf4da391f00d15c",
+        "checkfunc": tarball_version,
     },
 )
 
@@ -442,8 +461,10 @@ build.add(
     "uuid",
     download={
         "url": "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/libuuid-{version}.tar.gz",
         "version": "1.0.3",
         "md5sum": "d44d866d06286c08ba0846aba1086d68",
+        "checkfunc": uuid_version,
     },
 )
 
@@ -453,8 +474,11 @@ build.add(
     wait_on=["OpenSSL"],
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/krb5-{version}.tar.gz",
         "version": "1.20",
         "md5sum": "e88657aca6e6b0528c11a78643498bd5",
+        "checkfunc": krb_version,
+        "checkurl": "https://kerberos.org/dist/krb5/",
     },
 )
 
@@ -462,8 +486,10 @@ build.add(
     "readline",
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/readline-{version}.tar.gz",
         "version": "8.2",
         "md5sum": "4aa1b31be779e6b84f9a96cb66bc50f6",
+        "checkfunc": tarball_version,
     },
 )
 
@@ -485,8 +511,11 @@ build.add(
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
+        "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
         "md5sum": "7bf85df71bbe7f95e5370b983e6ae684",
+        "checkfunc": python_version,
+        "checkurl": "https://www.python.org/ftp/python/",
     },
 )
 

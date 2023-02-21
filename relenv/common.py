@@ -299,6 +299,36 @@ def get_download_location(url, dest):
     return os.path.join(dest, os.path.basename(url))
 
 
+def fetch_url(url, fp):
+    """
+    Fetch the contents of a url.
+
+    This method will store the contents in the given file like object.
+    """
+    n = 0
+    while n < 3:
+        n += 1
+        try:
+            fin = urllib.request.urlopen(url)
+        except (
+            urllib.error.HTTPError,
+            urllib.error.URLError,
+            http.client.RemoteDisconnected,
+        ) as exc:
+            if n == 3:
+                print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
+                raise
+            time.sleep(n * 10)
+    try:
+        block = fin.read(10240)
+        while block:
+            fp.write(block)
+            block = fin.read(10240)
+    finally:
+        fin.close()
+        # fp.close()
+
+
 def download_url(url, dest, verbose=True):
     """
     Download the url to the provided destination.
@@ -320,28 +350,9 @@ def download_url(url, dest, verbose=True):
     local = get_download_location(url, dest)
     if verbose:
         print(f"Downloading {url} -> {local}")
-    n = 0
-    while n < 3:
-        n += 1
-        try:
-            fin = urllib.request.urlopen(url)
-        except (
-            urllib.error.HTTPError,
-            urllib.error.URLError,
-            http.client.RemoteDisconnected,
-        ) as exc:
-            if n == 3:
-                print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
-                raise
-            time.sleep(n * 10)
     fout = open(local, "wb")
-    block = fin.read(10240)
     try:
-        while block:
-            fout.write(block)
-            block = fin.read(10240)
-        fin.close()
-        fout.close()
+        fetch_url(url, fout)
     except Exception:
         try:
             os.unlink(local)

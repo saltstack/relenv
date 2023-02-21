@@ -20,6 +20,9 @@ import io
 import os
 import multiprocessing
 import pprint
+import re
+from html.parser import HTMLParser
+
 
 from relenv.common import (
     DATA_DIR,
@@ -35,9 +38,17 @@ from relenv.common import (
     get_triplet,
     runcmd,
     work_dirs,
+    fetch_url,
 )
 from relenv.relocate import main as relocate_main
 
+
+CHECK_VERSIONS_SUPPORT = True
+try:
+    from packaging.version import InvalidVersion, parse
+    from looseversion import LooseVersion
+except ImportError:
+    CHECK_VERSIONS_SUPPORT = False
 
 log = logging.getLogger(__name__)
 
@@ -337,6 +348,101 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def tarball_version(href):
+    if href.endswith("tar.gz"):
+        try:
+            x = href.split("-", 1)[1][:-7]
+            if x != "latest":
+                return x
+        except IndexError:
+            return None
+
+
+def sqlite_version(href):
+    if "releaselog" in href:
+        link = href.split("/")[1][:-5]
+        return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split("_")])
+
+
+def ffi_version(href):
+    if "tag/" in href:
+        return href.split("/v")[-1]
+
+
+def krb_version(href):
+    if re.match(r"\d\.\d\d/", href):
+        return href[:-1]
+
+
+def python_version(href):
+    if re.match(r"(\d+\.)+\d/", href):
+        return href[:-1]
+
+
+def uuid_version(href):
+    if "download" in href and "latest" not in href:
+        return href[:-16].rsplit("/")[-1].replace("libuuid-", "")
+
+
+def parse_links(text):
+    class HrefParser(HTMLParser):
+        hrefs = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "a":
+                link = dict(attrs).get("href", "")
+                if link:
+                    self.hrefs.append(link)
+
+    parser = HrefParser()
+    parser.feed(text)
+    return parser.hrefs
+
+
+def check_files(location, func, current):
+    fp = io.BytesIO()
+    fetch_url(location, fp)
+    fp.seek(0)
+    text = fp.read().decode()
+    loose = False
+    try:
+        current = parse(current)
+    except InvalidVersion:
+        current = LooseVersion(current)
+        loose = True
+
+    versions = []
+    for _ in parse_links(text):
+        version = func(_)
+        if version:
+            if loose:
+                versions.append(LooseVersion(version))
+            else:
+                try:
+                    versions.append(parse(version))
+                except InvalidVersion:
+                    pass
+
+    versions.sort()
+    compare_versions(current, versions)
+
+
+def compare_versions(current, versions):
+    for version in versions:
+        try:
+            if version > current:
+                print(f"Found new version {version} > {current}")
+        except TypeError:
+            print(f"Unable to compare versions {version}")
+
+
+# def check_named_versions(name, current, versions):
+#    version, current = check_versions
+#    if version == NOOP:
+#        return
+#    print(f"{name}: {version} > {current}")
+
+
 class Download:
     """
     A utility that holds information about content to be downloaded.
@@ -360,31 +466,45 @@ class Download:
         self,
         name,
         url,
+        fallback_url=None,
         signature=None,
         destination="",
         version="",
         md5sum=None,
+        checkfunc=None,
+        checkurl=None,
     ):
         self.name = name
         self.url_tpl = url
+        self.fallback_url_tpl = fallback_url
         self.signature_tpl = signature
         self.destination = destination
         self.version = version
         self.md5sum = md5sum
+        self.checkfunc = checkfunc
+        self.checkurl = checkurl
 
     def copy(self):
         return Download(
             self.name,
             self.url_tpl,
+            self.fallback_url_tpl,
             self.signature_tpl,
             self.destination,
             self.version,
             self.md5sum,
+            self.checkfunc,
+            self.checkurl,
         )
 
     @property
     def url(self):
         return self.url_tpl.format(version=self.version)
+
+    @property
+    def fallback_url(self):
+        if self.fallback_url_tpl:
+            return self.fallback_url_tpl.format(version=self.version)
 
     @property
     def signature_url(self):
@@ -406,7 +526,12 @@ class Download:
         :return: The path to the downloaded content, and whether it was downloaded.
         :rtype: tuple(str, bool)
         """
-        return download_url(self.url, self.destination, CICD), True
+        try:
+            return download_url(self.url, self.destination, CICD), True
+        except Exception as exc:
+            if self.fallback_url:
+                print(f"Download failed ({exc}); trying fallback url")
+                return download_url(self.fallback_url, self.destination, CICD), True
 
     def fetch_signature(self, version):
         """
@@ -506,6 +631,13 @@ class Download:
                 valid = valid and valid_md5
             log.debug("Checksum for %s: %s", self.name, self.md5sum)
         return valid
+
+    def check_version(self):
+        if self.checkurl:
+            url = self.checkurl
+        else:
+            url = self.url.rsplit("/", 1)[0]
+        check_files(url, self.checkfunc, self.version)
 
 
 class Dirs:
@@ -1057,6 +1189,14 @@ class Builder:
         # process if it's dependencies have finished.
         self.download_files(steps, force_download=force_download)
         self.build(steps, cleanup)
+
+    def check_versions(self):
+        for step in list(self.recipies):
+            download = self.recipies[step]["download"]
+            if not download:
+                continue
+            print(f"Checking {step}")
+            download.check_version()
 
 
 def patch_shebang(path, old, new):
