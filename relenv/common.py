@@ -230,6 +230,19 @@ def get_triplet(machine=None, plat=None):
         raise RelenvException(f"Unknown platform {plat}")
 
 
+def plat_from_triplet(plat):
+    """
+    Convert platform from build to the value of sys.platform.
+    """
+    if plat == "linux-gnu":
+        return "linux"
+    elif plat == "macos":
+        return "darwin"
+    elif plat == "win":
+        return "win32"
+    raise RelenvException(f"Unkown platform {plat}")
+
+
 def list_archived_builds():
     """
     Return a list of version, architecture and platforms for builds.
