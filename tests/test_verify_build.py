@@ -5,25 +5,50 @@ Verify relenv builds.
 """
 import os
 import pathlib
+import platform
+import shutil
 import subprocess
 import sys
 import textwrap
 
 import pytest
 
-from relenv.common import DATA_DIR, archived_build, get_triplet
+from relenv.common import DATA_DIR, get_triplet, list_archived_builds, plat_from_triplet
 from relenv.create import create
 
+
+def get_build_version():
+    if "RELENV_PY_VERSION" in os.environ:
+        return os.environ["RELENV_PY_VERSION"]
+    builds = list(list_archived_builds())
+    versions = []
+    for version, arch, plat in builds:
+        sysplat = plat_from_triplet(plat)
+        if sysplat == sys.platform and arch == platform.machine().lower():
+            versions.append(version)
+    if versions:
+        return versions[0]
+
+
+@pytest.fixture(scope="module")
+def build_version():
+    version = get_build_version()
+    yield version
+
+
+@pytest.fixture(scope="module")
+def minor_version():
+    yield get_build_version().rsplit(".", 1)[0]
+
+
 pytestmark = [
-    pytest.mark.skipif(
-        not archived_build().exists(), reason="Build archive does not exist"
-    ),
+    pytest.mark.skipif(not get_build_version(), reason="Build archive does not exist"),
 ]
 
 
 @pytest.fixture
-def build(tmpdir):
-    create("test", tmpdir)
+def build(tmpdir, build_version):
+    create("test", tmpdir, version=build_version)
     yield pathlib.Path(tmpdir) / "test"
 
 
@@ -56,12 +81,13 @@ def test_directories_win(build):
 
 
 @pytest.mark.skip_on_windows
-def test_directories(build):
+def test_directories(build, minor_version):
+    vpy = f"python{minor_version}"
     assert (build / "bin").exists()
     assert (build / "lib").exists()
-    assert (build / "lib" / "python3.10").exists()
-    assert (build / "lib" / "python3.10" / "lib-dynload").exists()
-    assert (build / "lib" / "python3.10" / "site-packages").exists()
+    assert (build / "lib" / vpy).exists()
+    assert (build / "lib" / vpy / "lib-dynload").exists()
+    assert (build / "lib" / vpy / "site-packages").exists()
     assert (build / "include").exists()
 
 
@@ -108,12 +134,23 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
+@pytest.mark.skipif(
+    sys.platform != "linux" and get_build_version() == "3.11.2",
+    reason="3.11.2 will not work on windows yet",
+)
 def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
-    packages = [
-        "salt@git+https://github.com/saltstack/salt",
-    ]
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
+    if sys.platform == "linux" and shutil.which("git"):
+        packages = [
+            "./salt",
+        ]
+        p = subprocess.run(
+            ["git", "clone", "https://github.com/saltstack/salt.git", "--depth", "1"],
+            env=env,
+        )
+    else:
+        packages = ["salt@git+https://github.com/saltstack/salt"]
 
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
@@ -132,6 +169,9 @@ def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
 
 
 @pytest.mark.skip_on_windows
+@pytest.mark.skipif(
+    get_build_version() == "3.11.2", reason="3.11.2 will not work with 3005.x"
+)
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     packages = [
         "salt==3005",
@@ -178,13 +218,22 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
     ), f"Could not run script for {name}, likely not pinning to the correct python"
 
 
+@pytest.mark.skipif(
+    get_build_version() == "3.11.2",
+    reason="3.11.2 will not work until pyzmq is upgraded",
+)
 def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
-
     p = subprocess.run(
-        ["git", "clone", "https://github.com/saltstack/salt.git", f"{tmpdir / 'salt'}"]
+        [
+            "git",
+            "clone",
+            "--depth=1",
+            "https://github.com/saltstack/salt.git",
+            f"{tmpdir / 'salt'}",
+        ]
     )
     assert p.returncode == 0, "Failed clone salt repo"
 
@@ -229,13 +278,14 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     assert p.returncode == 0, f"Failed to pip install {name}"
 
     import_name = "libcloud.security"
-    import_ret = subprocess.run(
-        [str(pyexec), "-c", f"import {import_name}", "--no-cache"]
-    )
+    import_ret = subprocess.run([str(pyexec), "-c", f"import {import_name}"])
     assert import_ret.returncode == 0, f"Failed to import {import_name}"
 
 
 @pytest.mark.skip_on_windows
+@pytest.mark.skipif(
+    get_build_version() == "3.11.2", reason="3.11.2 will not work with 3005.x"
+)
 def test_pip_install_salt_pip_dir(pipexec, build):
     packages = [
         "salt",
@@ -305,9 +355,12 @@ def test_pip_install_m2crypto(pipexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     p = subprocess.run(
+        ["swig", "-version"],
+    )
+    p = subprocess.run(
         [str(pipexec), "install", "m2crypto", "--no-cache", "-v"],
         env=env,
-        stdout=subprocess.PIPE,
+        # stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
     assert p.returncode == 0, "Failed to pip install m2crypto"
@@ -330,7 +383,7 @@ def test_pip_install_m2crypto(pipexec, build, tmpdir):
 
 
 @pytest.mark.skip_on_windows
-def test_shabangs(pipexec, build):
+def test_shabangs(pipexec, build, minor_version):
     def validate_shebang(path):
         with open(path, "r") as fp:
             return fp.read(9) == "#!/bin/sh"
@@ -338,16 +391,43 @@ def test_shabangs(pipexec, build):
     path = build / "bin" / "pip3"
     assert path.exists()
     assert validate_shebang(path)
-    path = build / "lib" / "python3.10" / "cgi.py"
+    path = build / "lib" / f"python{minor_version}" / "cgi.py"
     assert path.exists()
     assert validate_shebang(path)
     if sys.platform == "linux":
         path = (
             build
             / "lib"
-            / "python3.10"
-            / f"config-3.10-{get_triplet()}"
+            / f"python{minor_version}"
+            / f"config-{minor_version}-{get_triplet()}"
             / "python-config.py"
         )
         assert path.exists()
         assert validate_shebang(path)
+
+
+# XXX Mac support
+@pytest.mark.skip_unless_on_linux
+def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
+    p = subprocess.run(
+        [str(pipexec), "install", "cffi", "--no-cache", "--no-binary=cffi"],
+        # stdout=subprocess.PIPE,
+        # stderr=subprocess.PIPE,
+    )
+    assert p.returncode == 0, "Failed to pip install cffi"
+    b2 = build.parent / "test2"
+    build.rename(b2)
+    libname = (
+        f"_cffi_backend.cpython-{minor_version.replace('.', '')}-x86_64-linux-gnu.so"
+    )
+    p = subprocess.run(
+        ["ldd", b2 / "lib" / f"python{minor_version}" / "site-packages" / libname],
+        stdout=subprocess.PIPE,
+    )
+    for line in p.stdout.splitlines():
+        line = line.decode()
+        if "=>" not in line:
+            continue
+        lib, dest = [_.strip() for _ in line.split("=>", 1)]
+        if lib == "libffi.so.8":
+            assert str(b2) in dest

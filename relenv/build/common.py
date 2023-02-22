@@ -143,6 +143,8 @@ for key in _build_time_vars:
     val = _build_time_vars[key]
     orig = val
     if isinstance(val, str):
+        # This assumes we're installing c libararies into site-packages
+        val = val.replace('-Wl,--rpath={BUILDROOT}/lib', '-Wl,--rpath=$ORIGIN/../../')
         val = val.format(
             BUILDROOT=buildroot,
             TOOLCHAIN=toolchain,
