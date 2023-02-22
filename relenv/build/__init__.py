@@ -129,7 +129,7 @@ def main(args):
         if not CHECK_VERSIONS_SUPPORT:
             print(
                 "Check versions not supported. Please install the "
-                "packagig and looseversion python packages."
+                "packaging and looseversion python packages."
             )
             sys.exit(2)
         build.check_versions()
