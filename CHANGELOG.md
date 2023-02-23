@@ -1,3 +1,11 @@
+0.7.0
+=====
+
+* Update to python 3.10.10
+* Remove C-python test suite from build
+* Fix rpath on pip installed C moudles
+
+
 0.6.0
 =====
 
