@@ -1387,9 +1387,13 @@ def finalize(env, dirs, logfp):
     )
 
     # Fix the shebangs in the scripts python layed down.
+    if sys.platform == "linux":
+        shebang = "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION'].split('.', 1)[0]}"))
+    else:
+        shebang = "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}"))
     patch_shebangs(
         str(pathlib.Path(dirs.prefix) / "bin"),
-        "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION'].split('.', 1)[0]}")),
+        shebang,
         SHEBANG_TPL.format("/python3"),
     )
 
