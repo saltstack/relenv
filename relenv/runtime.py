@@ -10,8 +10,10 @@ This code is run when initializing the python interperter in a Relenv environmen
   gcc. This ensures when using pip any c dependencies are compiled against the
   proper glibc version.
 """
+import contextlib
 import importlib
 import os
+import functools
 import pathlib
 import shutil
 import subprocess
@@ -19,6 +21,16 @@ import sys
 
 from .common import MODULE_DIR, format_shebang
 
+
+
+@contextlib.contextmanager
+def pushd(new_dir):
+	old_dir = os.getcwd()
+	os.chdir(new_dir)
+	try:
+		yield
+	finally:
+		os.chdir(old_dir)
 
 def debug(string):
     """
@@ -31,7 +43,7 @@ def debug(string):
         print(string)
 
 
-def root():
+def relenv_root():
     """
     Return the relenv module root.
     """
@@ -68,9 +80,9 @@ def get_config_var_wrapper(func):
         if name == "BINDIR":
             orig = func(name)
             if os.environ.get("RELENV_PIP_DIR"):
-                val = root()
+                val = relenv_root()
             else:
-                val = root() / "Scripts"
+                val = relenv_root() / "Scripts"
             debug(f"get_config_var call {name} old: {orig} new: {val}")
             return val
         else:
@@ -89,7 +101,7 @@ def get_paths_wrapper(func, default_scheme):
     def wrapped(scheme=default_scheme, vars=None, expand=True):
         paths = func(scheme=scheme, vars=vars, expand=expand)
         if "RELENV_PIP_DIR" in os.environ:
-            paths["scripts"] = str(root())
+            paths["scripts"] = str(relenv_root())
             sys.exec_prefix = paths["scripts"]
         return paths
 
@@ -105,7 +117,83 @@ def finalize_options_wrapper(func):
 
     def wrapper(self, *args, **kwargs):
         func(self, *args, **kwargs)
-        self.include_dirs.append(f"{root()}/include")
+        self.include_dirs.append(f"{relenv_root()}/include")
+
+    return wrapper
+
+
+def install_wheel_wrapper(func):
+    """
+    Wrap pip's wheel install function.
+
+    This method determines any newly installed files and checks their RPATHs.
+    """
+
+    @functools.wraps(func)
+    def wrapper(
+            name, wheel_path, scheme, req_description, pycompile,
+            warn_script_location, direct_url, requested):
+        from pip._internal.utils.wheel import parse_wheel
+        from zipfile import ZipFile
+        from relenv import relocate
+        with ZipFile(wheel_path) as zf:
+            info_dir, metadata = parse_wheel(zf, name)
+        func(name, wheel_path, scheme, req_description, pycompile,
+                    warn_script_location, direct_url, requested)
+        plat = pathlib.Path(scheme.platlib)
+        rootdir = relenv_root()
+        with open(plat / info_dir / "RECORD") as fp:
+            for line in fp.readlines():
+                file = plat / line.split(',', 1)[0]
+                if not file.exists():
+                    debug(f"Relenv - File not found {file}")
+                    continue
+                if relocate.is_elf(file):
+                    debug(f"Relenv - Found elf {file}")
+                    relocate.handle_elf(plat / file, rootdir / "lib", True, rootdir)
+
+    return wrapper
+
+
+def install_legacy_wrapper(func):
+    """
+    Wrap pip's legacy install function
+
+    This method determines any newly installed files and checks their RPATHs.
+    """
+    # XXX It might be better to handle legacy installs by overriding things in
+    # setuptools, would we get more bang for our buck or increase complexity?
+
+    @functools.wraps(func)
+    def wrapper(install_options, global_options, root, home, prefix,
+        use_user_site, pycompile, scheme, setup_py_path, isolated, req_name,
+        build_env, unpacked_source_directory, req_description):
+        from relenv import relocate
+        with open(pathlib.Path(setup_py_path).parent / f"{req_description}.egg-info" / "PKG-INFO") as fp:
+            pkg_info = fp.read()
+        version = None
+        for line in pkg_info.splitlines():
+            if line.startswith("Version:"):
+                version = line.split("Version: ")[1].strip()
+                break
+        func(
+            install_options, global_options, root, home, prefix, use_user_site,
+            pycompile, scheme, setup_py_path, isolated, req_name, build_env,
+            unpacked_source_directory, req_description)
+        egginfo = None
+        for path in sorted(pathlib.Path(scheme.purelib).glob('*.egg-info')):
+            if path.name.startswith(f"{req_description}-{version}"):
+                egginfo = path
+                break
+        plat = pathlib.Path(scheme.platlib)
+        rootdir = relenv_root()
+        with pushd(egginfo):
+            with open("installed-files.txt") as fp:
+                for line in fp.readlines():
+                    file = pathlib.Path(line.strip()).resolve()
+                    if relocate.is_elf(file):
+                        debug(f"Relenv - Found elf {file}")
+                        relocate.handle_elf(plat / file, rootdir / "lib", True, rootdir)
 
     return wrapper
 
@@ -119,6 +207,8 @@ class RelenvImporter:
     loading_sysconfig_data = False
     loading_sysconfig = False
     loading_distutils = False
+    loading_op_wheel = False
+    loading_op_legacy = False
 
     sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
 
@@ -150,6 +240,18 @@ class RelenvImporter:
                 return None
             debug(f"RelenvImporter - match {module_name}")
             self.loading_distutils = True
+            return self
+        elif module_name == "pip._internal.operations.install.wheel":
+            if self.loading_op_wheel:
+                return None
+            debug(f"RelenvImporter - match {module_name}")
+            self.loading_op_wheel = True
+            return self
+        elif module_name == "pip._internal.operations.install.legacy":
+            if self.loading_op_legacy:
+                return None
+            debug(f"RelenvImporter - match {module_name}")
+            self.loading_op_legacy = True
             return self
         return None
 
@@ -186,6 +288,20 @@ class RelenvImporter:
             mod.build_ext.finalize_options = finalize_options_wrapper(
                 mod.build_ext.finalize_options
             )
+        elif name == "pip._internal.operations.install.wheel":
+            debug(f"RelenvImporter - load_module {name}")
+            mod = importlib.import_module(name)
+            mod.install_wheel = install_wheel_wrapper(
+                mod.install_wheel
+            )
+            self.loading_op_wheel = False
+        elif name == "pip._internal.operations.install.legacy":
+            debug(f"RelenvImporter - load_module {name}")
+            mod = importlib.import_module(name)
+            mod.install = install_legacy_wrapper(
+                mod.install
+            )
+            self.loading_op_legacy = False
         sys.modules[name] = mod
         return mod
 

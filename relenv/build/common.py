@@ -143,8 +143,6 @@ for key in _build_time_vars:
     val = _build_time_vars[key]
     orig = val
     if isinstance(val, str):
-        # This assumes we're installing c libararies into site-packages
-        val = val.replace('-Wl,--rpath={BUILDROOT}/lib', '-Wl,--rpath=$ORIGIN/../../')
         val = val.format(
             BUILDROOT=buildroot,
             TOOLCHAIN=toolchain,
@@ -1362,16 +1360,14 @@ def finalize(env, dirs, logfp):
     # Lay down relenv.runtime, we'll pip install the rest later
     relenv = pymodules / "site-packages" / "relenv"
     os.makedirs(relenv, exist_ok=True)
-    runtime = MODULE_DIR / "runtime.py"
-    dest = relenv / "runtime.py"
-    with io.open(runtime, "r") as rfp:
-        with io.open(dest, "w") as wfp:
-            wfp.write(rfp.read())
-    runtime = MODULE_DIR / "common.py"
-    dest = relenv / "common.py"
-    with io.open(runtime, "r") as rfp:
-        with io.open(dest, "w") as wfp:
-            wfp.write(rfp.read())
+
+    for name in ["runtime.py", "relocate.py", "common.py"]:
+        src = MODULE_DIR / "runtime.py"
+        dest = relenv / "runtime.py"
+        with io.open(src, "r") as rfp:
+            with io.open(dest, "w") as wfp:
+                wfp.write(rfp.read())
+
     init = relenv / "__init__.py"
     init.touch()
 
