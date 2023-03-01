@@ -6,13 +6,12 @@ The windows build process.
 import glob
 import shutil
 import sys
-import io
 import os
 import pathlib
 import tarfile
 
 
-from .common import runcmd, create_archive, MODULE_DIR, SITECUSTOMIZE, builds
+from .common import runcmd, create_archive, MODULE_DIR, builds, install_runtime
 from ..common import arches, WIN32
 
 ARCHES = arches[WIN32]
@@ -153,25 +152,8 @@ def finalize(env, dirs, logfp):
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "Scripts"
     sitepackages = dirs.prefix / "Lib" / "site-packages"
-    sitecustomize = sitepackages / "sitecustomize.py"
-    with io.open(str(sitecustomize), "w") as fp:
-        fp.write(SITECUSTOMIZE)
 
-    # Lay down relenv.runtime, we'll pip install the rest later
-    relenvdir = sitepackages / "relenv"
-    os.makedirs(relenvdir, exist_ok=True)
-    runtime = MODULE_DIR / "runtime.py"
-    dest = relenvdir / "runtime.py"
-    with io.open(runtime, "r") as rfp:
-        with io.open(dest, "w") as wfp:
-            wfp.write(rfp.read())
-    runtime = MODULE_DIR / "common.py"
-    dest = relenvdir / "common.py"
-    with io.open(runtime, "r") as rfp:
-        with io.open(dest, "w") as wfp:
-            wfp.write(rfp.read())
-    init = relenvdir / "__init__.py"
-    init.touch()
+    install_runtime(sitepackages)
 
     # Install pip
     python = dirs.prefix / "Scripts" / "python.exe"

@@ -50,6 +50,12 @@ jobs:
           sudo apt-get install -y build-essential bison python3-all patchelf swig
           python3 -m pip install nox
 
+      - name: Python Version
+        run: |
+          python3 --version
+          python3 -c 'import os; print(os.name)'
+
+
       - name: Fetch Toolchain
         run: |
           python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
@@ -62,11 +68,6 @@ jobs:
       - name: Build
         run: |
           python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
-
-      - name: Verify Build
-        if: ${{ matrix.host == matrix.target }}
-        run: |
-          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v3
@@ -83,6 +84,11 @@ jobs:
           name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
+
+      - name: Verify Build
+        if: ${{ matrix.host == matrix.target }}
+        run: |
+          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Set Exit Status
         if: always()

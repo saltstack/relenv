@@ -10,7 +10,7 @@ on:
 
 jobs:
   Pre-Commit:
-    name: Relenv
+    name: Pre-Commit Checks
 
     runs-on: ubuntu-latest
 

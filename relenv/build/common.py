@@ -916,6 +916,9 @@ class Builder:
         os.makedirs(dirs.logs, exist_ok=True)
         os.makedirs(dirs.prefix, exist_ok=True)
         logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
+        handler = logging.FileHandler(dirs.logs / f"{name}.log")
+        log.addHandler(handler)
+        log.setLevel(logging.NOTSET)
 
         # DEBUG: Uncomment to debug
         # logfp = sys.stdout
@@ -935,6 +938,7 @@ class Builder:
                 "PATH": os.environ["PATH"],
             }
 
+        env["RELENV_DEBUG"] = "1"
         env["RELENV_HOST"] = self.triplet
         env["RELENV_HOST_ARCH"] = self.arch
         env["RELENV_BUILD"] = self.build_triplet
@@ -962,6 +966,7 @@ class Builder:
             sys.exit(1)
         finally:
             os.chdir(cwd)
+            log.removeHandler(handler)
             logfp.close()
 
     def cleanup(self):
@@ -1226,6 +1231,9 @@ def patch_shebang(path, old, new):
     with open(path, "w") as fp:
         fp.write(new)
         fp.write(data)
+    with open(path, "r") as fp:
+        data = fp.read()
+    log.info("Patched shebang of %s => %r", path, data)
     return True
 
 
@@ -1284,7 +1292,7 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
         if isinstance(val, str):
             for _ in (fbuildroot, ftoolchain):
                 val = _(val)
-                print(f"SYSCONFIG [{key}] {mod.build_time_vars[key]} => {val}")
+                log.info("SYSCONFIG [%s] %s => %s", key, mod.build_time_vars[key], val)
         data[key] = val
 
     with open(destfile, "w", encoding="utf8") as f:
@@ -1310,6 +1318,29 @@ def find_sysconfigdata(pymodules):
         for file in files:
             if file.find("sysconfigdata") > -1 and file.endswith(".py"):
                 return file[:-3]
+
+
+def install_runtime(sitepackages):
+    """
+    Install a base relenv runtime.
+    """
+    sitecustomize = sitepackages / "sitecustomize.py"
+    with io.open(str(sitecustomize), "w") as fp:
+        fp.write(SITECUSTOMIZE)
+
+    # Lay down relenv.runtime, we'll pip install the rest later
+    relenv = sitepackages / "relenv"
+    os.makedirs(relenv, exist_ok=True)
+
+    for name in ["runtime.py", "relocate.py", "common.py"]:
+        src = MODULE_DIR / name
+        dest = relenv / name
+        with io.open(src, "r") as rfp:
+            with io.open(dest, "w") as wfp:
+                wfp.write(rfp.read())
+
+    init = relenv / "__init__.py"
+    init.touch()
 
 
 def finalize(env, dirs, logfp):
@@ -1353,24 +1384,8 @@ def finalize(env, dirs, logfp):
 
     # Lay down site customize
     bindir = pathlib.Path(dirs.prefix) / "bin"
-    sitecustomize = pymodules / "site-packages" / "sitecustomize.py"
-    with io.open(str(sitecustomize), "w") as fp:
-        fp.write(SITECUSTOMIZE)
-
-    # Lay down relenv.runtime, we'll pip install the rest later
-    relenv = pymodules / "site-packages" / "relenv"
-    os.makedirs(relenv, exist_ok=True)
-
-    for name in ["runtime.py", "relocate.py", "common.py"]:
-        src = MODULE_DIR / "runtime.py"
-        dest = relenv / "runtime.py"
-        with io.open(src, "r") as rfp:
-            with io.open(dest, "w") as wfp:
-                wfp.write(rfp.read())
-
-    init = relenv / "__init__.py"
-    init.touch()
-
+    sitepackages = pymodules / "site-packages"
+    install_runtime(sitepackages)
     # Install pip
     python = dirs.prefix / "bin" / "python3"
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
@@ -1383,18 +1398,21 @@ def finalize(env, dirs, logfp):
         stdout=logfp,
     )
 
-    # Fix the shebangs in the scripts python layed down.
-    if sys.platform == "linux":
-        shebang = "#!{}".format(
-            str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION'].split('.', 1)[0]}")
+    # Fix the shebangs in the scripts python layed down. Order matters.
+    shebangs = [
+        "#!{}".format(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}"),
+        "#!{}".format(
+            bindir / f"python{env['RELENV_PY_MAJOR_VERSION'].split('.', 1)[0]}"
+        ),
+    ]
+    newshebang = format_shebang("/python3")
+    for shebang in shebangs:
+        log.info("Patch shebang %r with  %r", shebang, newshebang)
+        patch_shebangs(
+            str(pathlib.Path(dirs.prefix) / "bin"),
+            shebang,
+            newshebang,
         )
-    else:
-        shebang = "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}"))
-    patch_shebangs(
-        str(pathlib.Path(dirs.prefix) / "bin"),
-        shebang,
-        format_shebang("/python3"),
-    )
 
     if sys.platform == "linux":
         pyconf = f"config-{env['RELENV_PY_MAJOR_VERSION']}-{env['RELENV_HOST']}"
@@ -1451,7 +1469,7 @@ def finalize(env, dirs, logfp):
         "*.dylib",
     ]
     archive = f"{ dirs.prefix }.tar.xz"
-    print(f"Archive is { archive }")
+    log.info("Archive is %s", archive)
     with tarfile.open(archive, mode="w:xz") as fp:
         create_archive(fp, dirs.prefix, globs, logfp)
 
@@ -1469,9 +1487,8 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
     :param logfp: A pointer to the log file
     :type logfp: file
     """
-    logfp.write(f"CURRENT DIR {os.getcwd()}")
-    if logfp:
-        logfp.write(f"Creating archive {tarfp.name}\n")
+    log.info("Current directory %s", os.getcwd())
+    log.info("Creating archive %s", tarfp.name)
     for root, _dirs, files in os.walk(toarchive):
         relroot = pathlib.Path(root).relative_to(toarchive)
         for f in files:
@@ -1482,9 +1499,7 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
                     matches = True
                     break
             if matches:
-                if logfp:
-                    logfp.write("Adding {}\n".format(relpath))
+                log.info("Adding %s", relpath)
                 tarfp.add(relpath, relpath, recursive=False)
             else:
-                if logfp:
-                    logfp.write("Skipping {}\n".format(relpath))
+                log.info("Skipping %s", relpath)
