@@ -21,6 +21,10 @@ jobs:
         python:
             - 3.10.10
             - 3.11.2
+        platform:
+          - linux-gnu
+          - win
+          - macos
         include:
           - platform: linux-gnu
             arch: aarch64
