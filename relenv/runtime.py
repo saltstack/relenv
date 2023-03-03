@@ -22,6 +22,13 @@ import sys
 from .common import MODULE_DIR, format_shebang
 
 
+def get_major_version():
+    """
+    Current python major version.
+    """
+    return "{}.{}".format(*sys.version_info)
+
+
 @contextlib.contextmanager
 def pushd(new_dir):
     """
@@ -205,18 +212,20 @@ def install_legacy_wrapper(func):
     ):
         from relenv import relocate
 
-        pkginfo = (
-            pathlib.Path(setup_py_path).parent
-            / f"{req_description}.egg-info"
-            / "PKG-INFO"
-        )
+        pkginfo = pathlib.Path(setup_py_path).parent / "PKG-INFO"
         with open(pkginfo) as fp:
             pkg_info = fp.read()
         version = None
+        name = None
         for line in pkg_info.splitlines():
             if line.startswith("Version:"):
                 version = line.split("Version: ")[1].strip()
-                break
+                if name:
+                    break
+            if line.startswith("Name:"):
+                name = line.split("Name: ")[1].strip()
+                if version:
+                    break
         func(
             install_options,
             global_options,
@@ -234,10 +243,24 @@ def install_legacy_wrapper(func):
             req_description,
         )
         egginfo = None
+        if prefix:
+            sitepack = (
+                pathlib.Path(prefix)
+                / "lib"
+                / f"python{get_major_version()}"
+                / "site-packages"
+            )
+            for path in sorted(sitepack.glob("*.egg-info")):
+                if path.name.startswith(f"{name}-{version}"):
+                    egginfo = path
+                    break
         for path in sorted(pathlib.Path(scheme.purelib).glob("*.egg-info")):
-            if path.name.startswith(f"{req_description}-{version}"):
+            if path.name.startswith(f"{name}-{version}"):
                 egginfo = path
                 break
+        if egginfo is None:
+            debug(f"Relenv was not able to find egg info for: {req_description}")
+            return
         plat = pathlib.Path(scheme.platlib)
         rootdir = relenv_root()
         with pushd(egginfo):
