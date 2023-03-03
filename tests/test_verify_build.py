@@ -410,9 +410,7 @@ def test_shabangs(pipexec, build, minor_version):
 @pytest.mark.skip_unless_on_linux
 def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
     p = subprocess.run(
-        [str(pipexec), "install", "cffi", "--no-cache", "--no-binary=cffi"],
-        # stdout=subprocess.PIPE,
-        # stderr=subprocess.PIPE,
+        [str(pipexec), "install", "cffi==1.15.1", "--no-cache-dir", "--no-binary=cffi"],
     )
     assert p.returncode == 0, "Failed to pip install cffi"
     b2 = build.parent / "test2"
@@ -431,3 +429,42 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
         lib, dest = [_.strip() for _ in line.split("=>", 1)]
         if lib == "libffi.so.8":
             assert str(b2) in dest
+
+
+@pytest.mark.skip_unless_on_linux
+def test_cryptography_rpath(pipexec, build, minor_version):
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "cryptography",
+            "--no-cache-dir",
+            "--no-binary=cryptography",
+        ],
+    )
+    assert p.returncode == 0, "Failed to pip install cryptography"
+    bindings = (
+        build
+        / "lib"
+        / f"python{minor_version}"
+        / "site-packages"
+        / "cryptography"
+        / "hazmat"
+        / "bindings"
+    )
+    p = subprocess.run(
+        ["ldd", bindings / "_openssl.abi3.so"], stdout=subprocess.PIPE, check=True
+    )
+    found = 0
+    for line in p.stdout.splitlines():
+        line = line.decode()
+        if "=>" not in line:
+            continue
+        lib, dest = [_.strip() for _ in line.split("=>", 1)]
+        if lib == "libssl.so.1.1":
+            found += 1
+            assert str(build) in dest
+        elif lib == "libcrypto.so.1.1":
+            found += 1
+            assert str(build) in dest
+    assert found == 2, f"Found {found} of 2 shared libraries"
