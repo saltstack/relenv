@@ -211,7 +211,6 @@ jobs:
           python -m relenv build --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
       - name: Verify Build
-        if: ${{ matrix.arch == 'amd64' }}
         run: |
           nox -e tests -- tests/test_verify_build.py
 
