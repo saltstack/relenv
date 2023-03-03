@@ -289,8 +289,6 @@ class RelenvImporter:
     loading_op_wheel = False
     loading_op_legacy = False
 
-    sysconfigdata = "_sysconfigdata__linux_x86_64-linux-gnu"
-
     def find_module(self, module_name, package_path=None):
         """
         Find a module for importing into the relenv environment.
