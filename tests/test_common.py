@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2
 import pathlib
 import platform
+import shutil
+import subprocess
 import sys
 import tarfile
 from unittest.mock import Mock, patch
@@ -10,6 +12,7 @@ import pytest
 
 from relenv.common import (
     MODULE_DIR,
+    SHEBANG_TPL,
     RelenvException,
     archived_build,
     extract_archive,
@@ -163,3 +166,12 @@ def test_get_download_location(tmp_path):
     url = "https://test.com/1.0.0/test-1.0.0.tar.xz"
     loc = get_download_location(url, str(tmp_path))
     assert loc == str(tmp_path / "test-1.0.0.tar.xz")
+
+
+@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
+def test_shebang_tpl():
+    sh = SHEBANG_TPL.format("python3")
+    proc = subprocess.Popen(["shellcheck", "-"], stdin=subprocess.PIPE)
+    proc.stdin.write(sh.encode())
+    proc.communicate()
+    assert proc.returncode == 0
