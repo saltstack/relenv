@@ -164,7 +164,7 @@ def main(args):
     :param args: The arguments for the command
     :type args: ``argparse.Namespace``
     """
-    version = os.environ.get("RELENV_FETCH_VERSION", "latest")
+    version = os.environ.get("RELENV_FETCH_VERSION", __version__)
     machine = platform.machine()
     dirs = work_dirs()
     print(f"Toolchain directory: {dirs.toolchain}")
