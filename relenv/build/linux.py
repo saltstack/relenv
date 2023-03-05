@@ -110,6 +110,33 @@ def build_bzip2(env, dirs, logfp):
     shutil.copy2("libbz2.so.1.0.8", os.path.join(dirs.prefix, "lib"))
 
 
+def build_libxcrypt(env, dirs, logfp):
+    """
+    Build libxcrypt.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
+    runcmd(
+        [
+            "./configure",
+            "--prefix={}".format(dirs.prefix),
+            # "--enable-libgdbm-compat",
+            "--build={}".format(env["RELENV_BUILD"]),
+            "--host={}".format(env["RELENV_HOST"]),
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
+
 def build_gdbm(env, dirs, logfp):
     """
     Build gdbm.
@@ -372,6 +399,15 @@ build.add(
 )
 
 build.add(
+    "libxcrypt",
+    download={
+        "url": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
+        "version": "4.4.33",
+        "md5sum": "d83b7bb334c4daf4e64a253b78f320da",
+    },
+)
+
+build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
@@ -528,5 +564,5 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.2")
+build = build.copy(version="3.11.2", md5sum="a957cffb58a89303b62124896881950b")
 builds.add("linux", builder=build)

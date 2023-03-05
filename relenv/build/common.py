@@ -821,7 +821,7 @@ class Builder:
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
-    def copy(self, version):
+    def copy(self, version, md5sum):
         recipies = {}
         for name in self.recipies:
             _ = self.recipies[name]
@@ -840,6 +840,7 @@ class Builder:
             version,
         )
         build.recipies["python"]["download"].version = version
+        build.recipies["python"]["download"].md5sum = md5sum
         return build
 
     def set_arch(self, arch):
