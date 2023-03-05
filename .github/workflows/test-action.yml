@@ -35,6 +35,16 @@ jobs:
         run: |
           pip3 install nox
 
+      - name: Install Linux dependencies
+        if: ${{ matrix.runs-on == 'linux' }}
+        run: |
+          apt-get install -y shellcheck
+
+      - name: Install Mac dependencies
+        if: ${{ matrix.runs-on == 'macos-12' }}
+        run: |
+          brew install shellcheck
+
       - name: Run tests
         run: |
           nox -e tests
