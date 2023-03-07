@@ -28,11 +28,11 @@ from relenv.common import (
     DATA_DIR,
     LINUX,
     MODULE_DIR,
-    SHEBANG_TPL,
     RelenvException,
     build_arch,
     download_url,
     extract_archive,
+    format_shebang,
     get_download_location,
     get_toolchain,
     get_triplet,
@@ -1397,7 +1397,7 @@ def finalize(env, dirs, logfp):
     patch_shebangs(
         str(pathlib.Path(dirs.prefix) / "bin"),
         shebang,
-        SHEBANG_TPL.format("/python3"),
+        format_shebang("/python3"),
     )
 
     if sys.platform == "linux":
@@ -1405,13 +1405,13 @@ def finalize(env, dirs, logfp):
         patch_shebang(
             str(pymodules / pyconf / "python-config.py"),
             "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}")),
-            SHEBANG_TPL.format("../../../bin/python3"),
+            format_shebang("../../../bin/python3"),
         )
 
     patch_shebang(
         str(pymodules / "cgi.py"),
         "#! /usr/local/bin/python",
-        SHEBANG_TPL.format("../../bin/python3"),
+        format_shebang("../../bin/python3"),
     )
 
     def runpip(pkg, upgrade=False):

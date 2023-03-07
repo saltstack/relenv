@@ -12,10 +12,12 @@ import pytest
 
 from relenv.common import (
     MODULE_DIR,
-    SHEBANG_TPL,
+    SHEBANG_TPL_LINUX,
+    SHEBANG_TPL_MACOS,
     RelenvException,
     archived_build,
     extract_archive,
+    format_shebang,
     get_download_location,
     get_toolchain,
     get_triplet,
@@ -169,9 +171,18 @@ def test_get_download_location(tmp_path):
 
 
 @pytest.mark.skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
-def test_shebang_tpl():
-    sh = SHEBANG_TPL.format("python3")
-    proc = subprocess.Popen(["shellcheck", "-"], stdin=subprocess.PIPE)
+def test_shebang_tpl_linux():
+    sh = format_shebang("python3", SHEBANG_TPL_LINUX).split("'''")[1].strip("'")
+    proc = subprocess.Popen(["shellcheck", "-s", "sh", "-"], stdin=subprocess.PIPE)
+    proc.stdin.write(sh.encode())
+    proc.communicate()
+    assert proc.returncode == 0
+
+
+@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
+def test_shebang_tpl_macos():
+    sh = format_shebang("python3", SHEBANG_TPL_MACOS).split("'''")[1].strip("'")
+    proc = subprocess.Popen(["shellcheck", "-s", "sh", "-"], stdin=subprocess.PIPE)
     proc.stdin.write(sh.encode())
     proc.communicate()
     assert proc.returncode == 0
