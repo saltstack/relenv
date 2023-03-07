@@ -45,34 +45,56 @@ else:
 
 DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve()
 
+# SHEBANG_TPL_LINUX = textwrap.dedent(
+#    """#!/bin/sh
+# "exec" "$(dirname $(("readlink -f $0"))){}" "$0" "$@"
+# """
+# )
+SHEBANG_TPL_LINUX = textwrap.dedent(
+    """#!/bin/sh
+"true" ''''
+"exec" "$(dirname "$(readlink -f "$0")")/python3" "$0" "$@"
+'''
+"""
+)
+
+SHEBANG_TPL_MACOS = textwrap.dedent(
+    """\
+#!/bin/sh
+"true" ''''
+TARGET_FILE=$0
+cd "$(dirname "$TARGET_FILE")" || return
+TARGET_FILE=$(basename "$TARGET_FILE")
+# Iterate down a (possible) chain of symlinks
+while [ -L "$TARGET_FILE" ]
+do
+    TARGET_FILE=$(readlink "$TARGET_FILE")
+    cd "$(dirname "$TARGET_FILE")" || return
+    TARGET_FILE=$(basename "$TARGET_FILE")
+done
+PHYS_DIR=$(pwd -P)
+REALPATH=$PHYS_DIR/$TARGET_FILE
+"exec" "$(dirname "$REALPATH")"/python3 "$REALPATH" "$@"
+'''"""
+)
+
 if sys.platform == "linux":
-    SHEBANG_TPL = "#!/bin/sh\n" '"exec" "$(dirname "$(readlink -f "$0")"){}" "$0" "$@"'
+    SHEBANG_TPL = SHEBANG_TPL_LINUX
 else:
-    SHEBANG_TPL = textwrap.dedent(
-        """\
-    #!/bin/sh
-    "true" '''\'
-    TARGET_FILE=$0
-    cd `dirname $TARGET_FILE`
-    TARGET_FILE=`basename $TARGET_FILE`
-    # Iterate down a (possible) chain of symlinks
-    while [ -L "$TARGET_FILE" ]
-    do
-        TARGET_FILE=`readlink $TARGET_FILE`
-        cd `dirname $TARGET_FILE`
-        TARGET_FILE=`basename $TARGET_FILE`
-    done
-    PHYS_DIR=`pwd -P`
-    REALPATH=$PHYS_DIR/$TARGET_FILE
-    "exec" "`dirname $REALPATH`{}" "$REALPATH" "$@"
-    '''"""
-    )
+    SHEBANG_TPL = SHEBANG_TPL_MACOS
 
 
 class RelenvException(Exception):
     """
     Base class for exeptions generated from relenv.
     """
+
+
+def format_shebang(python, tpl=SHEBANG_TPL):
+    """
+    Return a formatted shebang.
+    """
+    return tpl.format(python).strip()
 
 
 def build_arch():

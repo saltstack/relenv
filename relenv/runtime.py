@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 
-from .common import MODULE_DIR, SHEBANG_TPL
+from .common import MODULE_DIR, format_shebang
 
 
 def debug(string):
@@ -55,8 +55,8 @@ def _build_shebang(*args, **kwargs):
             return "#!<launcher_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
     if os.environ.get("RELENV_PIP_DIR"):
-        return (SHEBANG_TPL.format("/bin/python3")).encode()
-    return (SHEBANG_TPL.format("/python3")).encode()
+        return format_shebang("/bin/python3").encode()
+    return format_shebang("/python3").encode()
 
 
 def get_config_var_wrapper(func):
