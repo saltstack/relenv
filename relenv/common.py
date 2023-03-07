@@ -45,11 +45,6 @@ else:
 
 DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve()
 
-# SHEBANG_TPL_LINUX = textwrap.dedent(
-#    """#!/bin/sh
-# "exec" "$(dirname $(("readlink -f $0"))){}" "$0" "$@"
-# """
-# )
 SHEBANG_TPL_LINUX = textwrap.dedent(
     """#!/bin/sh
 "true" ''''
