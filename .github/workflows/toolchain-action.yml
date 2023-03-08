@@ -20,7 +20,7 @@ jobs:
       - src-build
       - ${{ matrix.host }}
 
-    if: fromJSON(inputs.changed-files)['toolchain'] == 'true'
+    #if: fromJSON(inputs.changed-files)['toolchain'] == 'true'
 
     strategy:
       fail-fast: false

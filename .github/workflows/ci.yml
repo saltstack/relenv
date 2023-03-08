@@ -73,19 +73,20 @@ jobs:
       kind: "${{ inputs.kind }}"
       cmd: "${{ inputs.package_command }}"
 
-  build:
-    name: Python Builds
-    uses: ./.github/workflows/build-action.yml
-    needs:
-      - get-changed-files
-    with:
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
   toolchain:
     name: Toolchain Builds
     uses: ./.github/workflows/toolchain-action.yml
     needs:
       - get-changed-files
+    with:
+      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  build:
+    name: Python Builds
+    uses: ./.github/workflows/build-action.yml
+    needs:
+      - get-changed-files
+      - toolchain
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
