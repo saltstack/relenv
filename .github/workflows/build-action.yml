@@ -58,7 +58,22 @@ jobs:
 
       - name: Fetch Toolchain
         run: |
-          python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
+          python3 --version
+          python3 -c 'import os; print(os.name)'
+
+      - name: Download Toolchain Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+          path: toolchain/toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+
+      - name: Extract Toolchain Artifact
+        run: |
+          tar -C toolchain -xvf toolchain/toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+
+      #- name: Fetch Toolchain
+      #  run: |
+      #    python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
 
       - name: Fetch Native Build
         if: ${{ matrix.host != matrix.target }}
