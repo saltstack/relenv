@@ -81,14 +81,25 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
-  build:
-    name: Python Builds
-    uses: ./.github/workflows/build-action.yml
+  build-native:
+    name: Python Native Builds
+    uses: ./.github/workflows/build-native-action.yml
     needs:
       - get-changed-files
       - toolchain
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+
+  #build-cross:
+  #  name: Python Cross Builds
+  #  uses: ./.github/workflows/build-action.yml
+  #  needs:
+  #    - get-changed-files
+  #    - toolchain
+  #    - build-native
+  #  with:
+  #    changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
+  #    kind: "cross"
 
   test:
     name: Test
@@ -112,7 +123,8 @@ jobs:
     uses: ./.github/workflows/deploy-build-action.yml
     needs:
       - build-python-package
-      - build
+      - build-native
+      #- build-cross
     with:
       version: "${{ needs.build-python-package.outputs.version }}"
     secrets:
@@ -172,8 +184,9 @@ jobs:
     if: always()
     needs:
       - pre-commit
-      - build
       - toolchain
+      - build-native
+      #- build-cross
       - test
       - docs
       - upload-build-artifacts
