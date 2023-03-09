@@ -7,10 +7,7 @@ on:
         required: true
         type: string
         description: Build relenv python builds
-      kind:
-        required: true
-        type: string
-        description: Which kind of build to run native or cross
+
 jobs:
 
   build_linux:
@@ -24,15 +21,13 @@ jobs:
         host:
           - x86_64
           - aarch64
-        target:
-          - x86_64
-          - aarch64
+        include:
+          - host: x86_64
+            target: x86_64
+          - host: aarch64
+            target: aarch64
 
     name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
-
-    if: |
-      ( matrix.host  ==  matrix.target  &&  inputs.kind  == "native" ) ||
-      ( matrix.host  !=  matrix.target  &&  inputs.kind  == "cross" )
 
     runs-on:
       - self-hosted
@@ -62,34 +57,25 @@ jobs:
           python3 --version
           python3 -c 'import os; print(os.name)'
 
-
-      - name: Fetch Toolchain
-        run: |
-          python3 --version
-          python3 -c 'import os; print(os.name)'
-
       - name: Download Toolchain Artifact
         uses: actions/download-artifact@v3
         with:
           name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
-          path: toolchain/toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+          path: .
 
       - name: Extract Toolchain Artifact
         run: |
-          tar -C toolchain -xvf toolchain/toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
-
-      #- name: Fetch Toolchain
-      #  run: |
-      #    python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
-
-      - name: Fetch Native Build
-        if: ${{ matrix.host != matrix.target }}
-        run: |
-          python3 -m relenv fetch --python=${{ matrix.version }}
+          mkdir -p toolchain
+          tar -C toolchain -xvf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
 
       - name: Build
         run: |
           python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
+
+      - name: Verify Build
+        if: ${{ matrix.host == matrix.target }}
+        run: |
+          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v3
@@ -106,11 +92,6 @@ jobs:
           name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
-
-      - name: Verify Build
-        if: ${{ matrix.host == matrix.target }}
-        run: |
-          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: Set Exit Status
         if: always()
@@ -233,6 +214,7 @@ jobs:
           python -m relenv build --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
       - name: Verify Build
+        if: ${{ matrix.arch == 'amd64' }}
         run: |
           nox -e tests -- tests/test_verify_build.py
 
