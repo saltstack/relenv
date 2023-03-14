@@ -131,6 +131,8 @@ def main(args):
     :type args: argparse.Namespace
     """
     name = args.name
+    if args.arch != build_arch():
+        print("Warning: Cross compilation support is experimental and is not fully tested or working!")
     try:
         create(name, arch=args.arch, version=args.python)
     except CreateException as exc:

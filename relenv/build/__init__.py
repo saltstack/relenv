@@ -136,6 +136,8 @@ def main(args):
         sys.exit()
 
     build.set_arch(args.arch)
+    if build.build_arch != build.arch:
+        print("Warning: Cross compilation support is experimental and is not fully tested or working!")
     steps = None
     if args.steps:
         steps = [_.strip() for _ in args.steps]
