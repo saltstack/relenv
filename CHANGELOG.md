@@ -1,3 +1,12 @@
+0.8.0
+=====
+
+* Better fix for rpaths of pip installed C extensions
+* Fetch current version not 'latest'
+* Add libxcrypt to linux builds
+* Shellcheck script shebangs
+
+
 0.7.0
 =====
 
