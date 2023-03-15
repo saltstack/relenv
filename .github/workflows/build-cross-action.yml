@@ -7,7 +7,10 @@ on:
         required: true
         type: string
         description: Build relenv python builds
-
+      kind:
+        required: true
+        type: string
+        description: Which kind of build to run native or cross
 jobs:
 
   build_linux:
@@ -21,13 +24,15 @@ jobs:
         host:
           - x86_64
           - aarch64
-        include:
-          - host: x86_64
-            target: x86_64
-          - host: aarch64
-            target: aarch64
+        target:
+          - x86_64
+          - aarch64
 
     name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
+
+    if: |
+      ( matrix.host  ==  matrix.target  &&  inputs.kind  == "native" ) ||
+      ( matrix.host  !=  matrix.target  &&  inputs.kind  == "cross" )
 
     runs-on:
       - self-hosted
@@ -61,12 +66,20 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
-          path: .
+          path: toolchain/toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
 
       - name: Extract Toolchain Artifact
         run: |
-          mkdir -p toolchain
-          tar -C toolchain -xvf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+          tar -C toolchain -xvf toolchain/toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
+
+      #- name: Fetch Toolchain
+      #  run: |
+      #    python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
+
+      - name: Fetch Native Build
+        if: ${{ matrix.host != matrix.target }}
+        run: |
+          python3 -m relenv fetch --python=${{ matrix.version }}
 
       - name: Build
         run: |
@@ -207,7 +220,7 @@ jobs:
       - name: Fetch Native Build
         if: ${{ matrix.arch != 'amd64' }}
         run: |
-          RELENV_FETCH_VERSION=latest python3 -m relenv fetch --python=${{ matrix.version }}
+          python3 -m relenv fetch --python=${{ matrix.version }}
 
       - name: Build Python with Relenv
         run: |
