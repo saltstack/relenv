@@ -22,7 +22,8 @@ LIBCLIBS = [
     "libm.so.6",
     "libmd.so.0",
     "libpthread.so.0",
-    "libcrypt.so.1",
+    # Adjust rpath of libcrypt because we include libxcrypt
+    # "libcrypt.so.1",
     "libdl.so.2",
     "libmemusage.so",
     "libnsl.so.1",

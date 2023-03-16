@@ -1,3 +1,9 @@
+0.8.1
+=====
+
+* Fix bug in crypt module's rpath
+
+
 0.8.0
 =====
 

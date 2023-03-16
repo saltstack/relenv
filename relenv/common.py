@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 
 # relenv package version
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 

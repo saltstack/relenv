@@ -21,21 +21,17 @@ jobs:
         python:
             - 3.10.10
             - 3.11.2
-        platform:
-          - linux-gnu
-          - win
-          - macos
         include:
-          - platform: linux-gnu
-            arch: aarch64
-          - platform: linux-gnu
-            arch: x86_64
-          - platform: win
-            arch: x86
-          - platform: win
-            arch: amd64
-          - platform: macos
-            arch: x86_64
+          - arch: aarch64
+            platform: linux-gnu
+          - arch: x86_64
+            platform: linux-gnu
+          - arch: x86
+            platform: win
+          - arch: amd64
+            platform: win
+          - arch: x86_64
+            platform: macos
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       SSHKEY: ${{ secrets.SSHKEY }}
