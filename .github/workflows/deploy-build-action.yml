@@ -19,19 +19,32 @@ jobs:
     strategy:
       matrix:
         python:
-            - 3.10.10
-            - 3.11.2
-        include:
-          - arch: aarch64
-            platform: linux-gnu
-          - arch: x86_64
-            platform: linux-gnu
-          - arch: x86
-            platform: win
-          - arch: amd64
-            platform: win
-          - arch: x86_64
-            platform: macos
+          - 3.10.10
+          - 3.11.2
+        platform:
+          - linux-gnu
+          - win
+          - macos
+        arch:
+          - aarch64
+          - amd64
+          - x86_64
+          - x86
+        exclude:
+          - platform: linux-gnu
+            arch: amd64
+          - platform: linux-gnu
+            arch: x86
+          - platform: win
+            arch: aarch64
+          - platform: win
+            arch: x86_64
+          - platform: macos
+            arch: aarch64
+          - platform: macos
+            arch: amd64
+          - platform: macos
+            arch: x86
     env:
       SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       SSHKEY: ${{ secrets.SSHKEY }}
