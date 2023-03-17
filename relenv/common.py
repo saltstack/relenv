@@ -16,7 +16,7 @@ import urllib.error
 import urllib.request
 
 # relenv package version
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -48,7 +48,7 @@ DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve
 SHEBANG_TPL_LINUX = textwrap.dedent(
     """#!/bin/sh
 "true" ''''
-"exec" "$(dirname "$(readlink -f "$0")")/python3" "$0" "$@"
+"exec" "$(dirname "$(readlink -f "$0")"){}" "$0" "$@"
 '''
 """
 )
@@ -69,7 +69,7 @@ do
 done
 PHYS_DIR=$(pwd -P)
 REALPATH=$PHYS_DIR/$TARGET_FILE
-"exec" "$(dirname "$REALPATH")"/python3 "$REALPATH" "$@"
+"exec" "$(dirname "$REALPATH")"{} "$REALPATH" "$@"
 '''"""
 )
 

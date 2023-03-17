@@ -1,3 +1,9 @@
+0.8.2
+=====
+
+* Fix SHEBANG when installing scripts to root
+
+
 0.8.1
 =====
 
