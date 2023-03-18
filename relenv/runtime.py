@@ -339,6 +339,19 @@ class RelenvImporter:
                 break
         sys.modules[name] = mod
 
+    def create_module(self, spec):
+        """
+        Create the module via a spec.
+        """
+        return self.load_module(spec.name)
+
+    def exec_module(self, module):
+        """
+        Exec module noop.
+        """
+        return None
+                      `
+
 
 def wrap_sysconfig(name):
     """
