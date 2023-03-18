@@ -350,7 +350,6 @@ class RelenvImporter:
         Exec module noop.
         """
         return None
-                      `
 
 
 def wrap_sysconfig(name):
@@ -448,23 +447,40 @@ importer = RelenvImporter(
 )
 
 
-def bootstrap():
+def install_cargo_config():
     """
-    Bootstrap the relenv environment.
+    Setup cargo config.
     """
-    cross = os.environ.get("RELENV_CROSS", "")
-    if cross:
-        crossroot = pathlib.Path(cross).resolve()
-        sys.prefix = str(crossroot)
-        sys.exec_prefix = str(crossroot)
-        # XXX What about dist-packages
-        pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
-        sys.path = [
-            str(crossroot / "lib" / pyver),
-            str(crossroot / "lib" / pyver / "lib-dynload"),
-            str(crossroot / "lib" / pyver / "site-packages"),
-        ] + [_ for _ in sys.path if "site-packages" not in _]
+    if sys.platform != "linux":
+        return
+    triplet = get_triplet()
+    dirs = work_dirs()
+    toolchain = dirs.toolchain / triplet
+    cargo_home = toolchain / "cargo"
+    if not cargo_home.exists():
+        cargo_home.mkdir()
+    cargo_config = cargo_home / "config.toml"
+    if not cargo_config.exists():
+        if triplet == "x86_64-linux-gnu":
+            cargo_triplet = "x86_64-unknown-linux-gnu"
+        else:
+            cargo_triplet = "aarch64-unknown-linux-gnu"
+        gcc = toolchain / "bin" / f"{triplet}-gcc"
+        with open(cargo_config, "w") as fp:
+            fp.write(
+                textwrap.dedent(
+                    """\
+            [target.{}]
+            linker = "{}"
+            """
+                ).format(cargo_triplet, gcc)
+            )
 
+
+def setup_openssl():
+    """
+    Configure openssl certificate locations.
+    """
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
@@ -495,26 +511,31 @@ def bootstrap():
                 if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
                     os.environ["SSL_CERT_FILE"] = str(cert_file)
 
-    triplet = get_triplet()
-    dirs = work_dirs()
-    toolchain = dirs.toolchain / triplet
-    cargo_home = toolchain / "cargo"
-    if not cargo_home.exists():
-        cargo_home.mkdir()
-    cargo_config = cargo_home / "config.toml"
-    if not cargo_config.exists():
-        if triplet == "x86_64-linux-gnu":
-            cargo_triplet = "x86_64-unknown-linux-gnu"
-        else:
-            cargo_triplet = "aarch64-unknown-linux-gnu"
-        gcc = toolchain / "bin" / f"{triplet}-gcc"
-        with open(cargo_config, "w") as fp:
-            fp.write(
-                textwrap.dedent(
-                    """\
-            [target.{}]
-            linker = "{}"
-            """
-                ).format(cargo_triplet, gcc)
-            )
+
+def setup_crossroot():
+    """
+    Setup cross root if needed.
+    """
+    cross = os.environ.get("RELENV_CROSS", "")
+    if cross:
+        crossroot = pathlib.Path(cross).resolve()
+        sys.prefix = str(crossroot)
+        sys.exec_prefix = str(crossroot)
+        # XXX What about dist-packages
+        pyver = f"python{sys.version_info.major}.{sys.version_info.minor}"
+        sys.path = [
+            str(crossroot / "lib" / pyver),
+            str(crossroot / "lib" / pyver / "lib-dynload"),
+            str(crossroot / "lib" / pyver / "site-packages"),
+        ] + [_ for _ in sys.path if "site-packages" not in _]
+
+
+def bootstrap():
+    """
+    Bootstrap the relenv environment.
+    """
+    setup_crossroot()
+    setup_openssl()
+    install_cargo_config()
     sys.meta_path = [importer] + sys.meta_path
+    sys.RELENV = relenv_root()
