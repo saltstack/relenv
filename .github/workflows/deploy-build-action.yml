@@ -17,6 +17,7 @@ jobs:
     name: Deploy Artifacts ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         python:
           - 3.10.10
