@@ -18,8 +18,9 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import textwrap
 
-from .common import MODULE_DIR, format_shebang
+from .common import MODULE_DIR, format_shebang, get_triplet, work_dirs
 
 
 def get_major_version():
@@ -277,106 +278,161 @@ def install_legacy_wrapper(func):
     return wrapper
 
 
-class RelenvImporter:
+class Wrapper:
     """
-    An importer to be added to ``sys.meta_path`` to handle importing into a relenv environment.
+    Wrap methods of an imported module.
     """
 
-    loading_pip_scripts = False
-    loading_sysconfig_data = False
-    loading_sysconfig = False
-    loading_distutils = False
-    loading_op_wheel = False
-    loading_op_legacy = False
+    def __init__(self, module, wrapper, matcher="equals", _loading=False):
+        self.module = module
+        self.wrapper = wrapper
+        self.matcher = matcher
+        self.loading = _loading
+
+    def matches(self, module):
+        """
+        Check if wrapper metches module being imported.
+        """
+        if self.matcher == "startswith":
+            return module.startswith(self.module)
+        return self.module == module
+
+    def __call__(self, module_name):
+        """
+        Preform the wrapper operation.
+        """
+        return self.wrapper(module_name)
+
+
+class RelenvImporter:
+    """
+    Handle runtime wrapping of module methods.
+    """
+
+    def __init__(self, wrappers=None, _loads=None):
+        if wrappers is None:
+            wrappers = []
+        self.wrappers = wrappers
+        if _loads is None:
+            _loads = {}
+        self._loads = _loads
 
     def find_module(self, module_name, package_path=None):
         """
-        Find a module for importing into the relenv environment.
-
-        :param module_name: The name of the module
-        :type module_name: str
-        :param package_path: The path to the package, defaults to None
-        :type package_path: str, optional
-        :return: The instance that called this method if it found the module, or None if it didn't
-        :rtype: RelenvImporter or None
+        Find modules being imported.
         """
-        if module_name.startswith("sysconfig"):  # and sys.platform == "win32":
-            if self.loading_sysconfig:
-                return None
-            debug(f"RelenvImporter - match {module_name}")
-            self.loading_sysconfig = True
-            return self
-        elif module_name == "pip._vendor.distlib.scripts":
-            if self.loading_pip_scripts:
-                return None
-            debug(f"RelenvImporter - match {module_name}")
-            self.loading_pip_scripts = True
-            return self
-        elif module_name == "distutils.command.build_ext":
-            if self.loading_distutils:
-                return None
-            debug(f"RelenvImporter - match {module_name}")
-            self.loading_distutils = True
-            return self
-        elif module_name == "pip._internal.operations.install.wheel":
-            if self.loading_op_wheel:
-                return None
-            debug(f"RelenvImporter - match {module_name}")
-            self.loading_op_wheel = True
-            return self
-        elif module_name == "pip._internal.operations.install.legacy":
-            if self.loading_op_legacy:
-                return None
-            debug(f"RelenvImporter - match {module_name}")
-            self.loading_op_legacy = True
-            return self
-        return None
+        for wrapper in self.wrappers:
+            if wrapper.matches(module_name) and not wrapper.loading:
+                debug(f"RelenvImporter - match {module_name}")
+                wrapper.loading = True
+                return self
 
     def load_module(self, name):
         """
-        Load the given module.
-
-        :param name: The module name to load
-        :type name: str
-        :return: The loaded module or the calling instance if importing sysconfigdata
-        :rtype: types.ModuleType or RelenvImporter
+        Load an imported module.
         """
-        if name.startswith("sysconfig"):
-            debug(f"RelenvImporter - load_module {name}")
-            mod = importlib.import_module("sysconfig")
-            mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
-            mod._PIP_USE_SYSCONFIG = True
-            try:
-                # Python >= 3.10
-                scheme = mod.get_default_scheme()
-            except AttributeError:
-                # Python < 3.10
-                scheme = mod._get_default_scheme()
-            mod.get_paths = get_paths_wrapper(mod.get_paths, scheme)
-            self.loading_sysconfig = False
-        elif name == "pip._vendor.distlib.scripts":
-            debug(f"RelenvImporter - load_module {name}")
-            mod = importlib.import_module(name)
-            mod.ScriptMaker._build_shebang = _build_shebang
-            self.loading_pip_scripts = False
-        elif name == "distutils.command.build_ext":
-            debug(f"RelenvImporter - load_module {name}")
-            mod = importlib.import_module(name)
-            mod.build_ext.finalize_options = finalize_options_wrapper(
-                mod.build_ext.finalize_options
-            )
-        elif name == "pip._internal.operations.install.wheel":
-            debug(f"RelenvImporter - load_module {name}")
-            mod = importlib.import_module(name)
-            mod.install_wheel = install_wheel_wrapper(mod.install_wheel)
-            self.loading_op_wheel = False
-        elif name == "pip._internal.operations.install.legacy":
-            debug(f"RelenvImporter - load_module {name}")
-            mod = importlib.import_module(name)
-            mod.install = install_legacy_wrapper(mod.install)
-            self.loading_op_legacy = False
+        for wrapper in self.wrappers:
+            if wrapper.matches(name):
+                debug(f"RelenvImporter - load_module {name}")
+                mod = wrapper(name)
+                wrapper.loading = False
+                break
         sys.modules[name] = mod
-        return mod
+
+
+def wrap_sysconfig(name):
+    """
+    Sysconfig wrapper.
+    """
+    mod = importlib.import_module("sysconfig")
+    mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
+    mod._PIP_USE_SYSCONFIG = True
+    try:
+        # Python >= 3.10
+        scheme = mod.get_default_scheme()
+    except AttributeError:
+        # Python < 3.10
+        scheme = mod._get_default_scheme()
+    mod.get_paths = get_paths_wrapper(mod.get_paths, scheme)
+    return mod
+
+
+def wrap_pip_distlib_scripts(name):
+    """
+    pip.distlib.scripts wrapper.
+    """
+    mod = importlib.import_module(name)
+    mod.ScriptMaker._build_shebang = _build_shebang
+    return mod
+
+
+def wrap_distutils_command(name):
+    """
+    distutils.command wrapper.
+    """
+    mod = importlib.import_module(name)
+    mod.build_ext.finalize_options = finalize_options_wrapper(
+        mod.build_ext.finalize_options
+    )
+    return mod
+
+
+def wrap_pip_install_wheel(name):
+    """
+    pip._internal.operations.install.wheel wrapper.
+    """
+    mod = importlib.import_module(name)
+    mod.install_wheel = install_wheel_wrapper(mod.install_wheel)
+    return mod
+
+
+def wrap_pip_install_legacy(name):
+    """
+    pip._internal.operations.install.legacy wrapper.
+    """
+    mod = importlib.import_module(name)
+    mod.install = install_legacy_wrapper(mod.install)
+    return mod
+
+
+def wrap_pip_build_wheel(name):
+    """
+    pip._internal.operations.build wrapper.
+    """
+    mod = importlib.import_module(name)
+
+    def wrap(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            dirs = work_dirs()
+            toolchain = dirs.toolchain / get_triplet()
+            cargo_home = str(toolchain / "cargo")
+            if "CARGO_HOME" in os.environ and os.environ["CARGO_HOME"] != cargo_home:
+                print(
+                    f"Warning: CARGO_HOME environment not set to relenv's toolchain!\n"
+                    f"expected: {cargo_home}\ncurrent: {os.environ['CARGO_HOME']}"
+                )
+            else:
+                print("SET CARGO HOME")
+                os.environ["CARGO_HOME"] = cargo_home
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    mod.build_wheel_pep517 = wrap(mod.build_wheel_pep517)
+    return mod
+
+
+importer = RelenvImporter(
+    wrappers=[
+        Wrapper("sysconfig", wrap_sysconfig, "startswith"),
+        Wrapper("pip._vendor.distlib.scripts", wrap_pip_distlib_scripts),
+        Wrapper("distutils.command.build", wrap_pip_distlib_scripts),
+        Wrapper("pip._internal.operations.install.wheel", wrap_pip_install_wheel),
+        Wrapper("pip._internal.operations.install.legacy", wrap_pip_install_legacy),
+        Wrapper("pip._internal.operations.build.wheel", wrap_pip_build_wheel),
+    ],
+)
 
 
 def bootstrap():
@@ -426,5 +482,26 @@ def bootstrap():
                 if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
                     os.environ["SSL_CERT_FILE"] = str(cert_file)
 
-    importer = RelenvImporter()
+    triplet = get_triplet()
+    dirs = work_dirs()
+    toolchain = dirs.toolchain / triplet
+    cargo_home = toolchain / "cargo"
+    if not cargo_home.exists():
+        cargo_home.mkdir()
+    cargo_config = cargo_home / "config.toml"
+    if not cargo_config.exists():
+        if triplet == "x86_64-linux-gnu":
+            cargo_triplet = "x86_64-unknown-linux-gnu"
+        else:
+            cargo_triplet = "aarch64-unknown-linux-gnu"
+        gcc = toolchain / "bin" / f"{triplet}-gcc"
+        with open(cargo_config, "w") as fp:
+            fp.write(
+                textwrap.dedent(
+                    """\
+            [target.{}]
+            linker = "{}"
+            """
+                ).format(cargo_triplet, gcc)
+            )
     sys.meta_path = [importer] + sys.meta_path
