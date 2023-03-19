@@ -404,6 +404,8 @@ build.add(
         "url": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
         "version": "4.4.33",
         "md5sum": "d83b7bb334c4daf4e64a253b78f320da",
+        "checkfunc": github_version,
+        "checkurl": "https://github.com/besser82/libxcrypt/releases/",
     },
 )
 
@@ -476,7 +478,7 @@ build.add(
         "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
         "version": "3.4.4",
         "md5sum": "0da1a5ed7786ac12dcbaf0d499d8a049",
-        "checkfunc": ffi_version,
+        "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
 )
