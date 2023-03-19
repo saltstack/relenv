@@ -149,6 +149,7 @@ def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
             ["git", "clone", "https://github.com/saltstack/salt.git", "--depth", "1"],
             env=env,
         )
+        assert p.returncode == 0, f"Failed to clone salt repository"
     else:
         packages = ["salt@git+https://github.com/saltstack/salt"]
 

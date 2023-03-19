@@ -440,7 +440,7 @@ importer = RelenvImporter(
     wrappers=[
         Wrapper("sysconfig", wrap_sysconfig, "startswith"),
         Wrapper("pip._vendor.distlib.scripts", wrap_pip_distlib_scripts),
-        Wrapper("distutils.command.build", wrap_distutils_command),
+        Wrapper("distutils.command.build_ext", wrap_distutils_command),
         Wrapper("pip._internal.operations.install.wheel", wrap_pip_install_wheel),
         Wrapper("pip._internal.operations.install.legacy", wrap_pip_install_legacy),
         Wrapper("pip._internal.operations.build.wheel", wrap_pip_build_wheel),
