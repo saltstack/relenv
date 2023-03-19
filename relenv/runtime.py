@@ -338,6 +338,7 @@ class RelenvImporter:
                 wrapper.loading = False
                 break
         sys.modules[name] = mod
+        return mod
 
     def create_module(self, spec):
         """
