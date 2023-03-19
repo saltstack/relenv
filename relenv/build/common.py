@@ -364,7 +364,7 @@ def sqlite_version(href):
         return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split("_")])
 
 
-def ffi_version(href):
+def github_version(href):
     if "tag/" in href:
         return href.split("/v")[-1]
 
