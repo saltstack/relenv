@@ -149,7 +149,7 @@ def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
             ["git", "clone", "https://github.com/saltstack/salt.git", "--depth", "1"],
             env=env,
         )
-        assert p.returncode == 0, f"Failed to clone salt repository"
+        assert p.returncode == 0, "Failed to clone salt repository"
     else:
         packages = ["salt@git+https://github.com/saltstack/salt"]
 
@@ -469,3 +469,16 @@ def test_cryptography_rpath(pipexec, build, minor_version):
             found += 1
             assert str(build) in dest
     assert found == 2, f"Found {found} of 2 shared libraries"
+
+    # Verify the rust binary was compiled against relenv's glibc
+    p = subprocess.run(
+        ["readelf", "--version-info", bindings / "_rust.abi3.so"],
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    valid = True
+    for line in p.stdout.decode().splitlines():
+        if "GLIBC_2.33" in line:
+            valid = False
+            break
+    assert valid

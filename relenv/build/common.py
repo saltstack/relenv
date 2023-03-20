@@ -937,8 +937,6 @@ class Builder:
             env = {
                 "PATH": os.environ["PATH"],
             }
-
-        env["RELENV_DATA"] = os.environ["RELENV_DATA"]
         env["RELENV_DEBUG"] = "1"
         env["RELENV_HOST"] = self.triplet
         env["RELENV_HOST_ARCH"] = self.arch
@@ -946,6 +944,8 @@ class Builder:
         env["RELENV_BUILD_ARCH"] = self.build_arch
         env["RELENV_PY_VERSION"] = self.recipies["python"]["download"].version
         env["RELENV_PY_MAJOR_VERSION"] = env["RELENV_PY_VERSION"].rsplit(".", 1)[0]
+        if "RELENV_DATA" in os.environ:
+            env["RELENV_DATA"] = os.environ["RELENV_DATA"]
         if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
