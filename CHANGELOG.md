@@ -1,3 +1,12 @@
+0.9.0
+=====
+
+* Add support for rust c extensions
+* Add sys.RELENV attribute to runtime bootstrap
+* Fix ImportWarning thrown by RelenvImporter
+* Refactor RelenvImporter
+
+
 0.8.2
 =====
 
