@@ -12,18 +12,18 @@ log = logging.getLogger()
 
 def setup_parser(subparsers):
     """
-    Setup the subparser for the ``check`` command.
+    Setup the subparser for the ``relenv check`` command.
 
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
-    subparser = subparsers.add_parser("check", description="Check relenv intergrety")
+    subparser = subparsers.add_parser("check", description="Check relenv integrity")
     subparser.set_defaults(func=main)
 
 
 def main(args):
     """
-    The entrypoint into the ``relenv fetch`` command.
+    The entrypoint into the ``relenv check`` command.
 
     :param args: The args passed to the command
     :type args: argparse.Namespace

@@ -12,7 +12,7 @@ log = logging.getLogger()
 
 def setup_parser(subparsers):
     """
-    Setup the subparser for the ``check`` command.
+    Setup the subparser for the ``relenv buildenv`` command.
 
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
@@ -25,15 +25,17 @@ def setup_parser(subparsers):
 
 def main(args):
     """
-    The entrypoint into the ``relenv fetch`` command.
+    The entrypoint into the ``relenv buildenv`` command.
 
     :param args: The args passed to the command
     :type args: argparse.Namespace
     """
     logging.basicConfig(level=logging.INFO)
     if not hasattr(sys, "RELENV"):
-        log.error("Not in a relenv environment")
+        log.error("Not in a relenv environment.")
         sys.exit(1)
+    if sys.platform != "linux":
+        log.error("buildenv is only supported on Linux.")
 
     dirs = work_dirs()
     triplet = get_triplet()
