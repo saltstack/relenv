@@ -550,3 +550,76 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
     """
     )
     subprocess.run([py3, "-c", testscript], check=True)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_libgit2(pipexec, build, minor_version, tmpdir):
+    libssh2ver = "1.10.0"
+    libgit2ver = "1.5.2"
+    os.chdir(tmpdir)
+
+    buildscript = textwrap.dedent(
+        """\
+    set -e
+
+    # Setup the build environment
+    eval $({build}/bin/relenv buildenv)
+
+    # Build and install libssh2
+    wget https://www.libssh2.org/download/libssh2-{libssh2ver}.tar.gz
+    tar xvf libssh2-{libssh2ver}.tar.gz
+    cd libssh2-{libssh2ver}
+    mkdir bin
+    cd bin
+    cmake .. -DCMAKE_C_FLAGS="$CFLAGS" \
+      -DCMAKE_MODULE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_INSTALL_RPATH="$RELENV_PATH/lib" \
+      -DCMAKE_BUILD_WITH_INSTALL_RPATH=True \
+      -DOPENSSL_ROOT_DIR="$RELENV_PATH" \
+      -DCMAKE_PREFIX_PATH="$RELENV_PATH/lib" \
+      -DENABLE_ZLIB_COMPRESSION=ON \
+      -DCMAKE_INSTALL_PREFIX="$RELENV_PATH"
+    cmake --build .
+    cmake --build . --target install
+
+    cd ../..
+
+    # Build and install libgit2
+    wget https://github.com/libgit2/libgit2/archive/refs/tags/v{libgit2ver}.tar.gz
+    tar xvf v{libgit2ver}.tar.gz
+    cd libgit2-{libgit2ver}
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_C_FLAGS="$CFLAGS" \
+      -DCMAKE_MODULE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
+      -DCMAKE_INSTALL_RPATH="$RELENV_PATH/lib" \
+      -DCMAKE_BUILD_WITH_INSTALL_RPATH=True \
+      -DOPENSSL_ROOT_DIR="$RELENV_PATH" \
+      -DCMAKE_INSTALL_PREFIX="$RELENV_PATH"
+    cmake --build .
+    cmake --build . --target install
+
+    cd ../..
+
+    # Fix any non-relative rpaths
+    {build}/bin/relenv check
+    """
+    )
+
+    with open("buildscript.sh", "w") as fp:
+        fp.write(
+            buildscript.format(
+                libgit2ver=libgit2ver,
+                libssh2ver=libssh2ver,
+                build=build,
+            )
+        )
+
+    subprocess.run(["/bin/sh", "buildscript.sh"], check=True)
+
+    subprocess.run(
+        [str(pipexec), "install", "pygit2", "--no-cache", "--no-binary=:all:"],
+        check=True,
+    )
