@@ -1,0 +1,61 @@
+Additional Dependencies (Linux)
+-------------------------------
+
+Some python libraries do not provide wheels and require additional libraries to
+install properly. You can handle installing these python packages in two ways.
+You build them using system dependencies or you can install the needed
+depenency libraries into a relenv environment.
+
+The general procedure for installing python modules to use your system's
+libraries is to install the required sytem packages which contain the header
+files needed for the package. Then using your system's compiler configured with
+the system include path and system librariy directory.
+
+To install additional libraries into the relenv environment you will compile
+the library from source using the relenv toolchain compiler. Relenv provides
+the ``relenv buildenv`` to help simplify setting up your environment to use the
+relenv toolchain.Link the library against relenv's library directory and
+setting the rpath to relenvs' library directory. Then run ``relenv check`` to
+check and potentially fix the binary's rpath, making it relative. Finally using
+pip to install the intended python library.
+
+
+Installing pycurl Using System Libraries
+========================================
+
+This is an example of installing pycurl using the system's libcurl on Debian Linux.
+
+.. code-block:: bash
+
+   sudo apt-get install libcurl4-openssl-dev
+   relenv create myenv
+   CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install pycurl --no-cache
+
+
+
+Building and Installing curl For pycurl
+=======================================
+
+In this example, we use ``relenv buildenv`` to setup our environment. Install
+curl after building it from source. Run ``relenv check`` to fix the rpaths,
+making them relative. Then installing pycurl using the relenv's pip.
+
+.. code-block:: bash
+
+   relenv create myenv
+   # C extensions require a toolchain on linux
+   relenv fetch toolchain
+   # Load some useful build variables into the environment
+   eval $(myenv/bin/relenv buildenv)
+   wget https://curl.se/download/curl-8.0.1.tar.gz
+   tar xgf curl-8.0.1.tar.gz
+   cd curl-8.0.1
+   # Configure curl using the build environment.
+   ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
+   make
+   make install
+   cd ..
+   # Install pycurl, adjust the path so pycurl can find the curl-config executable
+   PATH="${RELENV_PATH}/bin:${PATH}" myenv/bin/pip3 install pycurl
+
+

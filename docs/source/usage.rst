@@ -71,33 +71,3 @@ pip will use myenv's Python interpreter. See the full :doc:`cli/create` document
    myenv/bin/pip3 install mycoolpackage
 
 
-Additional Dependencies
------------------------
-
-Some python libraries do not provide wheels and require additional libraries to
-install properly. You can handle installing these python packages in two ways.
-You build them using system dependencies or you can install the needed
-depenency libraries into a relenv environment.
-
-Building and installing curl for pycurl
-=======================================
-
-.. code-block:: bash
-
-   relenv create myenv
-   # C extensions require a toolchain on linux
-   relenv fetch toolchain
-   # Load some useful build variables into the environment
-   eval $(myenv/bin/relenv buildenv)
-   wget https://curl.se/download/curl-8.0.1.tar.gz
-   tar xgf curl-8.0.1.tar.gz
-   cd curl-8.0.1
-   # Configure curl using the build environment.
-   ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
-   make
-   make install
-   cd ..
-   # Install pycurl, adjust the path so pycurl can find the curl-config executable
-   PATH="${RELENV_PATH}/bin:${PATH}" meh/bin/pip3 install pycurl
-
-
