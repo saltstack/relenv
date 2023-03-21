@@ -32,6 +32,18 @@ This is an example of installing pycurl using the system's libcurl on Debian Lin
    CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install pycurl --no-cache
 
 
+Installing pygit2 Using System Libraries
+========================================
+
+This is an example of installing pygit2 using the system's libgit2 on Debian Linux.
+
+.. code-block:: bash
+
+   sudo apt-get install libgit2-dev libssh2-1-dev
+   relenv create myenv
+   CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install libgit2 --no-binary=":all:"
+
+
 
 Building and Installing curl For pycurl
 =======================================
@@ -57,5 +69,50 @@ making them relative. Then installing pycurl using the relenv's pip.
    cd ..
    # Install pycurl, adjust the path so pycurl can find the curl-config executable
    PATH="${RELENV_PATH}/bin:${PATH}" myenv/bin/pip3 install pycurl
+
+
+
+Building and Installing libgit2 for pygit2
+==========================================
+
+In this example we use Cmake to build and install libssh2 and libgit2,
+pre-requsits for pygit2.
+
+.. code-block:: bash
+
+   relenv create myenv
+   # C extensions require a toolchain on linux
+   relenv fetch toolchain
+   # Load some useful build variables into the environment
+   eval $(myenv/bin/relenv buildenv)
+
+   # Build and install libssh2
+   wget https://www.libssh2.org/download/libssh2-1.10.0.tar.gz
+   tar xvf libssh2-1.10.0.tar.gz
+   cd libssh2-1.10.0
+   mkdir bin
+   cd bin
+   cmake .. -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_MODULE_LINKER_FLAGS="$LDFLAGS" -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" -DCMAKE_INSTALL_RPATH="$RELENV_PATH/lib" -DCMAKE_BUILD_WITH_INSTALL_RPATH=True -DOPENSSL_ROOT_DIR="$RELENV_PATH" -DCMAKE_PREFIX_PATH="$RELENV_PATH/lib" -DENABLE_ZLIB_COMPRESSION=ON -DCMAKE_INSTALL_PREFIX="$RELENV_PATH"
+   cmake --build .
+   cmake --build . --target install
+
+   cd ../..
+
+   # Build and install libssh2 (version 0.5.x for pygit2)
+   wget https://github.com/libgit2/libgit2/archive/refs/tags/v0.5.2.tar.gz
+   tar xvf v0.5.2.tar.gz
+   cd libgit2-0.5.2
+   mkdir build
+   cd build
+   cmake .. -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_MODULE_LINKER_FLAGS="$LDFLAGS" -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" -DCMAKE_INSTALL_RPATH="$RELENV_PATH/lib" -DCMAKE_BUILD_WITH_INSTALL_RPATH=True -DOPENSSL_ROOT_DIR="$RELENV_PATH" -DCMAKE_INSTALL_PREFIX="$RELENV_PATH"
+   cmake --build .
+   cmake --build . --target install
+   cd ../..
+
+   # Run relenv check
+   myenv/bin/relenv check
+
+   myenv/bin/pip3 install pygit2 --no-binary=":all:"
+
 
 
