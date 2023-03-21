@@ -141,7 +141,8 @@ def test_imports(pyexec):
 def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
-    if sys.platform == "linux" and shutil.which("git"):
+    if sys.platform == "linux" and not shutil.which("git"):
+        os.chdir(tmp_path)
         packages = [
             "./salt",
         ]
@@ -482,3 +483,70 @@ def test_cryptography_rpath(pipexec, build, minor_version):
             valid = False
             break
     assert valid
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_pycurl(pipexec, build, minor_version, tmpdir):
+    curlver = "8.0.1"
+    os.chdir(tmpdir)
+
+    # Build curl and install it into the relenv environment
+    buildscript = textwrap.dedent(
+        """\
+    set -e
+    wget https://curl.se/download/curl-{curlver}.tar.gz
+    tar xvf curl-{curlver}.tar.gz
+    cd curl-{curlver}
+    eval $({build}/bin/relenv buildenv)
+    env
+    ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
+    make
+    make install
+    {build}/bin/relenv check\
+    """
+    )
+    with open("buildcurl.sh", "w") as fp:
+        fp.write(
+            buildscript.format(
+                curlver=curlver,
+                build=build,
+            )
+        )
+
+    subprocess.run(["/bin/sh", "buildcurl.sh"], check=True)
+
+    # Make sure curl-config exists.
+    assert (build / "bin" / "curl-config").exists()
+
+    # Add the relenv environment to the path so pycurl can find the curl-config
+    # executable
+    env = os.environ.copy()
+    env["PATH"] = f"{build}/bin:{env['PATH']}"
+
+    # Install pycurl
+    subprocess.run(
+        [str(pipexec), "install", "pycurl", "--no-cache"], env=env, check=True
+    )
+
+    # Move the relenv environment, if something goes wrong this will break the linker.
+    b2 = build.parent / "test2"
+    build.rename(b2)
+
+    # Test pycurl
+    py3 = str(b2 / "bin" / "python3")
+    testscript = textwrap.dedent(
+        """\
+    import pycurl
+    import io
+    import re
+    curl = pycurl.Curl()
+    buff = io.BytesIO()
+    hdr = io.BytesIO()
+    curl.setopt(pycurl.URL, 'http://example.org')
+    curl.setopt(pycurl.WRITEFUNCTION, buff.write)
+    curl.setopt(pycurl.HEADERFUNCTION, hdr.write)
+    curl.perform()
+    print(curl.getinfo(pycurl.HTTP_CODE))
+    """
+    )
+    subprocess.run([py3, "-c", testscript], check=True)

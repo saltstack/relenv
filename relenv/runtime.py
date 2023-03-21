@@ -419,15 +419,21 @@ def wrap_pip_build_wheel(name):
         def wrapper(*args, **kwargs):
             dirs = work_dirs()
             toolchain = dirs.toolchain / get_triplet()
-            cargo_home = str(toolchain / "cargo")
-            if "CARGO_HOME" in os.environ and os.environ["CARGO_HOME"] != cargo_home:
-                print(
-                    f"Warning: CARGO_HOME environment not set to relenv's toolchain!\n"
-                    f"expected: {cargo_home}\ncurrent: {os.environ['CARGO_HOME']}"
-                )
+            if not toolchain.exists():
+                debug("Unable to set CARGO_HOME no toolchain exists")
             else:
-                print("SET CARGO HOME")
-                os.environ["CARGO_HOME"] = cargo_home
+                cargo_home = str(toolchain / "cargo")
+                if (
+                    "CARGO_HOME" in os.environ
+                    and os.environ["CARGO_HOME"] != cargo_home
+                ):
+                    print(
+                        f"Warning: CARGO_HOME environment not set to relenv's toolchain!\n"
+                        f"expected: {cargo_home}\ncurrent: {os.environ['CARGO_HOME']}"
+                    )
+                else:
+                    debug("Relenv set CARGO_HOME")
+                    os.environ["CARGO_HOME"] = cargo_home
             return func(*args, **kwargs)
 
         return wrapper
