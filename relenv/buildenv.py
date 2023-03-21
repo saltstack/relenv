@@ -1,3 +1,5 @@
+# Copyright 2023 VMware, Inc.
+# SPDX-License-Identifier: Apache-2.0
 """
 Helper for building libraries to install into a relenv environment.
 """
@@ -55,7 +57,9 @@ def main(args):
             export LDFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
                 -Wl,-rpath,${{RELENV_PATH}}/lib"
         """.format(
-                relenv=sys.RELENV, toolchain=toolchain, triplet=triplet,
+                relenv=sys.RELENV,
+                toolchain=toolchain,
+                triplet=triplet,
             )
         )
     )
