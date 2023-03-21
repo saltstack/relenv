@@ -9,6 +9,7 @@ Topics
    :maxdepth: 1
 
    usage
+   additional-dependencies
    cli/index
    toolchain
    contributing
