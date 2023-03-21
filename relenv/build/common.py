@@ -1459,6 +1459,7 @@ def finalize(env, dirs, logfp):
     globs = [
         "/bin/python*",
         "/bin/pip*",
+        "/bin/relenv",
         "/lib/python*/ensurepip/*",
         "/lib/python*/site-packages/*",
         "/include/*",

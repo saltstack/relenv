@@ -350,7 +350,8 @@ def fetch_url(url, fp):
                 raise
             time.sleep(n * 10)
     try:
-        block = fin.read(10240)
+        size = 1024 * 300
+        block = fin.read(size)
         while block:
             fp.write(block)
             block = fin.read(10240)

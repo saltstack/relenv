@@ -104,6 +104,12 @@ def setup_parser(subparsers):
         action="store_true",
         help="Check for new version of python and it's depenencies, then exit.",
     )
+    build_subparser.add_argument(
+        "--env",
+        default=False,
+        action="store_true",
+        help=(""),
+    )
 
 
 def main(args):

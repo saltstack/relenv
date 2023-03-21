@@ -376,4 +376,8 @@ def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if not hasattr(sys, "RELENV"):
+        raise RuntimeError("Not in a relenv environment")
+    main(sys.RELENV)

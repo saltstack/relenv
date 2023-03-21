@@ -6,7 +6,7 @@ The entrypoint into relenv.
 
 from argparse import ArgumentParser
 
-from . import build, create, fetch, toolchain
+from . import build, buildenv, check, create, fetch, toolchain
 from .common import __version__
 
 
@@ -32,6 +32,8 @@ def setup_cli():
         toolchain,
         create,
         fetch,
+        check,
+        buildenv,
     ]
     for mod in modules_to_setup:
         mod.setup_parser(subparsers)
