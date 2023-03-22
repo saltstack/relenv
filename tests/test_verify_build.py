@@ -573,14 +573,12 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir):
     cd libssh2-{libssh2ver}
     mkdir bin
     cd bin
-    cmake .. -DCMAKE_C_FLAGS="$CFLAGS" \
-      -DCMAKE_MODULE_LINKER_FLAGS="$LDFLAGS" \
-      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
-      -DCMAKE_INSTALL_RPATH="$RELENV_PATH/lib" \
-      -DCMAKE_BUILD_WITH_INSTALL_RPATH=True \
-      -DOPENSSL_ROOT_DIR="$RELENV_PATH" \
-      -DCMAKE_PREFIX_PATH="$RELENV_PATH/lib" \
+    cmake .. \
       -DENABLE_ZLIB_COMPRESSION=ON \
+      -DOPENSSL_ROOT_DIR="$RELENV_PATH" \
+      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_EXAMPLES=OFF \
+      -DBUILD_TESTING=OFF \
       -DCMAKE_INSTALL_PREFIX="$RELENV_PATH"
     cmake --build .
     cmake --build . --target install
@@ -593,12 +591,11 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir):
     cd libgit2-{libgit2ver}
     mkdir build
     cd build
-    cmake .. -DCMAKE_C_FLAGS="$CFLAGS" \
-      -DCMAKE_MODULE_LINKER_FLAGS="$LDFLAGS" \
-      -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS" \
-      -DCMAKE_INSTALL_RPATH="$RELENV_PATH/lib" \
-      -DCMAKE_BUILD_WITH_INSTALL_RPATH=True \
+    cmake ..  \
       -DOPENSSL_ROOT_DIR="$RELENV_PATH" \
+      -DBUILD_CLI=OFF \
+      -DBUILD_TESTS=OFF \
+      -DUSE_SSH=ON \
       -DCMAKE_INSTALL_PREFIX="$RELENV_PATH"
     cmake --build .
     cmake --build . --target install
