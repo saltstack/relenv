@@ -33,7 +33,7 @@ LIBCLIBS = [
     "libnss_files.so.2",
     "libnss_hesiod.so.2",
     "libpcprofile.so.2",
-    "libresolve.so.2",
+    "libresolv.so.2",
     "librt.so.1",
     "libthread_db.so.1",
     "libutil.so.2",
@@ -300,7 +300,7 @@ def handle_elf(path, libs, rpath_only, root=None):
 
         if is_in_dir(linked_lib, root):
             needs_rpath = True
-            log.warning("File already within root directory: %s", linked_lib)
+            log.info("File already within root directory: %s", linked_lib)
             continue
 
         relocated_path = os.path.join(libs, lib_basename)
