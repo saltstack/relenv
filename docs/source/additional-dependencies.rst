@@ -27,8 +27,8 @@ This is an example of installing pycurl using the system's libcurl on Debian Lin
 
 .. code-block:: bash
 
-   sudo apt-get install libcurl4-openssl-dev
    relenv create myenv
+   sudo apt-get install libcurl4-openssl-dev
    CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install pycurl --no-cache
 
 
@@ -39,9 +39,22 @@ This is an example of installing pygit2 using the system's libgit2 on Debian Lin
 
 .. code-block:: bash
 
-   sudo apt-get install libgit2-dev libssh2-1-dev
    relenv create myenv
+   sudo apt-get install libgit2-dev libssh2-1-dev
    CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install libgit2 --no-binary=":all:"
+
+
+
+Installing python-ldap Using System Libraries
+================================================
+
+This is an example of installing python-ldap using the system's open-ldap on Debian Linux.
+
+.. code-block:: bash
+
+   relenv create myenv
+   sudo apt-get install openldap-dev libsasl2-dev
+   CC=/usr/bin/gcc LDFLAGS="-I/usr/include -L/usr/lib" CFLAGS="-I/usr/include" myenv/bin/pip3 install python-ldap
 
 
 
@@ -128,6 +141,46 @@ pre-requsits for pygit2.
    myenv/bin/relenv check
 
    myenv/bin/pip3 install pygit2 --no-binary=":all:"
+
+
+
+Building and Installing open-ldap For python-ldap
+=================================================
+
+In this example, we use ``relenv buildenv`` to setup our environment. Build and
+install sasl and open-ldap. Run ``relenv check`` to fix the rpaths, making them
+relative. Then install python-ldap using the relenv's pip.
+
+.. code-block:: bash
+
+   relenv create myenv
+   # C extensions require a toolchain on linux
+   relenv fetch toolchain
+   # Load some useful build variables into the environment
+   eval $(myenv/bin/relenv buildenv)
+
+   # Build and Install sasl
+   wget https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
+   tar xvf cyrus-sasl-2.1.28.tar.gz
+   cd cyrus-sasl-2.1.28
+   ./configure --prefix=$RELENV_PATH
+   make
+   make install
+   cd ..
+
+   # Build and Install Open LDAP
+   wget https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-2.5.14.tgz
+   tar xvf openldap-2.5.14.tgz
+   cd openldap-2.5.14
+   ./configure --prefix=$RELENV_PATH
+   make
+   make install
+   cd ..
+
+   # Fix any non-relative rpaths
+   myenv/bin/relenv check
+
+   myenv/bin/pip3 install python-ldap
 
 
 

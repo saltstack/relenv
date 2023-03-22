@@ -52,6 +52,8 @@ def main(args):
             export CXX="${{TOOLCHAIN_PATH}}/bin/{triplet}-g++ -no-pie"
             export CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
                 -I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
+            export CPPFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
+                -I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
             export CMAKE_CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
                 -I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
             export LDFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib

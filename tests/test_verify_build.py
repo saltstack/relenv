@@ -502,7 +502,9 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
     ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
     make
     make install
-    {build}/bin/relenv check\
+
+    # Fix any non-relative rpaths
+    {build}/bin/relenv check
     """
     )
     with open("buildcurl.sh", "w") as fp:
@@ -621,5 +623,57 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir):
 
     subprocess.run(
         [str(pipexec), "install", "pygit2", "--no-cache", "--no-binary=:all:"],
+        check=True,
+    )
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
+    saslver = "2.1.28"
+    ldapver = "2.5.14"
+    os.chdir(tmpdir)
+
+    buildscript = textwrap.dedent(
+        """\
+    # Setup the environment
+    set -e
+    eval $({build}/bin/relenv buildenv)
+
+    # Build and Install sasl
+    wget https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-{saslver}/cyrus-sasl-{saslver}.tar.gz
+    tar xvf cyrus-sasl-{saslver}.tar.gz
+    cd cyrus-sasl-{saslver}
+    ./configure --prefix=$RELENV_PATH
+    make
+    make install
+    cd ..
+
+    # Build and Install Open LDAP
+    wget https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-{ldapver}.tgz
+    tar xvf openldap-{ldapver}.tgz
+    cd openldap-{ldapver}
+    ./configure --prefix=$RELENV_PATH
+    make
+    make install
+    cd ..
+
+    # Fix any non-relative rpaths
+    {build}/bin/relenv check
+    """
+    )
+
+    with open("buildscript.sh", "w") as fp:
+        fp.write(
+            buildscript.format(
+                saslver=saslver,
+                ldapver=ldapver,
+                build=build,
+            )
+        )
+
+    subprocess.run(["/bin/sh", "buildscript.sh"], check=True)
+
+    subprocess.run(
+        [str(pipexec), "install", "python-ldap", "--no-cache", "--no-binary=:all:"],
         check=True,
     )
