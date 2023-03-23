@@ -1,3 +1,11 @@
+0.10.0
+=====
+
+* Add buildenv to support building of additional libraries
+* Add check to support installation of additional libraries
+* Add examples of building libgit2, open-ldap and libcurl
+
+
 0.9.0
 =====
 
