@@ -439,7 +439,7 @@ def test_cryptography_rpath(pipexec, build, minor_version):
         [
             str(pipexec),
             "install",
-            "cryptography",
+            "cryptography==0.39.2",
             "--no-cache-dir",
             "--no-binary=cryptography",
         ],
