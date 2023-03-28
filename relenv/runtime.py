@@ -463,6 +463,9 @@ def install_cargo_config():
     triplet = get_triplet()
     dirs = work_dirs()
     toolchain = dirs.toolchain / triplet
+    if not toolchain.exists():
+        debug("Unable to set CARGO_HOME no toolchain exists")
+        return
     cargo_home = toolchain / "cargo"
     if not cargo_home.exists():
         cargo_home.mkdir()
