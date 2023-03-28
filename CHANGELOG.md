@@ -1,5 +1,11 @@
+0.10.1
+======
+
+* Fix bug in runtime.bootstrap on linux when no toolchain exists
+
+
 0.10.0
-=====
+======
 
 * Add buildenv to support building of additional libraries
 * Add check to support installation of additional libraries
