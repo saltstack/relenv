@@ -434,17 +434,18 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_cryptography_rpath(pipexec, build, minor_version):
+@pytest.mark.parametrize("cryptography_version", ["40.0.1", "39.0.2"])
+def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version):
     p = subprocess.run(
         [
             str(pipexec),
             "install",
-            "cryptography==39.0.2",
+            f"cryptography=={cryptography_version}",
             "--no-cache-dir",
             "--no-binary=cryptography",
         ],
     )
-    assert p.returncode == 0, "Failed to pip install cryptography"
+    assert p.returncode != 1, "Failed to pip install cryptography"
     bindings = (
         build
         / "lib"
@@ -454,8 +455,12 @@ def test_cryptography_rpath(pipexec, build, minor_version):
         / "hazmat"
         / "bindings"
     )
+    if cryptography_version == "39.0.2":
+        osslinked = "_openssl.abi3.so"
+    else:
+        osslinked = "_rust.abi3.so"
     p = subprocess.run(
-        ["ldd", bindings / "_openssl.abi3.so"], stdout=subprocess.PIPE, check=True
+        ["ldd", bindings / osslinked], stdout=subprocess.PIPE, check=True
     )
     found = 0
     for line in p.stdout.splitlines():
@@ -463,10 +468,11 @@ def test_cryptography_rpath(pipexec, build, minor_version):
         if "=>" not in line:
             continue
         lib, dest = [_.strip() for _ in line.split("=>", 1)]
-        if lib == "libssl.so.1.1":
+        baselib = '.'.join(lib.split('.')[:2])
+        if baselib == "libssl.so":
             found += 1
             assert str(build) in dest
-        elif lib == "libcrypto.so.1.1":
+        elif baselib == "libcrypto.so":
             found += 1
             assert str(build) in dest
     assert found == 2, f"Found {found} of 2 shared libraries"

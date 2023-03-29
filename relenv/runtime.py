@@ -408,6 +408,23 @@ def wrap_pip_install_legacy(name):
     return mod
 
 
+def set_env_if_not_set(name, value):
+    """
+    Set an environment variable if not already set.
+
+    If the environment variable is already set and not equal to value, warn the
+    user.
+    """
+    if name in os.environ and os.environ[name] != value:
+        print(
+            f"Warning: {name} environment not set to relenv's root!\n"
+            f"expected: {value}\ncurrent: {os.environ[name]}"
+        )
+    else:
+        debug(f"Relenv set {name}")
+        os.environ[name] = value
+
+
 def wrap_pip_build_wheel(name):
     """
     pip._internal.operations.build wrapper.
@@ -422,18 +439,16 @@ def wrap_pip_build_wheel(name):
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
+                relenvroot = str(sys.RELENV)
+                rustflags = (
+                    f"-C link-arg=-Wl,-rpath,{relenvroot}/lib "
+                    f"-C link-arg=-L{relenvroot}/lib "
+                    f"-C link-arg=-L{toolchain}/sysroot/lib"
+                )
                 cargo_home = str(toolchain / "cargo")
-                if (
-                    "CARGO_HOME" in os.environ
-                    and os.environ["CARGO_HOME"] != cargo_home
-                ):
-                    print(
-                        f"Warning: CARGO_HOME environment not set to relenv's toolchain!\n"
-                        f"expected: {cargo_home}\ncurrent: {os.environ['CARGO_HOME']}"
-                    )
-                else:
-                    debug("Relenv set CARGO_HOME")
-                    os.environ["CARGO_HOME"] = cargo_home
+                set_env_if_not_set("CARGO_HOME", cargo_home)
+                set_env_if_not_set("OPENSSL_DIR", relenvroot)
+                set_env_if_not_set("RUSTFLAGS", rustflags)
             return func(*args, **kwargs)
 
         return wrapper

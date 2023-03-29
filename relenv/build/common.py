@@ -273,6 +273,7 @@ def build_openssl(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    temp = tempfile.mkdtemp()
     arch = "aarch64"
     if sys.platform == "darwin":
         plat = "darwin64"
@@ -287,12 +288,12 @@ def build_openssl(env, dirs, logfp):
     runcmd(
         [
             "./Configure",
-            "{}-{}".format(plat, arch),
+            f"{plat}-{arch}",
             "no-idea",
             "shared",
-            "--prefix={}".format(dirs.prefix),
-            # "--openssldir={}/ssl".format(dirs.prefix),
-            "--openssldir=/tmp/ssl",
+            f"--prefix={dirs.prefix}",
+            f"--openssldir={temp}",
+            "--libdir=lib",
         ],
         env=env,
         stderr=logfp,
