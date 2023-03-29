@@ -37,6 +37,9 @@ LIBCLIBS = [
     "librt.so.1",
     "libthread_db.so.1",
     "libutil.so.2",
+    # libgcc is not technically glibc but shares the same kind of backwards
+    # compatablity guarantees.
+    "libgcc_s.so.2",
 ]
 
 LC_ID_DYLIB = "LC_ID_DYLIB"
