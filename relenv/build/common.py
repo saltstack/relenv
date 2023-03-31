@@ -1297,15 +1297,12 @@ def install_runtime(sitepackages):
     relenv = sitepackages / "relenv"
     os.makedirs(relenv, exist_ok=True)
 
-    for name in ["runtime.py", "relocate.py", "common.py"]:
+    for name in ["runtime.py", "relocate.py", "common.py", "__init__.py"]:
         src = MODULE_DIR / name
         dest = relenv / name
         with io.open(src, "r") as rfp:
             with io.open(dest, "w") as wfp:
                 wfp.write(rfp.read())
-
-    init = relenv / "__init__.py"
-    init.touch()
 
 
 def finalize(env, dirs, logfp):
