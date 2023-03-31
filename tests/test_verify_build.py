@@ -468,7 +468,7 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
         if "=>" not in line:
             continue
         lib, dest = [_.strip() for _ in line.split("=>", 1)]
-        baselib = '.'.join(lib.split('.')[:2])
+        baselib = ".".join(lib.split(".")[:2])
         if baselib == "libssl.so":
             found += 1
             assert str(build) in dest
