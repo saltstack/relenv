@@ -1353,7 +1353,7 @@ def finalize(env, dirs, logfp):
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
         env["RELENV_CROSS"] = dirs.prefix
         python = env["RELENV_NATIVE_PY"]
-    logfp.write(f"\nRUN ENSURE PIP\n")
+    logfp.write("\nRUN ENSURE PIP\n")
     runcmd(
         [str(python), "-m", "ensurepip"],
         env=env,
