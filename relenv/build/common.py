@@ -64,43 +64,13 @@ CICD = "CI" in os.environ
 NODOWLOAD = False
 
 
-SITECUSTOMIZE = '''"""
-Relenv site customize
-"""
-import os
-import site
-import sys
+RELENV_PTH = (
+    "import os; from importlib.machinery import SourceFileLoader as SF; "
+    'from pathlib import Path as P; SF("relenv.runtime", '
+    'str(P(__file__).parent / "site-packages" / "relenv" / '
+    '"runtime.py")).load_module("relenv.runtime").bootstrap();'
+)
 
-# Remove any paths not relative to relenv's root directory, or a virtualenv's
-# root directory if one was created from the relenv python
-
-# On non virtualenv scenarios, sys.prefix is the same as sys.base_prefix,
-# while on virtualenv scenarios, they differ. Both of these prefixes should not
-# be removed from sys.path
-__valid_path_prefixes = tuple({sys.prefix, sys.base_prefix})
-__sys_path = []
-for __path in sys.path:
-    if __path.startswith(__valid_path_prefixes):
-        __sys_path.append(__path)
-if 'PYTHONPATH' in os.environ:
-    sep = ':'
-    if sys.platform == 'win32':
-       sep = ';'
-    for __path in os.environ['PYTHONPATH'].split(sep):
-        __sys_path.append(__path)
-
-# Replace sys.path
-sys.path[:] = __sys_path
-site.ENABLE_USER_SITE = False
-
-try:
-    import relenv.runtime
-except ImportError:
-    if "RELENV_DEBUG" in os.environ:
-        print("Unable to find relenv.runtime for bootstrap.", file=sys.stderr, flush=True)
-else:
-    relenv.runtime.bootstrap()
-'''
 
 SYSCONFIGDATA = """
 import pathlib, sys, platform, os
@@ -1319,9 +1289,9 @@ def install_runtime(sitepackages):
     """
     Install a base relenv runtime.
     """
-    sitecustomize = sitepackages / "sitecustomize.py"
-    with io.open(str(sitecustomize), "w") as fp:
-        fp.write(SITECUSTOMIZE)
+    relenv_pth = sitepackages / "relenv.pth"
+    with io.open(str(relenv_pth), "w") as fp:
+        fp.write(RELENV_PTH)
 
     # Lay down relenv.runtime, we'll pip install the rest later
     relenv = sitepackages / "relenv"
