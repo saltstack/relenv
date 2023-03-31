@@ -16,11 +16,13 @@ import importlib
 import os
 import pathlib
 import shutil
+import site
 import subprocess
 import sys
 import textwrap
 
 from .common import MODULE_DIR, format_shebang, get_triplet, work_dirs
+from . import relocate
 
 
 def get_major_version():
@@ -156,8 +158,6 @@ def install_wheel_wrapper(func):
 
         from pip._internal.utils.wheel import parse_wheel
 
-        from relenv import relocate
-
         with ZipFile(wheel_path) as zf:
             info_dir, metadata = parse_wheel(zf, name)
         func(
@@ -211,7 +211,6 @@ def install_legacy_wrapper(func):
         unpacked_source_directory,
         req_description,
     ):
-        from relenv import relocate
 
         pkginfo = pathlib.Path(setup_py_path).parent / "PKG-INFO"
         with open(pkginfo) as fp:
@@ -555,10 +554,55 @@ def setup_crossroot():
         ] + [_ for _ in sys.path if "site-packages" not in _]
 
 
+def wrapsitecustomize(func):
+    @functools.wraps(func)
+    def wrapper():
+        func()
+
+        sitecustomize = None
+        try:
+            import sitecustomize
+        except ImportError as exc:
+            if exc.name == "sitecustomize":
+                pass
+            else:
+                raise
+
+        # Attempt to make sure we're not pulling in packages outside of the
+        # relenv environment. This can't be done when pip is using build_env to
+        # install packages. This code seems potentially brittle and there may
+        # be reasonable arguments against doing it at all.
+        if sitecustomize is None or "pip-build-env" not in sitecustomize.__file__:
+            __valid_path_prefixes = tuple({sys.prefix, sys.base_prefix})
+            __sys_path = []
+            _orig = sys.path[:]
+            for __path in sys.path:
+                if __path.startswith(__valid_path_prefixes):
+                    __sys_path.append(__path)
+            if "PYTHONPATH" in os.environ:
+                sep = ":"
+                if sys.platform == "win32":
+                    sep = ";"
+                for __path in os.environ["PYTHONPATH"].split(sep):
+                    __sys_path.append(__path)
+            # Replace sys.path
+            sys.path[:] = __sys_path
+            debug(f"SYS PATH IS {sys.path}")
+            debug(f"ORG PATH IS {_orig}")
+        else:
+            debug(f"SKIP PATH MUNGE")
+
+        site.ENABLE_USER_SITE = False
+        debug("After site customize wrapper")
+
+    return wrapper
+
+
 def bootstrap():
     """
     Bootstrap the relenv environment.
     """
+    site.execsitecustomize = wrapsitecustomize(site.execsitecustomize)
     setup_crossroot()
     setup_openssl()
     install_cargo_config()
