@@ -437,13 +437,6 @@ def compare_versions(current, versions):
             print(f"Unable to compare versions {version}")
 
 
-# def check_named_versions(name, current, versions):
-#    version, current = check_versions
-#    if version == NOOP:
-#        return
-#    print(f"{name}: {version} > {current}")
-
-
 class Download:
     """
     A utility that holds information about content to be downloaded.
