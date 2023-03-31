@@ -21,8 +21,8 @@ import subprocess
 import sys
 import textwrap
 
-from .common import MODULE_DIR, format_shebang, get_triplet, work_dirs
 from . import relocate
+from .common import MODULE_DIR, format_shebang, get_triplet, work_dirs
 
 
 def get_major_version():
@@ -555,6 +555,13 @@ def setup_crossroot():
 
 
 def wrapsitecustomize(func):
+    """
+    Wrap site.execsitecustomize.
+
+    This allows relenv a hook to be the last thing that runs when pythong is
+    setting itself up.
+    """
+
     @functools.wraps(func)
     def wrapper():
         func()
@@ -587,10 +594,10 @@ def wrapsitecustomize(func):
                     __sys_path.append(__path)
             # Replace sys.path
             sys.path[:] = __sys_path
-            debug(f"SYS PATH IS {sys.path}")
-            debug(f"ORG PATH IS {_orig}")
+            debug(f"original sys.path was {_orig}")
+            debug(f"new sys.path is {sys.path}")
         else:
-            debug(f"SKIP PATH MUNGE")
+            debug("Skip path munging")
 
         site.ENABLE_USER_SITE = False
         debug("After site customize wrapper")
