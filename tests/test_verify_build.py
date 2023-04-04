@@ -561,9 +561,22 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_libgit2(pipexec, build, minor_version, tmpdir):
-    libssh2ver = "1.10.0"
-    libgit2ver = "1.5.2"
+@pytest.mark.parametrize(
+    "versions",
+    [
+        {
+            "libssh2": "1.10.0",
+            "libgit2": "1.5.2",
+            "pygit2": "1.11.1",
+        },
+        {
+            "libssh2": "1.10.0",
+            "libgit2": "1.6.2",
+            "pygit2": "1.12.0",
+        },
+    ],
+)
+def test_install_libgit2(pipexec, build, minor_version, tmpdir, versions):
     os.chdir(tmpdir)
 
     buildscript = textwrap.dedent(
@@ -574,9 +587,9 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir):
     eval $({build}/bin/relenv buildenv)
 
     # Build and install libssh2
-    wget https://www.libssh2.org/download/libssh2-{libssh2ver}.tar.gz
-    tar xvf libssh2-{libssh2ver}.tar.gz
-    cd libssh2-{libssh2ver}
+    wget https://www.libssh2.org/download/libssh2-{libssh2}.tar.gz
+    tar xvf libssh2-{libssh2}.tar.gz
+    cd libssh2-{libssh2}
     mkdir bin
     cd bin
     cmake .. \
@@ -592,9 +605,9 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir):
     cd ../..
 
     # Build and install libgit2
-    wget https://github.com/libgit2/libgit2/archive/refs/tags/v{libgit2ver}.tar.gz
-    tar xvf v{libgit2ver}.tar.gz
-    cd libgit2-{libgit2ver}
+    wget https://github.com/libgit2/libgit2/archive/refs/tags/v{libgit2}.tar.gz
+    tar xvf v{libgit2}.tar.gz
+    cd libgit2-{libgit2}
     mkdir build
     cd build
     cmake ..  \
@@ -612,20 +625,25 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir):
     {build}/bin/relenv check
     """
     )
+    print(versions)
 
     with open("buildscript.sh", "w") as fp:
         fp.write(
             buildscript.format(
-                libgit2ver=libgit2ver,
-                libssh2ver=libssh2ver,
-                build=build,
+                libssh2=versions["libssh2"], libgit2=versions["libgit2"], build=build
             )
         )
 
     subprocess.run(["/bin/sh", "buildscript.sh"], check=True)
 
     subprocess.run(
-        [str(pipexec), "install", "pygit2", "--no-cache", "--no-binary=:all:"],
+        [
+            str(pipexec),
+            "install",
+            f"pygit2=={versions['pygit2']}",
+            "--no-cache",
+            "--no-binary=:all:",
+        ],
         check=True,
     )
 
