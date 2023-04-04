@@ -69,7 +69,7 @@ making them relative. Then installing pycurl using the relenv's pip.
 
    relenv create myenv
    # C extensions require a toolchain on linux
-   relenv fetch toolchain
+   relenv toolchain fetch
    # Load some useful build variables into the environment
    eval $(myenv/bin/relenv buildenv)
    wget https://curl.se/download/curl-8.0.1.tar.gz
@@ -95,7 +95,7 @@ pre-requsits for pygit2.
 
    relenv create myenv
    # C extensions require a toolchain on linux
-   relenv fetch toolchain
+   relenv toolchain fetch
    # Load some useful build variables into the environment
    eval $(myenv/bin/relenv buildenv)
 
@@ -151,7 +151,7 @@ relative. Then install python-ldap using the relenv's pip.
 
    relenv create myenv
    # C extensions require a toolchain on linux
-   relenv fetch toolchain
+   relenv toolchain fetch
    # Load some useful build variables into the environment
    eval $(myenv/bin/relenv buildenv)
 
