@@ -522,7 +522,7 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
     wget https://curl.se/download/curl-{curlver}.tar.gz
     tar xvf curl-{curlver}.tar.gz
     cd curl-{curlver}
-    eval $({build}/bin/relenv buildenv)
+    source <({build}/bin/relenv buildenv)
     env
     ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
     make
@@ -604,7 +604,7 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir, versions):
     set -e
 
     # Setup the build environment
-    eval $({build}/bin/relenv buildenv)
+    source <({build}/bin/relenv buildenv)
 
     # Build and install libssh2
     wget https://www.libssh2.org/download/libssh2-{libssh2}.tar.gz
@@ -682,7 +682,7 @@ def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
         """\
     # Setup the environment
     set -e
-    eval $({build}/bin/relenv buildenv)
+    source <({build}/bin/relenv buildenv)
 
     # Build and Install sasl
     wget https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-{saslver}/cyrus-sasl-{saslver}.tar.gz

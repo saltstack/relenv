@@ -71,7 +71,7 @@ making them relative. Then installing pycurl using the relenv's pip.
    # C extensions require a toolchain on linux
    relenv toolchain fetch
    # Load some useful build variables into the environment
-   eval $(myenv/bin/relenv buildenv)
+   source <(myenv/bin/relenv buildenv)
    wget https://curl.se/download/curl-8.0.1.tar.gz
    tar xgf curl-8.0.1.tar.gz
    cd curl-8.0.1
@@ -97,7 +97,7 @@ pre-requsits for pygit2.
    # C extensions require a toolchain on linux
    relenv toolchain fetch
    # Load some useful build variables into the environment
-   eval $(myenv/bin/relenv buildenv)
+   source <(myenv/bin/relenv buildenv)
 
    # Build and install libssh2
    wget https://www.libssh2.org/download/libssh2-1.10.0.tar.gz
@@ -153,7 +153,7 @@ relative. Then install python-ldap using the relenv's pip.
    # C extensions require a toolchain on linux
    relenv toolchain fetch
    # Load some useful build variables into the environment
-   eval $(myenv/bin/relenv buildenv)
+   source <(myenv/bin/relenv buildenv)
 
    # Build and Install sasl
    wget https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-2.1.28/cyrus-sasl-2.1.28.tar.gz
