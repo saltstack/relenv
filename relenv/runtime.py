@@ -13,6 +13,7 @@ This code is run when initializing the python interperter in a Relenv environmen
 import contextlib
 import functools
 import importlib
+import json
 import os
 import pathlib
 import shutil
@@ -106,6 +107,40 @@ def get_config_var_wrapper(func):
 
     return wrapped
 
+def get_config_vars_wrapper(func, mod):
+    """
+    Return a wrapper to resolve paths relative to the relenv root.
+    """
+
+    def wrapped(*args):
+        if "RELENV_BUILD" in os.environ:
+            return func(*args)
+
+        _CONFIG_VARS = func()
+        p = subprocess.run([
+            "/usr/bin/python3",
+            "-c",
+            "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
+        ], capture_output=True)
+        _SYSTEM_CONFIG_VARS = json.loads(p.stdout[:-1])
+        for a in [
+            "AR",
+            "CC",
+            "CFLAGS",
+            "CPPFLAGS",
+            "CXX",
+            "LIBDEST",
+            "SCRIPTDIR",
+            "BLDSHARED",
+            "LDFLAGS",
+            "LDCXXSHARED",
+            "LDSHARED",
+        ]:
+            _CONFIG_VARS[a] = _SYSTEM_CONFIG_VARS[a]
+        mod._CONFIG_VARS = _CONFIG_VARS
+        return func(*args)
+
+    return wrapped
 
 def get_paths_wrapper(func, default_scheme):
     """
@@ -358,6 +393,7 @@ def wrap_sysconfig(name):
     """
     mod = importlib.import_module("sysconfig")
     mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
+    mod.get_config_vars = get_config_vars_wrapper(mod.get_config_vars, mod)
     mod._PIP_USE_SYSCONFIG = True
     try:
         # Python >= 3.10
@@ -458,7 +494,7 @@ def wrap_pip_build_wheel(name):
 
 importer = RelenvImporter(
     wrappers=[
-        Wrapper("sysconfig", wrap_sysconfig, "startswith"),
+        Wrapper("sysconfig", wrap_sysconfig),
         Wrapper("pip._vendor.distlib.scripts", wrap_pip_distlib_scripts),
         Wrapper("distutils.command.build_ext", wrap_distutils_command),
         Wrapper("pip._internal.operations.install.wheel", wrap_pip_install_wheel),
