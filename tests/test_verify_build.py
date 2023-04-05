@@ -549,6 +549,7 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
     # executable
     env = os.environ.copy()
     env["PATH"] = f"{build}/bin:{env['PATH']}"
+    env["RELENV_BUILDENV"] = "yes"
 
     # Install pycurl
     subprocess.run(
@@ -655,6 +656,9 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir, versions):
 
     subprocess.run(["/bin/sh", "buildscript.sh"], check=True)
 
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    env["RELENV_BUILDENV"] = "yes"
     subprocess.run(
         [
             str(pipexec),
@@ -664,6 +668,7 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir, versions):
             "--no-binary=:all:",
         ],
         check=True,
+        env=env,
     )
 
 
@@ -712,8 +717,11 @@ def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
         )
 
     subprocess.run(["/bin/sh", "buildscript.sh"], check=True)
-
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    env["RELENV_BUILDENV"] = "yes"
     subprocess.run(
         [str(pipexec), "install", "python-ldap", "--no-cache", "--no-binary=:all:"],
         check=True,
+        env=env,
     )
