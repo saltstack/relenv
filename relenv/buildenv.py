@@ -50,14 +50,14 @@ def main(args):
             export RELENV_PATH="{relenv}"
             export CC="${{TOOLCHAIN_PATH}}/bin/{triplet}-gcc -no-pie"
             export CXX="${{TOOLCHAIN_PATH}}/bin/{triplet}-g++ -no-pie"
-            export CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
-                -I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
-            export CPPFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
-                -I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
-            export CMAKE_CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
-                -I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
-            export LDFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib
-                -Wl,-rpath,${{RELENV_PATH}}/lib"
+            export CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
+-I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
+            export CPPFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
+-I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
+            export CMAKE_CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
+-I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
+            export LDFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
+-Wl,-rpath,${{RELENV_PATH}}/lib"
         """.format(
                 relenv=sys.RELENV,
                 toolchain=toolchain,
