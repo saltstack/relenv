@@ -905,6 +905,7 @@ class Builder:
                 "PATH": os.environ["PATH"],
             }
         env["RELENV_DEBUG"] = "1"
+        env["RELENV_BUILDENV"] = "1"
         env["RELENV_HOST"] = self.triplet
         env["RELENV_HOST_ARCH"] = self.arch
         env["RELENV_BUILD"] = self.build_triplet

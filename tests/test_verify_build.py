@@ -141,6 +141,7 @@ def test_imports(pyexec):
 def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
+    env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and not shutil.which("git"):
         os.chdir(tmp_path)
         packages = [
@@ -180,6 +181,7 @@ def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     ]
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
+    env["RELENV_BUILDENV"] = "yes"
 
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
@@ -202,6 +204,7 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
     name = "chardet==5.1.0"
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
+    env["RELENV_BUILDENV"] = "yes"
 
     p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
     assert p.returncode == 0, f"Failed to pip install {name}"
@@ -228,6 +231,7 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
+    env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
         [
             "git",
@@ -260,8 +264,10 @@ def test_pip_install_cryptography(pipexec):
     packages = [
         "cryptography",
     ]
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"])
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
@@ -269,14 +275,18 @@ def test_pip_install_idem(pipexec):
     packages = [
         "idem",
     ]
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"])
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
 def test_pip_install_and_import_libcloud(pipexec, pyexec):
     name = "apache-libcloud"
-    p = subprocess.run([str(pipexec), "install", name, "--no-cache"])
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
+    p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
     assert p.returncode == 0, f"Failed to pip install {name}"
 
     import_name = "libcloud.security"
@@ -293,6 +303,7 @@ def test_pip_install_salt_pip_dir(pipexec, build):
         "salt",
     ]
     env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_PIP_DIR"] = "yes"
     for name in packages:
@@ -310,6 +321,7 @@ def test_pip_install_salt_pip_dir(pipexec, build):
 
 def test_nox_virtualenvs(pipexec, build, tmp_path):
     env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
     name = "nox"
 
@@ -355,6 +367,7 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
 @pytest.mark.skip_unless_on_linux
 def test_pip_install_m2crypto(pipexec, build, tmpdir):
     env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
     p = subprocess.run(
         ["swig", "-version"],
@@ -411,8 +424,11 @@ def test_shabangs(pipexec, build, minor_version):
 # XXX Mac support
 @pytest.mark.skip_unless_on_linux
 def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
         [str(pipexec), "install", "cffi==1.15.1", "--no-cache-dir", "--no-binary=cffi"],
+        env=env,
     )
     assert p.returncode == 0, "Failed to pip install cffi"
     b2 = build.parent / "test2"
@@ -436,6 +452,8 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize("cryptography_version", ["40.0.1", "39.0.2"])
 def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version):
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
         [
             str(pipexec),
@@ -444,6 +462,7 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
             "--no-cache-dir",
             "--no-binary=cryptography",
         ],
+        env=env,
     )
     assert p.returncode != 1, "Failed to pip install cryptography"
     bindings = (
