@@ -46,6 +46,7 @@ def main(args):
     print(
         textwrap.dedent(
             """\
+            export RELENV_BUILDENV=1
             export TOOLCHAIN_PATH="{toolchain}"
             export RELENV_PATH="{relenv}"
             export CC="${{TOOLCHAIN_PATH}}/bin/{triplet}-gcc -no-pie"

@@ -142,6 +142,45 @@ def get_config_vars_wrapper(func, mod):
 
     return wrapped
 
+def get_config_vars_wrapper(func, mod):
+    """
+    Return a wrapper to resolve paths relative to the relenv root.
+    """
+
+    def wrapped(*args):
+        if "RELENV_BUILDENV" in os.environ:
+            return func(*args)
+
+        _CONFIG_VARS = func()
+        p = subprocess.run(
+            [
+                "/usr/bin/python3",
+                "-c",
+                "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
+            ],
+            capture_output=True,
+        )
+        _SYSTEM_CONFIG_VARS = json.loads(p.stdout[:-1])
+        for a in [
+            "AR",
+            "CC",
+            "CFLAGS",
+            "CPPFLAGS",
+            "CXX",
+            "LIBDEST",
+            "SCRIPTDIR",
+            "BLDSHARED",
+            "LDFLAGS",
+            "LDCXXSHARED",
+            "LDSHARED",
+        ]:
+            _CONFIG_VARS[a] = _SYSTEM_CONFIG_VARS[a]
+        mod._CONFIG_VARS = _CONFIG_VARS
+        return func(*args)
+
+    return wrapped
+
+
 def get_paths_wrapper(func, default_scheme):
     """
     Return a wrapper to resolve paths relative to the relenv root.
