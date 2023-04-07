@@ -117,6 +117,7 @@ def get_config_vars_wrapper(func, mod):
         if sys.platform == "win32" or "RELENV_BUILDENV" in os.environ:
             return func(*args)
 
+        _CONFIG_VARS = func()
         p = subprocess.run(
             [
                 "/usr/bin/python3",
