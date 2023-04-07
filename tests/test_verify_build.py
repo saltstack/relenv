@@ -725,3 +725,15 @@ def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
         check=True,
         env=env,
     )
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_python_ldap_system_libs(pipexec, build, minor_version, tmpdir):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    # env["RELENV_BUILDENV"] = "yes"
+    subprocess.run(
+        [str(pipexec), "install", "python-ldap", "--no-cache", "--no-binary=:all:"],
+        check=True,
+        env=env,
+    )
