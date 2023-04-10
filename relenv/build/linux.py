@@ -414,8 +414,8 @@ build.add(
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
-        "version": "5.4.1",
-        "md5sum": "7e7454778b4cfae238a7660521b29b38",
+        "version": "5.4.2",
+        "md5sum": "4ac4e5da95aa8604a81e32079cb00d42",
         "checkfunc": tarball_version,
     },
 )
@@ -424,10 +424,10 @@ build.add(
     name="SQLite",
     build_func=build_sqlite,
     download={
-        "url": "https://sqlite.org/2022/sqlite-autoconf-{version}.tar.gz",
+        "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3400100",
-        "md5sum": "42175b1a1d23529cb133bbd2b5900afd",
+        "version": "3410200",
+        "md5sum": "862075fd1c38324878ef809eda39edfe",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },

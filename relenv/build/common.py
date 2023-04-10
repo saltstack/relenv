@@ -179,8 +179,11 @@ def verify_checksum(file, checksum):
         log.error("Can't verify checksum because none was given")
         return False
     with open(file, "rb") as fp:
-        if checksum != hashlib.md5(fp.read()).hexdigest():
-            raise RelenvException("md5 checksum verification failed")
+        file_checksum = hashlib.md5(fp.read()).hexdigest()
+        if checksum != file_checksum:
+            raise RelenvException(
+                f"md5 checksum verification failed. expected={checksum} found={file_checksum}"
+            )
     return True
 
 
