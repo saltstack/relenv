@@ -40,6 +40,7 @@ LIBCLIBS = [
     # libgcc is not technically glibc but shares the same kind of backwards
     # compatablity guarantees.
     "libgcc_s.so.2",
+    "libgcc_s.so.1",
 ]
 
 LC_ID_DYLIB = "LC_ID_DYLIB"
