@@ -126,7 +126,7 @@ def build_python(env, dirs, logfp):
     )
 
 
-build = builds.add("win32", populate_env=populate_env, version="3.10.10")
+build = builds.add("win32", populate_env=populate_env, version="3.10.11")
 
 build.add(
     "python",
@@ -134,6 +134,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": build.version,
+        "md5sum": "1bf8481a683e0881e14d52e0f23633a6",
     },
 )
 
