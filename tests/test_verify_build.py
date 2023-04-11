@@ -523,6 +523,7 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
     tar xvf curl-{curlver}.tar.gz
     cd curl-{curlver}
     source <({build}/bin/relenv buildenv)
+    export LDFLAGS="${{LDFLAGS}} -Wl,-rpath-link,${{RELENV_PATH}}/lib"
     env
     ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
     make
