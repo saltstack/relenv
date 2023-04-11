@@ -207,5 +207,5 @@ build.add(
     wait_on=["python"],
 )
 
-build = build.copy(version="3.11.2", md5sum="a957cffb58a89303b62124896881950b")
+build = build.copy(version="3.11.3", md5sum="a957cffb58a89303b62124896881950b")
 builds.add("win32", builder=build)
