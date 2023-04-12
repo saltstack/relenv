@@ -1,3 +1,14 @@
+0.11.0
+======
+
+* Use a pth file instead of sitecustomize for relenv runtime
+* Fix errors in documentation
+* Default to using system libraries, act more like virtualenv
+* Source relenv buildenv instead of eval
+* Upgrade XZ and SQLite
+* Upgrade minor python versions (3.10.11 and 3.11.3)
+
+
 0.10.1
 ======
 
