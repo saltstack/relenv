@@ -24,6 +24,8 @@ LINUX = "linux"
 WIN32 = "win32"
 DARWIN = "darwin"
 
+CHECK_HOSTS = ("repo.saltproject.io", "woz.io")
+
 arches = {
     LINUX: (
         "x86_64",
@@ -329,24 +331,40 @@ def get_download_location(url, dest):
     return os.path.join(dest, os.path.basename(url))
 
 
-def fetch_url(url, fp):
+def check_url(url, timeout=30):
+    """
+    Check that the url returns a 200.
+    """
+    fin = None
+    try:
+        fin = urllib.request.urlopen(url, timeout=timeout)
+    except Exception:
+        return False
+    finally:
+        if fin:
+            fin.close()
+    return True
+
+
+def fetch_url(url, fp, backoff=3, timeout=30):
     """
     Fetch the contents of a url.
 
     This method will store the contents in the given file like object.
     """
+    if backoff < 1:
+        backoff = 1
     n = 0
-    while n < 3:
+    while n < backoff:
         n += 1
         try:
-            fin = urllib.request.urlopen(url)
+            fin = urllib.request.urlopen(url, timeout=timeout)
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
             http.client.RemoteDisconnected,
-        ) as exc:
-            if n == 3:
-                print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
+        ):
+            if n >= backoff:
                 raise
             time.sleep(n * 10)
     try:
@@ -360,7 +378,7 @@ def fetch_url(url, fp):
         # fp.close()
 
 
-def download_url(url, dest, verbose=True):
+def download_url(url, dest, verbose=True, backoff=3, timeout=5):
     """
     Download the url to the provided destination.
 
@@ -383,8 +401,10 @@ def download_url(url, dest, verbose=True):
         print(f"Downloading {url} -> {local}")
     fout = open(local, "wb")
     try:
-        fetch_url(url, fout)
-    except Exception:
+        fetch_url(url, fout, backoff, timeout)
+    except Exception as exc:
+        if verbose:
+            print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
         try:
             os.unlink(local)
         except OSError:

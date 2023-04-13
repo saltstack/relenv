@@ -11,10 +11,12 @@ import shutil
 import sys
 
 from .common import (
+    CHECK_HOSTS,
     DATA_DIR,
     __version__,
     arches,
     build_arch,
+    check_url,
     download_url,
     extract_archive,
     get_toolchain,
@@ -25,7 +27,7 @@ from .common import (
 
 CT_NG_VER = "1.25.0"
 CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.tar.bz2"
-TC_URL = "https://woz.io/relenv/{version}/toolchain/{host}/{triplet}.tar.xz"
+TC_URL = "https://{hostname}/relenv/{version}/toolchain/{host}/{triplet}.tar.xz"
 CICD = "CI" in os.environ
 
 
@@ -83,7 +85,20 @@ def fetch(arch, toolchain, clean=False, version=__version__):
     if archdir.exists():
         print(f"Toolchain directory exists, skipping {arch}")
         return
-    url = TC_URL.format(version=version, host=platform.machine(), triplet=triplet)
+
+    check_hosts = CHECK_HOSTS
+    if os.environ.get("RELENV_FETCH_HOST", ""):
+        check_hosts = [os.environ["RELENV_FETCH_HOST"]]
+    for host in check_hosts:
+        url = TC_URL.format(
+            hostname=host, version=version, host=platform.machine(), triplet=triplet
+        )
+        if check_url(url, timeout=5):
+            break
+    else:
+        print(f"Unable to find file on an hosts {' '.join(check_hosts)}")
+        sys.exit(1)
+
     archive = download_url(url, toolchain)
     extract_archive(toolchain, archive)
 
