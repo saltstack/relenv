@@ -5,12 +5,15 @@ The ``relenv fetch`` command.
 """
 
 import os
+import sys
 
 from .build import platform_module, platform_versions
 from .common import (
+    CHECK_HOSTS,
     DATA_DIR,
     __version__,
     build_arch,
+    check_url,
     download_url,
     get_triplet,
     work_dir,
@@ -52,7 +55,16 @@ def main(args):
     """
     version = os.environ.get("RELENV_FETCH_VERSION", __version__)
     triplet = get_triplet(machine=args.arch)
-    url = f"https://woz.io/relenv/{version}/build/{args.python}-{triplet}.tar.xz"
+    check_hosts = CHECK_HOSTS
+    if os.environ.get("RELENV_FETCH_HOST", ""):
+        check_hosts = [os.environ["RELENV_FETCH_HOST"]]
+    for host in check_hosts:
+        url = f"https://{host}/relenv/{version}/build/{args.python}-{triplet}.tar.xz"
+        if check_url(url, timeout=5):
+            break
+    else:
+        print(f"Unable to find file on an hosts {' '.join(check_hosts)}")
+        sys.exit(1)
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
     download_url(url, builddir)
