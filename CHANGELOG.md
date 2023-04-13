@@ -1,3 +1,9 @@
+0.11.1
+======
+
+* Import all relenv modules using a reletive path when relenv.runtime is
+  imported.
+
 0.11.0
 ======
 

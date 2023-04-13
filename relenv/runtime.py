@@ -21,9 +21,20 @@ import site
 import subprocess
 import sys
 import textwrap
+from importlib.machinery import SourceFileLoader
 
-from . import relocate
-from .common import MODULE_DIR, format_shebang, get_triplet, work_dirs
+# relenv.pth has a __file__ which is set to the path to site.py of the python
+# interpreter being used. We're using that to determine the proper
+# relenv.runtime to import. Working around the rest of the import mechanisims.
+# Import any other needed modules from this same relenv. This prevents pulling
+# in a relenv from some other location in the path and is needed because these
+# imports happen before our path munghing in site in wrapsitecustomize.
+relocate = SourceFileLoader(
+    "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
+).load_module("relenv.relocate")
+common = SourceFileLoader(
+    "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
+).load_module("relenv.common")
 
 
 def get_major_version():
@@ -64,9 +75,9 @@ def relenv_root():
     # XXX Look for rootdir / ".relenv"
     if sys.platform == "win32":
         # /Lib/site-packages/relenv/
-        return MODULE_DIR.parent.parent.parent
+        return common.MODULE_DIR.parent.parent.parent
     # /lib/pythonX.X/site-packages/relenv/
-    return MODULE_DIR.parent.parent.parent.parent
+    return common.MODULE_DIR.parent.parent.parent.parent
 
 
 def _build_shebang(*args, **kwargs):
@@ -82,8 +93,8 @@ def _build_shebang(*args, **kwargs):
             return "#!<launcher_dir>\\Scripts\\python.exe".encode()
         return "#!<launcher_dir>\\python.exe".encode()
     if os.environ.get("RELENV_PIP_DIR"):
-        return format_shebang("/bin/python3").encode()
-    return format_shebang("/python3").encode()
+        return common.format_shebang("/bin/python3").encode()
+    return common.format_shebang("/python3").encode()
 
 
 def get_config_var_wrapper(func):
@@ -474,8 +485,8 @@ def wrap_pip_build_wheel(name):
     def wrap(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            dirs = work_dirs()
-            toolchain = dirs.toolchain / get_triplet()
+            dirs = common.work_dirs()
+            toolchain = dirs.toolchain / common.get_triplet()
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
@@ -515,8 +526,8 @@ def install_cargo_config():
     """
     if sys.platform != "linux":
         return
-    triplet = get_triplet()
-    dirs = work_dirs()
+    triplet = common.get_triplet()
+    dirs = common.work_dirs()
     toolchain = dirs.toolchain / triplet
     if not toolchain.exists():
         debug("Unable to set CARGO_HOME no toolchain exists")
