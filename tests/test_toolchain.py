@@ -13,22 +13,24 @@ def test_fetch(tmp_path):
     archdir = tmp_path / "archdir"
     archive = str(tmp_path / "archive")
     with patch("relenv.toolchain.get_triplet", return_value="a-fake-triplet"):
-        with patch("relenv.toolchain.get_toolchain", return_value=archdir):
-            with patch(
-                "relenv.toolchain.download_url", return_value=archive
-            ) as dl_mock:
-                with patch("relenv.toolchain.extract_archive") as extract_mock:
-                    fetch("fake_arch", "fake_toolchain")
-                    dl_mock.assert_called_once()
-                    extract_mock.assert_called_with("fake_toolchain", archive)
+        with patch("relenv.toolchain.check_url", return_value=True):
+            with patch("relenv.toolchain.get_toolchain", return_value=archdir):
+                with patch(
+                    "relenv.toolchain.download_url", return_value=archive
+                ) as dl_mock:
+                    with patch("relenv.toolchain.extract_archive") as extract_mock:
+                        fetch("fake_arch", "fake_toolchain")
+                        dl_mock.assert_called_once()
+                        extract_mock.assert_called_with("fake_toolchain", archive)
 
 
 def test_fetch_directory_exists(tmp_path):
     with patch("relenv.toolchain.get_triplet", return_value="a-fake-triplet"):
         with patch("relenv.toolchain.get_toolchain", return_value=tmp_path):
-            with patch("relenv.toolchain.download_url") as dl_mock:
-                fetch("fake_arch", "fake_toolchain")
-                dl_mock.assert_not_called()
+            with patch("relenv.toolchain.check_url", return_value=True):
+                with patch("relenv.toolchain.download_url") as dl_mock:
+                    fetch("fake_arch", "fake_toolchain")
+                    dl_mock.assert_not_called()
 
 
 def test__configure_ctng(tmp_path):
