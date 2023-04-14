@@ -378,7 +378,7 @@ def fetch_url(url, fp, backoff=3, timeout=30):
         # fp.close()
 
 
-def download_url(url, dest, verbose=True, backoff=3, timeout=5):
+def download_url(url, dest, verbose=True, backoff=3, timeout=60):
     """
     Download the url to the provided destination.
 
