@@ -252,12 +252,18 @@ def build_openssl(env, dirs, logfp):
         plat = "darwin64"
         if env["RELENV_HOST_ARCH"] == "x86_64":
             arch = "x86_64-cc"
+        elif env["RELENV_HOST_ARCH"] == "arm64":
+            arch = "arm64-cc"
+        else:
+            raise RelenvException(f"Unable to build {env['RELENV_HOST_ARCH']}")
     else:
         plat = "linux"
         if env["RELENV_HOST_ARCH"] == "x86_64":
             arch = "x86_64"
         elif env["RELENV_HOST_ARCH"] == "aarch64":
             arch = "aarch64"
+        else:
+            raise RelenvException(f"Unable to build {env['RELENV_HOST_ARCH']}")
     runcmd(
         [
             "./Configure",
