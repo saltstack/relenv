@@ -31,7 +31,7 @@ arches = {
         "x86_64",
         "aarch64",
     ),
-    DARWIN: ("x86_64",),
+    DARWIN: ("x86_64", "arm64"),
     WIN32: (
         "amd64",
         "x86",
