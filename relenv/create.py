@@ -47,7 +47,7 @@ def setup_parser(subparsers):
         "create",
         description=(
             "Create a Relenv environment. This will create a directory of the given "
-            "name with newly created Relenv environment.",
+            "name with newly created Relenv environment."
         ),
     )
     subparser.set_defaults(func=main)
