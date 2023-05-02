@@ -119,6 +119,21 @@ def get_config_var_wrapper(func):
     return wrapped
 
 
+_CONFIG_VARS_DEFAULTS = {
+    "AR": "ar",
+    "CC": "gcc",
+    "CFLAGS": "-Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O3 -Wall",
+    "CPPFLAGS": "-I. -I./Include",
+    "CXX": "g++",
+    "LIBDEST": "/usr/local/lib/python3.8",
+    "SCRIPTDIR": "/usr/local/lib",
+    "BLDSHARED": "gcc -shared",
+    "LDFLAGS": "",
+    "LDCXXSHARED": "g++ -shared",
+    "LDSHARED": "gcc -shared",
+}
+
+
 def get_config_vars_wrapper(func, mod):
     """
     Return a wrapper to resolve paths relative to the relenv root.
@@ -129,15 +144,20 @@ def get_config_vars_wrapper(func, mod):
             return func(*args)
 
         _CONFIG_VARS = func()
-        p = subprocess.run(
-            [
-                "/usr/bin/python3",
-                "-c",
-                "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
-            ],
-            capture_output=True,
-        )
-        _SYSTEM_CONFIG_VARS = json.loads(p.stdout[:-1])
+        pyexec = shutil.which("python3")
+        if pyexec:
+            p = subprocess.run(
+                [
+                    pyexec,
+                    "-c",
+                    "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
+                ],
+                capture_output=True,
+            )
+            _SYSTEM_CONFIG_VARS = json.loads(p.stdout[:-1])
+        else:
+            _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
+
         for name in [
             "AR",
             "CC",
