@@ -140,7 +140,6 @@ def test_imports(pyexec):
 )
 def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
     env = os.environ.copy()
-    env["RELENV_DEBUG"] = "yes"
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and not shutil.which("git"):
         os.chdir(tmp_path)
@@ -229,9 +228,8 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
 )
 def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
     env = os.environ.copy()
-    env["RELENV_DEBUG"] = "yes"
-    env["USE_STATIC_REQUIREMENTS"] = "1"
     env["RELENV_BUILDENV"] = "yes"
+    env["USE_STATIC_REQUIREMENTS"] = "1"
     p = subprocess.run(
         [
             "git",
@@ -733,7 +731,6 @@ def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
 def test_install_python_ldap_system_libs(pipexec, build, minor_version, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
-    # env["RELENV_BUILDENV"] = "yes"
     subprocess.run(
         [str(pipexec), "install", "python-ldap", "--no-cache", "--no-binary=:all:"],
         check=True,
