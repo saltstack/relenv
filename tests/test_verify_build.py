@@ -728,7 +728,7 @@ def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_python_ldap_system_libs(pipexec, build, minor_version, tmpdir):
+def test_install_python_ldap_system_libs(pipexec):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     subprocess.run(
@@ -736,3 +736,42 @@ def test_install_python_ldap_system_libs(pipexec, build, minor_version, tmpdir):
         check=True,
         env=env,
     )
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_with_target_shebang(pipexec, build):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "cowsay", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    shebang = pathlib.Path(extras / "bin" / "cowsay").open().readlines()[2].strip()
+    assert (
+        shebang
+        == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python3.10" "$0" "$@"'
+    )
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_with_target_uninstall(pipexec, build):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "cowsay", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    assert (extras / "cowsay").exists()
+    assert (extras / "bin" / "cowsay").exists()
+    env["PYTHONPATH"] = extras
+    subprocess.run(
+        [str(pipexec), "uninstall", "cowsay", "-y"],
+        check=True,
+        env=env,
+    )
+    assert not (extras / "cowsay").exists()
+    assert not (extras / "bin" / "cowsay").exists()

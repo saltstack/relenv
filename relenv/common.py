@@ -429,3 +429,21 @@ def runcmd(*args, **kwargs):
     if proc.returncode != 0:
         raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
     return proc
+
+
+def relative_interpreter(root_dir, scripts_dir, interpreter):
+    """
+    Return a relativized path to the given scripts_dir and interpreter.
+    """
+    scripts = pathlib.Path(scripts_dir)
+    interp = pathlib.Path(interpreter)
+    root = pathlib.Path(root_dir)
+    try:
+        relinterp = interp.relative_to(root)
+    except ValueError:
+        raise ValueError("interperter not relative to root_dir")
+    try:
+        relscripts = pathlib.Path(*(".." for x in scripts.relative_to(root).parts))
+    except ValueError:
+        raise ValueError("scripts_dir not relative to root_dir")
+    return relscripts / relinterp
