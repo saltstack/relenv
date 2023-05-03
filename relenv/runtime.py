@@ -155,11 +155,11 @@ def get_config_vars_wrapper(func, mod):
             return func(*args)
 
         _CONFIG_VARS = func()
-        pyexec = shutil.which("python3")
-        if pyexec:
+        pyexec = pathlib.Path("/usr/bin/python3")
+        if pyexec.exists():
             p = subprocess.run(
                 [
-                    pyexec,
+                    str(pyexec),
                     "-c",
                     "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
                 ],
@@ -171,6 +171,7 @@ def get_config_vars_wrapper(func, mod):
                 debug(f"Failed to load JSON from: {p.stdout.strip()}")
                 _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
         else:
+            debug("System python not found")
             _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
 
         for name in [
