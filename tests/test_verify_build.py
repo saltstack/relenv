@@ -751,7 +751,9 @@ def test_install_with_target_shebang(pipexec, build, minor_version):
     shebang = pathlib.Path(extras / "bin" / "cowsay").open().readlines()[2].strip()
     assert (
         shebang
-        == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python{}" "$0" "$@"'.format(minor_version)
+        == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python{}" "$0" "$@"'.format(
+            minor_version
+        )
     )
 
 
