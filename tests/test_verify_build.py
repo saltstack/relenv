@@ -739,7 +739,7 @@ def test_install_python_ldap_system_libs(pipexec):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_with_target_shebang(pipexec, build):
+def test_install_with_target_shebang(pipexec, build, minor_version):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
@@ -751,7 +751,7 @@ def test_install_with_target_shebang(pipexec, build):
     shebang = pathlib.Path(extras / "bin" / "cowsay").open().readlines()[2].strip()
     assert (
         shebang
-        == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python3.10" "$0" "$@"'
+        == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python{}" "$0" "$@"'.format(minor_version)
     )
 
 
