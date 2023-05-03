@@ -46,3 +46,6 @@ relok8.py
 # nox
 .nox
 artifacts
+
+# neovim temp files
+*~
