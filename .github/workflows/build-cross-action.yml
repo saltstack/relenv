@@ -106,20 +106,6 @@ jobs:
           path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
-      - name: Set Exit Status
-        if: always()
-        run: |
-          mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-linux-${{ matrix.version }}-${{ matrix.host }}-${{ matrix.target }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
-
   build_macos:
     name: "Python macOS"
 
@@ -174,20 +160,6 @@ jobs:
           name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
           path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
           retention-days: 5
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-macos-${{ matrix.version }}-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error
 
   build_windows:
     name: "Python Windows"
@@ -245,17 +217,3 @@ jobs:
           name: ${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
           path: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
           retention-days: 5
-
-      - name: Set Exit Status
-        if: always()
-        run: |
-          mkdir exitstatus
-          echo "${{ job.status }}" > exitstatus/${{ github.job }}-windows-${{ matrix.version }}-${{ matrix.arch }}
-
-      - name: Upload Exit Status
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: exitstatus
-          path: exitstatus
-          if-no-files-found: error

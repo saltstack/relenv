@@ -194,26 +194,20 @@ jobs:
       - deploy-python-package
       - push-tag
     steps:
-    - name: Download Exit Status Files
-      if: always()
-      uses: actions/download-artifact@v3
-      with:
-        name: exitstatus
-        path: exitstatus
+      - name: Get workflow information
+        id: get-workflow-info
+        uses: technote-space/workflow-conclusion-action@v3
 
-    - name: Delete Exit Status Artifacts
-      if: always()
-      uses: geekyeggo/delete-artifact@v2
-      with:
-        name: exitstatus
-        failOnError: false
+      - name: Set Pipeline Exit Status
+        shell: bash
+        run: |
+          if [ "${{ steps.get-workflow-info.outputs.conclusion }}" != "success" ]; then
+            exit 1
+          else
+            exit 0
+          fi
 
-    - name: Set Pipeline Exit Status
-      run: |
-        tree exitstatus
-        grep -RE 'failure|cancelled' exitstatus/ && exit 1 || exit 0
-
-    - name: Done
-      if: always()
-      run:
-        echo "All worflows finished"
+      - name: Done
+        if: always()
+        run:
+          echo "All worflows finished"
