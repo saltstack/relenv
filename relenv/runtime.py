@@ -165,7 +165,11 @@ def get_config_vars_wrapper(func, mod):
                 ],
                 capture_output=True,
             )
-            _SYSTEM_CONFIG_VARS = json.loads(p.stdout[:-1])
+            try:
+                _SYSTEM_CONFIG_VARS = json.loads(p.stdout.strip())
+            except json.JSONDecodeError:
+                debug(f"Failed to load JSON from: {p.stdout.strip()}")
+                _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
         else:
             _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
 
