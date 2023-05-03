@@ -1,3 +1,14 @@
+0.12.0
+======
+
+* Add support building on M1 mac
+* Fix wart in relenv create's help message
+* Look in path for system python
+* Provide sane defaults for pip when no system python is found
+* Fix shebangs when using pip --target to install packages
+* Fix uninstalling packages installed with pip --target
+
+
 0.11.2
 ======
 
