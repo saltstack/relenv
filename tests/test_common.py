@@ -21,6 +21,7 @@ from relenv.common import (
     get_download_location,
     get_toolchain,
     get_triplet,
+    relative_interpreter,
     runcmd,
     work_dir,
     work_dirs,
@@ -186,3 +187,31 @@ def test_shebang_tpl_macos():
     proc.stdin.write(sh.encode())
     proc.communicate()
     assert proc.returncode == 0
+
+
+def test_relative_interpreter_default_location():
+    assert relative_interpreter(
+        "/tmp/relenv", "/tmp/relenv/bin", "/tmp/relenv/bin/python3"
+    ) == pathlib.Path("..", "bin", "python3")
+
+
+def test_relative_interpreter_pip_dir_location():
+    assert relative_interpreter(
+        "/tmp/relenv", "/tmp/relenv", "/tmp/relenv/bin/python3"
+    ) == pathlib.Path("bin", "python3")
+
+
+def test_relative_interpreter_alternate_location():
+    assert relative_interpreter(
+        "/tmp/relenv", "/tmp/relenv/bar/bin", "/tmp/relenv/bin/python3"
+    ) == pathlib.Path("..", "..", "bin", "python3")
+
+
+def test_relative_interpreter_interpreter_not_relative_to_root():
+    with pytest.raises(ValueError):
+        relative_interpreter("/tmp/relenv", "/tmp/relenv/bar/bin", "/tmp/bin/python3")
+
+
+def test_relative_interpreter_scripts_not_relative_to_root():
+    with pytest.raises(ValueError):
+        relative_interpreter("/tmp/relenv", "/tmp/bar/bin", "/tmp/relenv/bin/python3")

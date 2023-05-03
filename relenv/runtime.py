@@ -80,21 +80,32 @@ def relenv_root():
     return common.MODULE_DIR.parent.parent.parent.parent
 
 
-def _build_shebang(*args, **kwargs):
+def _build_shebang(func, *args, **kwargs):
     """
     Build a shebang to point to the proper location.
 
     :return: The shebang
     :rtype: bytes
     """
-    debug("Relenv - _build_shebang")
-    if sys.platform == "win32":
-        if os.environ.get("RELENV_PIP_DIR"):
-            return "#!<launcher_dir>\\Scripts\\python.exe".encode()
-        return "#!<launcher_dir>\\python.exe".encode()
-    if os.environ.get("RELENV_PIP_DIR"):
-        return common.format_shebang("/bin/python3").encode()
-    return common.format_shebang("/python3").encode()
+
+    @functools.wraps(func)
+    def wrapped(self, *args, **kwargs):
+        scripts = pathlib.Path(self.target_dir)
+        if TARGET.TARGET:
+            scripts = pathlib.Path(TARGET.PATH).absolute() / "bin"
+        try:
+            interpreter = common.relative_interpreter(
+                sys.RELENV, scripts, pathlib.Path(sys.executable).resolve()
+            )
+        except ValueError:
+            debug("Relenv Value Error - _build_shebang {self.target_dir}")
+            return func(self, *args, **kwargs)
+        debug("Relenv - _build_shebang {scripts} {interpreter}")
+        if sys.platform == "win32":
+            return str(pathlib.Path("#!<launcher_dir>") / interpreter).encode()
+        return common.format_shebang("/" / interpreter).encode()
+
+    return wrapped
 
 
 def get_config_var_wrapper(func):
@@ -446,7 +457,7 @@ def wrap_pip_distlib_scripts(name):
     pip.distlib.scripts wrapper.
     """
     mod = importlib.import_module(name)
-    mod.ScriptMaker._build_shebang = _build_shebang
+    mod.ScriptMaker._build_shebang = _build_shebang(mod.ScriptMaker._build_shebang)
     return mod
 
 
@@ -528,6 +539,58 @@ def wrap_pip_build_wheel(name):
     return mod
 
 
+class TARGET:
+    """
+    Container for global pip target state.
+    """
+    TARGET = False
+    TARGET_PATH = None
+
+
+def wrap_cmd_install(name):
+    """
+    Wrap pip install command to store target argument state.
+    """
+    mod = importlib.import_module(name)
+
+    def wrap(func):
+        @functools.wraps(func)
+        def wrapper(self, options, args):
+            if not options.use_user_site:
+                if options.target_dir:
+                    TARGET.TARGET = True
+                    TARGET.PATH = options.target_dir
+            return func(self, options, args)
+
+        return wrapper
+
+    mod.InstallCommand.run = wrap(mod.InstallCommand.run)
+    return mod
+
+
+def wrap_locations(name):
+    """
+    Wrap pip locations to fix locations when installing with target.
+    """
+    mod = importlib.import_module(name)
+
+    def wrap(func):
+        @functools.wraps(func)
+        def wrapper(
+            dist_name, user=False, home=None, root=None, isolated=False, prefix=None
+        ):
+            scheme = func(dist_name, user, home, root, isolated, prefix)
+            if TARGET.TARGET:
+                scheme.platlib = home
+                scheme.purelib = home
+            return scheme
+
+        return wrapper
+
+    mod.get_scheme = wrap(mod.get_scheme)
+    return mod
+
+
 importer = RelenvImporter(
     wrappers=[
         Wrapper("sysconfig", wrap_sysconfig),
@@ -536,6 +599,8 @@ importer = RelenvImporter(
         Wrapper("pip._internal.operations.install.wheel", wrap_pip_install_wheel),
         Wrapper("pip._internal.operations.install.legacy", wrap_pip_install_legacy),
         Wrapper("pip._internal.operations.build.wheel", wrap_pip_build_wheel),
+        Wrapper("pip._internal.commands.install", wrap_cmd_install),
+        Wrapper("pip._internal.locations", wrap_locations),
     ],
 )
 
@@ -652,7 +717,12 @@ def wrapsitecustomize(func):
         # install packages. This code seems potentially brittle and there may
         # be reasonable arguments against doing it at all.
         if sitecustomize is None or "pip-build-env" not in sitecustomize.__file__:
-            __valid_path_prefixes = tuple({sys.prefix, sys.base_prefix})
+            __valid_path_prefixes = tuple(
+                {
+                    str(pathlib.Path(sys.prefix).resolve()),
+                    str(pathlib.Path(sys.base_prefix).resolve()),
+                }
+            )
             __sys_path = []
             _orig = sys.path[:]
             for __path in sys.path:
