@@ -1,3 +1,9 @@
+0.12.1
+======
+
+* Be more robust when getting system python config
+
+
 0.12.0
 ======
 
