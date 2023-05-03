@@ -543,6 +543,7 @@ class TARGET:
     """
     Container for global pip target state.
     """
+
     TARGET = False
     TARGET_PATH = None
 
