@@ -1,3 +1,9 @@
+0.12.3
+======
+
+* Preserve ignore installed option when using pip with a target.
+
+
 0.12.2
 ======
 
