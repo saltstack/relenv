@@ -1,5 +1,6 @@
 # Copyright 2022-2023 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
+import os
 import pathlib
 import platform
 import shutil
@@ -23,6 +24,7 @@ from relenv.common import (
     get_triplet,
     relative_interpreter,
     runcmd,
+    sanitize_sys_path,
     work_dir,
     work_dirs,
     work_root,
@@ -51,7 +53,7 @@ def test_get_triplet_default():
     elif plat == "linux":
         assert get_triplet() == f"{machine}-linux-gnu"
     else:
-        pytest.fail("Do not know how to test for '{}' platform".format(plat))
+        pytest.fail(f"Do not know how to test for '{plat}' platform")
 
 
 def test_get_triplet_unknown():
@@ -215,3 +217,15 @@ def test_relative_interpreter_interpreter_not_relative_to_root():
 def test_relative_interpreter_scripts_not_relative_to_root():
     with pytest.raises(ValueError):
         relative_interpreter("/tmp/relenv", "/tmp/bar/bin", "/tmp/relenv/bin/python3")
+
+
+def test_sanitize_sys_path():
+    python_path_entries = ["/blah/blah", "/yada/yada"]
+    expected = ["/foo/1", "/bar/2"] + python_path_entries
+    sys_path = ["/foo/1", "/bar/2", "/lib/3"]
+    with patch.object(sys, "prefix", "/foo"), patch.object(
+        sys, "base_prefix", "/bar"
+    ), patch.dict(os.environ, PYTHONPATH=os.pathsep.join(python_path_entries)):
+        new_sys_path = sanitize_sys_path(sys_path)
+        assert new_sys_path != sys_path
+        assert new_sys_path == expected

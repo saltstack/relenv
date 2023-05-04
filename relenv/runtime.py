@@ -721,26 +721,9 @@ def wrapsitecustomize(func):
         # install packages. This code seems potentially brittle and there may
         # be reasonable arguments against doing it at all.
         if sitecustomize is None or "pip-build-env" not in sitecustomize.__file__:
-            __valid_path_prefixes = tuple(
-                {
-                    pathlib.Path(sys.prefix).resolve(),
-                    pathlib.Path(sys.base_prefix).resolve(),
-                }
-            )
-            __sys_path = []
             _orig = sys.path[:]
-            for __path in sys.path:
-                for __valid_path_prefix in __valid_path_prefixes:
-                    try:
-                        pathlib.Path(__path).relative_to(__valid_path_prefix)
-                        __sys_path.append(__path)
-                    except ValueError:
-                        continue
-            if "PYTHONPATH" in os.environ:
-                for __path in os.environ["PYTHONPATH"].split(os.pathsep):
-                    __sys_path.append(__path)
             # Replace sys.path
-            sys.path[:] = __sys_path
+            sys.path[:] = common.sanitize_sys_path(sys.path)
             debug(f"original sys.path was {_orig}")
             debug(f"new sys.path is {sys.path}")
         else:

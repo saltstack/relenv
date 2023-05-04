@@ -447,3 +447,27 @@ def relative_interpreter(root_dir, scripts_dir, interpreter):
     except ValueError:
         raise ValueError("scripts_dir not relative to root_dir")
     return relscripts / relinterp
+
+
+def sanitize_sys_path(sys_path_entries):
+    """
+    Sanitize `sys.path` to only include paths relative to the onedir environment.
+    """
+    __sys_path = []
+    __valid_path_prefixes = tuple(
+        {
+            pathlib.Path(sys.prefix).resolve(),
+            pathlib.Path(sys.base_prefix).resolve(),
+        }
+    )
+    for __path in sys_path_entries:
+        for __valid_path_prefix in __valid_path_prefixes:
+            try:
+                pathlib.Path(__path).relative_to(__valid_path_prefix)
+                __sys_path.append(__path)
+            except ValueError:
+                continue
+    if "PYTHONPATH" in os.environ:
+        for __path in os.environ["PYTHONPATH"].split(os.pathsep):
+            __sys_path.append(__path)
+    return __sys_path
