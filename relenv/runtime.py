@@ -551,6 +551,7 @@ class TARGET:
 
     TARGET = False
     TARGET_PATH = None
+    IGNORE = False
 
 
 def wrap_cmd_install(name):
