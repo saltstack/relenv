@@ -566,6 +566,7 @@ def wrap_cmd_install(name):
                 if options.target_dir:
                     TARGET.TARGET = True
                     TARGET.PATH = options.target_dir
+                    TARGET.IGNORE = options.ignore_installed
             return func(self, options, args)
 
         return wrapper
@@ -596,6 +597,19 @@ def wrap_locations(name):
     mod.get_scheme = wrap(mod.get_scheme)
     return mod
 
+def wrap_req_command(name):
+    mod = importlib.import_module(name)
+    def wrap(func):
+        @functools.wraps(func)
+        def wrapper(
+            self, options, session, target_python, ignore_requires_python,
+        ):
+            if TARGET.TARGET:
+                options.ignore_installed = TARGET.IGNORE
+            return func(self, options, session, target_python, ignore_requires_python)
+        return wrapper
+    mod.RequirementCommand._build_package_finder = wrap(mod.RequirementCommand._build_package_finder)
+    return mod
 
 importer = RelenvImporter(
     wrappers=[
@@ -607,6 +621,7 @@ importer = RelenvImporter(
         Wrapper("pip._internal.operations.build.wheel", wrap_pip_build_wheel),
         Wrapper("pip._internal.commands.install", wrap_cmd_install),
         Wrapper("pip._internal.locations", wrap_locations),
+        Wrapper("pip._internal.cli.req_command", wrap_req_command),
     ],
 )
 
