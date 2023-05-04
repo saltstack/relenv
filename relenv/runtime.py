@@ -723,17 +723,19 @@ def wrapsitecustomize(func):
         if sitecustomize is None or "pip-build-env" not in sitecustomize.__file__:
             __valid_path_prefixes = tuple(
                 {
-                    str(pathlib.Path(sys.prefix).resolve()),
-                    str(pathlib.Path(sys.base_prefix).resolve()),
+                    pathlib.Path(sys.prefix).resolve(),
+                    pathlib.Path(sys.base_prefix).resolve(),
                 }
             )
             __sys_path = []
             _orig = sys.path[:]
             for __path in sys.path:
-                if str(pathlib.Path(__path).resolve()).startswith(
-                    __valid_path_prefixes
-                ):
-                    __sys_path.append(__path)
+                for __valid_path_prefix in __valid_path_prefixes:
+                    try:
+                        pathlib.Path(__path).relative_to(__valid_path_prefix)
+                        __sys_path.append(__path)
+                    except ValueError:
+                        continue
             if "PYTHONPATH" in os.environ:
                 for __path in os.environ["PYTHONPATH"].split(os.pathsep):
                     __sys_path.append(__path)
