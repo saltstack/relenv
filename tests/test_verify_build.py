@@ -777,3 +777,27 @@ def test_install_with_target_uninstall(pipexec, build):
     )
     assert not (extras / "cowsay").exists()
     assert not (extras / "bin" / "cowsay").exists()
+
+
+def test_install_with_target_cffi_versions(pipexec, pyexec, build):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "cffi==1.14.6"],
+        check=True,
+        env=env,
+    )
+    subprocess.run(
+        [str(pipexec), "install", "cffi==1.15.1", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    env["PYTHONPATH"] = str(extras)
+    proc = subprocess.run(
+        [str(pyexec), "-c", "import cffi; cffi.FFI(); print(cffi.__version__)"],
+        check=True,
+        env=env,
+        capture_output=True,
+    )
+    proc.stdout.decode().strip() == "1.15.1"
