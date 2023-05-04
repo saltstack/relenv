@@ -713,9 +713,7 @@ def wrapsitecustomize(func):
         try:
             import sitecustomize
         except ImportError as exc:
-            if exc.name == "sitecustomize":
-                pass
-            else:
+            if exc.name != "sitecustomize":
                 raise
 
         # Attempt to make sure we're not pulling in packages outside of the
@@ -732,13 +730,12 @@ def wrapsitecustomize(func):
             __sys_path = []
             _orig = sys.path[:]
             for __path in sys.path:
-                if __path.startswith(__valid_path_prefixes):
+                if str(pathlib.Path(__path).resolve()).startswith(
+                    __valid_path_prefixes
+                ):
                     __sys_path.append(__path)
             if "PYTHONPATH" in os.environ:
-                sep = ":"
-                if sys.platform == "win32":
-                    sep = ";"
-                for __path in os.environ["PYTHONPATH"].split(sep):
+                for __path in os.environ["PYTHONPATH"].split(os.pathsep):
                     __sys_path.append(__path)
             # Replace sys.path
             sys.path[:] = __sys_path
