@@ -801,3 +801,49 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build):
         capture_output=True,
     )
     proc.stdout.decode().strip() == "1.15.1"
+
+
+def test_install_with_target_no_ignore_installed(pipexec, pyexec, build):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "cffi==1.15.1"],
+        check=True,
+        env=env,
+    )
+    proc = subprocess.run(
+        [str(pipexec), "install", "pygit2==1.12.0", f"--target={extras}"],
+        check=True,
+        env=env,
+        capture_output=True,
+    )
+    out = proc.stdout.decode()
+    assert "already satisfied: cffi" in out
+    assert "installed cffi" not in out
+
+
+def test_install_with_target_ignore_installed(pipexec, pyexec, build):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "cffi==1.15.1"],
+        check=True,
+        env=env,
+    )
+    proc = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "pygit2==1.12.0",
+            f"--target={extras}",
+            "--ignore-installed",
+        ],
+        check=True,
+        env=env,
+        capture_output=True,
+    )
+    out = proc.stdout.decode()
+    assert "installed cffi" in out
+    assert "already satisfied: cffi" not in out
