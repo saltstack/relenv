@@ -1,3 +1,9 @@
+0.12.2
+======
+
+* Fix path comparison bug on win32
+
+
 0.12.1
 ======
 
