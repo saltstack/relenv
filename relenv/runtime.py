@@ -611,8 +611,8 @@ def wrap_req_command(name):
             self,
             options,
             session,
-            target_python,
-            ignore_requires_python,
+            target_python=None,
+            ignore_requires_python=None,
         ):
             if TARGET.TARGET:
                 options.ignore_installed = TARGET.IGNORE
