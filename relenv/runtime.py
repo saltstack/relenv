@@ -598,19 +598,33 @@ def wrap_locations(name):
     mod.get_scheme = wrap(mod.get_scheme)
     return mod
 
+
 def wrap_req_command(name):
+    """
+    Honor ignore installed option from pip cli.
+    """
     mod = importlib.import_module(name)
+
     def wrap(func):
         @functools.wraps(func)
         def wrapper(
-            self, options, session, target_python, ignore_requires_python,
+            self,
+            options,
+            session,
+            target_python,
+            ignore_requires_python,
         ):
             if TARGET.TARGET:
                 options.ignore_installed = TARGET.IGNORE
             return func(self, options, session, target_python, ignore_requires_python)
+
         return wrapper
-    mod.RequirementCommand._build_package_finder = wrap(mod.RequirementCommand._build_package_finder)
+
+    mod.RequirementCommand._build_package_finder = wrap(
+        mod.RequirementCommand._build_package_finder
+    )
     return mod
+
 
 importer = RelenvImporter(
     wrappers=[
