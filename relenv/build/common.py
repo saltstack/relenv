@@ -256,6 +256,7 @@ def build_openssl(env, dirs, logfp):
             arch = "arm64-cc"
         else:
             raise RelenvException(f"Unable to build {env['RELENV_HOST_ARCH']}")
+        extended_cmd = []
     else:
         plat = "linux"
         if env["RELENV_HOST_ARCH"] == "x86_64":
@@ -264,21 +265,25 @@ def build_openssl(env, dirs, logfp):
             arch = "aarch64"
         else:
             raise RelenvException(f"Unable to build {env['RELENV_HOST_ARCH']}")
-    runcmd(
-        [
-            "./Configure",
-            f"{plat}-{arch}",
-            f"--prefix={dirs.prefix}",
-            f"--openssldir={temp}",
-            "--libdir=lib",
-            "--api=1.1.1",
-            "--shared",
-            "--with-rand-seed=os,egd",
-            "enable-fips",
-            "enable-egd",
-            "no-idea",
+        extended_cmd = [
             "-Wl,-z,noexecstack",
-        ],
+        ]
+    cmd = [
+        "./Configure",
+        f"{plat}-{arch}",
+        f"--prefix={dirs.prefix}",
+        f"--openssldir={temp}",
+        "--libdir=lib",
+        "--api=1.1.1",
+        "--shared",
+        "--with-rand-seed=os,egd",
+        "enable-fips",
+        "enable-egd",
+        "no-idea",
+    ]
+    cmd.extend(extended_cmd)
+    runcmd(
+        cmd,
         env=env,
         stderr=logfp,
         stdout=logfp,
