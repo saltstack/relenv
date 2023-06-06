@@ -363,10 +363,12 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pip_install_m2crypto(pipexec, build, tmpdir):
+def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
     env = os.environ.copy()
-    env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
+    env["LDFLAGS"] = "-L/usr/lib"
+    env["CFLAGS"] = "-I/usr/include"
+    env["SWIG_FEATURES"] = "-I/usr/include"
     p = subprocess.run(
         ["swig", "-version"],
     )
@@ -374,6 +376,49 @@ def test_pip_install_m2crypto(pipexec, build, tmpdir):
         [str(pipexec), "install", "m2crypto", "--no-cache", "-v"],
         env=env,
         # stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert p.returncode == 0, "Failed to pip install m2crypto"
+    gcc = str(
+        pathlib.Path(DATA_DIR)
+        / "toolchain"
+        / f"{get_triplet()}"
+        / "bin"
+        / f"{get_triplet()}-gcc"
+    )
+    include = "/usr/include"
+    found_include = False
+    for _ in p.stderr.splitlines():
+        line = _.decode()
+        if "gcc" in line:
+            for arg in line.split():
+                if arg == f"-I{include}":
+                    found_include = True
+    assert found_include
+    p = subprocess.run(
+        [str(pyexec), "-c", "import M2Crypto"],
+        env=env,
+        # stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False
+    )
+    assert p.returncode == 0, p.stderr
+
+
+@pytest.mark.skip_unless_on_linux
+def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build, tmpdir):
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
+    env["RELENV_DEBUG"] = "yes"
+    env["LDFLAGS"] = f"-L{build}lib"
+    env["CFLAGS"] = f"-I{build}/include"
+    env["SWIG_FEATURES"] = f"-I{build}/include"
+    p = subprocess.run(
+        ["swig", "-version"],
+    )
+    p = subprocess.run(
+        [str(pipexec), "install", "m2crypto", "--no-cache", "-v"],
+        env=env,
         stderr=subprocess.PIPE,
     )
     assert p.returncode == 0, "Failed to pip install m2crypto"
@@ -393,6 +438,13 @@ def test_pip_install_m2crypto(pipexec, build, tmpdir):
                 if arg == f"-I{include}":
                     found_include = True
     assert found_include
+    p = subprocess.run(
+        [str(pyexec), "-c", "import M2Crypto"],
+        env=env,
+        stderr=subprocess.PIPE,
+        check=False
+    )
+    assert p.returncode == 0, p.stderr
 
 
 @pytest.mark.skip_on_windows

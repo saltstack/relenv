@@ -218,7 +218,8 @@ def finalize_options_wrapper(func):
 
     def wrapper(self, *args, **kwargs):
         func(self, *args, **kwargs)
-        self.include_dirs.append(f"{relenv_root()}/include")
+        if "RELENV_BUILDENV" in os.environ:
+            self.include_dirs.append(f"{relenv_root()}/include")
 
     return wrapper
 
