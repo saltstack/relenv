@@ -1,0 +1,2 @@
+This is the default location for any patches needed for building python and
+it's dependencies.

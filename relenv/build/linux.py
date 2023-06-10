@@ -44,8 +44,6 @@ def populate_env(env, dirs):
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
     cflags = [
-        "-L{prefix}/lib",
-        "-L{}/{RELENV_HOST}/sysroot/lib".format(dirs.toolchain, **env),
         "-I{prefix}/include",
         "-I{prefix}/include/readline",
         "-I{prefix}/include/ncursesw",
@@ -55,8 +53,6 @@ def populate_env(env, dirs):
     # CPPFLAGS are needed for Python's setup.py to find the 'nessicery bits'
     # for things like zlib and sqlite.
     cpplags = [
-        "-L{prefix}/lib",
-        "-L{}/{RELENV_HOST}/sysroot/lib".format(dirs.toolchain, **env),
         "-I{prefix}/include",
         "-I{prefix}/include/readline",
         "-I{prefix}/include/ncursesw",
@@ -64,6 +60,7 @@ def populate_env(env, dirs):
     ]
     env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
+    env["LD_LIBRARY_PATH"] = "{prefix}/lib"
 
 
 def build_bzip2(env, dirs, logfp):
@@ -345,6 +342,11 @@ def build_python(env, dirs, logfp):
         fp.write(PATCH)
     runcmd(["patch", "-p0", "-i", "/tmp/patch"], env=env, stderr=logfp, stdout=logfp)
 
+    env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
+    env["OPENSSL_CFLAGS"] = f"-I{dirs.prefix}/include  -Wno-coverage-mismatch"
+    env["OPENSSL_LDFLAGS"] = f"-L{dirs.prefix}/lib"
+    env["CFLAGS"] = f"-Wno-coverage-mismatch {env['CFLAGS']}"
+
     cmd = [
         "./configure",
         "-v",
@@ -386,17 +388,32 @@ def build_python(env, dirs, logfp):
 build = builds.add("linux", populate_env=populate_env, version="3.10.11")
 
 build.add(
-    "OpenSSL",
+    "openssl",
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
-        "version": "3.1.0",
-        "md5sum": "f6c520aa2206d4d1fa71ea30b5e9a56d",
+        "version": "3.1.1",
+        "md5sum": "1864b75e31fb4a6e0a07fd832529add3",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
 )
+
+
+build.add(
+    "openssl-fips-module",
+    build_func=build_openssl_fips,
+    download={
+        "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
+        "version": "3.0.8",
+        "md5sum": "61e017cf4fea1b599048f621f1490fbd",
+        "checkfunc": tarball_version,
+        "checkurl": "https://www.openssl.org/source/",
+    },
+)
+
 
 build.add(
     "libxcrypt",
