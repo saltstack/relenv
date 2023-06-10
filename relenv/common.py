@@ -155,6 +155,7 @@ class WorkDirs:
         self.src = work_dir("src", DATA_DIR)
         self.logs = work_dir("logs", DATA_DIR)
         self.download = work_dir("download", DATA_DIR)
+        self.patches = MODULE_DIR / "build" / "patches"
 
     def __getstate__(self):
         """

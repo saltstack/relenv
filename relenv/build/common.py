@@ -235,7 +235,11 @@ def build_default(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_openssl(env, dirs, logfp):
+def build_openssl_fips(env, dirs, logfp):
+    return build_openssl(env, dirs, logfp, fips=True)
+
+
+def build_openssl(env, dirs, logfp, fips=False):
     """
     Build openssl.
 
@@ -268,16 +272,17 @@ def build_openssl(env, dirs, logfp):
         extended_cmd = [
             "-Wl,-z,noexecstack",
         ]
+    if fips:
+        extended_cmd.append("enable-fips")
     cmd = [
         "./Configure",
         f"{plat}-{arch}",
         f"--prefix={dirs.prefix}",
-        f"--openssldir={temp}",
+        f"--openssldir=/etc/ssl",
         "--libdir=lib",
         "--api=1.1.1",
         "--shared",
         "--with-rand-seed=os,egd",
-        "enable-fips",
         "enable-egd",
         "no-idea",
     ]
@@ -289,7 +294,13 @@ def build_openssl(env, dirs, logfp):
         stdout=logfp,
     )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
-    runcmd(["make", "install_sw"], env=env, stderr=logfp, stdout=logfp)
+    if fips:
+        shutil.copy(
+            pathlib.Path("providers") / "fips.so",
+            pathlib.Path(dirs.prefix) / "lib" / "ossl-modules",
+        )
+    else:
+        runcmd(["make", "install_sw"], env=env, stderr=logfp, stdout=logfp)
 
 
 def build_sqlite(env, dirs, logfp):
@@ -647,6 +658,7 @@ class Dirs:
         self.logs = dirs.logs
         self.sources = dirs.src
         self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
+        self.patches = dirs.patches
 
     @property
     def toolchain(self):
@@ -848,7 +860,7 @@ class Builder:
         else:
             return "{}-linux-gnu".format(self.arch)
 
-    def add(self, name, build_func=None, wait_on=None, download=None):
+    def add(self, name, build_func=None, wait_on=None, download=None, patches=None):
         """
         Add a step to the build process.
 
@@ -867,13 +879,16 @@ class Builder:
             build_func = self.build_default
         if download is not None:
             download = Download(name, destination=self.downloads, **download)
+        if patches is None:
+            patches = {}
         self.recipies[name] = {
             "build_func": build_func,
             "wait_on": wait_on,
             "download": download,
+            "patches": patches,
         }
 
-    def run(self, name, event, build_func, download):
+    def run(self, name, event, build_func, download, patches):
         """
         Run a build step.
 
@@ -944,6 +959,12 @@ class Builder:
         for k in env:
             logfp.write("{} {}\n".format(k, env[k]))
         logfp.write("*" * 80 + "\n")
+        logfp.flush()
+        for patch in patches:
+            logfp.write(f"Applying patch {patch}\n")
+            logfp.flush()
+            cmd = ["patch", "-p1", "-i", dirs.patches / patches[patch]]
+            runcmd(cmd, stderr=logfp, stdout=logfp)
         try:
             return build_func(env, dirs, logfp)
         except Exception:
