@@ -9,7 +9,8 @@ depenency libraries into a relenv environment.
 The general procedure for installing python modules to use your system's
 libraries is to install the required sytem packages which contain the header
 files needed for the package. Then using your system's compiler configured with
-the system include path and system librariy directory.
+the system include path and system librariy directory. This is the default
+behavior when using pip to install to relenv.
 
 To install additional libraries into the relenv environment you will compile
 the library from source using the relenv toolchain compiler. Relenv provides
@@ -29,7 +30,7 @@ This is an example of installing pycurl using the system's libcurl on Debian Lin
 
    relenv create myenv
    sudo apt-get install libcurl4-openssl-dev
-   CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install pycurl --no-cache
+   myenv/bin/pip3 install pycurl --no-cache
 
 
 Installing pygit2 Using System Libraries
@@ -41,7 +42,7 @@ This is an example of installing pygit2 using the system's libgit2 on Debian Lin
 
    relenv create myenv
    sudo apt-get install libgit2-dev libssh2-1-dev
-   CC=/usr/bin/gcc CFLAGS="-I/usr/include" LDFLAGS="-L/usr/lib" myenv/bin/pip3 install libgit2 --no-binary=":all:"
+   myenv/bin/pip3 install libgit2 --no-binary=":all:"
 
 
 
@@ -54,7 +55,23 @@ This is an example of installing python-ldap using the system's open-ldap on Deb
 
    relenv create myenv
    sudo apt-get install openldap-dev libsasl2-dev
-   CC=/usr/bin/gcc LDFLAGS="-I/usr/include -L/usr/lib" CFLAGS="-I/usr/include" myenv/bin/pip3 install python-ldap
+   myenv/bin/pip3 install python-ldap
+
+
+
+Installing M2Crypto Using System Libraries
+================================================
+
+This is an example of installing M2Crytpo using the system's openssl on Debian Linux.
+
+.. code-block:: bash
+
+   relenv create myenv
+   sudo apt-get install libssl-dev
+   env LDFLAGS="-L/usr/lib" \
+      CFLAGS="-I/usr/include" \
+      SWIG_FEATURES="-I/usr/include" \
+      myenv/bin/pip3 install m2crypto
 
 
 
@@ -180,3 +197,13 @@ relative. Then install python-ldap using the relenv's pip.
 
 
 
+Installing M2Crypto Using Relenv's Libraries
+================================================
+
+This is an example of installing M2Crytpo using the relenvs's openssl on Debian Linux.
+
+.. code-block:: bash
+
+   relenv create myenv
+   source <(myenv/bin/relenv buildenv)
+   SWIG_FEATURES="-I${RELENV_ROOT}/include" myenv/bin/pip3 install m2crypto
