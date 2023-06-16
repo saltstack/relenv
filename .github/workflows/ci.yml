@@ -135,8 +135,8 @@ jobs:
       #- build-cross
     with:
       version: "${{ needs.build-python-package.outputs.version }}"
-    secrets:
-      SSHKEY: "${{ secrets.SSHKEY }}"
+    # secrets:
+    #   SSHKEY: "${{ secrets.SSHKEY }}"
 
   upload-toolchain-artifacts:
     name: Deploy Toolchain
@@ -147,8 +147,8 @@ jobs:
       - toolchain
     with:
       version: "${{ needs.build-python-package.outputs.version }}"
-    secrets:
-      SSHKEY: "${{ secrets.SSHKEY }}"
+    # secrets:
+    #   SSHKEY: "${{ secrets.SSHKEY }}"
 
   deploy-python-package:
     name: Deploy Python Package
