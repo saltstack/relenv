@@ -15,9 +15,12 @@ on:
 jobs:
   upload_artifacts:
     name: Deploy Artifacts ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}
-    runs-on: ubuntu-latest
+    runs-on:
+      - self-hosted
+      - linux
+      - repo-release
+    environment: release
     strategy:
-      max-parallel: 1
       matrix:
         python:
           - 3.10.11
@@ -54,22 +57,27 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+        path: release-artifacts/
 
-    - name: Setup Private Key
-      run: |
-        ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-        echo "${SSHKEY}" | tr -d '\r' | ssh-add -
+    # - name: Setup Private Key
+    #   run: |
+    #     ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+    #     echo "${SSHKEY}" | tr -d '\r' | ssh-add -
 
-    - name: Setup Private Key
-      run: |
-        mkdir -p /home/runner/.ssh
-        touch /home/runner/.ssh/known_hosts
-        ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
+    # - name: Setup Private Key
+    #   run: |
+    #     mkdir -p /home/runner/.ssh
+    #     touch /home/runner/.ssh/known_hosts
+    #     ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
 
-    - name: Ensure Build Directory Exists
-      run: |
-        ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
+    # - name: Ensure Build Directory Exists
+    #   run: |
+    #     ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
 
-    - name: "Deploy Python Build: ${{ matrix.python }}-${{ matrix.host }}-${{ matrix.platform }}.tar.xz"
+    - name: Install `awscli`
       run: |
-        scp ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/build/"
+        pip3 install awscli
+
+    - name: "Deploy Python Build: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz"
+      run: |
+        aws s3 cp release-artifacts/* s3://salt-project-prod-salt-artifacts-release/relenv/${{ inputs.version }}/build/
