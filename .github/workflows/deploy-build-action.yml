@@ -7,9 +7,9 @@ on:
         required: false
         type: string
         description: Version to author
-    secrets:
-      SSHKEY:
-        required: true
+    # secrets:
+    #   SSHKEY:
+    #     required: true
 
 
 jobs:
@@ -49,9 +49,9 @@ jobs:
             arch: amd64
           - platform: macos
             arch: x86
-    env:
-      SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-      SSHKEY: ${{ secrets.SSHKEY }}
+    # env:
+    #   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+    #   SSHKEY: ${{ secrets.SSHKEY }}
     steps:
     - name: Download Artifacts
       uses: actions/download-artifact@v3
@@ -80,4 +80,4 @@ jobs:
 
     - name: "Deploy Python Build: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz"
       run: |
-        aws s3 cp release-artifacts/* s3://salt-project-prod-salt-artifacts-release/relenv/${{ inputs.version }}/build/
+        aws s3 cp release-artifacts/* s3://salt-project-test-salt-artifacts-release/relenv/${{ inputs.version }}/build/
