@@ -27,8 +27,6 @@ on:
           --wheel
           --outdir dist/
     secrets:
-      SSHKEY:
-        required: false
       PYPI_API_TOKEN:
         required: false
 
@@ -135,8 +133,6 @@ jobs:
       #- build-cross
     with:
       version: "${{ needs.build-python-package.outputs.version }}"
-    # secrets:
-    #   SSHKEY: "${{ secrets.SSHKEY }}"
 
   upload-toolchain-artifacts:
     name: Deploy Toolchain
@@ -147,8 +143,6 @@ jobs:
       - toolchain
     with:
       version: "${{ needs.build-python-package.outputs.version }}"
-    # secrets:
-    #   SSHKEY: "${{ secrets.SSHKEY }}"
 
   deploy-python-package:
     name: Deploy Python Package
@@ -216,4 +210,4 @@ jobs:
       - name: Done
         if: always()
         run:
-          echo "All worflows finished"
+          echo "All workflows finished"
