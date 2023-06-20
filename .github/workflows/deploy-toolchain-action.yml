@@ -7,14 +7,11 @@ on:
         required: false
         type: string
         description: Version to author
-    # secrets:
-    #   SSHKEY:
-    #     required: true
 
 
 jobs:
   upload_artifacts:
-    name: Deploy Artifacts ${{ matrix.arch }}-${{ matrix.platform }}
+    name: Deploy Artifacts ${{ matrix.host }}/${{ matrix.target }}
     runs-on:
       - self-hosted
       - linux
@@ -28,9 +25,6 @@ jobs:
         target:
           - x86_64
           - aarch64
-    # env:
-    #   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-    #   SSHKEY: ${{ secrets.SSHKEY }}
     steps:
 
     - name: Download Artifacts
@@ -38,25 +32,17 @@ jobs:
       with:
         name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
         path: release-artifacts/
-
-    # - name: Setup Private Key
-    #   run: |
-    #     ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-    #     echo "${SSHKEY}" | tr -d '\r' | ssh-add -
-
-    # - name: Setup Private Key
-    #   run: |
-    #     mkdir -p /home/runner/.ssh
-    #     touch /home/runner/.ssh/known_hosts
-    #     ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
-
-    # - name: Ensure Toolchain Directory Exists
-    #   run: |
-    #     ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/
-
-    # - name: "Deploy Toolchain: ${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz"
-    #   run: |
-    #     scp toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz "cicd@d1.h4.cx:/var/www/woz.io/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz"
+    
+    - name: Get Salt Project GitHub Actions Bot Environment
+      id: spb-environment
+      run: |
+        TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+        SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+        echo "spb-environment=$SPB_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+    
+    - name: Check SPB Environment
+      run: |
+        echo "${{ steps.spb-environment.outputs.spb-environment }}"
 
     - name: Install `awscli`
       run: |

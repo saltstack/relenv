@@ -7,9 +7,6 @@ on:
         required: false
         type: string
         description: Version to author
-    # secrets:
-    #   SSHKEY:
-    #     required: true
 
 
 jobs:
@@ -49,30 +46,12 @@ jobs:
             arch: amd64
           - platform: macos
             arch: x86
-    # env:
-    #   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-    #   SSHKEY: ${{ secrets.SSHKEY }}
     steps:
     - name: Download Artifacts
       uses: actions/download-artifact@v3
       with:
         name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
         path: release-artifacts/
-
-    # - name: Setup Private Key
-    #   run: |
-    #     ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-    #     echo "${SSHKEY}" | tr -d '\r' | ssh-add -
-
-    # - name: Setup Private Key
-    #   run: |
-    #     mkdir -p /home/runner/.ssh
-    #     touch /home/runner/.ssh/known_hosts
-    #     ssh-keyscan d1.h4.cx >> /home/runner/.ssh/known_hosts
-
-    # - name: Ensure Build Directory Exists
-    #   run: |
-    #     ssh cicd@d1.h4.cx mkdir -p /var/www/woz.io/relenv/${{ inputs.version }}/build/
 
     - name: Install `awscli`
       run: |
