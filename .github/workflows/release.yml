@@ -29,5 +29,4 @@ jobs:
       kind: "${{ inputs.kind }}"
       package_command: "${{ inputs.package_command }}"
     secrets:
-      SSHKEY: ${{ secrets.SSHKEY }}
       PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

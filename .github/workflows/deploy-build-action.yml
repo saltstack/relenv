@@ -53,10 +53,17 @@ jobs:
         name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
         path: release-artifacts/
 
+    - name: Get Salt Project GitHub Actions Bot Environment
+      id: spb-environment
+      run: |
+        TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
+        SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
+        echo "spb-environment=$SPB_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+    
     - name: Install `awscli`
       run: |
         pip3 install awscli
 
     - name: "Deploy Python Build: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz"
       run: |
-        aws s3 cp release-artifacts/* s3://salt-project-test-salt-artifacts-release/relenv/${{ inputs.version }}/build/
+        aws s3 cp release-artifacts/* s3://salt-project-${{ steps.spb-environment.outputs.spb-environment }}-salt-artifacts-release/relenv/${{ inputs.version }}/build/
