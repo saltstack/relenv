@@ -379,13 +379,6 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
         stderr=subprocess.PIPE,
     )
     assert p.returncode == 0, "Failed to pip install m2crypto"
-    gcc = str(
-        pathlib.Path(DATA_DIR)
-        / "toolchain"
-        / f"{get_triplet()}"
-        / "bin"
-        / f"{get_triplet()}-gcc"
-    )
     include = "/usr/include"
     found_include = False
     for _ in p.stderr.splitlines():
@@ -400,7 +393,7 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
         env=env,
         # stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        check=False
+        check=False,
     )
     assert p.returncode == 0, p.stderr
 
@@ -442,7 +435,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build, tmpdir):
         [str(pyexec), "-c", "import M2Crypto"],
         env=env,
         stderr=subprocess.PIPE,
-        check=False
+        check=False,
     )
     assert p.returncode == 0, p.stderr
 

@@ -163,8 +163,6 @@ jobs:
       - upload-toolchain-artifacts
     secrets:
       PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
-    #with:
-    #  version: "${{ needs.build-python-package.outputs.version }}"
 
   push-tag:
     name: Push Version Tag
