@@ -64,5 +64,5 @@ jobs:
 
     - name: "Deploy Toolchain: ${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz"
       run: |
-        aws s3 cp release-artifacts/* s3://salt-project-test-salt-artifacts-release/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz"
+        aws s3 cp release-artifacts/* s3://salt-project-test-salt-artifacts-release/relenv/${{ inputs.version }}/toolchain/${{ matrix.host }}/${{ matrix.target }}-linux-gnu.tar.xz
   
