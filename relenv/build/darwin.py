@@ -75,7 +75,7 @@ def build_python(env, dirs, logfp):
 build = builds.add("darwin", populate_env=populate_env, version="3.10.11")
 
 build.add(
-    "OpenSSL",
+    "openssl",
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
@@ -109,7 +109,7 @@ build.add(
     "python",
     build_func=build_python,
     wait_on=[
-        "OpenSSL",
+        "openssl",
         "XZ",
         "SQLite",
     ],
