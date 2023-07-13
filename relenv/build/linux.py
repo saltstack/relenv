@@ -526,7 +526,7 @@ build.add(
 build.add(
     "krb5",
     build_func=build_krb,
-    wait_on=["OpenSSL"],
+    wait_on=["openssl"],
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/krb5-{version}.tar.gz",
@@ -552,7 +552,7 @@ build.add(
     "python",
     build_func=build_python,
     wait_on=[
-        "OpenSSL",
+        "openssl",
         "libxcrypt",
         "XZ",
         "SQLite",
