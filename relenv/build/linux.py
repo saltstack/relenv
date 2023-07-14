@@ -401,18 +401,18 @@ build.add(
 )
 
 
-build.add(
-    "openssl-fips-module",
-    build_func=build_openssl_fips,
-    download={
-        "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
-        "version": "3.0.8",
-        "md5sum": "61e017cf4fea1b599048f621f1490fbd",
-        "checkfunc": tarball_version,
-        "checkurl": "https://www.openssl.org/source/",
-    },
-)
+#build.add(
+#    "openssl-fips-module",
+#    build_func=build_openssl_fips,
+#    download={
+#        "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
+#        "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
+#        "version": "3.0.8",
+#        "md5sum": "61e017cf4fea1b599048f621f1490fbd",
+#        "checkfunc": tarball_version,
+#        "checkurl": "https://www.openssl.org/source/",
+#    },
+#)
 
 
 build.add(
