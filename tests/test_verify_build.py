@@ -135,8 +135,8 @@ def test_imports(pyexec):
 
 
 @pytest.mark.skipif(
-    sys.platform != "linux" and get_build_version() == "3.11.3",
-    reason="3.11.3 will not work on windows yet",
+    sys.platform != "linux" and get_build_version() == "3.11.4",
+    reason="3.11.4 will not work on windows yet",
 )
 def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
     env = os.environ.copy()
@@ -172,7 +172,7 @@ def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
 
 @pytest.mark.skip_on_windows
 @pytest.mark.skipif(
-    get_build_version() == "3.11.3", reason="3.11.3 will not work with 3005.x"
+    get_build_version() == "3.11.4", reason="3.11.4 will not work with 3005.x"
 )
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     packages = [
@@ -223,8 +223,8 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
 
 
 @pytest.mark.skipif(
-    get_build_version() == "3.11.3",
-    reason="3.11.3 will not work until pyzmq is upgraded",
+    get_build_version() == "3.11.4",
+    reason="3.11.4 will not work until pyzmq is upgraded",
 )
 def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
     env = os.environ.copy()
@@ -294,7 +294,7 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
 
 @pytest.mark.skip_on_windows
 @pytest.mark.skipif(
-    get_build_version() == "3.11.3", reason="3.11.3 will not work with 3005.x"
+    get_build_version() == "3.11.4", reason="3.11.4 will not work with 3005.x"
 )
 def test_pip_install_salt_pip_dir(pipexec, build):
     packages = [

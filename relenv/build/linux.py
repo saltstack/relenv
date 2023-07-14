@@ -385,7 +385,7 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("linux", populate_env=populate_env, version="3.10.11")
+build = builds.add("linux", populate_env=populate_env, version="3.10.12")
 
 build.add(
     "openssl",
@@ -569,7 +569,7 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
-        "md5sum": "1bf8481a683e0881e14d52e0f23633a6",
+        "md5sum": "49b0342476b984e106d308c25d657f12",
         "checkfunc": python_version,
         "checkurl": "https://www.python.org/ftp/python/",
     },
@@ -584,5 +584,5 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.3", md5sum="a957cffb58a89303b62124896881950b")
+build = build.copy(version="3.11.4", md5sum="fb7f7eae520285788449d569e45b6718")
 builds.add("linux", builder=build)
