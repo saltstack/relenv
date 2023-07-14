@@ -658,7 +658,6 @@ class Dirs:
         self.logs = dirs.logs
         self.sources = dirs.src
         self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
-        self.patches = dirs.patches
 
     @property
     def toolchain(self):
@@ -860,7 +859,7 @@ class Builder:
         else:
             return "{}-linux-gnu".format(self.arch)
 
-    def add(self, name, build_func=None, wait_on=None, download=None, patches=None):
+    def add(self, name, build_func=None, wait_on=None, download=None):
         """
         Add a step to the build process.
 
@@ -879,16 +878,13 @@ class Builder:
             build_func = self.build_default
         if download is not None:
             download = Download(name, destination=self.downloads, **download)
-        if patches is None:
-            patches = {}
         self.recipies[name] = {
             "build_func": build_func,
             "wait_on": wait_on,
             "download": download,
-            "patches": patches,
         }
 
-    def run(self, name, event, build_func, download, patches):
+    def run(self, name, event, build_func, download):
         """
         Run a build step.
 
@@ -960,11 +956,6 @@ class Builder:
             logfp.write("{} {}\n".format(k, env[k]))
         logfp.write("*" * 80 + "\n")
         logfp.flush()
-        for patch in patches:
-            logfp.write(f"Applying patch {patch}\n")
-            logfp.flush()
-            cmd = ["patch", "-p1", "-i", dirs.patches / patches[patch]]
-            runcmd(cmd, stderr=logfp, stdout=logfp)
         try:
             return build_func(env, dirs, logfp)
         except Exception:
