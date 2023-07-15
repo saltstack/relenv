@@ -40,7 +40,8 @@ def setup_parser(subparsers):
     subparser.add_argument(
         "--python",
         default=platform_versions()[0],
-        choices=platform_versions(),
+        # Allow fetching of older versions
+        # choices=platform_versions(),
         type=str,
         help="The python version [default: %(default)s]",
     )
@@ -63,7 +64,7 @@ def main(args):
         if check_url(url, timeout=5):
             break
     else:
-        print(f"Unable to find file on an hosts {' '.join(check_hosts)}")
+        print(f"Unable to find file on any hosts {' '.join(check_hosts)}")
         sys.exit(1)
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
