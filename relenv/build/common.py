@@ -1184,9 +1184,12 @@ class Builder:
         if self.build_arch != self.arch:
             native_root = DATA_DIR / "native"
             if not native_root.exists():
+                if "RELENV_NATIVE_PY_VERSION" in os.environ:
+                    version = os.environ["RELENV_NATIVE_PY_VERSION"]
+                else:
+                    version = self.version
                 from relenv.create import create
-
-                create("native", DATA_DIR, version=self.version)
+                create("native", DATA_DIR, version=version)
 
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
