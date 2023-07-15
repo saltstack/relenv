@@ -171,14 +171,16 @@ jobs:
         run: |
           pip3 install nox
 
-      # - name: Fetch Native Build
-      #   if: ${{ matrix.arch != 'amd64' }}
-      #   env:
-      #     RELENV_FETCH_VERSION: latest
-      #   run: |
-      #     python3 -m relenv fetch --python=${{ matrix.version }}
+      - name: Fetch Native Build
+        if: ${{ matrix.arch != 'amd64' }}
+        env:
+          RELENV_FETCH_VERSION: latest
+        run: |
+          python3 -m relenv fetch --python=3.10.11
 
       - name: Build Python with Relenv
+        env:
+          RELENV_NATIVE_PY_VERSION: 3.10.11
         run: |
           python -m relenv build --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
