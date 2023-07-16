@@ -1,3 +1,12 @@
+0.13.0
+======
+
+* Tests and fixes for installing m2crypto
+* Fix pipelines to upload to repo.saltstack.io
+* Ship with openssl 3.1.1 on linux and darwin for FIPS compatability
+* Update openssl and python minior version to address CVEs
+
+
 0.12.3
 ======
 
