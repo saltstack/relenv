@@ -250,7 +250,6 @@ def build_openssl(env, dirs, logfp, fips=False):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    temp = tempfile.mkdtemp()
     arch = "aarch64"
     if sys.platform == "darwin":
         plat = "darwin64"
@@ -278,7 +277,7 @@ def build_openssl(env, dirs, logfp, fips=False):
         "./Configure",
         f"{plat}-{arch}",
         f"--prefix={dirs.prefix}",
-        f"--openssldir=/etc/ssl",
+        "--openssldir=/etc/ssl",
         "--libdir=lib",
         "--api=1.1.1",
         "--shared",
@@ -1189,6 +1188,7 @@ class Builder:
                 else:
                     version = self.version
                 from relenv.create import create
+
                 create("native", DATA_DIR, version=version)
 
         # Start a process for each build passing it an event used to notify each
