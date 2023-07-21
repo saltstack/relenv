@@ -1,3 +1,9 @@
+0.13.1
+======
+
+* Determine openssl modules directory at runtime
+
+
 0.13.0
 ======
 
