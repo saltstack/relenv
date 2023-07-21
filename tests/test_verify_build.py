@@ -170,6 +170,7 @@ def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
         assert script.exists()
 
 
+@pytest.mark.skip_on_darwin
 @pytest.mark.skip_on_windows
 @pytest.mark.skipif(
     get_build_version() == "3.11.4", reason="3.11.4 will not work with 3005.x"
