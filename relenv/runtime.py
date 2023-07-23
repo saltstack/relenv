@@ -690,12 +690,10 @@ def setup_openssl():
         else:
             proc = subprocess.run(
                 [openssl_bin, "version", "-d"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 universal_newlines=True,
                 shell=False,
                 check=False,
-                capture=True,
+                capture_output=True,
             )
             if proc.returncode != 0:
                 msg = "Unable to get the certificates directory from openssl"
@@ -713,12 +711,10 @@ def setup_openssl():
             if "OPENSSL_MODULES" not in os.environ:
                 proc = subprocess.run(
                     [openssl_bin, "info", "-modulesdir"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
                     universal_newlines=True,
                     shell=False,
                     check=False,
-                    capture=True,
+                    capture_output=True,
                 )
                 if proc.returncode != 0:
                     msg = "Unable to get the certificates modules from openssl"
