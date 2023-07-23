@@ -695,6 +695,7 @@ def setup_openssl():
                 universal_newlines=True,
                 shell=False,
                 check=False,
+                capture=True,
             )
             if proc.returncode != 0:
                 msg = "Unable to get the certificates directory from openssl"
@@ -717,6 +718,7 @@ def setup_openssl():
                     universal_newlines=True,
                     shell=False,
                     check=False,
+                    capture=True,
                 )
                 if proc.returncode != 0:
                     msg = "Unable to get the certificates modules from openssl"
