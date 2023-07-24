@@ -293,6 +293,8 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     assert import_ret.returncode == 0, f"Failed to import {import_name}"
 
 
+# XXX Re-enable after 3006.2 has been released
+@pytest.mark.skip_on_darwin
 @pytest.mark.skip_on_windows
 @pytest.mark.skipif(
     get_build_version() == "3.11.4", reason="3.11.4 will not work with 3005.x"
