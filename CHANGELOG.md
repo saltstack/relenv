@@ -1,3 +1,9 @@
+0.13.2
+======
+
+* Always use relenv's openssl modules directory
+
+
 0.13.1
 ======
 
