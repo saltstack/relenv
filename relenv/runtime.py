@@ -686,7 +686,6 @@ def setup_openssl():
         openssl_bin = shutil.which("openssl")
         if not openssl_bin:
             debug("Could not find the 'openssl' binary in the path")
-            os.environ["OPENSSL_MODULES"] = str(sys.RELENV / "lib" / "ossl-modules")
         else:
             proc = subprocess.run(
                 [openssl_bin, "version", "-d"],
@@ -708,24 +707,8 @@ def setup_openssl():
                 cert_file = path / "cert.pem"
                 if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
                     os.environ["SSL_CERT_FILE"] = str(cert_file)
-            if "OPENSSL_MODULES" not in os.environ:
-                proc = subprocess.run(
-                    [openssl_bin, "info", "-modulesdir"],
-                    universal_newlines=True,
-                    shell=False,
-                    check=False,
-                    capture_output=True,
-                )
-                if proc.returncode != 0:
-                    msg = "Unable to get the certificates modules from openssl"
-                    if proc.stderr:
-                        msg += f": {proc.stderr}"
-                    debug(msg)
-                    os.environ["OPENSSL_MODULES"] = str(
-                        sys.RELENV / "lib" / "ossl-modules"
-                    )
-                else:
-                    os.environ["OPENSSL_MODULES"] = str(proc.stdout.strip())
+        if "OPENSSL_MODULES" not in os.environ:
+            os.environ["OPENSSL_MODULES"] = str(sys.RELENV / "lib" / "ossl-modules")
 
 
 def setup_crossroot():
