@@ -79,7 +79,7 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "3.1.1",
+        "version": "3.1.2",
         "md5sum": "1864b75e31fb4a6e0a07fd832529add3",
     },
 )
