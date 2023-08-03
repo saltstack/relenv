@@ -394,7 +394,7 @@ build.add(
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
         "version": "3.1.2",
-        "md5sum": "1864b75e31fb4a6e0a07fd832529add3",
+        "md5sum": "1d7861f969505e67b8677e205afd9ff4",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
