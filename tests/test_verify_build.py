@@ -896,6 +896,133 @@ def test_install_with_target_ignore_installed(pipexec, pyexec, build):
     assert "installed cffi" in out
     assert "already satisfied: cffi" not in out
 
+
+@pytest.mark.skip_on_windows
+def test_no_legacy_hashlib(pipexec, pyexec, build):
+    """
+    Verify hashlib can find the legacy openssl provider.
+    """
+    env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+    with open(env["OPENSSL_CONF"], "w") as fp:
+        fp.write(
+            textwrap.dedent(
+                """
+            HOME			= .
+            openssl_conf = openssl_init
+            [openssl_init]
+            providers = provider_sect
+            [provider_sect]
+            default = default_sect
+            [default_sect]
+            activate = 1
+            """
+            )
+        )
+    proc = subprocess.run(
+        [
+            pyexec,
+            "-c",
+            "import hashlib; print(hashlib.algorithms_available)",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        env=env,
+    )
+    assert b"md4" not in proc.stdout
+
+
+@pytest.mark.skip_on_windows
+def test_legacy_hashlib(pipexec, pyexec, build):
+    """
+    Verify hashlib can find the legacy openssl provider.
+    """
+    env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+    with open(env["OPENSSL_CONF"], "w") as fp:
+        fp.write(
+            textwrap.dedent(
+                """
+            HOME			= .
+            openssl_conf = openssl_init
+            [openssl_init]
+            providers = provider_sect
+            [provider_sect]
+            default = default_sect
+            legacy = legacy_sect
+            [default_sect]
+            activate = 1
+            [legacy_sect]
+            activate = 1
+            """
+            )
+        )
+    proc = subprocess.run(
+        [
+            pyexec,
+            "-c",
+            "import hashlib; print(hashlib.algorithms_available)",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+        env=env,
+    )
+    with open(env["OPENSSL_CONF"], "r") as fp:
+        print(fp.read())
+    assert b"md4" in proc.stdout
+
+
+@pytest.mark.skip_unless_on_linux
+@pytest.mark.skip_if_binaries_missing("openssl")
+def test_hashlib_fips_module(pipexec, pyexec, build):
+    """
+    Verify hashlib works with fips module.
+    """
+    proc = subprocess.run(
+        [
+            "openssl",
+            "fipsinstall",
+            "-out",
+            str(build / "fipsmodule.cnf"),
+            "-module",
+            str(build / "lib" / "ossl-modules" / "fips.so"),
+        ],
+        check=True,
+    )
+    env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+    with open(env["OPENSSL_CONF"], "w") as fp:
+        fp.write(
+            textwrap.dedent(
+                """
+            HOME			= .
+            openssl_conf = openssl_init
+            [openssl_init]
+            providers = provider_sect
+            alg_section = algorithm_sect
+            .include fipsmodule.cnf
+            [provider_sect]
+            default = default_sect
+            fips = fips_sect
+            [default_sect]
+            activate = 1
+            [legacy_sect]
+            activate = 1
+            [algorithm_sect]
+            default_properties = fips=yes
+            """
+            )
+        )
+    proc = subprocess.run(
+        [
+            pyexec,
+            "-c",
+            "import hashlib; hashlib.md5(b'')",
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
+        env=env,
+    )
+    assert b"ValueError" not in proc.stdout
+
+
 @pytest.mark.skip_unless_on_linux
 def test_install_with_target_scripts(pipexec, build, minor_version):
     env = os.environ.copy()
