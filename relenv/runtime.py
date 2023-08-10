@@ -574,6 +574,81 @@ def wrap_cmd_install(name):
         return wrapper
 
     mod.InstallCommand.run = wrap(mod.InstallCommand.run)
+
+    def wrap(func):
+        @functools.wraps(func)
+        def wrapper(self, target_dir, target_temp_dir, upgrade):
+            from pip._internal.locations import get_scheme
+            from pip._internal.utils.misc import ensure_dir
+
+            ensure_dir(target_dir)
+
+            # Checking both purelib and platlib directories for installed
+            # packages to be moved to target directory
+            lib_dir_list = []
+
+            # Checking both purelib and platlib directories for installed
+            # packages to be moved to target directory
+            scheme = get_scheme("", home=target_temp_dir.path)
+            purelib_dir = scheme.purelib
+            platlib_dir = scheme.platlib
+            data_dir = scheme.data
+
+            if os.path.exists(purelib_dir):
+                lib_dir_list.append(purelib_dir)
+            if os.path.exists(platlib_dir) and platlib_dir != purelib_dir:
+                lib_dir_list.append(platlib_dir)
+            if os.path.exists(data_dir):
+                lib_dir_list.append(data_dir)
+
+            for lib_dir in lib_dir_list:
+                for item in os.listdir(lib_dir):
+                    if lib_dir == data_dir:
+                        ddir = os.path.join(data_dir, item)
+                        if any(s.startswith(ddir) for s in lib_dir_list[:-1]):
+                            continue
+                    target_item_dir = os.path.join(target_dir, item)
+
+                    # Special handling for scripts dir when target is used.
+                    if TARGET.TARGET is True and item == os.path.basename(
+                        scheme.scripts
+                    ):
+                        if not os.path.exists(target_item_dir):
+                            os.mkdir(target_item_dir)
+                        for script in os.listdir(os.path.join(lib_dir, item)):
+                            shutil.move(
+                                os.path.join(lib_dir, item, script),
+                                os.path.join(target_item_dir, script),
+                            )
+                    elif os.path.exists(target_item_dir):
+                        if not upgrade:
+                            mod.logger.warning(
+                                "Target directory %s already exists. Specify "
+                                "--upgrade to force replacement.",
+                                target_item_dir,
+                            )
+                            continue
+                        if os.path.islink(target_item_dir):
+                            mod.logger.warning(
+                                "Target directory %s already exists and is "
+                                "a link. pip will not automatically replace "
+                                "links, please remove if replacement is "
+                                "desired.",
+                                target_item_dir,
+                            )
+                            continue
+                        if os.path.isdir(target_item_dir):
+                            shutil.rmtree(target_item_dir)
+                        else:
+                            os.remove(target_item_dir)
+
+                        shutil.move(os.path.join(lib_dir, item), target_item_dir)
+                    else:
+                        shutil.move(os.path.join(lib_dir, item), target_item_dir)
+
+        return wrapper
+
+    mod.InstallCommand._handle_target_dir = wrap(mod.InstallCommand._handle_target_dir)
     return mod
 
 
