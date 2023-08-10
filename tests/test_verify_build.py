@@ -895,3 +895,21 @@ def test_install_with_target_ignore_installed(pipexec, pyexec, build):
     out = proc.stdout.decode()
     assert "installed cffi" in out
     assert "already satisfied: cffi" not in out
+
+@pytest.mark.skip_unless_on_linux
+def test_install_with_target_scripts(pipexec, build, minor_version):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "rend", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    assert (extras / "bin" / "rend").exists()
+    subprocess.run(
+        [str(pipexec), "install", "cowsay", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    assert (extras / "bin" / "cowsay").exists()
