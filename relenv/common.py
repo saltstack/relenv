@@ -13,7 +13,6 @@ import tarfile
 import textwrap
 import time
 import urllib.error
-import urllib.request
 
 # relenv package version
 __version__ = "0.13.3"
@@ -335,6 +334,9 @@ def check_url(url, timeout=30):
     """
     Check that the url returns a 200.
     """
+    # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import urllib.request
+
     fin = None
     try:
         fin = urllib.request.urlopen(url, timeout=timeout)
@@ -352,6 +354,9 @@ def fetch_url(url, fp, backoff=3, timeout=30):
 
     This method will store the contents in the given file like object.
     """
+    # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import urllib.request
+
     if backoff < 1:
         backoff = 1
     n = 0

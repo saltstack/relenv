@@ -754,6 +754,8 @@ def setup_openssl():
     """
     Configure openssl certificate locations.
     """
+    if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
+        os.environ["OPENSSL_MODULES"] = str(sys.RELENV / "lib" / "ossl-modules")
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
@@ -775,15 +777,17 @@ def setup_openssl():
                     msg += f": {proc.stderr}"
                 debug(msg)
             else:
-                _, directory = proc.stdout.split(":")
+                try:
+                    _, directory = proc.stdout.split(":")
+                except ValueError:
+                    debug(f"Unable to parse openssldir")
+                    return
                 path = pathlib.Path(directory.strip().strip('"'))
                 if not os.environ.get("SSL_CERT_DIR"):
                     os.environ["SSL_CERT_DIR"] = str(path / "certs")
                 cert_file = path / "cert.pem"
                 if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
                     os.environ["SSL_CERT_FILE"] = str(cert_file)
-        if "OPENSSL_MODULES" not in os.environ:
-            os.environ["OPENSSL_MODULES"] = str(sys.RELENV / "lib" / "ossl-modules")
 
 
 def setup_crossroot():
