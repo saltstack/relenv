@@ -12,7 +12,6 @@ import sys
 import tarfile
 import textwrap
 import time
-import urllib.error
 
 # relenv package version
 __version__ = "0.13.3"
@@ -356,6 +355,7 @@ def fetch_url(url, fp, backoff=3, timeout=30):
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
     import urllib.request
+    import urllib.error
 
     if backoff < 1:
         backoff = 1

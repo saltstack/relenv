@@ -780,7 +780,7 @@ def setup_openssl():
                 try:
                     _, directory = proc.stdout.split(":")
                 except ValueError:
-                    debug(f"Unable to parse openssldir")
+                    debug("Unable to parse openssldir")
                     return
                 path = pathlib.Path(directory.strip().strip('"'))
                 if not os.environ.get("SSL_CERT_DIR"):
