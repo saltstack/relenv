@@ -354,8 +354,8 @@ def fetch_url(url, fp, backoff=3, timeout=30):
     This method will store the contents in the given file like object.
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     if backoff < 1:
         backoff = 1
