@@ -1,3 +1,10 @@
+0.13.4
+======
+
+* Fix pip installing multiple packages with scripts to a target directory
+* Finish bootstrap before importing hashlib so our openssl modules will be found.
+
+
 0.13.3
 ======
 
