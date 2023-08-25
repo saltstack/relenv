@@ -1,6 +1,6 @@
 0.13.5
 ======
-* Bump to Python 3.10.13 and 3.11.5 due to CVE-2023-40217
+* Bump to Python 3.10.13 and 3.11.5 due to CVE-2023-40217 and CVE-2023-41105
 
 
 0.13.4
