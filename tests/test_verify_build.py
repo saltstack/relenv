@@ -937,6 +937,11 @@ def test_legacy_hashlib(pipexec, pyexec, build):
     Verify hashlib can find the legacy openssl provider.
     """
     env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+
+    # https://github.com/openssl/openssl/issues/16079
+    if sys.platform == "darwin":
+        env["DYLD_LIBRARY_PATH"] = str(build / "lib")
+
     with open(env["OPENSSL_CONF"], "w") as fp:
         fp.write(
             textwrap.dedent(

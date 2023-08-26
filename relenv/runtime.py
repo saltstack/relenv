@@ -757,10 +757,7 @@ def setup_openssl():
     Configure openssl certificate locations.
     """
     if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
-        if sys.platform == "darwin":
-            os.environ["OPENSSL_MODULES"] = str(sys.RELENV / "lib" / "ossl-modules")
-        else:
-            set_openssl_search_path(str(sys.RELENV / "lib" / "ossl-modules"))
+        set_openssl_search_path(str(sys.RELENV / "lib" / "ossl-modules"))
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
