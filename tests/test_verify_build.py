@@ -4,6 +4,7 @@
 Verify relenv builds.
 """
 import os
+import packaging
 import pathlib
 import platform
 import shutil
@@ -173,7 +174,7 @@ def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
 @pytest.mark.skip_on_darwin
 @pytest.mark.skip_on_windows
 @pytest.mark.skipif(
-    get_build_version() == "3.11.4", reason="3.11.4 will not work with 3005.x"
+    packaging.version.parse(get_build_version()) >= packaging.version.parse("3.11.4"), reason="3.11.4 will not work with 3005.x"
 )
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     packages = [
