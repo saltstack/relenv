@@ -460,7 +460,7 @@ def test_shabangs(pipexec, build, minor_version):
             build
             / "lib"
             / f"python{minor_version}"
-            / f"config-{minor_version}-{get_triplet()}"
+            / f"config-{minor_version}d-{get_triplet()}"
             / "python-config.py"
         )
         assert path.exists()
@@ -498,6 +498,12 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize("cryptography_version", ["40.0.1", "39.0.2"])
 def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version):
+    def find_library(path, search):
+        for root, dirs, files in os.walk(path):
+            for fname in files:
+                if fname.startswith(search) and fname.endswith(".so"):
+                    return fname
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
@@ -521,7 +527,7 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
         / "bindings"
     )
     if cryptography_version == "39.0.2":
-        osslinked = "_openssl.abi3.so"
+        osslinked = find_library(bindings, "_openssl")
     else:
         osslinked = "_rust.abi3.so"
     p = subprocess.run(
