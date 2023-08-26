@@ -11,6 +11,8 @@ This code is run when initializing the python interperter in a Relenv environmen
   proper glibc version.
 """
 import contextlib
+import ctypes
+import ctypes.util
 import functools
 import importlib
 import json
@@ -755,7 +757,7 @@ def setup_openssl():
     Configure openssl certificate locations.
     """
     if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
-        os.environ["OPENSSL_MODULES"] = str(sys.RELENV / "lib" / "ossl-modules")
+        set_openssl_search_path(str(sys.RELENV / "lib" / "ossl-modules"))
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
@@ -788,6 +790,20 @@ def setup_openssl():
                 cert_file = path / "cert.pem"
                 if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
                     os.environ["SSL_CERT_FILE"] = str(cert_file)
+
+
+def set_openssl_search_path(path):
+    """
+    Set the default search location for openssl modules.
+    """
+    POSSL_LIB_CTX = ctypes.c_void_p
+    libcrypto = ctypes.CDLL(ctypes.util.find_library("crypto"))
+    OSSL_PROVIDER_set_default_search_path = (
+        libcrypto.OSSL_PROVIDER_set_default_search_path
+    )
+    OSSL_PROVIDER_set_default_search_path.argtypes = (POSSL_LIB_CTX, ctypes.c_char_p)
+    OSSL_PROVIDER_set_default_search_path.restype = ctypes.c_int
+    OSSL_PROVIDER_set_default_search_path(None, path.encode())
 
 
 def setup_crossroot():
