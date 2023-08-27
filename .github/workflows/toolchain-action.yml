@@ -50,7 +50,7 @@ jobs:
       - name: Build toolchain
         # python3 -m relenv toolchain build --arch=${{ matrix.target }}
         env:
-          RELENV_TOOLCHAIN_VERSION: 0.13.14
+          RELENV_FETCH_VERSION: 0.13.14
         run: |
           python3 -m relenv toolchain fetch --arch=${{ matrix.target }}
 
