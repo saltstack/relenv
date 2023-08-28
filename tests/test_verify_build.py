@@ -48,9 +48,9 @@ pytestmark = [
 
 
 @pytest.fixture
-def build(tmpdir, build_version):
-    create("test", tmpdir, version=build_version)
-    yield pathlib.Path(tmpdir) / "test"
+def build(tmp_path, build_version):
+    create("test", tmp_path, version=build_version)
+    yield tmp_path / "test"
 
 
 @pytest.fixture
@@ -139,11 +139,10 @@ def test_imports(pyexec):
     sys.platform != "linux" and get_build_version() == "3.11.4",
     reason="3.11.4 will not work on windows yet",
 )
-def test_pip_install_salt_git(pipexec, build, tmp_path, pyexec):
+def test_pip_install_salt_git(pipexec, build, build_dir, pyexec):
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and not shutil.which("git"):
-        os.chdir(tmp_path)
         packages = [
             "./salt",
         ]
@@ -567,9 +566,8 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_pycurl(pipexec, build, minor_version, tmpdir):
+def test_install_pycurl(pipexec, build, minor_version, build_dir):
     curlver = "8.0.1"
-    os.chdir(tmpdir)
 
     # Build curl and install it into the relenv environment
     buildscript = textwrap.dedent(
@@ -637,6 +635,16 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
     subprocess.run([py3, "-c", testscript], check=True)
 
 
+@pytest.fixture
+def build_dir(tmp_path):
+    orig = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        yield tmp_path
+    finally:
+        os.chdir(orig)
+
+
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize(
     "versions",
@@ -653,8 +661,7 @@ def test_install_pycurl(pipexec, build, minor_version, tmpdir):
         },
     ],
 )
-def test_install_libgit2(pipexec, build, minor_version, tmpdir, versions):
-    os.chdir(tmpdir)
+def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
 
     buildscript = textwrap.dedent(
         """\
@@ -730,10 +737,9 @@ def test_install_libgit2(pipexec, build, minor_version, tmpdir, versions):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_python_ldap(pipexec, build, minor_version, tmpdir):
+def test_install_python_ldap(pipexec, build, minor_version, build_dir):
     saslver = "2.1.28"
     ldapver = "2.5.14"
-    os.chdir(tmpdir)
 
     buildscript = textwrap.dedent(
         """\
@@ -1008,10 +1014,13 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
         ],
         check=True,
     )
-    env = {
-        "OPENSSL_CONF": str(build / "openssl.cnf"),
-        "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
-    }
+    env = os.environ.copy()
+    env.update(
+        {
+            "OPENSSL_CONF": str(build / "openssl.cnf"),
+            "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
+        }
+    )
     with open(env["OPENSSL_CONF"], "w") as fp:
         fp.write(
             textwrap.dedent(
@@ -1026,8 +1035,6 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
             default = default_sect
             fips = fips_sect
             [default_sect]
-            activate = 1
-            [legacy_sect]
             activate = 1
             [algorithm_sect]
             default_properties = fips=yes
