@@ -12,7 +12,6 @@ This code is run when initializing the python interperter in a Relenv environmen
 """
 import contextlib
 import ctypes
-import ctypes.util
 import functools
 import importlib
 import json
@@ -756,8 +755,28 @@ def setup_openssl():
     """
     Configure openssl certificate locations.
     """
-    if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
-        set_openssl_search_path(str(sys.RELENV / "lib" / "ossl-modules"))
+    if "OPENSSL_MODULES" not in os.environ:
+        openssl_bin = shutil.which("openssl")
+        proc = subprocess.run(
+            [openssl_bin, "version", "-m"],
+            universal_newlines=True,
+            shell=False,
+            check=False,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            msg = "Unable to get the modules directory from openssl"
+            if proc.stderr:
+                msg += f": {proc.stderr}"
+            debug(msg)
+        else:
+            try:
+                _, directory = proc.stdout.split(":")
+            except ValueError:
+                debug("Unable to parse modules dir")
+                return
+            path = directory.strip().strip('"')
+            set_openssl_search_path(path)
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
@@ -766,6 +785,7 @@ def setup_openssl():
         if not openssl_bin:
             debug("Could not find the 'openssl' binary in the path")
         else:
+
             proc = subprocess.run(
                 [openssl_bin, "version", "-d"],
                 universal_newlines=True,
@@ -796,8 +816,12 @@ def set_openssl_search_path(path):
     """
     Set the default search location for openssl modules.
     """
+    if sys.platform == "darwin":
+        cryptopath = str(sys.RELENV / "lib" / "libcrypto.dylib")
+    else:
+        cryptopath = str(sys.RELENV / "lib" / "libcrypto.so")
+    libcrypto = ctypes.CDLL(cryptopath)
     POSSL_LIB_CTX = ctypes.c_void_p
-    libcrypto = ctypes.CDLL(ctypes.util.find_library("crypto"))
     OSSL_PROVIDER_set_default_search_path = (
         libcrypto.OSSL_PROVIDER_set_default_search_path
     )

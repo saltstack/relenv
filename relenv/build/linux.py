@@ -358,6 +358,8 @@ def build_python(env, dirs, logfp):
         f"--host={env['RELENV_HOST']}",
         "--disable-test-modules",
         "--with-pydebug",
+        "--with-ssl-default-suites=openssl",
+        "--with-builtin-hashlib-hashes=blake2",
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:

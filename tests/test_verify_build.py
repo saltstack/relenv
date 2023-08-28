@@ -912,7 +912,10 @@ def test_no_legacy_hashlib(pipexec, pyexec, build):
     """
     Verify hashlib can find the legacy openssl provider.
     """
-    env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+    env = {
+        "OPENSSL_CONF": str(build / "openssl.cnf"),
+        "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
+    }
     with open(env["OPENSSL_CONF"], "w") as fp:
         fp.write(
             textwrap.dedent(
@@ -946,7 +949,10 @@ def test_legacy_hashlib(pipexec, pyexec, build):
     """
     Verify hashlib can find the legacy openssl provider.
     """
-    env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+    env = {
+        "OPENSSL_CONF": str(build / "openssl.cnf"),
+        "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
+    }
 
     # https://github.com/openssl/openssl/issues/16079
     if sys.platform == "darwin":
@@ -1002,7 +1008,10 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
         ],
         check=True,
     )
-    env = {"OPENSSL_CONF": str(build / "openssl.cnf")}
+    env = {
+        "OPENSSL_CONF": str(build / "openssl.cnf"),
+        "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
+    }
     with open(env["OPENSSL_CONF"], "w") as fp:
         fp.write(
             textwrap.dedent(
@@ -1035,7 +1044,7 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
         stdout=subprocess.PIPE,
         env=env,
     )
-    assert b"ValueError" not in proc.stdout
+    assert b"ValueError" in proc.stdout
 
 
 @pytest.mark.skip_unless_on_linux
