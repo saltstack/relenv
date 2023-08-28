@@ -30,12 +30,16 @@ from importlib.machinery import SourceFileLoader
 # Import any other needed modules from this same relenv. This prevents pulling
 # in a relenv from some other location in the path and is needed because these
 # imports happen before our path munghing in site in wrapsitecustomize.
-relocate = SourceFileLoader(
-    "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
-).load_module("relenv.relocate")
-common = SourceFileLoader(
-    "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
-).load_module("relenv.common")
+relocate = importlib.util.module_from_spec(
+    importlib.util.spec_from_file_location(
+        "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
+    )
+)
+common = importlib.util.module_from_spec(
+    importlib.util.spec_from_file_location(
+        "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
+    )
+)
 
 
 def get_major_version():
@@ -415,30 +419,23 @@ class RelenvImporter:
                 wrapper.loading = True
                 return self
 
-    def load_module(self, name):
-        """
-        Load an imported module.
-        """
-        for wrapper in self.wrappers:
-            if wrapper.matches(name):
-                debug(f"RelenvImporter - load_module {name}")
-                mod = wrapper(name)
-                wrapper.loading = False
-                break
-        sys.modules[name] = mod
-        return mod
-
     def create_module(self, spec):
         """
         Create the module via a spec.
         """
-        return self.load_module(spec.name)
+        return self.exec_module(spec.name)
 
     def exec_module(self, module):
         """
         Exec module noop.
         """
-        return None
+        mod = None
+        for wrapper in self.wrappers:
+            if wrapper.matches(module):
+                mod = wrapper(module)
+                wrapper.loading = False
+                sys.modules[module] = mod
+        return mod
 
 
 def wrap_sysconfig(name):
