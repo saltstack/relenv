@@ -1041,10 +1041,10 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
             "import hashlib; hashlib.md5(b'')",
         ],
         check=False,
-        stdout=subprocess.PIPE,
         env=env,
+        capture_output=True,
     )
-    assert b"ValueError" in proc.stdout
+    assert b"ValueError" in proc.stderr
 
 
 @pytest.mark.skip_unless_on_linux
