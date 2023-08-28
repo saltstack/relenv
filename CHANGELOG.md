@@ -5,6 +5,7 @@
 * Include debug symbols to enable gdb debugging
 * Set openssl module locations via c api rather than environment variable
 * Default to the system's openssl modules directory
+* Bump dependency versions
 
 
 0.13.4
