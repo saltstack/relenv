@@ -423,8 +423,8 @@ build.add(
     "libxcrypt",
     download={
         "url": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
-        "version": "4.4.33",
-        "md5sum": "d83b7bb334c4daf4e64a253b78f320da",
+        "version": "4.4.36",
+        "md5sum": "b84cd4104e08c975063ec6c4d0372446",
         "checkfunc": github_version,
         "checkurl": "https://github.com/besser82/libxcrypt/releases/",
     },
@@ -435,8 +435,8 @@ build.add(
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
-        "version": "5.4.2",
-        "md5sum": "4ac4e5da95aa8604a81e32079cb00d42",
+        "version": "5.4.4",
+        "md5sum": "b9c34fed669c3e84aa1fa1246a99943b",
         "checkfunc": tarball_version,
     },
 )
@@ -447,8 +447,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3410200",
-        "md5sum": "862075fd1c38324878ef809eda39edfe",
+        "version": "3430000",
+        "md5sum": "f321a958aed13fb5f8773ae2f3504c0b",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
@@ -510,8 +510,8 @@ build.add(
     download={
         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/zlib-{version}.tar.gz",
-        "version": "1.2.13",
-        "md5sum": "9b8aa094c4e5765dabf4da391f00d15c",
+        "version": "1.3",
+        "md5sum": "60373b133d630f74f4a1f94c1185a53f",
         "checkfunc": tarball_version,
     },
 )
@@ -534,8 +534,8 @@ build.add(
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/krb5-{version}.tar.gz",
-        "version": "1.20",
-        "md5sum": "e88657aca6e6b0528c11a78643498bd5",
+        "version": "1.21",
+        "md5sum": "304b335236d86a7e8effec31bd782baf",
         "checkfunc": krb_version,
         "checkurl": "https://kerberos.org/dist/krb5/",
     },

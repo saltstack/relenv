@@ -89,8 +89,8 @@ build.add(
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
-        "version": "5.4.2",
-        "md5sum": "4ac4e5da95aa8604a81e32079cb00d42",
+        "version": "5.4.4",
+        "md5sum": "b9c34fed669c3e84aa1fa1246a99943b",
     },
 )
 
@@ -100,8 +100,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3410200",
-        "md5sum": "862075fd1c38324878ef809eda39edfe",
+        "version": "3430000",
+        "md5sum": "f321a958aed13fb5f8773ae2f3504c0b",
     },
 )
 
