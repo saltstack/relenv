@@ -3,6 +3,7 @@
 """
 Verify relenv builds.
 """
+import contextlib
 import os
 import pathlib
 import platform
@@ -48,9 +49,9 @@ pytestmark = [
 
 
 @pytest.fixture
-def build(tmpdir, build_version):
-    create("test", tmpdir, version=build_version)
-    yield pathlib.Path(tmpdir) / "test"
+def build(tmp_path, build_version):
+    create("test", tmp_path, version=build_version)
+    yield tmp_path / "test"
 
 
 @pytest.fixture
@@ -567,74 +568,74 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_pycurl(pipexec, build, minor_version, tmpdir):
+def test_install_pycurl(pipexec, build, minor_version, tmp_path):
     curlver = "8.0.1"
-    os.chdir(tmpdir)
+    with contextlib.chdir(tmp_path):
 
-    # Build curl and install it into the relenv environment
-    buildscript = textwrap.dedent(
-        """\
-    set -e
-    wget https://curl.se/download/curl-{curlver}.tar.gz
-    tar xvf curl-{curlver}.tar.gz
-    cd curl-{curlver}
-    source <({build}/bin/relenv buildenv)
-    export LDFLAGS="${{LDFLAGS}} -Wl,-rpath-link,${{RELENV_PATH}}/lib"
-    env
-    ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
-    make
-    make install
+        # Build curl and install it into the relenv environment
+        buildscript = textwrap.dedent(
+            """\
+        set -e
+        wget https://curl.se/download/curl-{curlver}.tar.gz
+        tar xvf curl-{curlver}.tar.gz
+        cd curl-{curlver}
+        source <({build}/bin/relenv buildenv)
+        export LDFLAGS="${{LDFLAGS}} -Wl,-rpath-link,${{RELENV_PATH}}/lib"
+        env
+        ./configure --prefix=$RELENV_PATH --with-openssl=$RELENV_PATH
+        make
+        make install
 
-    # Fix any non-relative rpaths
-    {build}/bin/relenv check
-    """
-    )
-    with open("buildcurl.sh", "w") as fp:
-        fp.write(
-            buildscript.format(
-                curlver=curlver,
-                build=build,
+        # Fix any non-relative rpaths
+        {build}/bin/relenv check
+        """
+        )
+        with open("buildcurl.sh", "w") as fp:
+            fp.write(
+                buildscript.format(
+                    curlver=curlver,
+                    build=build,
+                )
             )
+
+        subprocess.run(["/usr/bin/bash", "buildcurl.sh"], check=True)
+
+        # Make sure curl-config exists.
+        assert (build / "bin" / "curl-config").exists()
+
+        # Add the relenv environment to the path so pycurl can find the curl-config
+        # executable
+        env = os.environ.copy()
+        env["PATH"] = f"{build}/bin:{env['PATH']}"
+        env["RELENV_BUILDENV"] = "yes"
+
+        # Install pycurl
+        subprocess.run(
+            [str(pipexec), "install", "pycurl", "--no-cache"], env=env, check=True
         )
 
-    subprocess.run(["/usr/bin/bash", "buildcurl.sh"], check=True)
+        # Move the relenv environment, if something goes wrong this will break the linker.
+        b2 = build.parent / "test2"
+        build.rename(b2)
 
-    # Make sure curl-config exists.
-    assert (build / "bin" / "curl-config").exists()
-
-    # Add the relenv environment to the path so pycurl can find the curl-config
-    # executable
-    env = os.environ.copy()
-    env["PATH"] = f"{build}/bin:{env['PATH']}"
-    env["RELENV_BUILDENV"] = "yes"
-
-    # Install pycurl
-    subprocess.run(
-        [str(pipexec), "install", "pycurl", "--no-cache"], env=env, check=True
-    )
-
-    # Move the relenv environment, if something goes wrong this will break the linker.
-    b2 = build.parent / "test2"
-    build.rename(b2)
-
-    # Test pycurl
-    py3 = str(b2 / "bin" / "python3")
-    testscript = textwrap.dedent(
-        """\
-    import pycurl
-    import io
-    import re
-    curl = pycurl.Curl()
-    buff = io.BytesIO()
-    hdr = io.BytesIO()
-    curl.setopt(pycurl.URL, 'http://example.org')
-    curl.setopt(pycurl.WRITEFUNCTION, buff.write)
-    curl.setopt(pycurl.HEADERFUNCTION, hdr.write)
-    curl.perform()
-    print(curl.getinfo(pycurl.HTTP_CODE))
-    """
-    )
-    subprocess.run([py3, "-c", testscript], check=True)
+        # Test pycurl
+        py3 = str(b2 / "bin" / "python3")
+        testscript = textwrap.dedent(
+            """\
+        import pycurl
+        import io
+        import re
+        curl = pycurl.Curl()
+        buff = io.BytesIO()
+        hdr = io.BytesIO()
+        curl.setopt(pycurl.URL, 'http://example.org')
+        curl.setopt(pycurl.WRITEFUNCTION, buff.write)
+        curl.setopt(pycurl.HEADERFUNCTION, hdr.write)
+        curl.perform()
+        print(curl.getinfo(pycurl.HTTP_CODE))
+        """
+        )
+        subprocess.run([py3, "-c", testscript], check=True)
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1008,10 +1009,13 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
         ],
         check=True,
     )
-    env = {
-        "OPENSSL_CONF": str(build / "openssl.cnf"),
-        "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
-    }
+    env = os.environ.copy()
+    env.update(
+        {
+            "OPENSSL_CONF": str(build / "openssl.cnf"),
+            "OPENSSL_MODULES": str(build / "lib" / "ossl-modules"),
+        }
+    )
     with open(env["OPENSSL_CONF"], "w") as fp:
         fp.write(
             textwrap.dedent(
@@ -1026,8 +1030,6 @@ def test_hashlib_fips_module(pipexec, pyexec, build):
             default = default_sect
             fips = fips_sect
             [default_sect]
-            activate = 1
-            [legacy_sect]
             activate = 1
             [algorithm_sect]
             default_properties = fips=yes
