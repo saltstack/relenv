@@ -14,7 +14,6 @@ import contextlib
 import ctypes
 import functools
 import importlib
-import importlib.util
 import json
 import os
 import pathlib
@@ -36,7 +35,12 @@ import warnings
 def path_import(name, path):
     """
     Import module from a path.
+
+    This causes hashlib to be imported because of importing importlib.util so
+    it can not be used until after openssl has been configured.
     """
+    import importlib.util
+
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -44,11 +48,26 @@ def path_import(name, path):
     return module
 
 
-relocate = path_import(
-    "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
-)
+def common():
+    """
+    Late import relenv common.
+    """
+    if not hasattr(common, "common"):
+        common.common = path_import(
+            "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
+        )
+    return common.common
 
-common = path_import("relenv.common", str(pathlib.Path(__file__).parent / "common.py"))
+
+def relocate():
+    """
+    Late import relenv relocate.
+    """
+    if not hasattr(relocate, "relocate"):
+        relocate.relocate = path_import(
+            "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
+        )
+    return relocate.relocate
 
 
 def get_major_version():
@@ -86,12 +105,13 @@ def relenv_root():
     """
     Return the relenv module root.
     """
+    MODULE_DIR = pathlib.Path(__file__).resolve().parent
     # XXX Look for rootdir / ".relenv"
     if sys.platform == "win32":
         # /Lib/site-packages/relenv/
-        return common.MODULE_DIR.parent.parent.parent
+        return MODULE_DIR.parent.parent.parent
     # /lib/pythonX.X/site-packages/relenv/
-    return common.MODULE_DIR.parent.parent.parent.parent
+    return MODULE_DIR.parent.parent.parent.parent
 
 
 def _build_shebang(func, *args, **kwargs):
@@ -108,7 +128,7 @@ def _build_shebang(func, *args, **kwargs):
         if TARGET.TARGET:
             scripts = pathlib.Path(TARGET.PATH).absolute() / "bin"
         try:
-            interpreter = common.relative_interpreter(
+            interpreter = common().relative_interpreter(
                 sys.RELENV, scripts, pathlib.Path(sys.executable).resolve()
             )
         except ValueError:
@@ -117,7 +137,7 @@ def _build_shebang(func, *args, **kwargs):
         debug("Relenv - _build_shebang {scripts} {interpreter}")
         if sys.platform == "win32":
             return str(pathlib.Path("#!<launcher_dir>") / interpreter).encode()
-        return common.format_shebang("/" / interpreter).encode()
+        return common().format_shebang("/" / interpreter).encode()
 
     return wrapped
 
@@ -280,9 +300,9 @@ def install_wheel_wrapper(func):
                 if not file.exists():
                     debug(f"Relenv - File not found {file}")
                     continue
-                if relocate.is_elf(file):
+                if relocate().is_elf(file):
                     debug(f"Relenv - Found elf {file}")
-                    relocate.handle_elf(plat / file, rootdir / "lib", True, rootdir)
+                    relocate().handle_elf(plat / file, rootdir / "lib", True, rootdir)
 
     return wrapper
 
@@ -372,9 +392,11 @@ def install_legacy_wrapper(func):
                     if not file.exists():
                         debug(f"Relenv - File not found {file}")
                         continue
-                    if relocate.is_elf(file):
+                    if relocate().is_elf(file):
                         debug(f"Relenv - Found elf {file}")
-                        relocate.handle_elf(plat / file, rootdir / "lib", True, rootdir)
+                        relocate().handle_elf(
+                            plat / file, rootdir / "lib", True, rootdir
+                        )
 
     return wrapper
 
@@ -536,8 +558,8 @@ def wrap_pip_build_wheel(name):
     def wrap(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            dirs = common.work_dirs()
-            toolchain = dirs.toolchain / common.get_triplet()
+            dirs = common().work_dirs()
+            toolchain = dirs.toolchain / common().get_triplet()
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
@@ -737,8 +759,8 @@ def install_cargo_config():
     """
     if sys.platform != "linux":
         return
-    triplet = common.get_triplet()
-    dirs = common.work_dirs()
+    triplet = common().get_triplet()
+    dirs = common().work_dirs()
     toolchain = dirs.toolchain / triplet
     if not toolchain.exists():
         debug("Unable to set CARGO_HOME no toolchain exists")
@@ -769,6 +791,17 @@ def setup_openssl():
     Configure openssl certificate locations.
     """
     if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
+        # First load relenv's legacy provider then set the modules directory to
+        # the system's modules directory if we can determine it.
+        set_openssl_modules_dir(str(sys.RELENV / "lib" / "ossl-modules"))
+
+        if load_openssl_provider("default") == 0:
+            debug("Unable to load the default openssl provider")
+        if load_openssl_provider("legacy") == 0:
+            debug("Unable to load the legacy openssl provider")
+
+        # Now we try and determine the system's openssl modules directory. This
+        # is so we can use the system installed fips provider if it configured.
         openssl_bin = shutil.which("openssl")
         proc = subprocess.run(
             [openssl_bin, "version", "-m"],
@@ -789,7 +822,7 @@ def setup_openssl():
                 debug("Unable to parse modules dir")
                 return
             path = directory.strip().strip('"')
-            set_openssl_search_path(path)
+            set_openssl_modules_dir(path)
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
@@ -825,7 +858,7 @@ def setup_openssl():
                     os.environ["SSL_CERT_FILE"] = str(cert_file)
 
 
-def set_openssl_search_path(path):
+def set_openssl_modules_dir(path):
     """
     Set the default search location for openssl modules.
     """
@@ -841,6 +874,22 @@ def set_openssl_search_path(path):
     OSSL_PROVIDER_set_default_search_path.argtypes = (POSSL_LIB_CTX, ctypes.c_char_p)
     OSSL_PROVIDER_set_default_search_path.restype = ctypes.c_int
     OSSL_PROVIDER_set_default_search_path(None, path.encode())
+
+
+def load_openssl_provider(name):
+    """
+    Load an openssl module.
+    """
+    if sys.platform == "darwin":
+        cryptopath = str(sys.RELENV / "lib" / "libcrypto.dylib")
+    else:
+        cryptopath = str(sys.RELENV / "lib" / "libcrypto.so")
+    libcrypto = ctypes.CDLL(cryptopath)
+    POSSL_LIB_CTX = ctypes.c_void_p
+    OSSL_PROVIDER_load = libcrypto.OSSL_PROVIDER_load
+    OSSL_PROVIDER_load.argtypes = (POSSL_LIB_CTX, ctypes.c_char_p)
+    OSSL_PROVIDER_load.restype = ctypes.c_int
+    return OSSL_PROVIDER_load(None, name.encode())
 
 
 def setup_crossroot():
@@ -887,7 +936,7 @@ def wrapsitecustomize(func):
         if sitecustomize is None or "pip-build-env" not in sitecustomize.__file__:
             _orig = sys.path[:]
             # Replace sys.path
-            sys.path[:] = common.sanitize_sys_path(sys.path)
+            sys.path[:] = common().sanitize_sys_path(sys.path)
             debug(f"original sys.path was {_orig}")
             debug(f"new sys.path is {sys.path}")
         else:
@@ -911,8 +960,8 @@ def bootstrap():
         lineno=914,
     )
     sys.RELENV = relenv_root()
+    setup_openssl()
     site.execsitecustomize = wrapsitecustomize(site.execsitecustomize)
     setup_crossroot()
-    setup_openssl()
     install_cargo_config()
     sys.meta_path = [importer] + sys.meta_path

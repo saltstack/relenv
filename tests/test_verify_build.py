@@ -914,6 +914,7 @@ def test_install_with_target_ignore_installed(pipexec, pyexec, build):
     assert "already satisfied: cffi" not in out
 
 
+@pytest.mark.skipif(True, reason="This test is no longer valid, refactor needed")
 @pytest.mark.skip_on_windows
 def test_no_legacy_hashlib(pipexec, pyexec, build):
     """
