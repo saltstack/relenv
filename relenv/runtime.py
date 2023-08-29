@@ -35,7 +35,7 @@ import warnings
 
 def path_import(name, path):
     spec = importlib.util.spec_from_file_location(
-        "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
+        "relenv.common", path
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
