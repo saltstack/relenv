@@ -1,3 +1,10 @@
+0.13.7
+======
+
+* Load relenv's openssl legacy provider before setting modules dir to system
+  location for the system's fips provider.
+
+
 0.13.6
 ======
 
