@@ -1,3 +1,11 @@
+0.13.6
+======
+
+* Do not set openssl modules directory on windows since were still on 1.1.x
+* Fix load module deprecations warnings
+* Ignore load module imporet warnings for now
+
+
 0.13.5
 ======
 
