@@ -766,7 +766,7 @@ def setup_openssl():
     """
     Configure openssl certificate locations.
     """
-    if "OPENSSL_MODULES" not in os.environ:
+    if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
         openssl_bin = shutil.which("openssl")
         proc = subprocess.run(
             [openssl_bin, "version", "-m"],
