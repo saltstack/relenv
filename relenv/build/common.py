@@ -67,14 +67,14 @@ NODOWLOAD = False
 RELENV_PTH = (
     "import os; "
     "import sys; "
-    "from importlib import util as U; "
-    "from pathlib import Path as P; "
-    "s = U.spec_from_file_location("
-    "'relenv.runtime', str(P(__file__).parent / 'site-packages' / 'relenv' / 'runtime.py')"
+    "from importlib import util; "
+    "from pathlib import Path; "
+    "spec = util.spec_from_file_location("
+    "'relenv.runtime', str(Path(__file__).parent / 'site-packages' / 'relenv' / 'runtime.py')"
     "); "
-    "m = U.module_from_spec(s); "
-    "sys.modules['relenv.runtime'] = m; "
-    "s.loader.exec_module(m); m.bootstrap();"
+    "mod = util.module_from_spec(spec); "
+    "sys.modules['relenv.runtime'] = mod; "
+    "spec.loader.exec_module(mod); mod.bootstrap();"
 )
 
 
