@@ -34,9 +34,10 @@ import warnings
 
 
 def path_import(name, path):
-    spec = importlib.util.spec_from_file_location(
-        "relenv.common", path
-    )
+    """
+    Import module from a path.
+    """
+    spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     sys.modules[name] = module
@@ -46,6 +47,7 @@ def path_import(name, path):
 relocate = path_import(
     "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
 )
+
 common = path_import("relenv.common", str(pathlib.Path(__file__).parent / "common.py"))
 
 
