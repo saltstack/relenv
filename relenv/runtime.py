@@ -14,6 +14,7 @@ import contextlib
 import ctypes
 import functools
 import importlib
+import importlib.util
 import json
 import os
 import pathlib
@@ -22,7 +23,7 @@ import site
 import subprocess
 import sys
 import textwrap
-from importlib.machinery import SourceFileLoader
+import warnings
 
 # relenv.pth has a __file__ which is set to the path to site.py of the python
 # interpreter being used. We're using that to determine the proper
@@ -30,12 +31,22 @@ from importlib.machinery import SourceFileLoader
 # Import any other needed modules from this same relenv. This prevents pulling
 # in a relenv from some other location in the path and is needed because these
 # imports happen before our path munghing in site in wrapsitecustomize.
-relocate = SourceFileLoader(
+
+
+def path_import(name, path):
+    spec = importlib.util.spec_from_file_location(
+        "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sys.modules[name] = module
+    return module
+
+
+relocate = path_import(
     "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
-).load_module("relenv.relocate")
-common = SourceFileLoader(
-    "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
-).load_module("relenv.common")
+)
+common = path_import("relenv.common", str(pathlib.Path(__file__).parent / "common.py"))
 
 
 def get_major_version():
@@ -890,6 +901,13 @@ def bootstrap():
     """
     Bootstrap the relenv environment.
     """
+    warnings.filterwarnings(
+        "ignore",
+        message=".*falling back to find_module.*",
+        category=ImportWarning,
+        module="importlib._bootstrap",
+        lineno=914,
+    )
     sys.RELENV = relenv_root()
     site.execsitecustomize = wrapsitecustomize(site.execsitecustomize)
     setup_crossroot()
