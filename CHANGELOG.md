@@ -1,3 +1,9 @@
+0.13.8
+======
+
+* Fix wart in python-config's shebang cuasing syntax error.
+
+
 0.13.7
 ======
 
