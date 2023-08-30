@@ -1422,7 +1422,7 @@ def finalize(env, dirs, logfp):
         pyconf = f"config-{env['RELENV_PY_MAJOR_VERSION']}d-{env['RELENV_HOST']}"
         patch_shebang(
             str(pymodules / pyconf / "python-config.py"),
-            "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}")),
+            "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}d")),
             format_shebang("../../../bin/python3"),
         )
 
