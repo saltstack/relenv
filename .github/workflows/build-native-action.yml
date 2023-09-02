@@ -176,11 +176,11 @@ jobs:
         env:
           RELENV_FETCH_VERSION: 0.13.4
         run: |
-          python3 -m relenv fetch --python=3.10.11
+          python3 -m relenv fetch --python=3.10.12
 
       - name: Build Python with Relenv
         env:
-          RELENV_NATIVE_PY_VERSION: 3.10.11
+          RELENV_NATIVE_PY_VERSION: 3.10.12
         run: |
           python -m relenv build --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
