@@ -72,7 +72,7 @@ def build_python(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("darwin", populate_env=populate_env, version="3.10.13")
+build = builds.add("darwin", populate_env=populate_env, version="3.10.12")
 
 build.add(
     "openssl",
@@ -116,7 +116,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.gz",
-        "md5sum": "8847dc6458d1431d0ae0f55942deeb89",
+        "md5sum": "49b0342476b984e106d308c25d657f12",
         "version": build.version,
     },
 )
@@ -130,5 +130,5 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.5", md5sum="8847dc6458d1431d0ae0f55942deeb89")
+build = build.copy(version="3.11.4", md5sum="fb7f7eae520285788449d569e45b6718")
 builds.add("darwin", builder=build)
