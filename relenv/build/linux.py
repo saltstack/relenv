@@ -357,7 +357,7 @@ def build_python(env, dirs, logfp):
         f"--build={env['RELENV_BUILD']}",
         f"--host={env['RELENV_HOST']}",
         "--disable-test-modules",
-        "--with-pydebug",
+        #"--with-pydebug",
         "--with-ssl-default-suites=openssl",
         "--with-builtin-hashlib-hashes=blake2",
     ]
