@@ -1419,10 +1419,10 @@ def finalize(env, dirs, logfp):
         )
 
     if sys.platform == "linux":
-        pyconf = f"config-{env['RELENV_PY_MAJOR_VERSION']}d-{env['RELENV_HOST']}"
+        pyconf = f"config-{env['RELENV_PY_MAJOR_VERSION']}-{env['RELENV_HOST']}"
         patch_shebang(
             str(pymodules / pyconf / "python-config.py"),
-            "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}d")),
+            "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}")),
             format_shebang("../../../bin/python3"),
         )
 

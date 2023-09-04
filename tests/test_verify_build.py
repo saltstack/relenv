@@ -463,7 +463,7 @@ def test_shabangs(pipexec, build, minor_version):
             build
             / "lib"
             / f"python{minor_version}"
-            / f"config-{minor_version}d-{get_triplet()}"
+            / f"config-{minor_version}-{get_triplet()}"
             / "python-config.py"
         )
         assert path.exists()
