@@ -44,6 +44,7 @@ def populate_env(env, dirs):
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
     cflags = [
+        "-g",
         "-I{prefix}/include",
         "-I{prefix}/include/readline",
         "-I{prefix}/include/ncursesw",
@@ -357,7 +358,6 @@ def build_python(env, dirs, logfp):
         f"--build={env['RELENV_BUILD']}",
         f"--host={env['RELENV_HOST']}",
         "--disable-test-modules",
-        "--with-pydebug",
         "--with-ssl-default-suites=openssl",
         "--with-builtin-hashlib-hashes=blake2",
     ]
