@@ -1,3 +1,9 @@
+0.13.9
+======
+
+* Revert with-dbg flag on python builds.
+
+
 0.13.8
 ======
 
