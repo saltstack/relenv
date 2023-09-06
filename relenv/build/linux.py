@@ -37,6 +37,7 @@ def populate_env(env, dirs):
     env["CXX"] = "{}/bin/{}-g++ -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
     env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
     ldflags = [
+        "-Wl,--build-id=sha1",
         "-Wl,--rpath={prefix}/lib",
         "-L{prefix}/lib",
         "-L{}/{RELENV_HOST}/sysroot/lib".format(dirs.toolchain, **env),
