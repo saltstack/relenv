@@ -1,3 +1,9 @@
+0.13.10
+======
+
+* Add a build-id for downstream rpm packaging
+
+
 0.13.9
 ======
 
