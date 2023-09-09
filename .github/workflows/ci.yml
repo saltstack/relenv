@@ -137,6 +137,7 @@ jobs:
     needs:
       - build-python-package
       - build-native
+      - test-fips
       #- build-cross
     with:
       version: "${{ needs.build-python-package.outputs.version }}"
@@ -160,6 +161,7 @@ jobs:
       - test
       - docs
       - build-python-package
+      - test-fips
       - upload-build-artifacts
       - upload-toolchain-artifacts
     secrets:
