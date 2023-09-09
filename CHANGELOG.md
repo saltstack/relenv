@@ -1,5 +1,12 @@
+0.13.11
+=======
+
+* Add regression test for system fips module usage
+* Fix fips module usage on photon os.
+
+
 0.13.10
-======
+=======
 
 * Add a build-id for downstream rpm packaging
 
