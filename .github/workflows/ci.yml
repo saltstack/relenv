@@ -96,6 +96,13 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  test-fips:
+    name: Test Fips Mode
+    needs:
+      - build-native
+      - get-changed-files
+    uses: ./.github/workflows/test-fips-action.yml
+
   #build-cross:
   #  name: Python Cross Builds
   #  uses: ./.github/workflows/build-action.yml

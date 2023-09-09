@@ -1,0 +1,47 @@
+name: Test FIPS Mode
+
+on:
+  workflow_call:
+
+jobs:
+  container-test-job:
+    runs-on: ubuntu-latest
+    container:
+      image: photon:4.0
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - 3.10.13
+          - 3.11.5
+        arch:
+          - x86_64
+    env:
+      RELENV_DATA: ${{ github.workspace }}
+
+    steps:
+
+      - name: Install System Dependencies
+        run: |
+          yum install -y openssl-fips-provider python3 python3-virtualenv git gcc
+
+      - uses: actions/checkout@v3
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.version }}-${{ matrix.arch }}-linux-gnu.tar.xz
+          path: ./build/
+
+      - name: Create Virtual Environment
+        run: |
+          virtualenv venv
+
+      - name: Install Virtual Environment Dependencies
+        run: |
+          ./venv/bin/pip3 install -r requirements/tests.txt
+
+      - name: Run Fips Tests
+        run: |
+          ./venv/bin/python3 -m pytest -v tests/test_fips_photon.py
