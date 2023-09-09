@@ -99,6 +99,7 @@ def debug(string):
     """
     if os.environ.get("RELENV_DEBUG"):
         print(string)
+        sys.stdout.flush()
 
 
 def relenv_root():
@@ -791,17 +792,12 @@ def setup_openssl():
     Configure openssl certificate locations.
     """
     if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
-        # First load relenv's legacy provider then set the modules directory to
-        # the system's modules directory if we can determine it.
-        set_openssl_modules_dir(str(sys.RELENV / "lib" / "ossl-modules"))
+        # First try and load the system's fips provider. Then load relenv's
+        # legacy and default providers. The fips provider must be loaded first
+        # in order OpenSSl to work properly..
 
-        if load_openssl_provider("default") == 0:
-            debug("Unable to load the default openssl provider")
-        if load_openssl_provider("legacy") == 0:
-            debug("Unable to load the legacy openssl provider")
-
-        # Now we try and determine the system's openssl modules directory. This
-        # is so we can use the system installed fips provider if it configured.
+        # Try and determine the system's openssl modules directory. This is so
+        # we can use the system installed fips provider if it configured.
         openssl_bin = shutil.which("openssl")
         proc = subprocess.run(
             [openssl_bin, "version", "-m"],
@@ -823,6 +819,16 @@ def setup_openssl():
                 return
             path = directory.strip().strip('"')
             set_openssl_modules_dir(path)
+            if load_openssl_provider("fips") == 0:
+                debug("Unable to load the fips openssl provider")
+
+        set_openssl_modules_dir(str(sys.RELENV / "lib" / "ossl-modules"))
+
+        if load_openssl_provider("default") == 0:
+            debug("Unable to load the default openssl provider")
+        if load_openssl_provider("legacy") == 0:
+            debug("Unable to load the legacy openssl provider")
+
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
