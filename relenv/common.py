@@ -14,7 +14,7 @@ import textwrap
 import time
 
 # relenv package version
-__version__ = "0.13.11"
+__version__ = "0.13.12"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
