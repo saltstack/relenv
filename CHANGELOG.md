@@ -1,3 +1,15 @@
+0.13.13
+=======
+
+* Update python 3.11 to 3.11.6
+
+
+0.13.12
+=======
+
+* Update openssl (CVE-2023-4807) and sqlite to newest versions.
+
+
 0.13.11
 =======
 
