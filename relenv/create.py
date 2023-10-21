@@ -88,6 +88,9 @@ def create(name, dest=None, arch=None, version=None):
     else:
         writeto = pathlib.Path(name).resolve()
 
+    if version is None:
+        version = platform_versions()[0]
+
     if pathlib.Path(writeto).exists():
         raise CreateException("The requested path already exists.")
 
