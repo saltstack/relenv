@@ -5,9 +5,8 @@ Helper for building libraries to install into a relenv environment.
 """
 import logging
 import sys
-import textwrap
 
-from .common import get_triplet, work_dirs
+from .common import RelenvException, get_triplet, work_dirs
 
 log = logging.getLogger()
 
@@ -25,6 +24,54 @@ def setup_parser(subparsers):
     subparser.set_defaults(func=main)
 
 
+def is_relenv():
+    """
+    True when we are in a relenv environment.
+    """
+    return hasattr(sys, "RELENV")
+
+
+def buildenv(relenv_path=None):
+    """
+    Relenv build environment variable mapping.
+    """
+    if not relenv_path:
+        if not is_relenv():
+            raise RelenvException("Not in a relenv environment")
+        relenv_path = sys.RELENV
+
+    if sys.platform != "linux":
+        raise RelenvException("buildenv is only supported on Linux")
+
+    dirs = work_dirs()
+    triplet = get_triplet()
+    toolchain = dirs.toolchain / get_triplet()
+    return {
+        "RELENV_BUILDENV": 1,
+        "TOOLCHAIN_PATH": f"{toolchain}",
+        "RELENV_PATH": f"{relenv_path}",
+        "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
+        "CXX": f"{toolchain}/bin/{triplet}-g++ -no-pie",
+        "CFLAGS": (
+            f"-L{relenv_path}/lib -L{toolchain}/sysroot/lib "
+            f"-I{relenv_path}/include "
+            f"-I{toolchain}/sysroot/usr/include"
+        ),
+        "CPPFLAGS": (
+            f"-L{relenv_path}/lib -L{toolchain}/sysroot/lib "
+            f"-I{relenv_path}/include -I{toolchain}/sysroot/usr/include"
+        ),
+        "CMAKE_CFLAGS": (
+            f"-L{relenv_path}/lib -L{toolchain}/sysroot/lib "
+            f"-I{relenv_path}/include -I{toolchain}/sysroot/usr/include"
+        ),
+        "LDFLAGS": (
+            f"-L{relenv_path}/lib -L{toolchain}/sysroot/lib "
+            f"-Wl,-rpath,{relenv_path}/lib"
+        ),
+    }
+
+
 def main(args):
     """
     The entrypoint into the ``relenv buildenv`` command.
@@ -33,36 +80,18 @@ def main(args):
     :type args: argparse.Namespace
     """
     logging.basicConfig(level=logging.INFO)
-    if not hasattr(sys, "RELENV"):
+    if not is_relenv():
         log.error("Not in a relenv environment.")
         sys.exit(1)
     if sys.platform != "linux":
         log.error("buildenv is only supported on Linux.")
 
-    dirs = work_dirs()
-    triplet = get_triplet()
-    toolchain = dirs.toolchain / get_triplet()
+    # dirs = work_dirs()
+    # triplet = get_triplet()
+    # toolchain = dirs.toolchain / get_triplet()
 
-    print(
-        textwrap.dedent(
-            """\
-            export RELENV_BUILDENV=1
-            export TOOLCHAIN_PATH="{toolchain}"
-            export RELENV_PATH="{relenv}"
-            export CC="${{TOOLCHAIN_PATH}}/bin/{triplet}-gcc -no-pie"
-            export CXX="${{TOOLCHAIN_PATH}}/bin/{triplet}-g++ -no-pie"
-            export CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
--I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
-            export CPPFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
--I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
-            export CMAKE_CFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
--I${{RELENV_PATH}}/include -I${{TOOLCHAIN_PATH}}/sysroot/usr/include"
-            export LDFLAGS="-L${{RELENV_PATH}}/lib -L${{TOOLCHAIN_PATH}}/sysroot/lib \
--Wl,-rpath,${{RELENV_PATH}}/lib"
-        """.format(
-                relenv=sys.RELENV,
-                toolchain=toolchain,
-                triplet=triplet,
-            )
-        )
-    )
+    script = ""
+    for k, v in buildenv().items():
+        script += f"export {k}={v}\n"
+
+    print(script)
