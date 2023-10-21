@@ -47,7 +47,7 @@ def buildenv(relenv_path=None):
     triplet = get_triplet()
     toolchain = dirs.toolchain / get_triplet()
     return {
-        "RELENV_BUILDENV": 1,
+        "RELENV_BUILDENV": "1",
         "TOOLCHAIN_PATH": f"{toolchain}",
         "RELENV_PATH": f"{relenv_path}",
         "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
