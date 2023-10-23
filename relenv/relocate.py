@@ -348,6 +348,8 @@ def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
     :type log_level: str, optional
     """
     dirs = work_dirs()
+    if not dirs.logs.exists():
+        dirs.logs.mkdir()
     logging.basicConfig(
         level=logging.getLevelName(log_level.upper()),
         format="%(asctime)s %(message)s",
