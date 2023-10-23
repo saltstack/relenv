@@ -47,6 +47,19 @@ def setup_parser(subparsers):
     )
 
 
+def fetch(version, triplet, check_hosts=CHECK_HOSTS):
+    for host in check_hosts:
+        url = f"https://{host}/relenv/{version}/build/{args.python}-{triplet}.tar.xz"
+        if check_url(url, timeout=5):
+            break
+    else:
+        print(f"Unable to find file on any hosts {' '.join(check_hosts)}")
+        sys.exit(1)
+    builddir = work_dir("build", DATA_DIR)
+    os.makedirs(builddir, exist_ok=True)
+    download_url(url, builddir)
+
+
 def main(args):
     """
     The entrypoint into the ``relenv fetch`` command.
@@ -59,13 +72,4 @@ def main(args):
     check_hosts = CHECK_HOSTS
     if os.environ.get("RELENV_FETCH_HOST", ""):
         check_hosts = [os.environ["RELENV_FETCH_HOST"]]
-    for host in check_hosts:
-        url = f"https://{host}/relenv/{version}/build/{args.python}-{triplet}.tar.xz"
-        if check_url(url, timeout=5):
-            break
-    else:
-        print(f"Unable to find file on any hosts {' '.join(check_hosts)}")
-        sys.exit(1)
-    builddir = work_dir("build", DATA_DIR)
-    os.makedirs(builddir, exist_ok=True)
-    download_url(url, builddir)
+    fetch(version, triplet, check_hosts)

@@ -36,6 +36,7 @@ LIBCLIBS = [
     "libresolv.so.2",
     "librt.so.1",
     "libthread_db.so.1",
+    "libutil.so.1",
     "libutil.so.2",
     # libgcc is not technically glibc but shares the same kind of backwards
     # compatablity guarantees.
