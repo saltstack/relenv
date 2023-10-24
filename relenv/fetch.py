@@ -47,9 +47,9 @@ def setup_parser(subparsers):
     )
 
 
-def fetch(version, triplet, check_hosts=CHECK_HOSTS):
+def fetch(version, triplet, python, check_hosts=CHECK_HOSTS):
     for host in check_hosts:
-        url = f"https://{host}/relenv/{version}/build/{args.python}-{triplet}.tar.xz"
+        url = f"https://{host}/relenv/{version}/build/{python}-{triplet}.tar.xz"
         if check_url(url, timeout=5):
             break
     else:
@@ -69,7 +69,8 @@ def main(args):
     """
     version = os.environ.get("RELENV_FETCH_VERSION", __version__)
     triplet = get_triplet(machine=args.arch)
+    python = args.python
     check_hosts = CHECK_HOSTS
     if os.environ.get("RELENV_FETCH_HOST", ""):
         check_hosts = [os.environ["RELENV_FETCH_HOST"]]
-    fetch(version, triplet, check_hosts)
+    fetch(version, triplet, python, check_hosts)
