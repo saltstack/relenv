@@ -594,6 +594,3 @@ builds.add("linux", builder=build)
 
 build = build.copy(version="3.9.18", md5sum="765576c3af57deb046819ecd57804bbb")
 builds.add("linux", builder=build)
-
-build = build.copy(version="3.12.0", md5sum="f6f4616584b23254d165f4db90c247d6")
-builds.add("linux", builder=build)
