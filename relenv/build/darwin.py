@@ -132,3 +132,5 @@ build.add(
 
 build = build.copy(version="3.11.6", md5sum="d0c5a1a31efe879723e51addf56dd206")
 builds.add("darwin", builder=build)
+build = build.copy(version="3.9.18", md5sum="765576c3af57deb046819ecd57804bbb")
+builds.add("darwin", builder=build)
