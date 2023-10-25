@@ -319,7 +319,10 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
         assert (session / "bin" / "nox").exists()
 
 
-@pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(
+    sys.platform != "linux" or get_build_version() == "3.9.18",
+    reason="m2crypto does not work on non-Linux & on Linux 3.9.18 has trouble with this test.",
+)
 def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
