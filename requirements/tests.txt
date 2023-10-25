@@ -4,3 +4,4 @@
 pytest
 pytest-skip-markers
 swig
+setuptools
