@@ -320,15 +320,15 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
 
 
 @pytest.mark.skipif(
-    sys.platform != "linux" or get_build_version() == "3.9.18",
-    reason="m2crypto does not work on non-Linux & on Linux 3.9.18 has trouble with this test.",
+    sys.platform != "linux",
+    reason="m2crypto does not work on non-Linux platforms.",
 )
 def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["LDFLAGS"] = "-L/usr/lib"
-    env["CFLAGS"] = "-I/usr/include"
-    env["SWIG_FEATURES"] = "-I/usr/include"
+    env["CFLAGS"] = "-I/usr/include -I/usr/include/x86_64-linux-gnu"
+    env["SWIG_FEATURES"] = "-I/usr/include -I/usr/include/x86_64-linux-gnu"
     p = subprocess.run(
         ["swig", "-version"],
     )
