@@ -49,6 +49,7 @@ def buildenv(relenv_path=None):
     return {
         "RELENV_BUILDENV": "1",
         "TOOLCHAIN_PATH": f"{toolchain}",
+        "TRIPLET": f"{triplet}",
         "RELENV_PATH": f"{relenv_path}",
         "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
         "CXX": f"{toolchain}/bin/{triplet}-g++ -no-pie",
