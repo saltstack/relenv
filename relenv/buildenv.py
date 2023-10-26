@@ -93,6 +93,6 @@ def main(args):
 
     script = ""
     for k, v in buildenv().items():
-        script += f"export {k}={v}\n"
+        script += f'export {k}="{v}"\n'
 
     print(script)
