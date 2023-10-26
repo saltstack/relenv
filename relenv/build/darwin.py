@@ -79,8 +79,8 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "3.1.3",
-        "md5sum": "ece430df6d3158913df0950cc70ea2b2",
+        "version": "3.1.4",
+        "md5sum": "653ad58812c751b887e8ec37e02bba70",
     },
 )
 
@@ -100,8 +100,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3430100",
-        "md5sum": "77e61befe9c3298da0504f87772a24b0",
+        "version": "3430200",
+        "md5sum": "94fb06bfebc437762e489c355ae63716",
     },
 )
 
