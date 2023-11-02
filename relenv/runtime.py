@@ -791,6 +791,11 @@ def setup_openssl():
     """
     Configure openssl certificate locations.
     """
+    openssl_bin = shutil.which("openssl")
+    if not openssl_bin:
+        debug("Could not find the 'openssl' binary in the path")
+        return
+
     if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
         # First try and load the system's fips provider. Then load relenv's
         # legacy and default providers. The fips provider must be loaded first
@@ -798,7 +803,6 @@ def setup_openssl():
 
         # Try and determine the system's openssl modules directory. This is so
         # we can use the system installed fips provider if it configured.
-        openssl_bin = shutil.which("openssl")
         proc = subprocess.run(
             [openssl_bin, "version", "-m"],
             universal_newlines=True,
@@ -833,35 +837,30 @@ def setup_openssl():
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
     if "SSL_CERT_DIR" not in os.environ and sys.platform != "win32":
-        openssl_bin = shutil.which("openssl")
-        if not openssl_bin:
-            debug("Could not find the 'openssl' binary in the path")
+        proc = subprocess.run(
+            [openssl_bin, "version", "-d"],
+            universal_newlines=True,
+            shell=False,
+            check=False,
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            msg = "Unable to get the certificates directory from openssl"
+            if proc.stderr:
+                msg += f": {proc.stderr}"
+            debug(msg)
         else:
-
-            proc = subprocess.run(
-                [openssl_bin, "version", "-d"],
-                universal_newlines=True,
-                shell=False,
-                check=False,
-                capture_output=True,
-            )
-            if proc.returncode != 0:
-                msg = "Unable to get the certificates directory from openssl"
-                if proc.stderr:
-                    msg += f": {proc.stderr}"
-                debug(msg)
-            else:
-                try:
-                    _, directory = proc.stdout.split(":")
-                except ValueError:
-                    debug("Unable to parse openssldir")
-                    return
-                path = pathlib.Path(directory.strip().strip('"'))
-                if not os.environ.get("SSL_CERT_DIR"):
-                    os.environ["SSL_CERT_DIR"] = str(path / "certs")
-                cert_file = path / "cert.pem"
-                if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
-                    os.environ["SSL_CERT_FILE"] = str(cert_file)
+            try:
+                _, directory = proc.stdout.split(":")
+            except ValueError:
+                debug("Unable to parse openssldir")
+                return
+            path = pathlib.Path(directory.strip().strip('"'))
+            if not os.environ.get("SSL_CERT_DIR"):
+                os.environ["SSL_CERT_DIR"] = str(path / "certs")
+            cert_file = path / "cert.pem"
+            if cert_file.exists() and not os.environ.get("SSL_CERT_FILE"):
+                os.environ["SSL_CERT_FILE"] = str(cert_file)
 
 
 def set_openssl_modules_dir(path):
