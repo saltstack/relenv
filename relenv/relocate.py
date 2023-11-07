@@ -353,8 +353,8 @@ def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
     logging.basicConfig(
         level=logging.getLevelName(log_level.upper()),
         format="%(asctime)s %(message)s",
-        #filename=str(dirs.logs / "relocate.py.log"),
-        #filemode="w",
+        # filename=str(dirs.logs / "relocate.py.log"),
+        # filemode="w",
     )
     root_dir = str(pathlib.Path(root).resolve())
     if libs_dir is None:
