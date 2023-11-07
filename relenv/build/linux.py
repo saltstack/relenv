@@ -3,6 +3,7 @@
 """
 The linux build process.
 """
+import tempfile
 from .common import *
 from ..common import arches, LINUX
 
@@ -340,9 +341,14 @@ def build_python(env, dirs, logfp):
         ]
     )
 
-    with open("/tmp/patch", "w") as fp:
-        fp.write(PATCH)
-    runcmd(["patch", "-p0", "-i", "/tmp/patch"], env=env, stderr=logfp, stdout=logfp)
+    with tempfile.NamedTemporaryFile(
+        node="w", suffix="_patch", delete_on_close=False
+    ) as patch_file:
+        patch_file.write(PATCH)
+        patch_file.close()
+        runcmd(
+            ["patch", "-p0", "-i", patch_file.name], env=env, stderr=logfp, stdout=logfp
+        )
 
     env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
     env["OPENSSL_CFLAGS"] = f"-I{dirs.prefix}/include  -Wno-coverage-mismatch"
