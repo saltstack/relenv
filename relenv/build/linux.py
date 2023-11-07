@@ -344,7 +344,7 @@ def build_python(env, dirs, logfp):
 
     if pathlib.Path("setup.py").exists():
         with tempfile.NamedTemporaryFile(
-            node="w", suffix="_patch", delete_on_close=False
+            mode="w", suffix="_patch", delete_on_close=False
         ) as patch_file:
             patch_file.write(PATCH)
             patch_file.close()
