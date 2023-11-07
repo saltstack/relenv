@@ -13,7 +13,7 @@ import textwrap
 import packaging
 import pytest
 
-from relenv.common import DATA_DIR, get_triplet
+from relenv.common import DATA_DIR, get_triplet, build_arch
 
 from .conftest import get_build_version
 
@@ -319,13 +319,16 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
         assert (session / "bin" / "nox").exists()
 
 
-@pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="m2crypto does not work on non-Linux platforms.",
+)
 def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["LDFLAGS"] = "-L/usr/lib"
-    env["CFLAGS"] = "-I/usr/include"
-    env["SWIG_FEATURES"] = "-I/usr/include"
+    env["CFLAGS"] = f"-I/usr/include -I/usr/include/{build_arch()}-linux-gnu"
+    env["SWIG_FEATURES"] = f"-I/usr/include -I/usr/include/{build_arch()}-linux-gnu"
     p = subprocess.run(
         ["swig", "-version"],
     )
