@@ -468,8 +468,9 @@ def sanitize_sys_path(sys_path_entries):
     for __path in sys_path_entries:
         for __valid_path_prefix in __valid_path_prefixes:
             try:
-                pathlib.Path(__path).relative_to(__valid_path_prefix)
-                __sys_path.append(__path)
+                __resolved_path = pathlib.Path(__path).resolve()
+                __resolved_path.relative_to(__valid_path_prefix)
+                __sys_path.append(str(__resolved_path))
             except ValueError:
                 continue
     if "PYTHONPATH" in os.environ:
