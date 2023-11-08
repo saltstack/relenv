@@ -3,6 +3,7 @@
 #
 import os
 import platform
+import shutil
 import sys
 
 import pytest
@@ -43,16 +44,28 @@ def build(tmp_path, build_version):
 @pytest.fixture
 def pipexec(build):
     if sys.platform == "win32":
-        exc = build / "Scripts" / "pip3.exe"
+        path = build / "Scripts"
     else:
-        exc = build / "bin" / "pip3"
-    yield exc
+        path = build / "bin"
+
+    exe = shutil.which("pip3", path=path)
+    if exe is None:
+        exe = shutil.which("pip", path=path)
+    if exe is None:
+        pytest.fail(f"Failed to find 'pip3' and 'pip' in '{path}'")
+    yield exe
 
 
 @pytest.fixture
 def pyexec(build):
     if sys.platform == "win32":
-        exc = build / "Scripts" / "python.exe"
+        path = build / "Scripts"
     else:
-        exc = build / "bin" / "python3"
-    yield exc
+        path = build / "bin"
+
+    exe = shutil.which("python3", path=path)
+    if exe is None:
+        exe = shutil.which("python", path=path)
+    if exe is None:
+        pytest.fail(f"Failed to find 'python3' and 'python' in '{path}'")
+    yield exe
