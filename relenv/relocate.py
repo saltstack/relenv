@@ -10,8 +10,6 @@ import pathlib
 import shutil
 import subprocess
 
-from .common import work_dirs
-
 log = logging.getLogger(__name__)
 
 
@@ -334,7 +332,9 @@ def handle_elf(path, libs, rpath_only, root=None):
         log.info("Do not adjust rpath of %s", path)
 
 
-def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
+def main(
+    root, libs_dir=None, rpath_only=True, log_level="DEBUG", log_file_name="<stdout>"
+):
     """
     The entrypoint into the relocate script.
 
@@ -347,14 +347,17 @@ def main(root, libs_dir=None, rpath_only=True, log_level="DEBUG"):
     :param log_level: The level to log at, defaults to "INFO"
     :type log_level: str, optional
     """
-    dirs = work_dirs()
-    if not dirs.logs.exists():
-        os.makedirs(dirs.logs)
+    if log_file_name != "<stdout>":
+        kwargs = {
+            "filename": log_file_name,
+            "filemode": "w",
+        }
+    else:
+        kwargs = {}
     logging.basicConfig(
         level=logging.getLevelName(log_level.upper()),
         format="%(asctime)s %(message)s",
-        # filename=str(dirs.logs / "relocate.py.log"),
-        # filemode="w",
+        **kwargs,
     )
     root_dir = str(pathlib.Path(root).resolve())
     if libs_dir is None:
