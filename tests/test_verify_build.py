@@ -508,7 +508,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build, tmpdir):
 
 
 @pytest.mark.skip_on_windows
-def test_shabangs(pipexec, build, minor_version):
+def test_shebangs(pipexec, build, minor_version):
     def validate_shebang(path):
         with open(path, "r") as fp:
             return fp.read(9) == "#!/bin/sh"
