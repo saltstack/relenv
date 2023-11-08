@@ -1,7 +1,12 @@
-0.13.13
-=======
+0.14.0
+======
 
 * Update python 3.11 to 3.11.6
+* Update openssl to address CVE-2023-5363.
+* Update sqlite
+* Fix bug in openssl setup when openssl binary can't be found.
+* Add programatic access to buildenv
+* Fix buildenv's path to toolchain's sysroot
 
 
 0.13.12
