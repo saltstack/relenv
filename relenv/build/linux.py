@@ -37,7 +37,9 @@ def populate_env(env, dirs):
     # CC and CXX need to be to have the full path to the executable
     env["CC"] = "{}/bin/{}-gcc -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
     env["CXX"] = "{}/bin/{}-g++ -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
-    env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
+    # Add our toolchain binaries to the path. We also add the bin directory of
+    # our prefix so that libtirpc can find krb5-config
+    env["PATH"] = "{}/bin/:{}/bin/:{PATH}".format(dirs.toolchain, dirs.prefix, **env)
     ldflags = [
         "-Wl,--build-id=sha1",
         "-Wl,--rpath={prefix}/lib",
@@ -188,11 +190,12 @@ def build_ncurses(env, dirs, logfp):
             str(configure),
             "--prefix=/",
             "--with-shared",
+            "--with-termlib=tinfo",
             "--without-cxx-shared",
             "--without-static",
             "--without-cxx",
             "--enable-widec",
-            "--without-normal",
+            "--with-normal",
             "--disable-stripping",
             "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
@@ -343,11 +346,9 @@ def build_python(env, dirs, logfp):
     )
 
     if pathlib.Path("setup.py").exists():
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix="_patch", delete_on_close=False
-        ) as patch_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix="_patch") as patch_file:
             patch_file.write(PATCH)
-            patch_file.close()
+            patch_file.flush()
             runcmd(
                 ["patch", "-p0", "-i", patch_file.name],
                 env=env,
@@ -565,6 +566,20 @@ build.add(
 )
 
 build.add(
+    "tirpc",
+    wait_on=[
+        "krb5",
+    ],
+    download={
+        "url": "https://downloads.sourceforge.net/libtirpc/libtirpc-{version}.tar.bz2",
+        "fallback_url": "https://woz.io/relenv/dependencies/libtirpc-{version}.tar.bz2",
+        "version": "1.3.4",
+        "md5sum": "375dbe7ceb2d0300d173fb40321b49b6",
+        "checkfunc": tarball_version,
+    },
+)
+
+build.add(
     "python",
     build_func=build_python,
     wait_on=[
@@ -580,6 +595,7 @@ build.add(
         "uuid",
         "krb5",
         "readline",
+        "tirpc",
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
