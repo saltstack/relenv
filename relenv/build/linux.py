@@ -190,6 +190,7 @@ def build_ncurses(env, dirs, logfp):
             str(configure),
             "--prefix=/",
             "--with-shared",
+            "--enable-termcap",
             "--with-termlib=tinfo",
             "--without-cxx-shared",
             "--without-static",
@@ -216,6 +217,32 @@ def build_ncurses(env, dirs, logfp):
         stderr=logfp,
         stdout=logfp,
     )
+
+
+def build_readline(env, dirs, logfp):
+    """
+    Build readline library.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
+    env["LDFLAGS"] = f"{env['LDFLAGS']} -ltinfo"
+    cmd = [
+        "./configure",
+        "--prefix={}".format(dirs.prefix),
+    ]
+    if env["RELENV_HOST"].find("linux") > -1:
+        cmd += [
+            "--build={}".format(env["RELENV_BUILD"]),
+            "--host={}".format(env["RELENV_HOST"]),
+        ]
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
 def build_libffi(env, dirs, logfp):
@@ -356,7 +383,6 @@ def build_python(env, dirs, logfp):
                 stdout=logfp,
             )
 
-    env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
     env["OPENSSL_CFLAGS"] = f"-I{dirs.prefix}/include  -Wno-coverage-mismatch"
     env["OPENSSL_LDFLAGS"] = f"-L{dirs.prefix}/lib"
     env["CFLAGS"] = f"-Wno-coverage-mismatch {env['CFLAGS']}"
@@ -372,7 +398,8 @@ def build_python(env, dirs, logfp):
         f"--host={env['RELENV_HOST']}",
         "--disable-test-modules",
         "--with-ssl-default-suites=openssl",
-        "--with-builtin-hashlib-hashes=blake2",
+        "--with-builtin-hashlib-hashes=blake2,md5,sha1,sha2,sha3",
+        "--with-readline=readline",
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
@@ -494,7 +521,6 @@ build.add(
 build.add(
     name="ncurses",
     build_func=build_ncurses,
-    wait_on=["readline"],
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/ncurses-{version}.tar.gz",
@@ -556,6 +582,8 @@ build.add(
 
 build.add(
     "readline",
+    build_func=build_readline,
+    wait_on=["ncurses"],
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/readline-{version}.tar.gz",
