@@ -88,7 +88,7 @@ jobs:
           path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
-  build_macos:
+  build_macos_12_x86_64:
     name: "Python macOS"
 
     runs-on: macos-12
@@ -101,6 +101,61 @@ jobs:
           - 3.11.6
         arch:
           - x86_64
+
+    env:
+      RELENV_DATA: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install nox
+        run: |
+          pip3 install nox
+
+      - name: Uninstall gettext
+        run: |
+          brew uninstall --ignore-dependencies gettext
+
+      - name: Build
+        run: |
+          python3 -m relenv build --python=${{ matrix.version }}
+
+      - name: Re-install gettext
+        run: |
+          brew install gettext
+
+      - name: Verify Build
+        run: |
+          python3 -m nox -e tests -- tests/test_verify_build.py
+
+      - name: MacOS Logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: ${{ matrix.version }}-${{ matrix.arch }}-macos-logs
+          path: logs/*
+          retention-days: 5
+
+      - name: Python build
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          retention-days: 5
+
+  build_macos_13_arm64:
+    name: "Python macOS"
+
+    runs-on: macos-13-xlarge
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - 3.10.13
+          - 3.11.6
+        arch:
+          - arm64
 
     env:
       RELENV_DATA: ${{ github.workspace }}

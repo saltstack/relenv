@@ -9,15 +9,14 @@ on:
         description: JSON string containing information about changed files
 
 jobs:
-
   test:
-
     strategy:
       fail-fast: false
       matrix:
         runs-on:
           - ubuntu-latest
           - macos-12
+          - macos-13-xlarge
           - windows-latest
 
     name: Unit Test ${{ matrix.runs-on }}
@@ -41,7 +40,7 @@ jobs:
           apt-get install -y shellcheck
 
       - name: Install Mac dependencies
-        if: ${{ matrix.runs-on == 'macos-12' }}
+        if: ${{ matrix.runs-on == 'macos-12' || matrix.runs-on == 'macos-13-xlarge' }}
         run: |
           brew install shellcheck
 
