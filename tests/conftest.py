@@ -25,6 +25,10 @@ def get_build_version():
         return versions[0]
 
 
+def pytest_report_header(config):
+    return f"relenv python version: {get_build_version()}"
+
+
 @pytest.fixture(scope="module")
 def build_version():
     return get_build_version()
