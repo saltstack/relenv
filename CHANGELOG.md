@@ -7,6 +7,7 @@
 * Fix bug in openssl setup when openssl binary can't be found.
 * Add programatic access to buildenv
 * Fix buildenv's path to toolchain's sysroot
+* Add M1 mac support.
 
 
 0.13.12
