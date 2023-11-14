@@ -19,31 +19,46 @@ jobs:
     environment: release
     strategy:
       matrix:
-        python:
-          - 3.10.13
-          - 3.11.6
-        platform:
-          - linux-gnu
-          - win
-          - macos
-        arch:
-          - aarch64
-          - amd64
-          - x86_64
-          - x86
-        exclude:
+        include:
           - platform: linux-gnu
-            arch: amd64
-          - platform: linux-gnu
-            arch: x86
-          - platform: win
-            arch: aarch64
-          - platform: win
             arch: x86_64
-          - platform: macos
-            arch: amd64
-          - platform: macos
+            python: 3.10.13
+          - platform: linux-gnu
+            arch: x86_64
+            python: 3.11.6
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.10.13
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.11.6
+
+          - platform: win
             arch: x86
+            python: 3.10.13
+          - platform: win
+            arch: x86
+            python: 3.11.6
+          - platform: win
+            arch: amd64
+            python: 3.10.13
+          - platform: win
+            arch: amd64
+            python: 3.11.6
+
+          - platform: macos
+            arch: x86_64
+            python: 3.10.13
+          - platform: macos
+            arch: x86_64
+            python: 3.11.6
+          - platform: macos
+            arch: aarch64
+            python: 3.10.13
+          - platform: macos
+            arch: aarch64
+            python: 3.11.6
+
     steps:
     - name: Download Artifacts
       uses: actions/download-artifact@v3
