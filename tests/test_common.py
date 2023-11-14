@@ -221,12 +221,14 @@ def test_relative_interpreter_scripts_not_relative_to_root():
 
 def test_sanitize_sys_path():
     if sys.platform.startswith("win"):
-        path_prefix = "c:\\"
+        path_prefix = "C:\\"
+        separator = "\\"
     else:
         path_prefix = "/"
-    python_path_entries = [f"{path_prefix}blah/blah", f"{path_prefix}yada/yada"]
-    expected = [f"{path_prefix}foo/1", f"{path_prefix}bar/2"] + python_path_entries
-    sys_path = [f"{path_prefix}foo/1", f"{path_prefix}bar/2", f"{path_prefix}lib/3"]
+        separator = "/"
+    python_path_entries = [f"{path_prefix}blah{separator}blah", f"{path_prefix}yada{separator}yada"]
+    expected = [f"{path_prefix}foo{separator}1", f"{path_prefix}bar{separator}2"] + python_path_entries
+    sys_path = [f"{path_prefix}foo{separator}1", f"{path_prefix}bar{separator}2", f"{path_prefix}lib{separator}3"]
     with patch.object(sys, "prefix", f"{path_prefix}foo"), patch.object(
         sys, "base_prefix", f"{path_prefix}bar"
     ), patch.dict(os.environ, PYTHONPATH=os.pathsep.join(python_path_entries)):
