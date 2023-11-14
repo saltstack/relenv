@@ -41,8 +41,6 @@ jobs:
           - platform: win
             arch: x86_64
           - platform: macos
-            arch: aarch64
-          - platform: macos
             arch: amd64
           - platform: macos
             arch: x86
@@ -59,7 +57,7 @@ jobs:
         TOKEN=$(curl -sS -f -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 30")
         SPB_ENVIRONMENT=$(curl -sS -f -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/tags/instance/spb:environment)
         echo "spb-environment=$SPB_ENVIRONMENT" >> "$GITHUB_OUTPUT"
-    
+
     - name: Install `awscli`
       run: |
         pip3 install awscli
