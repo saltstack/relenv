@@ -1,3 +1,9 @@
+0.14.2
+======
+
+* Fix pipeline to upload arm builsds for macos.
+
+
 0.14.1
 ======
 
