@@ -1,4 +1,4 @@
-# Copyright 2022-2023 VMware, Inc.
+# Copyright 2022-2024 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
 The linux build process.
@@ -397,8 +397,8 @@ build.add(
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
-        "version": "3.1.4",
-        "md5sum": "653ad58812c751b887e8ec37e02bba70",
+        "version": "3.1.5",
+        "md5sum": "567235bf15ad72fcb9555e3b1c8ee4bc",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
@@ -589,5 +589,5 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.6", md5sum="d0c5a1a31efe879723e51addf56dd206")
+build = build.copy(version="3.11.7", md5sum="96c7e134c35a8c46236f8a0e566b69c")
 builds.add("linux", builder=build)
