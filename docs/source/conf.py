@@ -1,4 +1,4 @@
-# Copyright 2022-2023 VMware, Inc.
+# Copyright 2022-2024 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 
 # Configuration file for the Sphinx documentation builder.
