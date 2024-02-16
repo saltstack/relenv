@@ -615,77 +615,16 @@ def wrap_cmd_install(name):
     def wrap(func):
         @functools.wraps(func)
         def wrapper(self, target_dir, target_temp_dir, upgrade):
-            from pip._internal.locations import get_scheme
-            from pip._internal.utils.misc import ensure_dir
+            from pip._internal.cli.status_codes import SUCCESS
 
-            ensure_dir(target_dir)
-
-            # Checking both purelib and platlib directories for installed
-            # packages to be moved to target directory
-            lib_dir_list = []
-
-            # Checking both purelib and platlib directories for installed
-            # packages to be moved to target directory
-            scheme = get_scheme("", home=target_temp_dir.path)
-            purelib_dir = scheme.purelib
-            platlib_dir = scheme.platlib
-            data_dir = scheme.data
-
-            if os.path.exists(purelib_dir):
-                lib_dir_list.append(purelib_dir)
-            if os.path.exists(platlib_dir) and platlib_dir != purelib_dir:
-                lib_dir_list.append(platlib_dir)
-            if os.path.exists(data_dir):
-                lib_dir_list.append(data_dir)
-
-            for lib_dir in lib_dir_list:
-                for item in os.listdir(lib_dir):
-                    if lib_dir == data_dir:
-                        ddir = os.path.join(data_dir, item)
-                        if any(s.startswith(ddir) for s in lib_dir_list[:-1]):
-                            continue
-                    target_item_dir = os.path.join(target_dir, item)
-
-                    # Special handling for scripts dir when target is used.
-                    if TARGET.TARGET is True and item == os.path.basename(
-                        scheme.scripts
-                    ):
-                        if not os.path.exists(target_item_dir):
-                            os.mkdir(target_item_dir)
-                        for script in os.listdir(os.path.join(lib_dir, item)):
-                            shutil.move(
-                                os.path.join(lib_dir, item, script),
-                                os.path.join(target_item_dir, script),
-                            )
-                    elif os.path.exists(target_item_dir):
-                        if not upgrade:
-                            mod.logger.warning(
-                                "Target directory %s already exists. Specify "
-                                "--upgrade to force replacement.",
-                                target_item_dir,
-                            )
-                            continue
-                        if os.path.islink(target_item_dir):
-                            mod.logger.warning(
-                                "Target directory %s already exists and is "
-                                "a link. pip will not automatically replace "
-                                "links, please remove if replacement is "
-                                "desired.",
-                                target_item_dir,
-                            )
-                            continue
-                        if os.path.isdir(target_item_dir):
-                            shutil.rmtree(target_item_dir)
-                        else:
-                            os.remove(target_item_dir)
-
-                        shutil.move(os.path.join(lib_dir, item), target_item_dir)
-                    else:
-                        shutil.move(os.path.join(lib_dir, item), target_item_dir)
+            return SUCCESS
 
         return wrapper
 
-    mod.InstallCommand._handle_target_dir = wrap(mod.InstallCommand._handle_target_dir)
+    if hasattr(mod.InstallCommand, "_handle_target_dir"):
+        mod.InstallCommand._handle_target_dir = wrap(
+            mod.InstallCommand._handle_target_dir
+        )
     return mod
 
 
@@ -702,8 +641,9 @@ def wrap_locations(name):
         ):
             scheme = func(dist_name, user, home, root, isolated, prefix)
             if TARGET.TARGET:
-                scheme.platlib = home
-                scheme.purelib = home
+                scheme.platlib = TARGET.PATH
+                scheme.purelib = TARGET.PATH
+                scheme.data = TARGET.PATH
             return scheme
 
         return wrapper
@@ -739,6 +679,73 @@ def wrap_req_command(name):
     return mod
 
 
+def wrap_req_install(name):
+    """
+    Honor ignore installed option from pip cli.
+    """
+    mod = importlib.import_module(name)
+
+    def wrap(func):
+        if mod.InstallRequirement.install.__code__.co_argcount == 9:
+
+            @functools.wraps(func)
+            def wrapper(
+                self,
+                install_options,
+                global_options=None,
+                root=None,
+                home=None,
+                prefix=None,
+                warn_script_location=True,
+                use_user_site=False,
+                pycompile=True,
+            ):
+                if TARGET.TARGET:
+                    home = TARGET.PATH
+                return func(
+                    self,
+                    install_options,
+                    global_options,
+                    root,
+                    home,
+                    prefix,
+                    warn_script_location,
+                    use_user_site,
+                    pycompile,
+                )
+
+        else:
+
+            @functools.wraps(func)
+            def wrapper(
+                self,
+                global_options=None,
+                root=None,
+                home=None,
+                prefix=None,
+                warn_script_location=True,
+                use_user_site=False,
+                pycompile=True,
+            ):
+                if TARGET.TARGET:
+                    home = TARGET.PATH
+                return func(
+                    self,
+                    global_options,
+                    root,
+                    home,
+                    prefix,
+                    warn_script_location,
+                    use_user_site,
+                    pycompile,
+                )
+
+        return wrapper
+
+    mod.InstallRequirement.install = wrap(mod.InstallRequirement.install)
+    return mod
+
+
 importer = RelenvImporter(
     wrappers=[
         Wrapper("sysconfig", wrap_sysconfig),
@@ -750,6 +757,7 @@ importer = RelenvImporter(
         Wrapper("pip._internal.commands.install", wrap_cmd_install),
         Wrapper("pip._internal.locations", wrap_locations),
         Wrapper("pip._internal.cli.req_command", wrap_req_command),
+        Wrapper("pip._internal.req.req_install", wrap_req_install),
     ],
 )
 
