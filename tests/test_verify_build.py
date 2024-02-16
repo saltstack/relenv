@@ -1036,11 +1036,13 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
         [str(pipexec), "install", "saltext.vmware", f"--target={extras}"],
         check=True,
         env=env,
+        capture_output=True,
     )
     assert (extras / "saltext" / "vmware").exists()
     subprocess.run(
         [str(pipexec), "install", "saltext.bitwarden", f"--target={extras}"],
         check=True,
         env=env,
+        capture_output=True,
     )
     assert (extras / "saltext" / "bitwarden").exists()
