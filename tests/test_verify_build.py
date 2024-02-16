@@ -1025,3 +1025,22 @@ def test_install_with_target_scripts(pipexec, build, minor_version):
         env=env,
     )
     assert (extras / "bin" / "cowsay").exists()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_with_target_namespaces(pipexec, build, minor_version):
+    env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
+    extras = build / "extras"
+    subprocess.run(
+        [str(pipexec), "install", "saltext.vmware", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    assert (extras / "saltext" / "vmware").exists()
+    subprocess.run(
+        [str(pipexec), "install", "saltext.bitwarden", f"--target={extras}"],
+        check=True,
+        env=env,
+    )
+    assert (extras / "saltext" / "bitwarden").exists()
