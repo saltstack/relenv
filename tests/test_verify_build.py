@@ -1030,10 +1030,11 @@ def test_install_with_target_scripts(pipexec, build, minor_version):
 @pytest.mark.skip_unless_on_linux
 def test_install_with_target_namespaces(pipexec, build, minor_version):
     env = os.environ.copy()
+    os.chdir(build)
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
     subprocess.run(
-        [str(pipexec), "install", "saltext.vmware", f"--target={extras}"],
+        [str(pipexec), "install", "saltext.vmware", f"--target={extras}", "-v"],
         check=True,
         env=env,
         capture_output=True,
