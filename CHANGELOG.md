@@ -1,3 +1,11 @@
+0.15.0
+======
+
+* Upgrade openssl to 3.1.5
+* Upgrade python 3.11 to 3.11.7
+* Fix pip installation of namespaced packages when using --target.
+
+
 0.14.2
 ======
 
