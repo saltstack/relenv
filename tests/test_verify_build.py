@@ -1034,14 +1034,27 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
     subprocess.run(
-        [str(pipexec), "install", "saltext.vmware", f"--target={extras}", "-v", "--no-build-isolation"],
+        [
+            str(pipexec),
+            "install",
+            "saltext.vmware",
+            f"--target={extras}",
+            "-v",
+            "--no-build-isolation",
+        ],
         check=True,
         env=env,
         capture_output=True,
     )
     assert (extras / "saltext" / "vmware").exists()
     subprocess.run(
-        [str(pipexec), "install", "saltext.bitwarden", f"--target={extras}", "--no-build-isolation"],
+        [
+            str(pipexec),
+            "install",
+            "saltext.bitwarden",
+            f"--target={extras}",
+            "--no-build-isolation",
+        ],
         check=True,
         env=env,
         capture_output=True,
