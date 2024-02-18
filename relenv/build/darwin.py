@@ -5,7 +5,7 @@ The darwin build process.
 """
 import io
 
-from ..common import arches, DARWIN
+from ..common import arches, DARWIN, MACOS_DEVELOPMENT_TARGET
 from .common import runcmd, finalize, build_openssl, build_sqlite, builds
 
 ARCHES = arches[DARWIN]
@@ -26,7 +26,7 @@ def populate_env(env, dirs):
         "-L{prefix}/lib",
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
-    env["MACOSX_DEPLOYMENT_TARGET"] = "10.15"
+    env["MACOSX_DEPLOYMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
     cflags = [
         "-L{prefix}/lib",
         "-I{prefix}/include",

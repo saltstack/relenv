@@ -107,7 +107,7 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec):
         packages = ["salt@git+https://github.com/saltstack/salt"]
 
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
     names = ["salt", "salt-call", "salt-master", "salt-minion"]
@@ -139,7 +139,7 @@ def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     env["RELENV_BUILDENV"] = "yes"
 
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
     names = ["salt", "salt-call", "salt-master", "salt-minion"]
@@ -198,7 +198,16 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
     assert p.returncode == 0, "Failed clone salt repo"
 
     p = subprocess.run(
-        [str(pipexec), "install", f"{tmpdir / 'salt'}", "--no-cache"], env=env
+        [
+            str(pipexec),
+            "install",
+            f"{tmpdir / 'salt'}",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            "--use-pep517",
+            "--only-binary=pyzmq",
+        ],
+        env=env,
     )
     assert p.returncode == 0, "Failed to pip install ./salt"
 
@@ -214,6 +223,94 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
         assert script.exists()
 
 
+@pytest.mark.parametrize("salt_version", ["3006.x", "master"])
+def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_version):
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
+    env["USE_STATIC_REQUIREMENTS"] = "1"
+    p = subprocess.run(
+        [
+            "git",
+            "clone",
+            "--depth=1",
+            f"--branch={salt_version}",
+            "https://github.com/saltstack/salt.git",
+            f"{tmpdir / 'salt'}",
+        ]
+    )
+    assert p.returncode == 0, "Failed clone salt repo"
+
+    # p = subprocess.run(
+    #     [
+    #         str(pipexec),
+    #         "install",
+    #         f"{tmpdir / 'salt'}",
+    #         "--no-cache-dir",
+    #         "--no-binary=:all",
+    #         "--use-pep517",
+    #     ],
+    #     env=env,
+    # )
+    # assert p.returncode == 0, "Failed to pip install ./salt"
+    req = os.path.join(
+        f"{tmpdir / 'salt'}",
+        "requirements",
+        "static",
+        "pkg",
+        f"py{get_build_version().rsplit('.', 1)[0]}",
+        f"{sys.platform}.txt",
+    )
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            "--use-pep517",
+            "--only-binary=pyzmq",
+            f"--requirement={req}",
+        ],
+        env=env,
+    )
+    assert p.returncode == 0, "Failed to pip install package requirements"
+
+    # names = ["salt", "salt-call", "salt-master", "salt-minion"]
+    # if sys.platform == "win32":
+    #     names = ["salt-call.exe", "salt-minion.exe"]
+
+    # for _ in names:
+    #     if sys.platform == "win32":
+    #         script = pathlib.Path(build) / "Scripts" / _
+    #     else:
+    #         script = pathlib.Path(build) / "bin" / _
+    #     assert script.exists()
+
+
+@pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2"])
+def test_pip_install_pyzmq(pipexec, build, tmpdir, pyzmq_version):
+    if pyzmq_version == "23.2.0":
+        pytest.xfail("pyzmq 23.2.0 fails to build zeromq")
+    env = os.environ.copy()
+    print(env)
+    env["RELENV_BUILDENV"] = "yes"
+    env["USE_STATIC_REQUIREMENTS"] = "1"
+    env[
+        "CFLAGS"
+    ] = f"{env.get('CFLAGS', '')} -DCMAKE_OSX_ARCHITECTURES='arm64' -DZMQ_HAVE_CURVE=0"
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            "--use-pep517",
+            f"pyzmq=={pyzmq_version}",
+        ],
+        env=env,
+    )
+    assert p.returncode == 0, "Failed to pip install package requirements"
+
+
 def test_pip_install_cryptography(pipexec):
     packages = [
         "cryptography",
@@ -221,7 +318,7 @@ def test_pip_install_cryptography(pipexec):
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
@@ -232,7 +329,7 @@ def test_pip_install_idem(pipexec):
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
@@ -240,7 +337,7 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     name = "apache-libcloud"
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
-    p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+    p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
     assert p.returncode == 0, f"Failed to pip install {name}"
 
     import_name = "libcloud.security"
@@ -263,7 +360,7 @@ def test_pip_install_salt_pip_dir(pipexec, build):
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_PIP_DIR"] = "yes"
     for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+        p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
     names = ["salt", "salt-call", "salt-master", "salt-minion"]
@@ -281,7 +378,7 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
     env["RELENV_DEBUG"] = "yes"
     name = "nox"
 
-    p = subprocess.run([str(pipexec), "install", name, "--no-cache"], env=env)
+    p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
     assert p.returncode == 0, f"Failed to pip install {name}"
 
     if sys.platform == "win32":
@@ -331,7 +428,7 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
         ["swig", "-version"],
     )
     p = subprocess.run(
-        [str(pipexec), "install", "m2crypto", "--no-cache", "-v"],
+        [str(pipexec), "install", "m2crypto", "--no-cache-dir", "-v"],
         env=env,
         # stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -368,7 +465,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build, tmpdir):
         ["swig", "-version"],
     )
     p = subprocess.run(
-        [str(pipexec), "install", "m2crypto", "--no-cache", "-v"],
+        [str(pipexec), "install", "m2crypto", "--no-cache-dir", "-v"],
         env=env,
         stderr=subprocess.PIPE,
     )
@@ -560,7 +657,7 @@ def test_install_pycurl(pipexec, build, minor_version, build_dir):
 
     # Install pycurl
     subprocess.run(
-        [str(pipexec), "install", "pycurl", "--no-cache"], env=env, check=True
+        [str(pipexec), "install", "pycurl", "--no-cache-dir"], env=env, check=True
     )
 
     # Move the relenv environment, if something goes wrong this will break the linker.
@@ -681,7 +778,7 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
             str(pipexec),
             "install",
             f"pygit2=={versions['pygit2']}",
-            "--no-cache",
+            "--no-cache-dir",
             "--no-binary=:all:",
         ],
         check=True,
@@ -738,7 +835,7 @@ def test_install_python_ldap(pipexec, build, minor_version, build_dir):
     env["RELENV_BUILDENV"] = "yes"
 
     subprocess.run(
-        [str(pipexec), "install", "python-ldap", "--no-cache", "--no-binary=:all:"],
+        [str(pipexec), "install", "python-ldap", "--no-cache-dir", "--no-binary=:all:"],
         check=True,
         env=env,
     )
@@ -749,7 +846,7 @@ def test_install_python_ldap_system_libs(pipexec):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     subprocess.run(
-        [str(pipexec), "install", "python-ldap", "--no-cache", "--no-binary=:all:"],
+        [str(pipexec), "install", "python-ldap", "--no-cache-dir", "--no-binary=:all:"],
         check=True,
         env=env,
     )
