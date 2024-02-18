@@ -22,6 +22,8 @@ LINUX = "linux"
 WIN32 = "win32"
 DARWIN = "darwin"
 
+MACOS_DEVELOPMENT_TARGET = "10.15"
+
 CHECK_HOSTS = ("repo.saltproject.io", "woz.io")
 
 arches = {

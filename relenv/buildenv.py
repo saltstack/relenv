@@ -6,7 +6,7 @@ Helper for building libraries to install into a relenv environment.
 import logging
 import sys
 
-from .common import RelenvException, get_triplet, work_dirs
+from .common import MACOS_DEVELOPMENT_TARGET, RelenvException, get_triplet, work_dirs
 
 log = logging.getLogger()
 
@@ -46,7 +46,7 @@ def buildenv(relenv_path=None):
     dirs = work_dirs()
     triplet = get_triplet()
     toolchain = dirs.toolchain / get_triplet()
-    return {
+    env = {
         "RELENV_BUILDENV": "1",
         "TOOLCHAIN_PATH": f"{toolchain}",
         "TRIPLET": f"{triplet}",
@@ -54,16 +54,16 @@ def buildenv(relenv_path=None):
         "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
         "CXX": f"{toolchain}/bin/{triplet}-g++ -no-pie",
         "CFLAGS": (
-            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+         #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include "
             f"-I{toolchain}/sysroot/usr/include"
         ),
         "CPPFLAGS": (
-            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+        #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"
         ),
         "CMAKE_CFLAGS": (
-            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+        #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"
         ),
         "LDFLAGS": (
@@ -71,6 +71,9 @@ def buildenv(relenv_path=None):
             f"-Wl,-rpath,{relenv_path}/lib"
         ),
     }
+    if sys.platform == "dawin":
+        env["MACOS_DEVELOPMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
+    return env
 
 
 def main(args):
