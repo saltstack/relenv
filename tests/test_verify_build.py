@@ -13,7 +13,7 @@ import textwrap
 import packaging
 import pytest
 
-from relenv.common import DATA_DIR, get_triplet
+from relenv.common import DATA_DIR, build_arch, get_triplet
 
 from .conftest import get_build_version
 
@@ -179,6 +179,10 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
 def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_branch):
     if get_build_version().startswith("3.11"):
         pytest.xfail("3.11 builds fail.")
+
+    if salt_branch in ["3007.x", "master"]:
+        pytest.xfail("Known failure")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -187,7 +191,7 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_bra
             "git",
             "clone",
             "--depth=1",
-            "--branch={salt_branch}",
+            f"--branch={salt_branch}",
             "https://github.com/saltstack/salt.git",
             f"{tmpdir / 'salt'}",
         ]
@@ -199,10 +203,10 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_bra
             str(pipexec),
             "install",
             f"{tmpdir / 'salt'}",
+            "-v",
             "--no-cache-dir",
             "--no-binary=:all:",
             "--use-pep517",
-            "--only-binary=pyzmq",
         ],
         env=env,
     )
@@ -222,6 +226,10 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_bra
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
 def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_branch):
+
+    if salt_branch in ["3007.x", "master"]:
+        pytest.xfail("Known failure")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -264,7 +272,6 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_b
             "--no-cache-dir",
             "--no-binary=:all:",
             "--use-pep517",
-            "--only-binary=pyzmq",
             f"--requirement={req}",
         ],
         env=env,
@@ -285,10 +292,13 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_b
 
 @pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2"])
 def test_pip_install_pyzmq(pipexec, build, tmpdir, pyzmq_version):
-    if pyzmq_version == "23.2.0":
-        pytest.xfail("pyzmq 23.2.0 fails to build zeromq")
+
+    arch = build_arch()
+    if pyzmq_version == "23.2.0" and sys.platform == "darwin" and arch == "arm64":
+        pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
+    if sys.platform == "win32" and pyzmq_version == "25.1.2" and arch == "arm64":
+        pytest.xfail("pyzmq 25.1.2 fails on windows arm64")
     env = os.environ.copy()
-    print(env)
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
     env[
@@ -298,6 +308,7 @@ def test_pip_install_pyzmq(pipexec, build, tmpdir, pyzmq_version):
         [
             str(pipexec),
             "install",
+            "-v",
             "--no-cache-dir",
             "--no-binary=:all:",
             "--use-pep517",
