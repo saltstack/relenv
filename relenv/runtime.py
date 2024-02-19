@@ -148,6 +148,7 @@ def get_config_var_wrapper(func):
     Return a wrapper to resolve paths relative to the relenv root.
     """
 
+    @functools.wraps(func)
     def wrapped(name):
         if name == "BINDIR":
             orig = func(name)
@@ -179,36 +180,52 @@ _CONFIG_VARS_DEFAULTS = {
     "LDSHARED": "gcc -shared",
 }
 
+_SYSTEM_CONFIG_VARS = None
+
+
+def system_sysconfig():
+    """
+    Read the system python's sysconfig values.
+
+    Th system python isthe one installed by your package manager. Memoize them
+    to avoid the overhead of shelling out.
+    """
+    global _SYSTEM_CONFIG_VARS
+    if _SYSTEM_CONFIG_VARS:
+        return _SYSTEM_CONFIG_VARS
+    pyexec = pathlib.Path("/usr/bin/python3")
+    if pyexec.exists():
+        p = subprocess.run(
+            [
+                str(pyexec),
+                "-c",
+                "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
+            ],
+            capture_output=True,
+        )
+        try:
+            _SYSTEM_CONFIG_VARS = json.loads(p.stdout.strip())
+        except json.JSONDecodeError:
+            debug(f"Failed to load JSON from: {p.stdout.strip()}")
+            _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
+    else:
+        debug("System python not found")
+        _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
+    return _SYSTEM_CONFIG_VARS
+
 
 def get_config_vars_wrapper(func, mod):
     """
     Return a wrapper to resolve paths relative to the relenv root.
     """
 
+    @functools.wraps(func)
     def wrapped(*args):
         if sys.platform == "win32" or "RELENV_BUILDENV" in os.environ:
             return func(*args)
 
         _CONFIG_VARS = func()
-        pyexec = pathlib.Path("/usr/bin/python3")
-        if pyexec.exists():
-            p = subprocess.run(
-                [
-                    str(pyexec),
-                    "-c",
-                    "import json, sysconfig; print(json.dumps(sysconfig.get_config_vars()))",
-                ],
-                capture_output=True,
-            )
-            try:
-                _SYSTEM_CONFIG_VARS = json.loads(p.stdout.strip())
-            except json.JSONDecodeError:
-                debug(f"Failed to load JSON from: {p.stdout.strip()}")
-                _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
-        else:
-            debug("System python not found")
-            _SYSTEM_CONFIG_VARS = _CONFIG_VARS_DEFAULTS
-
+        _SYSTEM_CONFIG_VARS = system_sysconfig()
         for name in [
             "AR",
             "CC",
@@ -234,6 +251,7 @@ def get_paths_wrapper(func, default_scheme):
     Return a wrapper to resolve paths relative to the relenv root.
     """
 
+    @functools.wraps(func)
     def wrapped(scheme=default_scheme, vars=None, expand=True):
         paths = func(scheme=scheme, vars=vars, expand=expand)
         if "RELENV_PIP_DIR" in os.environ:
@@ -251,6 +269,7 @@ def finalize_options_wrapper(func):
     Used to add the relenv environment's include path.
     """
 
+    @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         func(self, *args, **kwargs)
         if "RELENV_BUILDENV" in os.environ:
@@ -436,7 +455,7 @@ class RelenvImporter:
     def __init__(self, wrappers=None, _loads=None):
         if wrappers is None:
             wrappers = []
-        self.wrappers = wrappers
+        self.wrappers = set(wrappers)
         if _loads is None:
             _loads = {}
         self._loads = _loads
