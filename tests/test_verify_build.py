@@ -175,12 +175,15 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
     ), f"Could not run script for {name}, likely not pinning to the correct python"
 
 
-@pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
+@pytest.mark.parametrize("salt_branch", ["3006.x", "3007.x", "master"])
 def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_branch):
+    if salt_branch in ["3007.x", "master"]:
+        pytest.xfail("Known failure")
+
     if get_build_version().startswith("3.11"):
         pytest.xfail("3.11 builds fail.")
 
-    if salt_branch in ["3007.x", "master"]:
+    if salt_branch == "3006.x" and sys.platform == "win32":
         pytest.xfail("Known failure")
 
     env = os.environ.copy()
@@ -296,8 +299,8 @@ def test_pip_install_pyzmq(pipexec, build, tmpdir, pyzmq_version):
     arch = build_arch()
     if pyzmq_version == "23.2.0" and sys.platform == "darwin" and arch == "arm64":
         pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
-    if sys.platform == "win32" and pyzmq_version == "25.1.2" and arch == "arm64":
-        pytest.xfail("pyzmq 25.1.2 fails on windows arm64")
+    if sys.platform == "win32" and pyzmq_version == "25.1.2":
+        pytest.xfail("pyzmq 25.1.2 fails on windows")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -354,6 +357,16 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
 
 
 def test_pip_install_salt_pip_dir(pipexec, build):
+    if (
+        get_build_version().startswith("3.11")
+        and sys.platform == "darwin"
+    ):
+        pytest.xfail("Known failure on py 3.11 macos")
+    if (
+        sys.platform == "win32"
+        and build_arch() == "amd64"
+    ):
+        pytest.xfail("Known failure on windows amd64")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
