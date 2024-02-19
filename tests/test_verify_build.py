@@ -1076,6 +1076,7 @@ def test_debugpy(pipexec, build, minor_version):
     server = subprocess.Popen(
         [
             str(build / "bin" / "python3"),
+            "-Xfrozen_modules=off",
             "-c",
             "import debugpy; debugpy.listen(5678); debugpy.wait_for_client()",
         ],
