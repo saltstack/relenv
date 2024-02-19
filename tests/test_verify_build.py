@@ -87,11 +87,9 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
-@pytest.mark.skipif(
-    sys.platform != "linux" and get_build_version() == "3.11.7",
-    reason="3.11.7 will not work on windows yet",
-)
 def test_pip_install_salt_git(pipexec, build, build_dir, pyexec):
+    if sys.platform == "win32" and get_build_version().startswith("3.11"):
+        pytest.xfail("Salt does not work with 3.11 on windows yet")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and not shutil.which("git"):
@@ -178,11 +176,10 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
     ), f"Could not run script for {name}, likely not pinning to the correct python"
 
 
-@pytest.mark.skipif(
-    get_build_version() == "3.11.7",
-    reason="3.11.7 will not work until pyzmq is upgraded",
-)
-def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
+@pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
+def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_branch):
+    if get_build_version().startswith("3.11"):
+        pytest.xfail("3.11 builds fail.")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -191,6 +188,7 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
             "git",
             "clone",
             "--depth=1",
+            "--branch={salt_branch}",
             "https://github.com/saltstack/salt.git",
             f"{tmpdir / 'salt'}",
         ]
@@ -223,8 +221,8 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir):
         assert script.exists()
 
 
-@pytest.mark.parametrize("salt_version", ["3006.x", "master"])
-def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_version):
+@pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
+def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_branch):
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -233,7 +231,7 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_v
             "git",
             "clone",
             "--depth=1",
-            f"--branch={salt_version}",
+            f"--branch={salt_branch}",
             "https://github.com/saltstack/salt.git",
             f"{tmpdir / 'salt'}",
         ]
@@ -345,23 +343,13 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     assert import_ret.returncode == 0, f"Failed to import {import_name}"
 
 
-# XXX Re-enable after 3006.2 has been released
-@pytest.mark.skip_on_darwin
-@pytest.mark.skip_on_windows
-@pytest.mark.skipif(
-    get_build_version() == "3.11.7", reason="3.11.7 will not work with 3005.x"
-)
 def test_pip_install_salt_pip_dir(pipexec, build):
-    packages = [
-        "salt",
-    ]
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_PIP_DIR"] = "yes"
-    for name in packages:
-        p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
-        assert p.returncode == 0, f"Failed to pip install {name}"
+    p = subprocess.run([str(pipexec), "install", "salt", "--no-cache-dir"], env=env)
+    assert p.returncode == 0, "Failed to pip install salt"
 
     names = ["salt", "salt-call", "salt-master", "salt-minion"]
     if sys.platform == "win32":
