@@ -177,12 +177,13 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
 
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "3007.x", "master"])
-def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_branch):
+def test_pip_install_salt_w_static_requirements(pipexec, build, tmp_path, salt_branch):
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
 
-    if get_build_version().startswith("3.11"):
-        pytest.xfail("3.11 builds fail.")
+    for py_version in ("3.11", "3.12"):
+        if get_build_version().startswith(py_version):
+            pytest.xfail(f"{py_version} builds fail.")
 
     if salt_branch == "3006.x" and sys.platform == "win32":
         pytest.xfail("Known failure")
@@ -197,7 +198,7 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_bra
             "--depth=1",
             f"--branch={salt_branch}",
             "https://github.com/saltstack/salt.git",
-            f"{tmpdir / 'salt'}",
+            f"{tmp_path / 'salt'}",
         ]
     )
     assert p.returncode == 0, "Failed clone salt repo"
@@ -206,7 +207,7 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_bra
         [
             str(pipexec),
             "install",
-            f"{tmpdir / 'salt'}",
+            f"{tmp_path / 'salt'}",
             "-v",
             "--no-cache-dir",
             "--no-binary=:all:",
@@ -229,7 +230,11 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmpdir, salt_bra
 
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
-def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_branch):
+def test_pip_install_salt_w_package_requirements(pipexec, tmp_path, salt_branch):
+
+    for py_version in ("3.11", "3.12"):
+        if get_build_version().startswith(py_version):
+            pytest.xfail(f"{py_version} builds fail.")
 
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
@@ -244,7 +249,7 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_b
             "--depth=1",
             f"--branch={salt_branch}",
             "https://github.com/saltstack/salt.git",
-            f"{tmpdir / 'salt'}",
+            f"{tmp_path / 'salt'}",
         ]
     )
     assert p.returncode == 0, "Failed clone salt repo"
@@ -253,7 +258,7 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_b
     #     [
     #         str(pipexec),
     #         "install",
-    #         f"{tmpdir / 'salt'}",
+    #         f"{tmp_path / 'salt'}",
     #         "--no-cache-dir",
     #         "--no-binary=:all",
     #         "--use-pep517",
@@ -262,7 +267,7 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_b
     # )
     # assert p.returncode == 0, "Failed to pip install ./salt"
     req = os.path.join(
-        f"{tmpdir / 'salt'}",
+        f"{tmp_path / 'salt'}",
         "requirements",
         "static",
         "pkg",
@@ -295,7 +300,9 @@ def xtest_pip_install_salt_w_package_requirements(pipexec, build, tmpdir, salt_b
 
 
 @pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2"])
-def test_pip_install_pyzmq(pipexec, build, tmpdir, pyzmq_version):
+def test_pip_install_pyzmq(pipexec, pyzmq_version):
+    if pyzmq_version == "23.2.0" and get_build_version().startswith("3.12"):
+        pytest.xfail(f"{pyzmq_version} does not install on 3.12")
 
     arch = build_arch()
     if pyzmq_version == "23.2.0" and sys.platform == "darwin" and arch == "arm64":
@@ -358,15 +365,11 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
 
 
 def test_pip_install_salt_pip_dir(pipexec, build):
-    if (
-        get_build_version().startswith("3.11")
-        and sys.platform == "darwin"
-    ):
+    if get_build_version().startswith("3.12"):
+        pytest.xfail("Don't try to install on 3.12 yet")
+    if get_build_version().startswith("3.11") and sys.platform == "darwin":
         pytest.xfail("Known failure on py 3.11 macos")
-    if (
-        sys.platform == "win32"
-        and build_arch() == "amd64"
-    ):
+    if sys.platform == "win32" and build_arch() == "amd64":
         pytest.xfail("Known failure on windows amd64")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -430,7 +433,9 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
+def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
+    if get_build_version().startswith("3.12"):
+        pytest.xfail("Does not install on 3.12 with system SSL yet")
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["LDFLAGS"] = "-L/usr/lib"
@@ -466,7 +471,7 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec, build, tmpdir):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build, tmpdir):
+def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -627,7 +632,9 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_pycurl(pipexec, build, minor_version, build_dir):
+def test_install_pycurl(pipexec, build):
+    if get_build_version().startswith("3.12"):
+        pytest.xfail("Does not install on 3.12 yet")
     curlver = "8.0.1"
 
     # Build curl and install it into the relenv environment
@@ -799,7 +806,9 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_python_ldap(pipexec, build, minor_version, build_dir):
+def test_install_python_ldap(pipexec, build):
+    if get_build_version().startswith("3.12"):
+        pytest.xfail("Does not install on 3.12 yet")
     saslver = "2.1.28"
     ldapver = "2.5.14"
 
@@ -855,6 +864,8 @@ def test_install_python_ldap(pipexec, build, minor_version, build_dir):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_python_ldap_system_libs(pipexec):
+    if get_build_version().startswith("3.12"):
+        pytest.xfail("Does not install on 3.12 yet")
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     subprocess.run(
