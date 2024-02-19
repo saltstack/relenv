@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import time
 
 import packaging
 import pytest
@@ -1060,3 +1061,32 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
         capture_output=True,
     )
     assert (extras / "saltext" / "bitwarden").exists()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_debugpy(pipexec, build, minor_version):
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "debugpy",
+        ]
+    )
+    assert p.returncode == 0, "Failed install debugpy"
+    server = subprocess.Popen(
+        [
+            str(build / "bin" / "python3"),
+            "-c",
+            "import debugpy; debugpy.listen(5678); debugpy.wait_for_client()",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    # Simply makeing a tcp connection to the port isn't enough to cuase
+    # debugpy.wait_for_client to return. For now, just wait 5 seconds to see if
+    # there is any output from debugpy and if not, consider this a success.
+    time.sleep(5)
+    server.kill()
+    server.wait()
+    assert server.stdout.read() == b""
+    assert server.stderr.read() == b""
