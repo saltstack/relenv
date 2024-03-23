@@ -389,7 +389,7 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("linux", populate_env=populate_env, version="3.10.13")
+build = builds.add("linux", populate_env=populate_env, version="3.10.14")
 
 build.add(
     "openssl",
@@ -397,8 +397,8 @@ build.add(
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
-        "version": "3.1.5",
-        "md5sum": "567235bf15ad72fcb9555e3b1c8ee4bc",
+        "version": "3.2.1",
+        "md5sum": "c239213887804ba00654884918b37441",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
@@ -574,7 +574,7 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
-        "md5sum": "8847dc6458d1431d0ae0f55942deeb89",
+        "md5sum": "05148354ce821ba7369e5b7958435400",
         "checkfunc": python_version,
         "checkurl": "https://www.python.org/ftp/python/",
     },
@@ -589,5 +589,5 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.7", md5sum="96c7e134c35a8c46236f8a0e566b69c")
+build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
 builds.add("linux", builder=build)
