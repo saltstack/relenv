@@ -79,8 +79,8 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "3.1.5",
-        "md5sum": "567235bf15ad72fcb9555e3b1c8ee4bc",
+        "version": "3.2.1",
+        "md5sum": "c239213887804ba00654884918b37441",
     },
 )
 
@@ -130,5 +130,5 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.7", md5sum="96c7e134c35a8c46236f8a0e566b69c")
+build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
 builds.add("darwin", builder=build)

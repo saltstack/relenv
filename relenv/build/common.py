@@ -1493,8 +1493,9 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
     :param logfp: A pointer to the log file
     :type logfp: file
     """
-    log.info("Current directory %s", os.getcwd())
-    log.info("Creating archive %s", tarfp.name)
+    if logfp is None:
+        log.info("Current directory %s", os.getcwd())
+        log.info("Creating archive %s", tarfp.name)
     for root, _dirs, files in os.walk(toarchive):
         relroot = pathlib.Path(root).relative_to(toarchive)
         for f in files:
@@ -1505,7 +1506,9 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
                     matches = True
                     break
             if matches:
-                log.info("Adding %s", relpath)
+                if logfp is None:
+                    log.info("Adding %s", relpath)
                 tarfp.add(relpath, relpath, recursive=False)
             else:
-                log.info("Skipping %s", relpath)
+                if logfp is None:
+                    log.info("Skipping %s", relpath)
