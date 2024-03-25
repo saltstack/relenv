@@ -20,7 +20,7 @@ jobs:
       matrix:
         version:
           - 3.10.14
-          - 3.11.7
+          - 3.11.8
         host:
           - x86_64
           - aarch64
@@ -116,7 +116,7 @@ jobs:
       matrix:
         version:
           - 3.10.14
-          - 3.11.7
+          - 3.11.8
         arch:
           - x86_64
 
@@ -170,7 +170,7 @@ jobs:
       matrix:
         version:
           - 3.10.14
-          - 3.11.7
+          - 3.11.8
         arch:
           - amd64
           - x86

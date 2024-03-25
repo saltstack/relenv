@@ -446,10 +446,10 @@ build.add(
     name="SQLite",
     build_func=build_sqlite,
     download={
-        "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
+        "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3430200",
-        "md5sum": "94fb06bfebc437762e489c355ae63716",
+        "version": "3450200",
+        "md5sum": "27436d5446f3e2afa6bc2e82f9c4f6ba",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
@@ -498,8 +498,8 @@ build.add(
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
-        "version": "3.4.4",
-        "md5sum": "0da1a5ed7786ac12dcbaf0d499d8a049",
+        "version": "3.4.6",
+        "md5sum": "b9cac6c5997dca2b3787a59ede34e0eb",
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
@@ -511,8 +511,8 @@ build.add(
     download={
         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/zlib-{version}.tar.gz",
-        "version": "1.3",
-        "md5sum": "60373b133d630f74f4a1f94c1185a53f",
+        "version": "1.3.1",
+        "md5sum": "9855b6d802d7fe5b7bd5b196a2271655",
         "checkfunc": tarball_version,
     },
 )
