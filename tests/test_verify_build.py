@@ -1138,10 +1138,24 @@ def test_install_with_target_scripts(pipexec, build, minor_version):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_with_target_namespaces(pipexec, build, minor_version):
+def test_install_with_target_namespaces(pipexec, build, minor_version, build_version):
     env = os.environ.copy()
     os.chdir(build)
     env["RELENV_DEBUG"] = "yes"
+
+    if "3.12" in build_version or "3.11" in build_version:
+        subprocess.run(
+            [
+                str(pipexec),
+                "install",
+                "cython",
+                "-v",
+                "--no-build-isolation",
+            ],
+            check=True,
+            env=env,
+        )
+
     extras = build / "extras"
     subprocess.run(
         [
@@ -1154,7 +1168,6 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
         ],
         check=True,
         env=env,
-        capture_output=True,
     )
     assert (extras / "saltext" / "vmware").exists()
     subprocess.run(
@@ -1167,7 +1180,6 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
         ],
         check=True,
         env=env,
-        capture_output=True,
     )
     assert (extras / "saltext" / "bitwarden").exists()
 
