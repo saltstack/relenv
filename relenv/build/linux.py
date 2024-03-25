@@ -67,6 +67,7 @@ def populate_env(env, dirs):
     env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["LD_LIBRARY_PATH"] = "{prefix}/lib"
+    env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
 
 
 def build_bzip2(env, dirs, logfp):
@@ -198,6 +199,8 @@ def build_ncurses(env, dirs, logfp):
             "--enable-widec",
             "--with-normal",
             "--disable-stripping",
+            f"--with-pkg-config={dirs.prefix}/lib/pkgconfig",
+            "--enable-pc-files",
             "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
@@ -230,7 +233,6 @@ def build_readline(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    env["LDFLAGS"] = f"{env['LDFLAGS']} -ltinfo"
     cmd = [
         "./configure",
         "--prefix={}".format(dirs.prefix),
@@ -400,6 +402,7 @@ def build_python(env, dirs, logfp):
         "--with-ssl-default-suites=openssl",
         "--with-builtin-hashlib-hashes=blake2,md5,sha1,sha2,sha3",
         "--with-readline=readline",
+        "--with-pkg-config=yes",
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
@@ -612,6 +615,7 @@ build.add(
     build_func=build_python,
     wait_on=[
         "openssl",
+        "openssl-fips-module",
         "libxcrypt",
         "XZ",
         "SQLite",
