@@ -1143,18 +1143,17 @@ def test_install_with_target_namespaces(pipexec, build, minor_version, build_ver
     os.chdir(build)
     env["RELENV_DEBUG"] = "yes"
 
-    if "3.12" in build_version or "3.11" in build_version:
-        subprocess.run(
-            [
-                str(pipexec),
-                "install",
-                "cython",
-                "-v",
-                "--no-build-isolation",
-            ],
-            check=True,
-            env=env,
-        )
+    subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "cython",
+            "-v",
+            "--no-build-isolation",
+        ],
+        check=True,
+        env=env,
+    )
 
     extras = build / "extras"
     subprocess.run(
