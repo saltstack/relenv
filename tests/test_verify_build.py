@@ -1166,7 +1166,7 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
     env["RELENV_DEBUG"] = "yes"
 
     build_version = get_build_version()
-    if build_version.startswith("3.12"):
+    if "3.12" in build_version or "3.11" in build_version:
         subprocess.run(
             [
                 str(pipexec),
