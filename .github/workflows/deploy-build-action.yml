@@ -22,39 +22,39 @@ jobs:
         include:
           - platform: linux-gnu
             arch: x86_64
-            python: 3.10.13
+            python: 3.10.14
           - platform: linux-gnu
             arch: x86_64
             python: 3.11.7
           - platform: linux-gnu
             arch: aarch64
-            python: 3.10.13
+            python: 3.10.14
           - platform: linux-gnu
             arch: aarch64
             python: 3.11.7
 
           - platform: win
             arch: x86
-            python: 3.10.13
+            python: 3.10.14
           - platform: win
             arch: x86
             python: 3.11.7
           - platform: win
             arch: amd64
-            python: 3.10.13
+            python: 3.10.14
           - platform: win
             arch: amd64
             python: 3.11.7
 
           - platform: macos
             arch: x86_64
-            python: 3.10.13
+            python: 3.10.14
           - platform: macos
             arch: x86_64
             python: 3.11.7
           - platform: macos
             arch: arm64
-            python: 3.10.13
+            python: 3.10.14
           - platform: macos
             arch: arm64
             python: 3.11.7
