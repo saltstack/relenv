@@ -92,7 +92,7 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec):
         pytest.xfail("Salt does not work with 3.11 on windows yet")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
-    if sys.platform == "linux" and not shutil.which("git"):
+    if sys.platform == "linux" and shutil.which("git"):
         packages = [
             "./salt",
         ]
@@ -434,8 +434,6 @@ def test_nox_virtualenvs(pipexec, build, tmp_path):
 
 @pytest.mark.skip_unless_on_linux
 def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
-    if get_build_version().startswith("3.12"):
-        pytest.xfail("Does not install on 3.12 with system SSL yet")
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["LDFLAGS"] = "-L/usr/lib"
@@ -540,6 +538,7 @@ def test_shebangs(pipexec, build, minor_version):
 @pytest.mark.skip_unless_on_linux
 def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
     env = os.environ.copy()
+    env["RELENV_DEBUG"] = "yes"
     env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
         [str(pipexec), "install", "cffi==1.15.1", "--no-cache-dir", "--no-binary=cffi"],
@@ -633,8 +632,6 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
 
 @pytest.mark.skip_unless_on_linux
 def test_install_pycurl(pipexec, build):
-    if get_build_version().startswith("3.12"):
-        pytest.xfail("Does not install on 3.12 yet")
     curlver = "8.0.1"
 
     # Build curl and install it into the relenv environment
@@ -807,8 +804,6 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_python_ldap(pipexec, build):
-    if get_build_version().startswith("3.12"):
-        pytest.xfail("Does not install on 3.12 yet")
     saslver = "2.1.28"
     ldapver = "2.5.14"
 
@@ -864,8 +859,6 @@ def test_install_python_ldap(pipexec, build):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_python_ldap_system_libs(pipexec):
-    if get_build_version().startswith("3.12"):
-        pytest.xfail("Does not install on 3.12 yet")
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     subprocess.run(
@@ -941,31 +934,49 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build):
 
 
 def test_install_with_target_no_ignore_installed(pipexec, pyexec, build):
+    build_version = get_build_version()
+    if build_version.startswith("3.12"):
+        cffi = "cffi==1.16.0"
+        pygit2 = "pygit2==1.14.0"
+    else:
+        cffi = "cffi==1.15.1"
+        pygit2 = "pygit2==1.12.0"
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
-    subprocess.run(
-        [str(pipexec), "install", "cffi==1.15.1"],
-        check=True,
+    install_cffi = subprocess.run(
+        [str(pipexec), "install", cffi],
+        # check=True,
         env=env,
     )
-    proc = subprocess.run(
-        [str(pipexec), "install", "pygit2==1.12.0", f"--target={extras}"],
-        check=True,
+    assert install_cffi.returncode == 0
+    install_pygit2 = subprocess.run(
+        [str(pipexec), "install", pygit2, f"--target={extras}"],
         env=env,
         capture_output=True,
     )
-    out = proc.stdout.decode()
+    assert install_pygit2.returncode == 0, (
+        install_pygit2.stdout,
+        install_pygit2.stderr,
+    )
+    out = install_pygit2.stdout.decode()
     assert "already satisfied: cffi" in out
     assert "installed cffi" not in out
 
 
 def test_install_with_target_ignore_installed(pipexec, pyexec, build):
+    build_version = get_build_version()
+    if build_version.startswith("3.12"):
+        cffi = "cffi==1.16.0"
+        pygit2 = "pygit2==1.14.0"
+    else:
+        cffi = "cffi==1.15.1"
+        pygit2 = "pygit2==1.12.0"
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
     subprocess.run(
-        [str(pipexec), "install", "cffi==1.15.1"],
+        [str(pipexec), "install", cffi],
         check=True,
         env=env,
     )
@@ -973,7 +984,7 @@ def test_install_with_target_ignore_installed(pipexec, pyexec, build):
         [
             str(pipexec),
             "install",
-            "pygit2==1.12.0",
+            pygit2,
             f"--target={extras}",
             "--ignore-installed",
         ],
@@ -1153,6 +1164,22 @@ def test_install_with_target_namespaces(pipexec, build, minor_version):
     env = os.environ.copy()
     os.chdir(build)
     env["RELENV_DEBUG"] = "yes"
+
+    build_version = get_build_version()
+    if build_version.startswith("3.12"):
+        subprocess.run(
+            [
+                str(pipexec),
+                "install",
+                "cython",
+                "-v",
+                "--no-build-isolation",
+            ],
+            check=True,
+            env=env,
+            capture_output=True,
+        )
+
     extras = build / "extras"
     subprocess.run(
         [
