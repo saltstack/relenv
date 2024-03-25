@@ -87,9 +87,11 @@ def test_imports(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
-def test_pip_install_salt_git(pipexec, build, build_dir, pyexec):
-    if sys.platform == "win32" and get_build_version().startswith("3.11"):
-        pytest.xfail("Salt does not work with 3.11 on windows yet")
+def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
+    if sys.platform == "win32" and "3.11" in build_version or "3.12" in build_version:
+        pytest.xfail("Salt does not work with 3.11 or 3.12 on windows yet")
+    if sys.platform == "darwin" and "3.12" in build_version:
+        pytest.xfail("Salt does not work with 3.12 on macos yet")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and shutil.which("git"):
@@ -919,7 +921,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build):
         env=env,
     )
     subprocess.run(
-        [str(pipexec), "install", "cffi==1.15.1", f"--target={extras}"],
+        [str(pipexec), "install", "cffi==1.16.0", f"--target={extras}"],
         check=True,
         env=env,
     )
@@ -930,7 +932,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build):
         env=env,
         capture_output=True,
     )
-    proc.stdout.decode().strip() == "1.15.1"
+    proc.stdout.decode().strip() == "1.16.0"
 
 
 def test_install_with_target_no_ignore_installed(pipexec, pyexec, build):
