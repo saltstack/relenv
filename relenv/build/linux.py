@@ -243,6 +243,7 @@ def build_readline(env, dirs, logfp):
             "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    env["LDFLAGS"] = f"-ltinfo {env['LDFLAGS']}"
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
