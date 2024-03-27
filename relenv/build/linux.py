@@ -186,18 +186,22 @@ def build_ncurses(env, dirs, logfp):
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "progs", "tic"], stderr=logfp, stdout=logfp)
     os.chdir(dirs.source)
+
+    # Configure with a prefix of '/' so things will be installed to '/lib'
+    # instead of '/usr/local/lib'. The root of the install will be specified
+    # via the DESTDIR make argument.
     runcmd(
         [
             str(configure),
             "--prefix=/",
             "--with-shared",
             "--enable-termcap",
-            "--with-termlib=tinfo",
+            "--with-termlib",
             "--without-cxx-shared",
             "--without-static",
             "--without-cxx",
             "--enable-widec",
-            "--with-normal",
+            "--without-normal",
             "--disable-stripping",
             f"--with-pkg-config={dirs.prefix}/lib/pkgconfig",
             "--enable-pc-files",
@@ -233,6 +237,7 @@ def build_readline(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    env["LDFLAGS"] = f"{env['LDFLAGS']} -ltinfow"
     cmd = [
         "./configure",
         "--prefix={}".format(dirs.prefix),
@@ -243,7 +248,6 @@ def build_readline(env, dirs, logfp):
             "--host={}".format(env["RELENV_HOST"]),
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-    env["LDFLAGS"] = f"-ltinfo {env['LDFLAGS']}"
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
@@ -418,6 +422,7 @@ def build_python(env, dirs, logfp):
     ]
 
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(["sed", "-i", "s/#readline readline.c -lreadline -ltermcap/readline readline.c -lreadline -ltinfow/g", "Modules/Setup"])
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
@@ -616,7 +621,6 @@ build.add(
     build_func=build_python,
     wait_on=[
         "openssl",
-        "openssl-fips-module",
         "libxcrypt",
         "XZ",
         "SQLite",
@@ -646,6 +650,7 @@ build.add(
     build_func=finalize,
     wait_on=[
         "python",
+        "openssl-fips-module",
     ],
 )
 
