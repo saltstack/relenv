@@ -1172,6 +1172,7 @@ def test_install_with_target_namespaces(pipexec, build, minor_version, build_ver
             str(pipexec),
             "install",
             "cython",
+            "setuptools",
             "-v",
             "--no-build-isolation",
         ],
