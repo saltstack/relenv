@@ -422,7 +422,14 @@ def build_python(env, dirs, logfp):
     ]
 
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-    runcmd(["sed", "-i", "s/#readline readline.c -lreadline -ltermcap/readline readline.c -lreadline -ltinfow/g", "Modules/Setup"])
+    runcmd(
+        [
+            "sed",
+            "-i",
+            "s/#readline readline.c -lreadline -ltermcap/readline readline.c -lreadline -ltinfow/g",
+            "Modules/Setup",
+        ]
+    )
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
