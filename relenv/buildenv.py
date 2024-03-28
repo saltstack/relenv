@@ -54,16 +54,16 @@ def buildenv(relenv_path=None):
         "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
         "CXX": f"{toolchain}/bin/{triplet}-g++ -no-pie",
         "CFLAGS": (
-         #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+            #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include "
             f"-I{toolchain}/sysroot/usr/include"
         ),
         "CPPFLAGS": (
-        #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+            #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"
         ),
         "CMAKE_CFLAGS": (
-        #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+            #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"
         ),
         "LDFLAGS": (
