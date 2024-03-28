@@ -18,6 +18,7 @@ jobs:
         version:
           - 3.10.14
           - 3.11.8
+          - 3.12.2
         host:
           - x86_64
           - aarch64
@@ -44,7 +45,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison python3-all patchelf swig cmake libldap2-dev libsasl2-dev ldap-utils libssl-dev
+          sudo apt-get install -y build-essential bison python3-all patchelf swig cmake libldap2-dev libsasl2-dev ldap-utils libssl-dev pkg-config
           python3 -m pip install nox
 
       - name: Python Version
@@ -99,6 +100,7 @@ jobs:
         version:
           - 3.10.14
           - 3.11.8
+          - 3.12.2
         arch:
           - x86_64
 
@@ -154,6 +156,7 @@ jobs:
         version:
           - 3.10.14
           - 3.11.8
+          - 3.12.2
         arch:
           - arm64
 
@@ -208,6 +211,7 @@ jobs:
         version:
           - 3.10.14
           - 3.11.8
+          - 3.12.2
         arch:
           - amd64
           - x86

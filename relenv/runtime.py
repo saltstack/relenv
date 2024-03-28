@@ -460,6 +460,16 @@ class RelenvImporter:
             _loads = {}
         self._loads = _loads
 
+    def find_spec(self, module_name, package_path=None, target=None):
+        """
+        Find modules being imported.
+        """
+        for wrapper in self.wrappers:
+            if wrapper.matches(module_name) and not wrapper.loading:
+                debug(f"RelenvImporter - match {module_name} {package_path} {target}")
+                wrapper.loading = True
+                return importlib.util.spec_from_loader(module_name, self)
+
     def find_module(self, module_name, package_path=None):
         """
         Find modules being imported.

@@ -209,3 +209,6 @@ build.add(
 
 build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
 builds.add("win32", builder=build)
+
+build = build.copy(version="3.12.2", md5sum="e7c178b97bf8f7ccd677b94d614f7b3c")
+builds.add("win32", builder=build)

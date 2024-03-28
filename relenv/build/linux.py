@@ -3,6 +3,8 @@
 """
 The linux build process.
 """
+import pathlib
+import tempfile
 from .common import *
 from ..common import arches, LINUX
 
@@ -35,7 +37,9 @@ def populate_env(env, dirs):
     # CC and CXX need to be to have the full path to the executable
     env["CC"] = "{}/bin/{}-gcc -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
     env["CXX"] = "{}/bin/{}-g++ -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
-    env["PATH"] = "{}/bin/:{PATH}".format(dirs.toolchain, **env)
+    # Add our toolchain binaries to the path. We also add the bin directory of
+    # our prefix so that libtirpc can find krb5-config
+    env["PATH"] = "{}/bin/:{}/bin/:{PATH}".format(dirs.toolchain, dirs.prefix, **env)
     ldflags = [
         "-Wl,--build-id=sha1",
         "-Wl,--rpath={prefix}/lib",
@@ -63,6 +67,7 @@ def populate_env(env, dirs):
     env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
     env["LD_LIBRARY_PATH"] = "{prefix}/lib"
+    env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
 
 
 def build_bzip2(env, dirs, logfp):
@@ -181,17 +186,25 @@ def build_ncurses(env, dirs, logfp):
         runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
         runcmd(["make", "-C", "progs", "tic"], stderr=logfp, stdout=logfp)
     os.chdir(dirs.source)
+
+    # Configure with a prefix of '/' so things will be installed to '/lib'
+    # instead of '/usr/local/lib'. The root of the install will be specified
+    # via the DESTDIR make argument.
     runcmd(
         [
             str(configure),
             "--prefix=/",
             "--with-shared",
+            "--enable-termcap",
+            "--with-termlib",
             "--without-cxx-shared",
             "--without-static",
             "--without-cxx",
             "--enable-widec",
             "--without-normal",
             "--disable-stripping",
+            f"--with-pkg-config={dirs.prefix}/lib/pkgconfig",
+            "--enable-pc-files",
             "--build={}".format(env["RELENV_BUILD"]),
             "--host={}".format(env["RELENV_HOST"]),
         ],
@@ -211,6 +224,32 @@ def build_ncurses(env, dirs, logfp):
         stderr=logfp,
         stdout=logfp,
     )
+
+
+def build_readline(env, dirs, logfp):
+    """
+    Build readline library.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
+    env["LDFLAGS"] = f"{env['LDFLAGS']} -ltinfow"
+    cmd = [
+        "./configure",
+        "--prefix={}".format(dirs.prefix),
+    ]
+    if env["RELENV_HOST"].find("linux") > -1:
+        cmd += [
+            "--build={}".format(env["RELENV_BUILD"]),
+            "--host={}".format(env["RELENV_HOST"]),
+        ]
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
 def build_libffi(env, dirs, logfp):
@@ -340,11 +379,17 @@ def build_python(env, dirs, logfp):
         ]
     )
 
-    with open("/tmp/patch", "w") as fp:
-        fp.write(PATCH)
-    runcmd(["patch", "-p0", "-i", "/tmp/patch"], env=env, stderr=logfp, stdout=logfp)
+    if pathlib.Path("setup.py").exists():
+        with tempfile.NamedTemporaryFile(mode="w", suffix="_patch") as patch_file:
+            patch_file.write(PATCH)
+            patch_file.flush()
+            runcmd(
+                ["patch", "-p0", "-i", patch_file.name],
+                env=env,
+                stderr=logfp,
+                stdout=logfp,
+            )
 
-    env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
     env["OPENSSL_CFLAGS"] = f"-I{dirs.prefix}/include  -Wno-coverage-mismatch"
     env["OPENSSL_LDFLAGS"] = f"-L{dirs.prefix}/lib"
     env["CFLAGS"] = f"-Wno-coverage-mismatch {env['CFLAGS']}"
@@ -360,7 +405,9 @@ def build_python(env, dirs, logfp):
         f"--host={env['RELENV_HOST']}",
         "--disable-test-modules",
         "--with-ssl-default-suites=openssl",
-        "--with-builtin-hashlib-hashes=blake2",
+        "--with-builtin-hashlib-hashes=blake2,md5,sha1,sha2,sha3",
+        "--with-readline=readline",
+        "--with-pkg-config=yes",
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
@@ -375,6 +422,7 @@ def build_python(env, dirs, logfp):
     ]
 
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(["sed", "-i", "s/#readline readline.c -lreadline -ltermcap/readline readline.c -lreadline -ltinfow/g", "Modules/Setup"])
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
@@ -482,7 +530,6 @@ build.add(
 build.add(
     name="ncurses",
     build_func=build_ncurses,
-    wait_on=["readline"],
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/ncurses-{version}.tar.gz",
@@ -544,11 +591,27 @@ build.add(
 
 build.add(
     "readline",
+    build_func=build_readline,
+    wait_on=["ncurses"],
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/readline-{version}.tar.gz",
         "version": "8.2",
         "md5sum": "4aa1b31be779e6b84f9a96cb66bc50f6",
+        "checkfunc": tarball_version,
+    },
+)
+
+build.add(
+    "tirpc",
+    wait_on=[
+        "krb5",
+    ],
+    download={
+        "url": "https://downloads.sourceforge.net/libtirpc/libtirpc-{version}.tar.bz2",
+        "fallback_url": "https://woz.io/relenv/dependencies/libtirpc-{version}.tar.bz2",
+        "version": "1.3.4",
+        "md5sum": "375dbe7ceb2d0300d173fb40321b49b6",
         "checkfunc": tarball_version,
     },
 )
@@ -569,6 +632,7 @@ build.add(
         "uuid",
         "krb5",
         "readline",
+        "tirpc",
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
@@ -586,8 +650,12 @@ build.add(
     build_func=finalize,
     wait_on=[
         "python",
+        "openssl-fips-module",
     ],
 )
 
 build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
+builds.add("linux", builder=build)
+
+build = build.copy(version="3.12.2", md5sum="e7c178b97bf8f7ccd677b94d614f7b3c")
 builds.add("linux", builder=build)
