@@ -268,13 +268,17 @@ def test_pip_install_salt_w_package_requirements(pipexec, tmp_path, salt_branch)
     #     env=env,
     # )
     # assert p.returncode == 0, "Failed to pip install ./salt"
+    if sys.platform == "win32":
+        reqfile = "windows.txt"
+    else:
+        reqfile = sys.platform
     req = os.path.join(
         f"{tmp_path / 'salt'}",
         "requirements",
         "static",
         "pkg",
         f"py{get_build_version().rsplit('.', 1)[0]}",
-        f"{sys.platform}.txt",
+        f"{reqfile}.txt",
     )
     p = subprocess.run(
         [
