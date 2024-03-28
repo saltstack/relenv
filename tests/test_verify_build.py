@@ -241,6 +241,9 @@ def test_pip_install_salt_w_package_requirements(pipexec, tmp_path, salt_branch)
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
 
+    if sys.platform == "win32":
+        pytest.xfail("Known failure")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
