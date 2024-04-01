@@ -3,8 +3,8 @@ Additional Dependencies (Linux)
 
 Some python libraries do not provide wheels and require additional libraries to
 install properly. You can handle installing these python packages in two ways.
-You build them using system dependencies or you can install the needed
-depenency libraries into a relenv environment.
+Build them using system dependencies or install the needed depenency libraries
+into a relenv environment.
 
 The general procedure for installing python modules to use your system's
 libraries is to install the required sytem packages which contain the header
