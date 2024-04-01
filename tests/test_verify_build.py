@@ -23,6 +23,11 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module")
+def arch():
+    return build_arch()
+
+
 @pytest.mark.skip_unless_on_windows
 def test_directories_win(build):
     assert (build / "Scripts").exists()
@@ -128,7 +133,7 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
     get_build_version()
     and packaging.version.parse(get_build_version())
     >= packaging.version.parse("3.11.7"),
-    reason="3.11.7 will not work with 3005.x",
+    reason="3.11.7 and greater will not work with 3005.x",
 )
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
     packages = [
@@ -179,12 +184,14 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
 
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "3007.x", "master"])
-def test_pip_install_salt_w_static_requirements(pipexec, build, tmp_path, salt_branch):
+def test_pip_install_salt_w_static_requirements(
+    pipexec, build, tmp_path, salt_branch, build_version
+):
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
 
     for py_version in ("3.11", "3.12"):
-        if get_build_version().startswith(py_version):
+        if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
 
     if salt_branch == "3006.x" and sys.platform == "win32":
@@ -232,10 +239,12 @@ def test_pip_install_salt_w_static_requirements(pipexec, build, tmp_path, salt_b
 
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
-def test_pip_install_salt_w_package_requirements(pipexec, tmp_path, salt_branch):
+def test_pip_install_salt_w_package_requirements(
+    pipexec, tmp_path, salt_branch, build_version
+):
 
     for py_version in ("3.11", "3.12"):
-        if get_build_version().startswith(py_version):
+        if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
 
     if salt_branch in ["3007.x", "master"]:
@@ -280,7 +289,7 @@ def test_pip_install_salt_w_package_requirements(pipexec, tmp_path, salt_branch)
         "requirements",
         "static",
         "pkg",
-        f"py{get_build_version().rsplit('.', 1)[0]}",
+        f"py{build_version.rsplit('.', 1)[0]}",
         f"{reqfile}.txt",
     )
     p = subprocess.run(
@@ -309,15 +318,17 @@ def test_pip_install_salt_w_package_requirements(pipexec, tmp_path, salt_branch)
 
 
 @pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2"])
-def test_pip_install_pyzmq(pipexec, pyzmq_version):
-    if pyzmq_version == "23.2.0" and get_build_version().startswith("3.12"):
+def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
+
+    if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
 
-    arch = build_arch()
     if pyzmq_version == "23.2.0" and sys.platform == "darwin" and arch == "arm64":
         pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
+
     if sys.platform == "win32" and pyzmq_version == "25.1.2":
         pytest.xfail("pyzmq 25.1.2 fails on windows")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -373,13 +384,18 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     assert import_ret.returncode == 0, f"Failed to import {import_name}"
 
 
-def test_pip_install_salt_pip_dir(pipexec, build):
-    if get_build_version().startswith("3.12"):
+def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
+
+    if "3.12" in build_version:
         pytest.xfail("Don't try to install on 3.12 yet")
-    if get_build_version().startswith("3.11") and sys.platform == "darwin":
+
+    if build_version.startswith("3.11") and sys.platform == "darwin":
+
         pytest.xfail("Known failure on py 3.11 macos")
-    if sys.platform == "win32" and build_arch() == "amd64":
+
+    if sys.platform == "win32" and arch == "amd64":
         pytest.xfail("Known failure on windows amd64")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -942,8 +958,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build):
     proc.stdout.decode().strip() == "1.16.0"
 
 
-def test_install_with_target_no_ignore_installed(pipexec, pyexec, build):
-    build_version = get_build_version()
+def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version):
     if build_version.startswith("3.12"):
         cffi = "cffi==1.16.0"
         pygit2 = "pygit2==1.14.0"
@@ -973,8 +988,7 @@ def test_install_with_target_no_ignore_installed(pipexec, pyexec, build):
     assert "installed cffi" not in out
 
 
-def test_install_with_target_ignore_installed(pipexec, pyexec, build):
-    build_version = get_build_version()
+def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_version):
     if build_version.startswith("3.12"):
         cffi = "cffi==1.16.0"
         pygit2 = "pygit2==1.14.0"
