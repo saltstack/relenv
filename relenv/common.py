@@ -11,9 +11,11 @@ import platform
 import selectors
 import subprocess
 import sys
+import queue
 import tarfile
 import textwrap
 import time
+import threading
 
 # relenv package version
 __version__ = "0.15.1"
@@ -444,30 +446,66 @@ def runcmd(*args, **kwargs):
     kwargs["stderr"] = subprocess.PIPE
     if "universal_newlines" not in kwargs:
         kwargs["universal_newlines"] = True
+    if sys.platform != "win32":
 
-    p = subprocess.Popen(*args, **kwargs)
-    # Read both stdout and stderr simultaneously
-    sel = selectors.DefaultSelector()
-    sel.register(p.stdout, selectors.EVENT_READ)
-    sel.register(p.stderr, selectors.EVENT_READ)
-    ok = True
-    while ok:
-        for key, val1 in sel.select():
-            line = key.fileobj.readline()
-            if not line:
-                ok = False
+        p = subprocess.Popen(*args, **kwargs)
+        # Read both stdout and stderr simultaneously
+        sel = selectors.DefaultSelector()
+        sel.register(p.stdout, selectors.EVENT_READ)
+        sel.register(p.stderr, selectors.EVENT_READ)
+        ok = True
+        while ok:
+            for key, val1 in sel.select():
+                line = key.fileobj.readline()
+                if not line:
+                    ok = False
+                    break
+                if line.endswith("\n"):
+                    line = line[:-1]
+                if key.fileobj is p.stdout:
+                    log.info(line)
+                else:
+                    log.error(line)
+
+    else:
+        def enqueue_stream(stream, queue, type):
+            for line in iter(stream.readline, b''):
+                if line:
+                    queue.put((type,  line))
+            stream.close()
+
+
+        def enqueue_process(process, queue):
+            process.wait()
+            queue.put(('x', 'x'))
+
+        p = subprocess.Popen(*args, **kwargs)
+        q = queue.Queue()
+        to = threading.Thread(target=enqueue_stream, args=(p.stdout, q, 1))
+        te = threading.Thread(target=enqueue_stream, args=(p.stderr, q, 2))
+        tp = threading.Thread(target=enqueue_process, args=(p, q))
+        te.start()
+        to.start()
+        tp.start()
+
+        while True:
+            kind, line = q.get()
+            if kind == 'x':
                 break
-            if line.endswith("\n"):
-                line = line[:-1]
-            if key.fileobj is p.stdout:
-                log.info(line)
+            if kind == 2:  # stderr
+                log.error(line[:-1])
             else:
-                log.error(line)
+                log.info(line[:-1])
+
+        tp.join()
+        to.join()
+        te.join()
+
+
     p.wait()
     if p.returncode != 0:
         raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
     return p
-
 
 def relative_interpreter(root_dir, scripts_dir, interpreter):
     """
