@@ -100,35 +100,14 @@ def test_work_dirs_attributes():
         assert hasattr(dirs, attr)
 
 
-@pytest.mark.skipif(True, reason="Needs re-factor")
 def test_runcmd_success():
-    with patch("subprocess.run") as moc:
-        ret = Mock()
-        ret.returncode = 0
-        moc.side_effect = [ret]
-        _ = runcmd(["echo", "foo"])
-        assert moc.called_with(["echo", "foo"])
-        assert _ == ret
+    ret = runcmd(["echo", "foo"])
+    assert ret.returncode == 0
 
 
-@pytest.mark.skipif(True, reason="Needs re-factor")
 def test_runcmd_fail():
-    with patch("subprocess.run") as moc:
-        ret = Mock()
-        ret.returncode = 1
-        moc.side_effect = [ret]
-        with pytest.raises(RelenvException):
-            _ = runcmd(["echo", "foo"])
-
-
-@pytest.mark.skipif(True, reason="Needs re-factor")
-def test_verify_checksum():
-    with patch("subprocess.run") as moc:
-        ret = Mock()
-        ret.returncode = 1
-        moc.side_effect = [ret]
-        with pytest.raises(RelenvException):
-            _ = runcmd(["echo", "foo"])
+    with pytest.raises(RelenvException):
+        ret = runcmd([sys.executable, "-c", "import sys;sys.exit(1)"])
 
 
 def test_work_dir_with_root_module_dir():
