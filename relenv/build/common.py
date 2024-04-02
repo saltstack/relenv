@@ -599,7 +599,7 @@ class Download:
             log.error("md5 validation failed on %s: %s", archive, exc)
             return False
 
-    def __call__(self, force_download=False):
+    def __call__(self, force_download=False, show_ui=False, exit_on_failure=False):
         """
         Downloads the url and validates the signature and md5 sum.
 
@@ -628,7 +628,15 @@ class Download:
             if self.md5sum is not None:
                 valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
                 valid = valid and valid_md5
-            log.debug("Checksum for %s: %s", self.name, self.md5sum)
+
+            log.warning("Checksum did not  match %s: %s", self.name, self.md5sum)
+            if show_ui:
+                sys.stderr.write(
+                    f"\nChecksum did not match {self.name}: {self.md5sum}\n"
+                )
+                sys.stderr.flush()
+        if exit_on_failure and not valid:
+            sys.exit(1)
         return valid
 
     def check_version(self):
@@ -904,8 +912,12 @@ class Builder:
 
         :return: The output of the build function
         """
-        while event.is_set() is False:
-            time.sleep(0.3)
+        log = logging.getLogger(None)
+        for handler in log.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                handler.setFormatter(
+                    logging.Formatter(f"%(asctime)s {name} %(message)s")
+                )
 
         if not self.dirs.build.exists():
             os.makedirs(self.dirs.build, exist_ok=True)
@@ -914,6 +926,10 @@ class Builder:
         os.makedirs(dirs.sources, exist_ok=True)
         os.makedirs(dirs.logs, exist_ok=True)
         os.makedirs(dirs.prefix, exist_ok=True)
+
+        while event.is_set() is False:
+            time.sleep(0.3)
+
         logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
         handler = logging.FileHandler(dirs.logs / f"{name}.log")
         log.addHandler(handler)
@@ -997,7 +1013,7 @@ class Builder:
             except FileNotFoundError:
                 pass
 
-    def download_files(self, steps=None, force_download=False):
+    def download_files(self, steps=None, force_download=False, show_ui=False):
         """
         Download all of the needed archives.
 
@@ -1010,8 +1026,11 @@ class Builder:
         fails = []
         processes = {}
         events = {}
-        sys.stdout.write("Starting downloads \n")
-        print_ui(events, processes, fails)
+        if show_ui:
+            sys.stdout.write("Starting downloads \n")
+        log.info("Starting downloads")
+        if show_ui:
+            print_ui(events, processes, fails)
         for name in steps:
             download = self.recipies[name]["download"]
             if download is None:
@@ -1020,7 +1039,13 @@ class Builder:
             event.set()
             events[name] = event
             proc = multiprocessing.Process(
-                name=name, target=download, kwargs={"force_download": force_download}
+                name=name,
+                target=download,
+                kwargs={
+                    "force_download": force_download,
+                    "show_ui": show_ui,
+                    "exit_on_failure": True,
+                },
             )
             proc.start()
             processes[name] = proc
@@ -1029,23 +1054,26 @@ class Builder:
             for proc in list(processes.values()):
                 proc.join(0.3)
                 # DEBUG: Comment to debug
-                print_ui(events, processes, fails)
+                if show_ui:
+                    print_ui(events, processes, fails)
                 if proc.exitcode is None:
                     continue
                 processes.pop(proc.name)
                 if proc.exitcode != 0:
                     fails.append(proc.name)
-        print_ui(events, processes, fails)
-        sys.stdout.write("\n")
-        if fails:
+        if show_ui:
             print_ui(events, processes, fails)
-            sys.stderr.write("The following failures were reported\n")
-            for fail in fails:
-                sys.stderr.write(fail + "\n")
-            sys.stderr.flush()
+            sys.stdout.write("\n")
+        if fails and False:
+            if show_ui:
+                print_ui(events, processes, fails)
+                sys.stderr.write("The following failures were reported\n")
+                for fail in fails:
+                    sys.stderr.write(fail + "\n")
+                sys.stderr.flush()
             sys.exit(1)
 
-    def build(self, steps=None, cleanup=True):
+    def build(self, steps=None, cleanup=True, show_ui=False):
         """
         Build!
 
@@ -1059,9 +1087,11 @@ class Builder:
         waits = {}
         processes = {}
 
-        sys.stdout.write("Starting builds\n")
-        # DEBUG: Comment to debug
-        print_ui(events, processes, fails)
+        if show_ui:
+            sys.stdout.write("Starting builds\n")
+            # DEBUG: Comment to debug
+            print_ui(events, processes, fails)
+        log.info("Starting builds")
 
         for name in steps:
             event = multiprocessing.Event()
@@ -1089,8 +1119,9 @@ class Builder:
         while processes:
             for proc in list(processes.values()):
                 proc.join(0.3)
-                # DEBUG: Comment to debug
-                print_ui(events, processes, fails)
+                if show_ui:
+                    # DEBUG: Comment to debug
+                    print_ui(events, processes, fails)
                 if proc.exitcode is None:
                     continue
                 processes.pop(proc.name)
@@ -1111,9 +1142,11 @@ class Builder:
 
         if fails:
             sys.stderr.write("The following failures were reported\n")
+            last_outs = {}
             for fail in fails:
+                log_file = self.dirs.logs / f"{fail}.log"
                 try:
-                    with io.open(self.dirs.logs / f"{fail}.log") as fp:
+                    with io.open(log_file) as fp:
                         fp.seek(0, 2)
                         end = fp.tell()
                         ind = end - 4096
@@ -1121,20 +1154,27 @@ class Builder:
                             fp.seek(ind)
                         else:
                             fp.seek(0)
-                        sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
-                        sys.stderr.write(fp.read() + "\n\n")
+                        last_out = fp.read()
+                        if show_ui:
+                            sys.stderr.write("=" * 20 + f" {fail} " + "=" * 20 + "\n")
+                            sys.stderr.write(fp.read() + "\n\n")
                 except FileNotFoundError:
-                    pass
-            sys.stderr.flush()
+                    last_outs[fail] = f"Log file not found: {log_file}"
+                log.error("Build step %s has failed", fail)
+                log.error(last_out)
+            if show_ui:
+                sys.stderr.flush()
             if cleanup:
+                log.debug("Performing cleanup.")
                 self.cleanup()
             sys.exit(1)
-        time.sleep(0.1)
-        # DEBUG: Comment to debug
-        print_ui(events, processes, fails)
-        sys.stdout.write("\n")
-        sys.stdout.flush()
+        if show_ui:
+            time.sleep(0.3)
+            print_ui(events, processes, fails)
+            sys.stdout.write("\n")
+            sys.stdout.flush()
         if cleanup:
+            log.debug("Performing cleanup.")
             self.cleanup()
 
     def check_prereqs(self):
@@ -1154,7 +1194,14 @@ class Builder:
         return fail
 
     def __call__(
-        self, steps=None, arch=None, clean=True, cleanup=True, force_download=False
+        self,
+        steps=None,
+        arch=None,
+        clean=True,
+        cleanup=True,
+        force_download=False,
+        show_ui=False,
+        log_level="WARNING",
     ):
         """
         Set the architecture, define the steps, clean if needed, download what is needed, and build.
@@ -1170,6 +1217,18 @@ class Builder:
         :param force_download: Whether or not to download the content if it already exists, defaults to True
         :type force_download: bool, optional
         """
+        log = logging.getLogger(None)
+
+        if not show_ui:
+            handler = logging.StreamHandler()
+            handler.setLevel(logging.getLevelName(log_level))
+            log.addHandler(handler)
+
+        os.makedirs(self.dirs.logs, exist_ok=True)
+        handler = logging.FileHandler(self.dirs.logs / "build.log")
+        handler.setLevel(logging.INFO)
+        log.addHandler(handler)
+
         if arch:
             self.set_arch(arch)
 
@@ -1199,16 +1258,18 @@ class Builder:
 
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
-        self.download_files(steps, force_download=force_download)
-        self.build(steps, cleanup)
+        self.download_files(steps, force_download=force_download, show_ui=show_ui)
+        self.build(steps, cleanup, show_ui=show_ui)
 
     def check_versions(self):
+        success = True
         for step in list(self.recipies):
             download = self.recipies[step]["download"]
             if not download:
                 continue
-            print(f"Checking {step}")
-            download.check_version()
+            if not download.check_version():
+                success = False
+        return success
 
 
 def patch_shebang(path, old, new):
