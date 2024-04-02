@@ -4,9 +4,11 @@
 Common classes and values used around relenv.
 """
 import http.client
+import logging
 import os
 import pathlib
 import platform
+import selectors
 import subprocess
 import sys
 import tarfile
@@ -79,6 +81,9 @@ if sys.platform == "linux":
     SHEBANG_TPL = SHEBANG_TPL_LINUX
 else:
     SHEBANG_TPL = SHEBANG_TPL_MACOS
+
+
+log = logging.getLogger()
 
 
 class RelenvException(Exception):
@@ -432,10 +437,36 @@ def runcmd(*args, **kwargs):
 
     :raises RelenvException: If the command finishes with a non zero exit code
     """
-    proc = subprocess.run(*args, **kwargs)
-    if proc.returncode != 0:
+    log.debug("Running command: %s", " ".join(args[0]))
+    # if "stdout" not in kwargs:
+    kwargs["stdout"] = subprocess.PIPE
+    # if "stderr" not in kwargs:
+    kwargs["stderr"] = subprocess.PIPE
+    if "universal_newlines" not in kwargs:
+        kwargs["universal_newlines"] = True
+
+    p = subprocess.Popen(*args, **kwargs)
+    # Read both stdout and stderr simultaneously
+    sel = selectors.DefaultSelector()
+    sel.register(p.stdout, selectors.EVENT_READ)
+    sel.register(p.stderr, selectors.EVENT_READ)
+    ok = True
+    while ok:
+        for key, val1 in sel.select():
+            line = key.fileobj.readline()
+            if not line:
+                ok = False
+                break
+            if line.endswith("\n"):
+                line = line[:-1]
+            if key.fileobj is p.stdout:
+                log.info(line)
+            else:
+                log.error(line)
+    p.wait()
+    if p.returncode != 0:
         raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
-    return proc
+    return p
 
 
 def relative_interpreter(root_dir, scripts_dir, interpreter):
