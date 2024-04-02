@@ -87,8 +87,8 @@ build.add(
 build.add(
     "XZ",
     download={
-        "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
+        "fallback_url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+        "url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
         "version": "5.4.4",
         "md5sum": "b9c34fed669c3e84aa1fa1246a99943b",
     },
