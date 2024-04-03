@@ -10,13 +10,10 @@ import os
 import pathlib
 import tarfile
 import logging
-
-
-log = logging.getLogger(__name__)
-
-
 from .common import runcmd, create_archive, MODULE_DIR, builds, install_runtime
 from ..common import arches, WIN32
+
+log = logging.getLogger(__name__)
 
 ARCHES = arches[WIN32]
 

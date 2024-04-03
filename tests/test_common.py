@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -107,7 +107,7 @@ def test_runcmd_success():
 
 def test_runcmd_fail():
     with pytest.raises(RelenvException):
-        ret = runcmd([sys.executable, "-c", "import sys;sys.exit(1)"])
+        runcmd([sys.executable, "-c", "import sys;sys.exit(1)"])
 
 
 def test_work_dir_with_root_module_dir():
