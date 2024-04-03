@@ -12,7 +12,6 @@ import shutil
 import tarfile
 import tempfile
 import time
-import traceback
 import subprocess
 import random
 import sys
@@ -607,6 +606,7 @@ class Download:
         :rtype: bool
         """
         os.makedirs(self.filepath.parent, exist_ok=True)
+
         downloaded = False
         if force_download:
             _, downloaded = self.fetch_file()
@@ -897,7 +897,9 @@ class Builder:
             "download": download,
         }
 
-    def run(self, name, event, build_func, download):
+    def run(
+        self, name, event, build_func, download, show_ui=False, log_level="WARNING"
+    ):
         """
         Run a build step.
 
@@ -912,8 +914,14 @@ class Builder:
 
         :return: The output of the build function
         """
-        log = logging.getLogger(None)
-        for handler in log.handlers:
+        root_log = logging.getLogger(None)
+        if sys.platform == "win32":
+            if not show_ui:
+                handler = logging.StreamHandler()
+                handler.setLevel(logging.getLevelName(log_level))
+                root_log.addHandler(handler)
+
+        for handler in root_log.handlers:
             if isinstance(handler, logging.StreamHandler):
                 handler.setFormatter(
                     logging.Formatter(f"%(asctime)s {name} %(message)s")
@@ -932,8 +940,8 @@ class Builder:
 
         logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
         handler = logging.FileHandler(dirs.logs / f"{name}.log")
-        log.addHandler(handler)
-        log.setLevel(logging.NOTSET)
+        root_log.addHandler(handler)
+        root_log.setLevel(logging.NOTSET)
 
         # DEBUG: Uncomment to debug
         # logfp = sys.stdout
@@ -967,20 +975,15 @@ class Builder:
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
         self.populate_env(env, dirs)
-
-        logfp.write("*" * 80 + "\n")
         _ = dirs.to_dict()
         for k in _:
-            logfp.write("{} {}\n".format(k, _[k]))
-        logfp.write("*" * 80 + "\n")
+            log.info("Directory %s %s", k, _[k])
         for k in env:
-            logfp.write("{} {}\n".format(k, env[k]))
-        logfp.write("*" * 80 + "\n")
-        logfp.flush()
+            log.info("Environment %s %s", k, env[k])
         try:
             return build_func(env, dirs, logfp)
         except Exception:
-            logfp.write(traceback.format_exc() + "\n")
+            log.exception("Build failure")
             sys.exit(1)
         finally:
             os.chdir(cwd)
@@ -1073,7 +1076,7 @@ class Builder:
                 sys.stderr.flush()
             sys.exit(1)
 
-    def build(self, steps=None, cleanup=True, show_ui=False):
+    def build(self, steps=None, cleanup=True, show_ui=False, log_level="WARNING"):
         """
         Build!
 
@@ -1097,6 +1100,8 @@ class Builder:
             event = multiprocessing.Event()
             events[name] = event
             kwargs = dict(self.recipies[name])
+            kwargs["show_ui"] = show_ui
+            kwargs["log_level"] = log_level
 
             # Determine needed dependency recipies.
             wait_on = kwargs.pop("wait_on", [])
@@ -1218,6 +1223,7 @@ class Builder:
         :type force_download: bool, optional
         """
         log = logging.getLogger(None)
+        log.setLevel(logging.NOTSET)
 
         if not show_ui:
             handler = logging.StreamHandler()
@@ -1259,7 +1265,7 @@ class Builder:
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
         self.download_files(steps, force_download=force_download, show_ui=show_ui)
-        self.build(steps, cleanup, show_ui=show_ui)
+        self.build(steps, cleanup, show_ui=show_ui, log_level=log_level)
 
     def check_versions(self):
         success = True

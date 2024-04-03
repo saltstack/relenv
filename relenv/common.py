@@ -8,14 +8,14 @@ import logging
 import os
 import pathlib
 import platform
+import queue
 import selectors
 import subprocess
 import sys
-import queue
 import tarfile
 import textwrap
-import time
 import threading
+import time
 
 # relenv package version
 __version__ = "0.15.1"
@@ -85,7 +85,7 @@ else:
     SHEBANG_TPL = SHEBANG_TPL_MACOS
 
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class RelenvException(Exception):
@@ -468,16 +468,20 @@ def runcmd(*args, **kwargs):
                     log.error(line)
 
     else:
-        def enqueue_stream(stream, queue, type):
-            for line in iter(stream.readline, b''):
-                if line:
-                    queue.put((type,  line))
-            stream.close()
 
+        def enqueue_stream(stream, queue, type):
+            NOOP = object()
+            for line in iter(stream.readline, NOOP):
+                if line is NOOP or line == "":
+                    break
+                if line:
+                    queue.put((type, line))
+            log.debug("stream close %r %r", type, line)
+            stream.close()
 
         def enqueue_process(process, queue):
             process.wait()
-            queue.put(('x', 'x'))
+            queue.put(("x", "x"))
 
         p = subprocess.Popen(*args, **kwargs)
         q = queue.Queue()
@@ -490,22 +494,23 @@ def runcmd(*args, **kwargs):
 
         while True:
             kind, line = q.get()
-            if kind == 'x':
-                break
-            if kind == 2:  # stderr
-                log.error(line[:-1])
-            else:
+            if kind == 1:  # stdout
                 log.info(line[:-1])
+            elif kind == 2:
+                log.error(line[:-1])
+            elif kind == "x":
+                log.debug("process queue end")
+                break
 
         tp.join()
         to.join()
         te.join()
 
-
     p.wait()
     if p.returncode != 0:
         raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
     return p
+
 
 def relative_interpreter(root_dir, scripts_dir, interpreter):
     """
