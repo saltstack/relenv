@@ -6,6 +6,7 @@ The ``relenv build`` command.
 import sys
 import random
 import codecs
+import signal
 
 from . import linux, darwin, windows
 from .common import builds, CHECK_VERSIONS_SUPPORT
@@ -166,6 +167,12 @@ def main(args):
         show_ui = False
     else:
         show_ui = True
+
+    def signal_handler(signal, frame):
+        sys.exit(1)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     build(
         steps=steps,
         arch=args.arch,

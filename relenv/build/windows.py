@@ -9,6 +9,10 @@ import sys
 import os
 import pathlib
 import tarfile
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 from .common import runcmd, create_archive, MODULE_DIR, builds, install_runtime
