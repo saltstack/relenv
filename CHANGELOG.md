@@ -1,3 +1,15 @@
+0.16.0
+======
+
+* Upgrade Python 3.10 to 3.10.14
+* Upgrade Python 3.11 to 3.11.8
+* Upgrade dependencies: openssl, sqlite, libffi and  zlib.
+* Add python 3.12.2
+* Add `--no-pretty` option to build command to allow build output to stdout.
+* Add '--log-level' option to build command.
+* Minor test improvements.
+
+
 0.15.1
 ======
 
