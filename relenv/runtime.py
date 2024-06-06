@@ -133,9 +133,9 @@ def _build_shebang(func, *args, **kwargs):
                 sys.RELENV, scripts, pathlib.Path(sys.executable).resolve()
             )
         except ValueError:
-            debug("Relenv Value Error - _build_shebang {self.target_dir}")
+            debug(f"Relenv Value Error - _build_shebang {self.target_dir}")
             return func(self, *args, **kwargs)
-        debug("Relenv - _build_shebang {scripts} {interpreter}")
+        debug(f"Relenv - _build_shebang {scripts} {interpreter}")
         if sys.platform == "win32":
             return str(pathlib.Path("#!<launcher_dir>") / interpreter).encode()
         return common().format_shebang("/" / interpreter).encode()
