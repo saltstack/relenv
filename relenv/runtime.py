@@ -619,6 +619,7 @@ class TARGET:
     TARGET = False
     TARGET_PATH = None
     IGNORE = False
+    INSTALL = False
 
 
 def wrap_cmd_install(name):
@@ -729,20 +730,23 @@ def wrap_req_install(name):
                 use_user_site=False,
                 pycompile=True,
             ):
-                if TARGET.TARGET:
-                    home = TARGET.PATH
-                return func(
-                    self,
-                    install_options,
-                    global_options,
-                    root,
-                    home,
-                    prefix,
-                    warn_script_location,
-                    use_user_site,
-                    pycompile,
-                )
-
+                try:
+                    if TARGET.TARGET:
+                        TARGET.ISNTALL = True
+                        home = TARGET.PATH
+                    return func(
+                        self,
+                        install_options,
+                        global_options,
+                        root,
+                        home,
+                        prefix,
+                        warn_script_location,
+                        use_user_site,
+                        pycompile,
+                    )
+                finally:
+                    TARGET.ISNTALL = False
         else:
 
             @functools.wraps(func)
@@ -756,18 +760,22 @@ def wrap_req_install(name):
                 use_user_site=False,
                 pycompile=True,
             ):
-                if TARGET.TARGET:
-                    home = TARGET.PATH
-                return func(
-                    self,
-                    global_options,
-                    root,
-                    home,
-                    prefix,
-                    warn_script_location,
-                    use_user_site,
-                    pycompile,
-                )
+                try:
+                    if TARGET.TARGET:
+                        TARGET.ISNTALL = True
+                        home = TARGET.PATH
+                    return func(
+                        self,
+                        global_options,
+                        root,
+                        home,
+                        prefix,
+                        warn_script_location,
+                        use_user_site,
+                        pycompile,
+                    )
+                finally:
+                    TARGET.ISNTALL = False
 
         return wrapper
 
