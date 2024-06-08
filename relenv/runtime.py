@@ -670,7 +670,7 @@ def wrap_locations(name):
             dist_name, user=False, home=None, root=None, isolated=False, prefix=None
         ):
             scheme = func(dist_name, user, home, root, isolated, prefix)
-            if TARGET.TARGET:
+            if TARGET.TARGET and TARGET.INSTALL:
                 scheme.platlib = TARGET.PATH
                 scheme.purelib = TARGET.PATH
                 scheme.data = TARGET.PATH
@@ -732,7 +732,7 @@ def wrap_req_install(name):
             ):
                 try:
                     if TARGET.TARGET:
-                        TARGET.ISNTALL = True
+                        TARGET.INSTALL = True
                         home = TARGET.PATH
                     return func(
                         self,
@@ -746,7 +746,7 @@ def wrap_req_install(name):
                         pycompile,
                     )
                 finally:
-                    TARGET.ISNTALL = False
+                    TARGET.INSTALL = False
         else:
 
             @functools.wraps(func)
@@ -762,7 +762,7 @@ def wrap_req_install(name):
             ):
                 try:
                     if TARGET.TARGET:
-                        TARGET.ISNTALL = True
+                        TARGET.INSTALL = True
                         home = TARGET.PATH
                     return func(
                         self,
@@ -775,7 +775,7 @@ def wrap_req_install(name):
                         pycompile,
                     )
                 finally:
-                    TARGET.ISNTALL = False
+                    TARGET.INSTALL = False
 
         return wrapper
 
