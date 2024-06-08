@@ -45,7 +45,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison python3-all patchelf swig cmake libldap2-dev libsasl2-dev ldap-utils libssl-dev pkg-config
+          sudo apt-get install -y build-essential bison python3-all patchelf swig cmake libldap2-dev libsasl2-dev ldap-utils libssl-dev pkg-config libvirt-dev default-libmysqlclient-dev 
           python3 -m pip install nox
 
       - name: Python Version
@@ -168,7 +168,7 @@ jobs:
 
       - name: Install nox
         run: |
-          pip3 install nox
+          brew install nox
 
       - name: Uninstall gettext
         run: |
@@ -184,7 +184,7 @@ jobs:
 
       - name: Verify Build
         run: |
-          python3 -m nox -e tests -- tests/test_verify_build.py
+          nox -e tests -- tests/test_verify_build.py
 
       - name: MacOS Logs
         uses: actions/upload-artifact@v3
