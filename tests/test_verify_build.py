@@ -1257,3 +1257,59 @@ def test_debugpy(pipexec, build, minor_version):
     server.wait()
     assert server.stdout.read() == b""
     assert server.stderr.read() == b""
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_libvirt(pipexec, build, minor_version):
+    extras = build / "extras"
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            f"--target={extras}",
+            "libvirt-python",
+        ]
+    )
+    assert p.returncode == 0, "Failed install libvirt-python"
+    # Validate libvirt.py ends up in the extras directory
+    assert (extras / "libvirt.py").exists()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_mysqlclient(pipexec, build, minor_version):
+    version = "2.2.4"
+    extras = build / "extras"
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            f"--target={extras}",
+            f"mysqlclient=={version}",
+        ]
+    )
+    assert p.returncode == 0, "Failed install mysqlclient"
+    assert (extras / "MySQLdb").exists()
+    assert (extras / f"mysqlclient-{version}.dist-info").exists()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_m2crypto(pipexec, build, minor_version):
+    version = "0.41.0"
+    extras = build / "extras"
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            f"--target={extras}",
+            f"m2crypto=={version}",
+        ]
+    )
+    assert p.returncode == 0, "Failed install M2Crypto"
+    assert (extras / "M2Crypto").exists()
+    assert (extras / f"M2Crypto-{version}.dist-info").exists()
