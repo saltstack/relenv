@@ -1,3 +1,10 @@
+0.16.1
+======
+
+* Fix pip build requirements install when used with --target
+* Fix docs builds
+
+
 0.16.0
 ======
 
