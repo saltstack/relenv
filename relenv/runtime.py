@@ -747,6 +747,7 @@ def wrap_req_install(name):
                     )
                 finally:
                     TARGET.INSTALL = False
+
         else:
 
             @functools.wraps(func)
