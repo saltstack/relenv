@@ -68,7 +68,7 @@ def test_download_exists(tmp_path):
 def test_validate_md5sum(tmp_path):
     fake_md5 = "fakemd5"
     with patch("relenv.build.common.verify_checksum") as run_mock:
-        assert Download.validate_md5sum(str(tmp_path), fake_md5) is True
+        assert Download.validate_checksum(str(tmp_path), fake_md5) is True
         run_mock.assert_called_with(str(tmp_path), fake_md5)
 
 
@@ -77,7 +77,7 @@ def test_validate_md5sum_failed(tmp_path):
     with patch(
         "relenv.build.common.verify_checksum", side_effect=RelenvException
     ) as run_mock:
-        assert Download.validate_md5sum(str(tmp_path), fake_md5) is False
+        assert Download.validate_checksum(str(tmp_path), fake_md5) is False
         run_mock.assert_called_with(str(tmp_path), fake_md5)
 
 

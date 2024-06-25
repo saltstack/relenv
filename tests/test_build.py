@@ -17,7 +17,7 @@ def fake_download(tmp_path):
 
 @pytest.fixture
 def fake_download_md5(fake_download):
-    return hashlib.md5(fake_download.read_bytes()).hexdigest()
+    return hashlib.sha1(fake_download.read_bytes()).hexdigest()
 
 
 @pytest.mark.skip_unless_on_linux
