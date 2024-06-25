@@ -98,7 +98,7 @@ build.add(
     name="SQLite",
     build_func=build_sqlite,
     download={
-        "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
+        "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
         "version": "3460000",
         "checksum": "cab1c195dbb477f4ab8939ca6c58c62230e5ceea",
