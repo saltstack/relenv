@@ -452,8 +452,8 @@ build.add(
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
-        "version": "3.2.1",
-        "md5sum": "c239213887804ba00654884918b37441",
+        "version": "3.2.2",
+        "checksum": "b12311372a0277ca0eb218a68a7fd9f5ce66d162",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
@@ -468,7 +468,7 @@ build.add(
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
         "version": "3.0.8",
-        "md5sum": "61e017cf4fea1b599048f621f1490fbd",
+        "checksum": "580d8a7232327fe1fa6e7db54ac060d4321f40ab",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
@@ -480,7 +480,7 @@ build.add(
     download={
         "url": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
         "version": "4.4.36",
-        "md5sum": "b84cd4104e08c975063ec6c4d0372446",
+        "checksum": "c040de2fd534f84082c9c42114ba11b4e1a67635",
         "checkfunc": github_version,
         "checkurl": "https://github.com/besser82/libxcrypt/releases/",
     },
@@ -489,10 +489,10 @@ build.add(
 build.add(
     "XZ",
     download={
-        "fallback_url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
-        "version": "5.4.4",
-        "md5sum": "b9c34fed669c3e84aa1fa1246a99943b",
+        "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+        "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
+        "version": "5.6.2",
+        "checksum": "0d6b10e4628fe08e19293c65e8dbcaade084a083",
         "checkfunc": tarball_version,
     },
 )
@@ -503,8 +503,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3450200",
-        "md5sum": "27436d5446f3e2afa6bc2e82f9c4f6ba",
+        "version": "3460000",
+        "checksum": "cab1c195dbb477f4ab8939ca6c58c62230e5ceea",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
@@ -517,7 +517,7 @@ build.add(
         "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/bzip2-{version}.tar.gz",
         "version": "1.0.8",
-        "md5sum": "67e051268d0c475ea773822f7500d0e5",
+        "checksum": "bf7badf7e248e0ecf465d33c2f5aeec774209227",
         "checkfunc": tarball_version,
     },
 )
@@ -529,7 +529,7 @@ build.add(
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/gdbm-{version}.tar.gz",
         "version": "1.23",
-        "md5sum": "8551961e36bf8c70b7500d255d3658ec",
+        "checksum": "50ba1b1d45ce33fd44e4fdaaf3b55a9d8f3dc418",
         "checkfunc": tarball_version,
     },
 )
@@ -540,8 +540,8 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/ncurses-{version}.tar.gz",
-        "version": "6.4",
-        "md5sum": "5a62487b5d4ac6b132fe2bf9f8fad29b",
+        "version": "6.5",
+        "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
         "checkfunc": tarball_version,
     },
 )
@@ -553,7 +553,7 @@ build.add(
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
         "version": "3.4.6",
-        "md5sum": "b9cac6c5997dca2b3787a59ede34e0eb",
+        "checksum": "19251dfee520dff42acefe36bfe76d7168071e01",
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
@@ -566,7 +566,7 @@ build.add(
         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/zlib-{version}.tar.gz",
         "version": "1.3.1",
-        "md5sum": "9855b6d802d7fe5b7bd5b196a2271655",
+        "checksum": "f535367b1a11e2f9ac3bec723fb007fbc0d189e5",
         "checkfunc": tarball_version,
     },
 )
@@ -577,7 +577,7 @@ build.add(
         "url": "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/libuuid-{version}.tar.gz",
         "version": "1.0.3",
-        "md5sum": "d44d866d06286c08ba0846aba1086d68",
+        "checksum": "46eaedb875ae6e63677b51ec583656199241d597",
         "checkfunc": uuid_version,
     },
 )
@@ -590,7 +590,7 @@ build.add(
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/krb5-{version}.tar.gz",
         "version": "1.21",
-        "md5sum": "304b335236d86a7e8effec31bd782baf",
+        "checksum": "e2ee531443122376ac8b62b3848d94376f646089",
         "checkfunc": krb_version,
         "checkurl": "https://kerberos.org/dist/krb5/",
     },
@@ -604,7 +604,7 @@ build.add(
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/readline-{version}.tar.gz",
         "version": "8.2",
-        "md5sum": "4aa1b31be779e6b84f9a96cb66bc50f6",
+        "checksum": "97ad98be243a857b639c0f3da2fe7d81c6d1d36e",
         "checkfunc": tarball_version,
     },
 )
@@ -615,10 +615,11 @@ build.add(
         "krb5",
     ],
     download={
-        "url": "https://downloads.sourceforge.net/libtirpc/libtirpc-{version}.tar.bz2",
+        "url": "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
+        #"url": "https://downloads.sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
         "fallback_url": "https://woz.io/relenv/dependencies/libtirpc-{version}.tar.bz2",
         "version": "1.3.4",
-        "md5sum": "375dbe7ceb2d0300d173fb40321b49b6",
+        "checksum": "63c800f81f823254d2706637bab551dec176b99b",
         "checkfunc": tarball_version,
     },
 )
@@ -645,7 +646,7 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
-        "md5sum": "05148354ce821ba7369e5b7958435400",
+        "checksum": "9103b4716dff30b40fd0239982f3a2d851143a46",
         "checkfunc": python_version,
         "checkurl": "https://www.python.org/ftp/python/",
     },
@@ -661,8 +662,8 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
+build = build.copy(version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada")
 builds.add("linux", builder=build)
 
-build = build.copy(version="3.12.2", md5sum="e7c178b97bf8f7ccd677b94d614f7b3c")
+build = build.copy(version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e")
 builds.add("linux", builder=build)
