@@ -25,57 +25,57 @@ jobs:
             python: 3.10.14
           - platform: linux-gnu
             arch: x86_64
-            python: 3.11.8
+            python: 3.11.9
           - platform: linux-gnu
             arch: x86_64
-            python: 3.12.2
+            python: 3.12.4
           - platform: linux-gnu
             arch: aarch64
             python: 3.10.14
           - platform: linux-gnu
             arch: aarch64
-            python: 3.11.8
+            python: 3.11.9
           - platform: linux-gnu
             arch: aarch64
-            python: 3.12.2
+            python: 3.12.4
 
           - platform: win
             arch: x86
             python: 3.10.14
           - platform: win
             arch: x86
-            python: 3.11.8
+            python: 3.11.9
           - platform: win
             arch: x86
-            python: 3.12.2
+            python: 3.12.4
           - platform: win
             arch: amd64
             python: 3.10.14
           - platform: win
             arch: amd64
-            python: 3.11.8
+            python: 3.11.9
           - platform: win
             arch: amd64
-            python: 3.12.2
+            python: 3.12.4
 
           - platform: macos
             arch: x86_64
             python: 3.10.14
           - platform: macos
             arch: x86_64
-            python: 3.11.8
+            python: 3.11.9
           - platform: macos
             arch: x86_64
-            python: 3.12.2
+            python: 3.12.4
           - platform: macos
             arch: arm64
             python: 3.10.14
           - platform: macos
             arch: arm64
-            python: 3.11.8
+            python: 3.11.9
           - platform: macos
             arch: arm64
-            python: 3.12.2
+            python: 3.12.4
 
     steps:
     - name: Download Artifacts
