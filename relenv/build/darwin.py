@@ -79,8 +79,8 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "3.2.1",
-        "md5sum": "c239213887804ba00654884918b37441",
+        "version": "3.2.2",
+        "checksum": "b12311372a0277ca0eb218a68a7fd9f5ce66d162",
     },
 )
 
@@ -89,8 +89,8 @@ build.add(
     download={
         "fallback_url": "http://tukaani.org/xz/xz-{version}.tar.gz",
         "url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
-        "version": "5.4.4",
-        "md5sum": "b9c34fed669c3e84aa1fa1246a99943b",
+        "version": "5.6.2",
+        "checksum": "0d6b10e4628fe08e19293c65e8dbcaade084a083",
     },
 )
 
@@ -100,8 +100,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2023/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3430200",
-        "md5sum": "94fb06bfebc437762e489c355ae63716",
+        "version": "3460000",
+        "checksum": "cab1c195dbb477f4ab8939ca6c58c62230e5ceea",
     },
 )
 
@@ -116,7 +116,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.gz",
-        "md5sum": "05148354ce821ba7369e5b7958435400",
+        "checksum": "05148354ce821ba7369e5b7958435400",
         "version": build.version,
     },
 )
@@ -130,8 +130,8 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
+build = build.copy(version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada")
 builds.add("darwin", builder=build)
 
-build = build.copy(version="3.12.2", md5sum="e7c178b97bf8f7ccd677b94d614f7b3c")
+build = build.copy(version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e")
 builds.add("darwin", builder=build)

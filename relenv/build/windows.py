@@ -135,7 +135,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": build.version,
-        "md5sum": "05148354ce821ba7369e5b7958435400",
+        "checksum": "05148354ce821ba7369e5b7958435400",
     },
 )
 
@@ -208,8 +208,8 @@ build.add(
     wait_on=["python"],
 )
 
-build = build.copy(version="3.11.8", md5sum="b353b8433e560e1af2b130f56dfbd973")
+build = build.copy(version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada")
 builds.add("win32", builder=build)
 
-build = build.copy(version="3.12.2", md5sum="e7c178b97bf8f7ccd677b94d614f7b3c")
+build = build.copy(version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e")
 builds.add("win32", builder=build)

@@ -377,9 +377,9 @@ def fetch_url(url, fp, backoff=3, timeout=30):
             urllib.error.HTTPError,
             urllib.error.URLError,
             http.client.RemoteDisconnected,
-        ):
+        ) as exc:
             if n >= backoff:
-                raise
+                raise RelenvException(f"Error fetching url {url} {exc}")
             time.sleep(n * 10)
     try:
         size = 1024 * 300

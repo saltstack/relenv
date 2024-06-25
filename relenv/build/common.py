@@ -184,10 +184,10 @@ def verify_checksum(file, checksum):
         log.error("Can't verify checksum because none was given")
         return False
     with open(file, "rb") as fp:
-        file_checksum = hashlib.md5(fp.read()).hexdigest()
+        file_checksum = hashlib.sha1(fp.read()).hexdigest()
         if checksum != file_checksum:
             raise RelenvException(
-                f"md5 checksum verification failed. expected={checksum} found={file_checksum}"
+                f"sha1 checksum verification failed. expected={checksum} found={file_checksum}"
             )
     return True
 
@@ -404,7 +404,7 @@ def parse_links(text):
     return parser.hrefs
 
 
-def check_files(location, func, current):
+def check_files(name, location, func, current):
     fp = io.BytesIO()
     fetch_url(location, fp)
     fp.seek(0)
@@ -429,14 +429,14 @@ def check_files(location, func, current):
                     pass
 
     versions.sort()
-    compare_versions(current, versions)
+    compare_versions(name, current, versions)
 
 
-def compare_versions(current, versions):
+def compare_versions(name, current, versions):
     for version in versions:
         try:
             if version > current:
-                print(f"Found new version {version} > {current}")
+                print(f"Found new version of {name} {version} > {current}")
         except TypeError:
             print(f"Unable to compare versions {version}")
 
@@ -455,8 +455,8 @@ class Download:
     :type destination: str
     :param version: The version of the content to download
     :type version: str
-    :param md5sum: The md5 sum of the download
-    :type md5sum: str
+    :param sha1: The sha1 sum of the download
+    :type sha1: str
 
     """
 
@@ -468,7 +468,7 @@ class Download:
         signature=None,
         destination="",
         version="",
-        md5sum=None,
+        checksum=None,
         checkfunc=None,
         checkurl=None,
     ):
@@ -478,7 +478,7 @@ class Download:
         self.signature_tpl = signature
         self.destination = destination
         self.version = version
-        self.md5sum = md5sum
+        self.checksum = checksum
         self.checkfunc = checkfunc
         self.checkurl = checkurl
 
@@ -490,7 +490,7 @@ class Download:
             self.signature_tpl,
             self.destination,
             self.version,
-            self.md5sum,
+            self.checksum,
             self.checkfunc,
             self.checkurl,
         )
@@ -528,7 +528,7 @@ class Download:
             return download_url(self.url, self.destination, CICD), True
         except Exception as exc:
             if self.fallback_url:
-                print(f"Download failed ({exc}); trying fallback url")
+                print(f"Download failed {self.url} ({exc}); trying fallback url")
                 return download_url(self.fallback_url, self.destination, CICD), True
 
     def fetch_signature(self, version):
@@ -580,27 +580,27 @@ class Download:
             return False
 
     @staticmethod
-    def validate_md5sum(archive, md5sum):
+    def validate_checksum(archive, checksum):
         """
-        True when when the archive matches the md5 hash.
+        True when when the archive matches the sha1 hash.
 
         :param archive: The path to the archive to validate
         :type archive: str
-        :param md5sum: The md5 sum to validate against
-        :type md5sum: str
+        :param checksum: The sha1 sum to validate against
+        :type checksum: str
         :return: True if the sums matched, else False
         :rtype: bool
         """
         try:
-            verify_checksum(archive, md5sum)
+            verify_checksum(archive, checksum)
             return True
         except RelenvException as exc:
-            log.error("md5 validation failed on %s: %s", archive, exc)
+            log.error("sha1 validation failed on %s: %s", archive, exc)
             return False
 
     def __call__(self, force_download=False, show_ui=False, exit_on_failure=False):
         """
-        Downloads the url and validates the signature and md5 sum.
+        Downloads the url and validates the signature and sha1 sum.
 
         :return: Whether or not validation succeeded
         :rtype: bool
@@ -613,8 +613,8 @@ class Download:
         else:
             file_is_valid = False
             dest = get_download_location(self.url, self.destination)
-            if self.md5sum and os.path.exists(dest):
-                file_is_valid = self.validate_md5sum(dest, self.md5sum)
+            if self.checksum and os.path.exists(dest):
+                file_is_valid = self.validate_checksum(dest, self.checksum)
             if file_is_valid:
                 log.debug("%s already downloaded, skipping.", self.url)
             else:
@@ -625,16 +625,17 @@ class Download:
                 sig, _ = self.fetch_signature()
                 valid_sig = self.validate_signature(self.filepath, sig)
                 valid = valid and valid_sig
-            if self.md5sum is not None:
-                valid_md5 = self.validate_md5sum(self.filepath, self.md5sum)
-                valid = valid and valid_md5
+            if self.checksum is not None:
+                valid_checksum = self.validate_checksum(self.filepath, self.checksum)
+                valid = valid and valid_checksum
 
-            log.warning("Checksum did not  match %s: %s", self.name, self.md5sum)
-            if show_ui:
-                sys.stderr.write(
-                    f"\nChecksum did not match {self.name}: {self.md5sum}\n"
-                )
-                sys.stderr.flush()
+            if not valid:
+                log.warning("Checksum did not match %s: %s", self.name, self.checksum)
+                if show_ui:
+                    sys.stderr.write(
+                        f"\nChecksum did not match {self.name}: {self.checksum}\n"
+                    )
+                    sys.stderr.flush()
         if exit_on_failure and not valid:
             sys.exit(1)
         return valid
@@ -644,7 +645,7 @@ class Download:
             url = self.checkurl
         else:
             url = self.url.rsplit("/", 1)[0]
-        check_files(url, self.checkfunc, self.version)
+        check_files(self.name, url, self.checkfunc, self.version)
 
 
 class Dirs:
@@ -826,7 +827,7 @@ class Builder:
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
-    def copy(self, version, md5sum):
+    def copy(self, version, checksum):
         recipies = {}
         for name in self.recipies:
             _ = self.recipies[name]
@@ -845,7 +846,7 @@ class Builder:
             version,
         )
         build.recipies["python"]["download"].version = version
-        build.recipies["python"]["download"].md5sum = md5sum
+        build.recipies["python"]["download"].checksum = checksum
         return build
 
     def set_arch(self, arch):
