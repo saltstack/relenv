@@ -540,8 +540,11 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/ncurses-{version}.tar.gz",
-        "version": "6.5",
-        "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
+        # XXX: Need to work out tinfo linkage
+        # "version": "6.5",
+        # "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
+        "version": "6.4",
+        "checksum": "bb5eb3f34b3ecd5bac8d0b58164b847f135b3d62",
         "checkfunc": tarball_version,
     },
 )
