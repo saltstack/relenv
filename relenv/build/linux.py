@@ -616,7 +616,7 @@ build.add(
     ],
     download={
         "url": "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
-        #"url": "https://downloads.sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
+        # "url": "https://downloads.sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
         "fallback_url": "https://woz.io/relenv/dependencies/libtirpc-{version}.tar.bz2",
         "version": "1.3.4",
         "checksum": "63c800f81f823254d2706637bab551dec176b99b",
@@ -662,8 +662,12 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada")
+build = build.copy(
+    version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada"
+)
 builds.add("linux", builder=build)
 
-build = build.copy(version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e")
+build = build.copy(
+    version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e"
+)
 builds.add("linux", builder=build)
