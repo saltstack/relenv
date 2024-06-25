@@ -130,8 +130,12 @@ build.add(
     ],
 )
 
-build = build.copy(version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada")
+build = build.copy(
+    version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada"
+)
 builds.add("darwin", builder=build)
 
-build = build.copy(version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e")
+build = build.copy(
+    version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e"
+)
 builds.add("darwin", builder=build)
