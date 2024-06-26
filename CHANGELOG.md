@@ -1,3 +1,14 @@
+0.17.0
+======
+
+* Upgrade python 3.11 to 3.11.9
+* Upgrade python 3.12 to 3.12.4
+* Upgrade openssl to 3.2.2
+* Upgrade XZ to 5.6.2
+* Upgrade SQLite to 3460000
+* Use sha1 for download checksums intead of md5
+
+
 0.16.1
 ======
 
