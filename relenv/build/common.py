@@ -287,6 +287,7 @@ def build_openssl(env, dirs, logfp, fips=False):
         "--api=1.1.1",
         "--shared",
         "--with-rand-seed=os,egd",
+        "enable-md2",
         "enable-egd",
         "no-idea",
     ]
