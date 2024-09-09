@@ -1,6 +1,13 @@
 0.17.0
 ======
 
+* Upgrade openssl to 3.2.3
+* Add enable md2 flag to openssl compilation
+
+
+0.17.0
+======
+
 * Upgrade python 3.11 to 3.11.9
 * Upgrade python 3.12 to 3.12.4
 * Upgrade openssl to 3.2.2
