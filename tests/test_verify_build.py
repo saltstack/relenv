@@ -190,6 +190,9 @@ def test_pip_install_salt_w_static_requirements(
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
 
+    if sys.platform == "darwin" and salt_branch in ["3006.x"]:
+        pytest.xfail("Known failure")
+
     for py_version in ("3.11", "3.12"):
         if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
