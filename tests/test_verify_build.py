@@ -256,6 +256,9 @@ def test_pip_install_salt_w_package_requirements(
     if sys.platform == "win32":
         pytest.xfail("Known failure")
 
+    if sys.platform == "darwin" and salt_branch == "3006.x":
+        pytest.xfail("Known failure")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
@@ -331,6 +334,9 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
 
     if sys.platform == "win32" and pyzmq_version == "25.1.2":
         pytest.xfail("pyzmq 25.1.2 fails on windows")
+
+    if sys.platform == "win32" and pyzmq_version == "23.2.0":
+        pytest.xfail("vcredist not found as of 9/9/24")
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
