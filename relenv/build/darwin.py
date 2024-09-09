@@ -78,9 +78,9 @@ build.add(
     "openssl",
     build_func=build_openssl,
     download={
-        "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "3.2.2",
-        "checksum": "b12311372a0277ca0eb218a68a7fd9f5ce66d162",
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
+        "version": "3.2.3",
+        "checksum": "1c04294b2493a868ac5f65d166c29625181a31ed",
     },
 )
 
