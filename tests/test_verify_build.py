@@ -1322,3 +1322,28 @@ def test_install_m2crypto(pipexec, build, minor_version):
     assert p.returncode == 0, "Failed install M2Crypto"
     assert (extras / "M2Crypto").exists()
     assert (extras / f"M2Crypto-{version}.dist-info").exists()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_pyinotify_w_latest_pip(pipexec, build, minor_version):
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--upgrade",
+            "pip",
+        ]
+    )
+    extras = build / "extras"
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--no-cache-dir",
+            "--no-binary=:all:",
+            f"--target={extras}",
+            "pyinotify",
+        ]
+    )
+    assert p.returncode == 0, "Failed install pyinotify"
+    assert (extras / "pyinotify").exists()
