@@ -671,9 +671,15 @@ def wrap_locations(name):
         ):
             scheme = func(dist_name, user, home, root, isolated, prefix)
             if TARGET.TARGET and TARGET.INSTALL:
-                scheme.platlib = TARGET.PATH
-                scheme.purelib = TARGET.PATH
-                scheme.data = TARGET.PATH
+                from pip._internal.models.scheme import Scheme
+
+                scheme = Scheme(
+                    platlib=TARGET.PATH,
+                    purelib=TARGET.PATH,
+                    headers=scheme.headers,
+                    scripts=scheme.scripts,
+                    data=scheme.data,
+                )
             return scheme
 
         return wrapper
