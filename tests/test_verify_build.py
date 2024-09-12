@@ -1346,4 +1346,4 @@ def test_install_pyinotify_w_latest_pip(pipexec, build, minor_version):
         ]
     )
     assert p.returncode == 0, "Failed install pyinotify"
-    assert (extras / "pyinotify").exists()
+    assert (extras / "pyinotify.py").exists()
