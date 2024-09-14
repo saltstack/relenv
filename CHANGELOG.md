@@ -1,8 +1,9 @@
-0.17.0
+0.17.1
 ======
 
 * Upgrade openssl to 3.2.3
 * Add enable md2 flag to openssl compilation
+* Fix pip install --target with pip version 24.2
 
 
 0.17.0
