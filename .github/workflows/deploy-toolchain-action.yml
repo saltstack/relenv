@@ -28,7 +28,7 @@ jobs:
     steps:
 
     - name: Download Artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
         path: release-artifacts/
