@@ -6,6 +6,7 @@ jobs:
   build:
     name: Publish Python Wheel
     runs-on: ubuntu-latest
+    environment: release
     steps:
       - name: Download Python Package Artifacts
         uses: actions/download-artifact@v3
