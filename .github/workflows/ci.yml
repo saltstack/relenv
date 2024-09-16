@@ -26,10 +26,6 @@ on:
           -C--global-option=--tag-build=+dev$(git rev-parse --short HEAD)
           --wheel
           --outdir dist/
-    secrets:
-      PYPI_API_TOKEN:
-        required: false
-
 jobs:
 
   get-changed-files:
@@ -164,8 +160,6 @@ jobs:
       - test-fips
       - upload-build-artifacts
       - upload-toolchain-artifacts
-    secrets:
-      PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
 
   create-release:
     name: Create Github Release
