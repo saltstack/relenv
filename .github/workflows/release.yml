@@ -29,5 +29,3 @@ jobs:
     with:
       kind: "${{ inputs.kind }}"
       package_command: "${{ inputs.package_command }}"
-    secrets:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
