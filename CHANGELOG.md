@@ -1,3 +1,9 @@
+0.17.2
+======
+
+* Fix github release publishing in workflows
+
+
 0.17.1
 ======
 
