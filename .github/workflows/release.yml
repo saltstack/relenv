@@ -23,10 +23,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+      id-token: write
     uses: ./.github/workflows/ci.yml
-    if: contains('["dwoz","MKLeb","s0undt3ch"]', github.actor)
+    if: contains('["dwoz", "twangboy", "dmurhpy18"]', github.actor)
     with:
       kind: "${{ inputs.kind }}"
       package_command: "${{ inputs.package_command }}"
-    secrets:
-      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

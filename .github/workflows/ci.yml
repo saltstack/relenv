@@ -26,10 +26,6 @@ on:
           -C--global-option=--tag-build=+dev$(git rev-parse --short HEAD)
           --wheel
           --outdir dist/
-    secrets:
-      PYPI_API_TOKEN:
-        required: false
-
 jobs:
 
   get-changed-files:
@@ -164,26 +160,17 @@ jobs:
       - test-fips
       - upload-build-artifacts
       - upload-toolchain-artifacts
-    secrets:
-      PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
 
-  push-tag:
-    name: Push Version Tag
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  create-release:
+    name: Create Github Release
+    uses: ./.github/workflows/github-release.yml
     if: ${{ inputs.kind == 'release' && success() }}
     needs:
       - build-python-package
       - deploy-python-package
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Push Tag
-        uses: rickstaa/action-create-tag@v1
-        with:
-          tag: "v${{ needs.build-python-package.outputs.version }}"
-          message: "Version ${{ needs.build-python-package.outputs.version }}"
+    with:
+      version: ${{ needs.build-python-package.outputs.version }}
+
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
@@ -201,7 +188,7 @@ jobs:
       - upload-build-artifacts
       - upload-toolchain-artifacts
       - deploy-python-package
-      - push-tag
+      - create-release
     steps:
       - name: Get workflow information
         id: get-workflow-info
