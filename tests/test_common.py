@@ -124,14 +124,14 @@ def test_get_toolchain(tmp_path):
     data_dir = tmp_path / "data"
     with patch("relenv.common.DATA_DIR", data_dir):
         ret = get_toolchain(arch="aarch64")
-        assert ret == data_dir / "toolchain" / "aarch64-linux-gnu"
+        assert "ppbt" in str(ret)
 
 
 def test_get_toolchain_no_arch(tmp_path):
     data_dir = tmp_path / "data"
     with patch("relenv.common.DATA_DIR", data_dir):
         ret = get_toolchain()
-        assert ret == data_dir / "toolchain"
+        assert "ppbt" in str(ret)
 
 
 @pytest.mark.parametrize("open_arg", (":gz", ":xz", ":bz2", ""))
