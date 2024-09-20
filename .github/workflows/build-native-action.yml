@@ -59,7 +59,7 @@ jobs:
 
       - name: Build
         run: |
-          venv/bin/python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
+          venv/bin/python3 -m relenv build --no-pretty --arch=${{ matrix.target }} --python=${{ matrix.version }}
 
       - name: Verify Build
         if: ${{ matrix.host == matrix.target }}
@@ -119,7 +119,7 @@ jobs:
 
       - name: Build
         run: |
-          python3 -m relenv build --python=${{ matrix.version }}
+          python3 -m relenv build --no-pretty --python=${{ matrix.version }}
 
       - name: Verify Build
         run: |
@@ -177,7 +177,7 @@ jobs:
 
       - name: Build
         run: |
-          python3 -m relenv build --python=${{ matrix.version }}
+          python3 -m relenv build --no-pretty --python=${{ matrix.version }}
 
       - name: Verify Build
         run: |
