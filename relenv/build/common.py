@@ -974,6 +974,7 @@ class Builder:
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
         self.populate_env(env, dirs)
+
         _ = dirs.to_dict()
         for k in _:
             log.info("Directory %s %s", k, _[k])
@@ -1193,7 +1194,7 @@ class Builder:
         fail = []
         if self.toolchain and not self.toolchain.exists():
             fail.append(
-                f"Toolchain for {self.arch} does not exist. Please use relenv toolchain to obtain a toolchain."
+                f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
             )
         return fail
 

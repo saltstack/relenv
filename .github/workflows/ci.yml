@@ -55,12 +55,6 @@ jobs:
             deleted:
               - deleted:
                 - '**'
-            toolchain:
-              - added|modified:
-                - '.github/workflows/*toolchain*.yml'
-                - 'relenv/toolchain.py'
-                - 'relenv/_toolchain/**'
-
   pre-commit:
     name: Pre-Commit
     uses: ./.github/workflows/pre-commit-action.yml
@@ -79,20 +73,11 @@ jobs:
       kind: "${{ inputs.kind }}"
       cmd: "${{ inputs.package_command }}"
 
-  toolchain:
-    name: Toolchain Builds
-    uses: ./.github/workflows/toolchain-action.yml
-    needs:
-      - get-changed-files
-    with:
-      changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-
   build-native:
     name: Python Native Builds
     uses: ./.github/workflows/build-native-action.yml
     needs:
       - get-changed-files
-      - toolchain
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
@@ -108,7 +93,6 @@ jobs:
   #  uses: ./.github/workflows/build-action.yml
   #  needs:
   #    - get-changed-files
-  #    - toolchain
   #    - build-native
   #  with:
   #    changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
@@ -142,6 +126,18 @@ jobs:
   #    - test-fips
   #  secrets:
   #    PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
+  #
+  upload-build-artifacts:
+    name: Deploy Prebuilt Python Builds
+    if: ${{ inputs.kind == 'release' && success() }}
+    uses: ./.github/workflows/deploy-build-action.yml
+    needs:
+      - build-python-package
+      - build-native
+      - test-fips
+      #- build-cross
+    with:
+      version: "${{ needs.build-python-package.outputs.version }}"
 
   deploy-python-package:
     name: "Deploy python package"
@@ -153,6 +149,7 @@ jobs:
       - docs
       - build-python-package
       - test-fips
+      - upload-build-artifacts
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -185,11 +182,11 @@ jobs:
     if: always()
     needs:
       - pre-commit
-      - toolchain
       - build-native
       #- build-cross
       - test
       - docs
+      - upload-build-artifacts
       - deploy-python-package
       - create-release
     steps:
