@@ -4,4 +4,4 @@
 pytest
 pytest-skip-markers
 swig
-ppbt
+ppbt; sys_platform == 'linux'
