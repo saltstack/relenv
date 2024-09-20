@@ -224,10 +224,14 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
-    dirs = work_dirs(root)
-    if arch:
-        return dirs.toolchain / "{}-linux-gnu".format(arch)
-    return dirs.toolchain
+    import ppbt
+
+    env = ppbt.environ(auto_extract=False)
+    return pathlib.Path(env["TOOLCHAIN_PATH"])
+    # dirs = work_dirs(root)
+    # if arch:
+    #    return dirs.toolchain / "{}-linux-gnu".format(arch)
+    # return dirs.toolchain
 
 
 def get_triplet(machine=None, plat=None):
