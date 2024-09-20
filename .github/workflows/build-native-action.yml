@@ -57,17 +57,6 @@ jobs:
           venv/bin/python3 --version
           venv/bin/python3 -c 'import os; print(os.name)'
 
-      - name: Download Toolchain Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
-          path: .
-
-      - name: Extract Toolchain Artifact
-        run: |
-          mkdir -p toolchain
-          tar -C toolchain -xvf toolchain-${{ matrix.host }}-${{ matrix.target }}-linux-gnu.tar.xz
-
       - name: Build
         run: |
           venv/bin/python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
