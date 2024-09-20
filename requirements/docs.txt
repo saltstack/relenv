@@ -5,3 +5,5 @@ sphinx
 sphinx-argparse
 furo
 sphinx-mdinclude
+ppbt; sys_platform == 'linux'
+
