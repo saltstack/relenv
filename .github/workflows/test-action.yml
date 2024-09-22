@@ -32,7 +32,7 @@ jobs:
 
       - name: Install python dependencies
         run: |
-          pip3 install nox ppbt
+          pip3 install nox
 
       - name: Install Linux dependencies
         if: ${{ matrix.runs-on == 'linux' }}
