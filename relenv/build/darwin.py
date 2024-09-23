@@ -72,7 +72,7 @@ def build_python(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("darwin", populate_env=populate_env, version="3.10.14")
+build = builds.add("darwin", populate_env=populate_env, version="3.10.15")
 
 build.add(
     "openssl",
@@ -100,8 +100,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3460000",
-        "checksum": "cab1c195dbb477f4ab8939ca6c58c62230e5ceea",
+        "version": "3460100",
+        "checksum": "1fdbada080f3285ac864c314bfbfc581b13e804b",
     },
 )
 
@@ -116,8 +116,8 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.gz",
-        "checksum": "05148354ce821ba7369e5b7958435400",
         "version": build.version,
+        "checksum": "f498fd8921e3c37e6aded9acb11ed23c8daa0bbe",
     },
 )
 
@@ -131,11 +131,11 @@ build.add(
 )
 
 build = build.copy(
-    version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada"
+    version="3.11.10", checksum="eb0ee5c84407445809a556592008cfc1867a39bc"
 )
 builds.add("darwin", builder=build)
 
 build = build.copy(
-    version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e"
+    version="3.12.5", checksum="d9b83c17a717e1cbd3ab6bd14cfe3e508e6d87b2"
 )
 builds.add("darwin", builder=build)

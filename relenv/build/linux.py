@@ -444,7 +444,7 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("linux", populate_env=populate_env, version="3.10.14")
+build = builds.add("linux", populate_env=populate_env, version="3.10.15")
 
 build.add(
     "openssl",
@@ -503,8 +503,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3460000",
-        "checksum": "cab1c195dbb477f4ab8939ca6c58c62230e5ceea",
+        "version": "3460100",
+        "checksum": "1fdbada080f3285ac864c314bfbfc581b13e804b",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
@@ -528,8 +528,8 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/gdbm-{version}.tar.gz",
-        "version": "1.23",
-        "checksum": "50ba1b1d45ce33fd44e4fdaaf3b55a9d8f3dc418",
+        "version": "1.24",
+        "checksum": "7bd455f28c9e4afacc042e0c712aac1b2391fef2",
         "checkfunc": tarball_version,
     },
 )
@@ -606,8 +606,8 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/readline-{version}.tar.gz",
-        "version": "8.2",
-        "checksum": "97ad98be243a857b639c0f3da2fe7d81c6d1d36e",
+        "version": "8.2.13",
+        "checksum": "5ffb6a334c2422acbe8f4d2cb11e345265c8d930",
         "checkfunc": tarball_version,
     },
 )
@@ -649,7 +649,7 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
-        "checksum": "9103b4716dff30b40fd0239982f3a2d851143a46",
+        "checksum": "f498fd8921e3c37e6aded9acb11ed23c8daa0bbe",
         "checkfunc": python_version,
         "checkurl": "https://www.python.org/ftp/python/",
     },
@@ -666,11 +666,11 @@ build.add(
 )
 
 build = build.copy(
-    version="3.11.9", checksum="926cd6a577b2e8dcbb17671b30eda04019328ada"
+    version="3.11.10", checksum="eb0ee5c84407445809a556592008cfc1867a39bc"
 )
 builds.add("linux", builder=build)
 
 build = build.copy(
-    version="3.12.4", checksum="c221421f3ba734daaf013dbdc7b48aa725cea18e"
+    version="3.12.5", checksum="d9b83c17a717e1cbd3ab6bd14cfe3e508e6d87b2"
 )
 builds.add("linux", builder=build)

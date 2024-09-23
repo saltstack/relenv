@@ -16,9 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.14
-          - 3.11.9
-          - 3.12.4
+          - 3.10.15
+          - 3.11.10
+          - 3.12.5
         host:
           - x86_64
           - aarch64
@@ -98,9 +98,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.14
-          - 3.11.9
-          - 3.12.4
+          - 3.10.15
+          - 3.11.10
+          - 3.12.5
         arch:
           - x86_64
 
@@ -154,9 +154,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.14
-          - 3.11.9
-          - 3.12.4
+          - 3.10.15
+          - 3.11.10
+          - 3.12.5
         arch:
           - arm64
 
@@ -209,9 +209,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.14
-          - 3.11.9
-          - 3.12.4
+          - 3.10.15
+          - 3.11.10
+          - 3.12.5
         arch:
           - amd64
           - x86

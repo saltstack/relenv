@@ -22,60 +22,60 @@ jobs:
         include:
           - platform: linux-gnu
             arch: x86_64
-            python: 3.10.14
+            python: 3.10.15
           - platform: linux-gnu
             arch: x86_64
-            python: 3.11.9
+            python: 3.11.10
           - platform: linux-gnu
             arch: x86_64
-            python: 3.12.4
+            python: 3.12.5
           - platform: linux-gnu
             arch: aarch64
-            python: 3.10.14
+            python: 3.10.15
           - platform: linux-gnu
             arch: aarch64
-            python: 3.11.9
+            python: 3.11.10
           - platform: linux-gnu
             arch: aarch64
-            python: 3.12.4
+            python: 3.12.5
 
           - platform: win
             arch: x86
-            python: 3.10.14
+            python: 3.10.15
           - platform: win
             arch: x86
-            python: 3.11.9
+            python: 3.11.10
           - platform: win
             arch: x86
-            python: 3.12.4
+            python: 3.12.5
           - platform: win
             arch: amd64
-            python: 3.10.14
+            python: 3.10.15
           - platform: win
             arch: amd64
-            python: 3.11.9
+            python: 3.11.10
           - platform: win
             arch: amd64
-            python: 3.12.4
+            python: 3.12.5
 
           - platform: macos
             arch: x86_64
-            python: 3.10.14
+            python: 3.10.15
           - platform: macos
             arch: x86_64
-            python: 3.11.9
+            python: 3.11.10
           - platform: macos
             arch: x86_64
-            python: 3.12.4
+            python: 3.12.5
           - platform: macos
             arch: arm64
-            python: 3.10.14
+            python: 3.10.15
           - platform: macos
             arch: arm64
-            python: 3.11.9
+            python: 3.11.10
           - platform: macos
             arch: arm64
-            python: 3.12.4
+            python: 3.12.5
 
     steps:
     - name: Download Artifacts
