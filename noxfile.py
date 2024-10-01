@@ -47,12 +47,6 @@ def build(session, arch):
     invoke_relenv(session, "build", f"--arch={arch}")
 
 
-@nox.session
-@nox.parametrize("arch", ("x86_64", "aarch64"))
-def toolchain(session, arch):
-    invoke_relenv(session, "toolchain", "build", f"--arch={arch}")
-
-
 # Convenience sessions
 @nox.session
 def build_x86_64(session):

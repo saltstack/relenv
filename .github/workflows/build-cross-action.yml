@@ -56,7 +56,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bison python3-all patchelf swig
-          python3 -m pip install nox
+          python3 -m pip install nox ppbt
 
       - name: Python Version
         run: |
