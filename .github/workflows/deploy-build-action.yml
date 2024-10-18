@@ -30,6 +30,9 @@ jobs:
             arch: x86_64
             python: 3.12.5
           - platform: linux-gnu
+            arch: x86_64
+            python: 3.13.0
+          - platform: linux-gnu
             arch: aarch64
             python: 3.10.15
           - platform: linux-gnu
@@ -38,6 +41,9 @@ jobs:
           - platform: linux-gnu
             arch: aarch64
             python: 3.12.5
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.13.0
 
           - platform: win
             arch: x86
@@ -49,6 +55,9 @@ jobs:
             arch: x86
             python: 3.12.5
           - platform: win
+            arch: x86
+            python: 3.13.0
+          - platform: win
             arch: amd64
             python: 3.10.15
           - platform: win
@@ -57,6 +66,9 @@ jobs:
           - platform: win
             arch: amd64
             python: 3.12.5
+          - platform: win
+            arch: amd64
+            python: 3.13.0
 
           - platform: macos
             arch: x86_64
@@ -68,6 +80,9 @@ jobs:
             arch: x86_64
             python: 3.12.5
           - platform: macos
+            arch: x86_64
+            python: 3.13.0
+          - platform: macos
             arch: arm64
             python: 3.10.15
           - platform: macos
@@ -76,6 +91,9 @@ jobs:
           - platform: macos
             arch: arm64
             python: 3.12.5
+          - platform: macos
+            arch: arm64
+            python: 3.13.0
 
     steps:
     - name: Download Artifacts

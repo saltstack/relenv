@@ -217,3 +217,8 @@ build = build.copy(
     version="3.12.5", checksum="d9b83c17a717e1cbd3ab6bd14cfe3e508e6d87b2"
 )
 builds.add("win32", builder=build)
+
+build = build.copy(
+    version="3.13.0", checksum="0f71dce4a3251460985a944bbd1d1b7db1660a91"
+)
+builds.add("win32", builder=build)
