@@ -1495,11 +1495,13 @@ def finalize(env, dirs, logfp):
             format_shebang("../../../bin/python3"),
         )
 
-    patch_shebang(
-        str(pymodules / "cgi.py"),
-        "#! /usr/local/bin/python",
-        format_shebang("../../bin/python3"),
-    )
+    # Moved in python 3.13 or removed?
+    if (pymodules / "cgi.py").exists():
+        patch_shebang(
+            str(pymodules / "cgi.py"),
+            "#! /usr/local/bin/python",
+            format_shebang("../../bin/python3"),
+        )
 
     def runpip(pkg, upgrade=False):
         logfp.write(f"\nRUN PIP {pkg} {upgrade}\n")
