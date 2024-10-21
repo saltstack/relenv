@@ -245,7 +245,7 @@ jobs:
         env:
           RELENV_NATIVE_PY_VERSION: 3.10.12
         run: |
-          python -m relenv build --arch=${{ matrix.arch }} --python=${{ matrix.version }}
+          python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
       - name: Verify Build
         if: ${{ matrix.arch == 'amd64' }}

@@ -97,8 +97,8 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
         pytest.xfail("Salt does not work with 3.11 or 3.12 on windows yet")
     if sys.platform == "darwin" and "3.12" in build_version:
         pytest.xfail("Salt does not work with 3.12 on macos yet")
-    # if "3.13" in build_version:
-    #    pytest.xfail("Salt does not work with 3.13 yet")
+    if sys.platform == "darwin" and "3.13" in build_version:
+        pytest.xfail("Salt does not work with 3.13 on macos yet")
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -341,8 +341,12 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
     if sys.platform == "win32" and pyzmq_version == "23.2.0":
         pytest.xfail("vcredist not found as of 9/9/24")
 
+    if sys.platform == "win32" and pyzmq_version == "26.2.0":
+        pytest.xfail("vcredist not found as of 9/9/24")
+
     if pyzmq_version == "23.2.0" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
+
     if pyzmq_version == "25.1.2" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
 
@@ -412,6 +416,9 @@ def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
 
     if sys.platform == "win32" and arch == "amd64":
         pytest.xfail("Known failure on windows amd64")
+
+    if sys.platform == "darwin" and "3.13" in build_version:
+        pytest.xfail("Salt does not work with 3.13 on macos yet")
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
