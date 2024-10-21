@@ -100,10 +100,11 @@ def build_python(env, dirs, logfp):
         dst=str(dirs.prefix / "Include"),
         dirs_exist_ok=True,
     )
-    shutil.copy(
-        src=str(dirs.source / "PC" / "pyconfig.h"),
-        dst=str(dirs.prefix / "Include"),
-    )
+    if "3.13" not in env["RELENV_PY_MAJOR_VERSION"]:
+        shutil.copy(
+            src=str(dirs.source / "PC" / "pyconfig.h"),
+            dst=str(dirs.prefix / "Include"),
+        )
 
     # Copy library files
     shutil.copytree(
