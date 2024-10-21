@@ -97,6 +97,9 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
         pytest.xfail("Salt does not work with 3.11 or 3.12 on windows yet")
     if sys.platform == "darwin" and "3.12" in build_version:
         pytest.xfail("Salt does not work with 3.12 on macos yet")
+    # if "3.13" in build_version:
+    #    pytest.xfail("Salt does not work with 3.13 yet")
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and shutil.which("git"):
@@ -193,7 +196,7 @@ def test_pip_install_salt_w_static_requirements(
     if sys.platform == "darwin" and salt_branch in ["3006.x"]:
         pytest.xfail("Known failure")
 
-    for py_version in ("3.11", "3.12"):
+    for py_version in ("3.11", "3.12", "3.13"):
         if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
 
@@ -246,7 +249,7 @@ def test_pip_install_salt_w_package_requirements(
     pipexec, tmp_path, salt_branch, build_version
 ):
 
-    for py_version in ("3.11", "3.12"):
+    for py_version in ("3.11", "3.12", "3.13"):
         if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
 
@@ -323,7 +326,7 @@ def test_pip_install_salt_w_package_requirements(
     #     assert script.exists()
 
 
-@pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2"])
+@pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2", "26.2.0"])
 def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
 
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
@@ -337,6 +340,11 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
 
     if sys.platform == "win32" and pyzmq_version == "23.2.0":
         pytest.xfail("vcredist not found as of 9/9/24")
+
+    if pyzmq_version == "23.2.0" and "3.13" in build_version:
+        pytest.xfail(f"{pyzmq_version} does not install on 3.13")
+    if pyzmq_version == "25.1.2" and "3.13" in build_version:
+        pytest.xfail(f"{pyzmq_version} does not install on 3.13")
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -553,9 +561,10 @@ def test_shebangs(pipexec, build, minor_version):
     path = build / "bin" / "pip3"
     assert path.exists()
     assert validate_shebang(path)
-    path = build / "lib" / f"python{minor_version}" / "cgi.py"
-    assert path.exists()
-    assert validate_shebang(path)
+    if "3.13" not in minor_version:
+        path = build / "lib" / f"python{minor_version}" / "cgi.py"
+        assert path.exists()
+        assert validate_shebang(path)
     if sys.platform == "linux":
         path = (
             build
@@ -943,17 +952,23 @@ def test_install_with_target_uninstall(pipexec, build):
     assert not (extras / "bin" / "cowsay").exists()
 
 
-def test_install_with_target_cffi_versions(pipexec, pyexec, build):
+def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
+    if "3.13" not in build_version:
+        subprocess.run(
+            [str(pipexec), "install", "cffi==1.14.6"],
+            check=True,
+            env=env,
+        )
+        subprocess.run(
+            [str(pipexec), "install", "cffi==1.16.0", f"--target={extras}"],
+            check=True,
+            env=env,
+        )
     subprocess.run(
-        [str(pipexec), "install", "cffi==1.14.6"],
-        check=True,
-        env=env,
-    )
-    subprocess.run(
-        [str(pipexec), "install", "cffi==1.16.0", f"--target={extras}"],
+        [str(pipexec), "install", "cffi==1.17.1", f"--target={extras}"],
         check=True,
         env=env,
     )
@@ -964,11 +979,14 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build):
         env=env,
         capture_output=True,
     )
-    proc.stdout.decode().strip() == "1.16.0"
+    proc.stdout.decode().strip() == "1.17.1"
 
 
 def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.12"):
+    if build_version.startswith("3.13"):
+        cffi = "cffi==1.17.1"
+        pygit2 = "pygit2==1.16.0"
+    elif build_version.startswith("3.12"):
         cffi = "cffi==1.16.0"
         pygit2 = "pygit2==1.14.0"
     else:
@@ -998,7 +1016,10 @@ def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_v
 
 
 def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.12"):
+    if build_version.startswith("3.13"):
+        cffi = "cffi==1.17.1"
+        pygit2 = "pygit2==1.16.0"
+    elif build_version.startswith("3.12"):
         cffi = "cffi==1.16.0"
         pygit2 = "pygit2==1.14.0"
     else:
@@ -1240,6 +1261,8 @@ def test_install_with_target_namespaces(pipexec, build, minor_version, build_ver
 
 @pytest.mark.skip_unless_on_linux
 def test_debugpy(pipexec, build, minor_version):
+    if "3.13" in minor_version:
+        pytest.xfail("Failes on python 3.13.0")
     p = subprocess.run(
         [
             str(pipexec),
@@ -1307,7 +1330,7 @@ def test_install_mysqlclient(pipexec, build, minor_version):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_m2crypto(pipexec, build, minor_version):
-    version = "0.41.0"
+    version = "0.42.0"
     extras = build / "extras"
     p = subprocess.run(
         [

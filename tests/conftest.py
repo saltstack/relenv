@@ -42,7 +42,11 @@ def minor_version():
 @pytest.fixture
 def build(tmp_path, build_version):
     create("test", tmp_path, version=build_version)
-    yield tmp_path / "test"
+    os.chdir(tmp_path / "test")
+    try:
+        yield tmp_path / "test"
+    finally:
+        shutil.rmtree(tmp_path)
 
 
 @pytest.fixture
