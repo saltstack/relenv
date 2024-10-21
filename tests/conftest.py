@@ -1,6 +1,7 @@
 # Copyright 2023-2024 VMware, Inc.
 # SPDX-License-Identifier: Apache-2.0
 #
+import logging
 import os
 import platform
 import shutil
@@ -10,6 +11,8 @@ import pytest
 
 from relenv.common import list_archived_builds, plat_from_triplet
 from relenv.create import create
+
+log = logging.getLogger(__name__)
 
 
 def get_build_version():
@@ -46,7 +49,10 @@ def build(tmp_path, build_version):
     try:
         yield tmp_path / "test"
     finally:
-        shutil.rmtree(tmp_path)
+        try:
+            shutil.rmtree(tmp_path)
+        except Exception as exc:
+            log.error("Failed to remove build directory %s", exc)
 
 
 @pytest.fixture
