@@ -78,7 +78,9 @@ RELENV_PTH = (
 
 
 SYSCONFIGDATA = """
-import pathlib, sys, platform, os
+import pathlib, sys, platform, os, logging
+
+log = logging.getLogger(__name__)
 
 def build_arch():
     machine = platform.machine()
@@ -112,7 +114,22 @@ else:
     DATA_DIR = DEFAULT_DATA_DIR
 
 buildroot = pydir.parent.parent
-toolchain = DATA_DIR / "toolchain" / get_triplet()
+
+if sys.platform == "linux":
+    toolchain = ""
+    ppbt = None
+    try:
+        import ppbt
+    except ImportError:
+        pass
+    if ppbt:
+        env = ppbt.environ(auto_extract=True)
+        toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
+    else:
+        log.warning("ppbt package not installed")
+else:
+    toolchain = DATA_DIR / "toolchain" / get_triplet()
+
 build_time_vars = {}
 for key in _build_time_vars:
     val = _build_time_vars[key]
@@ -977,6 +994,7 @@ class Builder:
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
         self.populate_env(env, dirs)
+
         _ = dirs.to_dict()
         for k in _:
             log.info("Directory %s %s", k, _[k])
@@ -1196,7 +1214,7 @@ class Builder:
         fail = []
         if self.toolchain and not self.toolchain.exists():
             fail.append(
-                f"Toolchain for {self.arch} does not exist. Please use relenv toolchain to obtain a toolchain."
+                f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
             )
         return fail
 
