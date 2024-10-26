@@ -32,10 +32,7 @@ jobs:
     name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
     runs-on:
-      - self-hosted
-      - linux
-      - src-build
-      - ${{ matrix.host }}
+      - ${{ (contains(matrix.host, 'x86_64') && 'linux-x86_64') || 'linux-arm64' }}
 
     env:
       RELENV_DATA: ${{ github.workspace }}
@@ -46,13 +43,14 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison python3-all patchelf swig cmake libldap2-dev libsasl2-dev ldap-utils libssl-dev pkg-config libvirt-dev default-libmysqlclient-dev 
-          python3 -m pip install nox
+          sudo apt-get install -y build-essential bison python3-all patchelf swig cmake libldap2-dev libsasl2-dev ldap-utils libssl-dev pkg-config libvirt-dev default-libmysqlclient-dev python3-virtualenv
+          virtualenv venv
+          venv/bin/pip3 install nox
 
       - name: Python Version
         run: |
-          python3 --version
-          python3 -c 'import os; print(os.name)'
+          venv/bin/python3 --version
+          venv/bin/python3 -c 'import os; print(os.name)'
 
       - name: Download Toolchain Artifact
         uses: actions/download-artifact@v4
@@ -67,12 +65,12 @@ jobs:
 
       - name: Build
         run: |
-          python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
+          venv/bin/python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
 
       - name: Verify Build
         if: ${{ matrix.host == matrix.target }}
         run: |
-          python3 -m nox -e tests -- -s tests/test_verify_build.py
+          venv/bin/python3 -m nox -e tests -- -s tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v4

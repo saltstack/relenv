@@ -15,10 +15,7 @@ jobs:
     name: "Toolchain ${{ matrix.target }} on ${{ matrix.host }}"
 
     runs-on:
-      - self-hosted
-      - linux
-      - src-build
-      - ${{ matrix.host }}
+      - ${{ (contains(matrix.host, 'x86_64') && 'linux-x86_64') || 'linux-arm64' }}
 
     #if: fromJSON(inputs.changed-files)['toolchain'] == 'true'
 
