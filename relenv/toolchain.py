@@ -30,6 +30,8 @@ CT_URL = "http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-{version}.t
 TC_URL = "https://{hostname}/relenv/{version}/toolchain/{host}/{triplet}.tar.xz"
 CICD = "CI" in os.environ
 
+LAST_RELENV_W_TOOLCHAIN = "0.17.4"
+
 
 def setup_parser(subparsers):
     """
@@ -91,7 +93,10 @@ def fetch(arch, toolchain, clean=False, version=__version__):
         check_hosts = [os.environ["RELENV_FETCH_HOST"]]
     for host in check_hosts:
         url = TC_URL.format(
-            hostname=host, version=version, host=platform.machine(), triplet=triplet
+            hostname=host,
+            version=LAST_RELENV_W_TOOLCHAIN,
+            host=platform.machine(),
+            triplet=triplet,
         )
         if check_url(url, timeout=5):
             break

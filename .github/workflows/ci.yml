@@ -126,27 +126,27 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
-  upload-build-artifacts:
-    name: Deploy Prebuilt Python Builds
-    if: ${{ inputs.kind == 'release' && success() }}
-    uses: ./.github/workflows/deploy-build-action.yml
-    needs:
-      - build-python-package
-      - build-native
-      - test-fips
-      #- build-cross
-    with:
-      version: "${{ needs.build-python-package.outputs.version }}"
+  #upload-build-artifacts:
+  #  name: Deploy Prebuilt Python Builds
+  #  if: ${{ inputs.kind == 'release' && success() }}
+  #  uses: ./.github/workflows/deploy-build-action.yml
+  #  needs:
+  #    - build-python-package
+  #    - build-native
+  #    - test-fips
+  #    #- build-cross
+  #  with:
+  #    version: "${{ needs.build-python-package.outputs.version }}"
 
-  upload-toolchain-artifacts:
-    name: Deploy Toolchain
-    if: ${{ inputs.kind == 'release' && success() }}
-    uses: ./.github/workflows/deploy-toolchain-action.yml
-    needs:
-      - build-python-package
-      - toolchain
-    with:
-      version: "${{ needs.build-python-package.outputs.version }}"
+  #upload-toolchain-artifacts:
+  #  name: Deploy Toolchain
+  #  if: ${{ inputs.kind == 'release' && success() }}
+  #  uses: ./.github/workflows/deploy-toolchain-action.yml
+  #  needs:
+  #    - build-python-package
+  #    - toolchain
+  #  with:
+  #    version: "${{ needs.build-python-package.outputs.version }}"
 
   deploy-python-package:
     name: Deploy Python Package
@@ -158,8 +158,8 @@ jobs:
       - docs
       - build-python-package
       - test-fips
-      - upload-build-artifacts
-      - upload-toolchain-artifacts
+  #    - upload-build-artifacts
+  #    - upload-toolchain-artifacts
 
   create-release:
     name: Create Github Release
@@ -185,8 +185,8 @@ jobs:
       #- build-cross
       - test
       - docs
-      - upload-build-artifacts
-      - upload-toolchain-artifacts
+  #    - upload-build-artifacts
+  #    - upload-toolchain-artifacts
       - deploy-python-package
       - create-release
     steps:
