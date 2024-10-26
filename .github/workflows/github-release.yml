@@ -11,6 +11,84 @@ jobs:
   release:
     name: Create Github Release
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux-gnu
+            arch: x86_64
+            python: 3.10.15
+          - platform: linux-gnu
+            arch: x86_64
+            python: 3.11.10
+          - platform: linux-gnu
+            arch: x86_64
+            python: 3.12.7
+          - platform: linux-gnu
+            arch: x86_64
+            python: 3.13.0
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.10.15
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.11.10
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.12.7
+          - platform: linux-gnu
+            arch: aarch64
+            python: 3.13.0
+
+          - platform: win
+            arch: x86
+            python: 3.10.15
+          - platform: win
+            arch: x86
+            python: 3.11.10
+          - platform: win
+            arch: x86
+            python: 3.12.7
+          - platform: win
+            arch: x86
+            python: 3.13.0
+          - platform: win
+            arch: amd64
+            python: 3.10.15
+          - platform: win
+            arch: amd64
+            python: 3.11.10
+          - platform: win
+            arch: amd64
+            python: 3.12.7
+          - platform: win
+            arch: amd64
+            python: 3.13.0
+
+          - platform: macos
+            arch: x86_64
+            python: 3.10.15
+          - platform: macos
+            arch: x86_64
+            python: 3.11.10
+          - platform: macos
+            arch: x86_64
+            python: 3.12.7
+          - platform: macos
+            arch: x86_64
+            python: 3.13.0
+          - platform: macos
+            arch: arm64
+            python: 3.10.15
+          - platform: macos
+            arch: arm64
+            python: 3.11.10
+          - platform: macos
+            arch: arm64
+            python: 3.12.7
+          - platform: macos
+            arch: arm64
+            python: 3.13.0
+
     steps:
       - name: Download Python Build Artifacts
         uses: actions/download-artifact@v4
@@ -23,6 +101,12 @@ jobs:
         with:
           name: Python Wheel
           path: dist
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+          path: release-artifacts/
 
       - name: Create Release
         id: create_release
@@ -58,3 +142,11 @@ jobs:
           asset_path: dist/relenv-${{ inputs.version }}-py3-none-any.whl
           asset_name: relenv-${{ inputs.version }}-py3-none-any.whl
           asset_content_type: application/zip
+
+      - name: Upload Release artifacts
+        id: upload-release-asset-x86_64
+        uses: actions/upload-release-asset@v1
+        with:
+          name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+          path: release-artifacts/
+          asset_content_type: application/tar+xz
