@@ -58,7 +58,7 @@ def fetch(version, triplet, python, check_hosts=CHECK_HOSTS):
             if check_url(url, timeout=5):
                 break
         else:
-            print(f"Unable to find file on any hosts {' '.join(check_hosts)}")
+            print(f"Unable to find file on any hosts: github.com {' '.join(x.split('/')[0] for x in check_hosts)}")
             sys.exit(1)
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)
