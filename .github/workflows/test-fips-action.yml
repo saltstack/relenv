@@ -4,7 +4,8 @@ on:
   workflow_call:
 
 jobs:
-  container-test-job:
+  test-fips:
+    name: Test FIPS compatability
     runs-on: ubuntu-latest
     container:
       image: photon:4.0
