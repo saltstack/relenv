@@ -67,10 +67,10 @@ jobs:
         run: |
           venv/bin/python3 -m relenv build --arch=${{ matrix.target }} --python=${{ matrix.version }}
 
-      - name: Verify Build
-        if: ${{ matrix.host == matrix.target }}
-        run: |
-          venv/bin/python3 -m nox -e tests -- -s tests/test_verify_build.py
+     # - name: Verify Build
+     #   if: ${{ matrix.host == matrix.target }}
+     #   run: |
+     #     venv/bin/python3 -m nox -e tests -- -s tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v4

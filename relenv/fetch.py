@@ -52,7 +52,7 @@ def fetch(version, triplet, python, check_hosts=CHECK_HOSTS):
     Fetch the specified python build.
     """
     for host in check_hosts:
-        url = f"https://{host}/relenv/{version}/build/{python}-{triplet}.tar.xz"
+        url = f"https://github.com/saltstack/relenv/releases/download/v{version}/{python}-{triplet}.tar.xz"
         if check_url(url, timeout=5):
             break
     else:
