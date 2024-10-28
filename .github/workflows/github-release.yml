@@ -24,11 +24,6 @@ jobs:
           name: Python Wheel
           path: dist
 
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
-          path: release-artifacts/
 
       - name: Create Release
         id: create_release
@@ -147,6 +142,11 @@ jobs:
             arch: arm64
             python: 3.13.0
     steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+          path: release-artifacts/
       - name: Upload ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
         id: upload-python-build-assets
         uses: actions/upload-release-asset@v1
