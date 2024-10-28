@@ -1,3 +1,11 @@
+0.18.0
+======
+
+* Relenv no longer relies on legacy infurstrucutre for ci/cd
+* Relenv python builds are no stored and downloaded from github rather than
+  legacy infurstructure
+
+
 0.17.4
 ======
 
