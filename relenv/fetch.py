@@ -51,10 +51,13 @@ def fetch(version, triplet, python, check_hosts=CHECK_HOSTS):
     """
     Fetch the specified python build.
     """
-    for host in check_hosts:
+    try:
         url = f"https://github.com/saltstack/relenv/releases/download/v{version}/{python}-{triplet}.tar.xz"
-        if check_url(url, timeout=5):
-            break
+        if not check_url(url, timeout=5):
+            for host in check_hosts:
+                url = f"https://{host}/relenv/{version}/build/{python}-{triplet}.tar.xz"
+                if check_url(url, timeout=5):
+                    break
     else:
         print(f"Unable to find file on any hosts {' '.join(check_hosts)}")
         sys.exit(1)
