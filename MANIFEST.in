@@ -1,0 +1,2 @@
+recursive-include relenv/_scripts *
+recursive-include relenv/_toolchain *
