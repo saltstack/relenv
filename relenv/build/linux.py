@@ -452,8 +452,8 @@ build.add(
     download={
         "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
-        "version": "3.2.3",
-        "checksum": "1c04294b2493a868ac5f65d166c29625181a31ed",
+        "version": "3.2.4",
+        "checksum": "2247802a1193c0f8eb41c870e8de45a2241422d5",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
@@ -555,8 +555,8 @@ build.add(
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
-        "version": "3.4.6",
-        "checksum": "19251dfee520dff42acefe36bfe76d7168071e01",
+        "version": "3.4.7",
+        "checksum": "b07136211f47fa30c0512ebd7484fde724978d99",
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
