@@ -1,4 +1,4 @@
-# Copyright 2022-2024 VMware, Inc.
+# Copyright 2023-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
 """
 Common classes and values used around relenv.

@@ -1,4 +1,4 @@
-# Copyright 2022-2024 VMware, Inc.
+# Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
 
 # Configuration file for the Sphinx documentation builder.
@@ -21,7 +21,7 @@ for addtl_path in addtl_paths:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Relenv"
-copyright = "2022 VMWare, Inc."
+copyright = "2022-2025 Broadcom."
 author = "Daniel A. Wozniak"
 
 # -- General configuration ---------------------------------------------------
