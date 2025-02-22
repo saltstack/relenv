@@ -1,3 +1,9 @@
+0.18.1
+======
+
+* Update openssl to 3.2.4
+* Update libffi to 3.4.7
+
 0.18.0
 ======
 
