@@ -1,4 +1,4 @@
-# Copyright 2023-2024 VMware, Inc.
+# Copyright 2025 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 """
 Check the integrety of a relenv environment.

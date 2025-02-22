@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021-2024 VMware, Inc.
+# Copyright 2025 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 #
 # pylint: disable=invalid-name,missing-module-docstring,missing-function-docstring
@@ -11,9 +11,9 @@ from datetime import datetime
 
 CODE_ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPDX_HEADER = "# SPDX-License-Identifier: Apache-2.0"
-COPYRIGHT_HEADER = "# Copyright {year} VMware, Inc."
+COPYRIGHT_HEADER = "# Copyright {year} Broadcom."
 COPYRIGHT_REGEX = re.compile(
-    r"# Copyright (?:(?P<start_year>[0-9]{4})(?:-(?P<cur_year>[0-9]{4}))?) VMware, Inc\."
+    r"# Copyright (?:(?P<start_year>[0-9]{4})(?:-(?P<cur_year>[0-9]{4}))?) Broadcom\."
 )
 SPDX_REGEX = re.compile(r"# SPDX-License-Identifier:.*")
 
