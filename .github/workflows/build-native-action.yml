@@ -235,13 +235,13 @@ jobs:
       - name: Fetch Native Build
         if: ${{ matrix.arch != 'amd64' }}
         env:
-          RELENV_FETCH_VERSION: 0.13.4
+          RELENV_FETCH_VERSION: 0.18.0
         run: |
-          python3 -m relenv fetch --python=3.10.12
+          python3 -m relenv fetch --python=3.10.15
 
       - name: Build Python with Relenv
         env:
-          RELENV_NATIVE_PY_VERSION: 3.10.12
+          RELENV_NATIVE_PY_VERSION: 3.10.15
         run: |
           python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
