@@ -1,3 +1,4 @@
+# Copyright 2025 Broadcom.
 # Copyright 2022-2024 VMware, Inc.
 # SPDX-License-Identifier: Apache-2
 """
@@ -331,13 +332,20 @@ def test_pip_install_salt_w_package_requirements(
     #     assert script.exists()
 
 
-@pytest.mark.parametrize("pyzmq_version", ["23.2.0", "25.1.2", "26.2.0"])
+@pytest.mark.parametrize(
+    "pyzmq_version",
+    [
+        "23.2.0",
+        "25.1.2",
+        "26.2.0",
+    ],
+)
 def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
 
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
 
-    if pyzmq_version == "23.2.0" and sys.platform == "darwin" and arch == "arm64":
+    if pyzmq_version == "23.2.0" and sys.platform == "darwin":
         pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
 
     if sys.platform == "win32" and pyzmq_version == "25.1.2":
@@ -356,11 +364,20 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
 
     env = os.environ.copy()
+
+    p = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "--upgrade",
+            "pip",
+            "setuptools",
+        ],
+        env=env,
+    )
+
+    env["ZMQ_PREFIX"] = "bundled"
     env["RELENV_BUILDENV"] = "yes"
-    env["USE_STATIC_REQUIREMENTS"] = "1"
-    env[
-        "CFLAGS"
-    ] = f"{env.get('CFLAGS', '')} -DCMAKE_OSX_ARCHITECTURES='arm64' -DZMQ_HAVE_CURVE=0"
     p = subprocess.run(
         [
             str(pipexec),
