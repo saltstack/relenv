@@ -128,17 +128,9 @@ jobs:
         run: |
           pip3 install nox
 
-      #- name: Uninstall gettext
-      #  run: |
-      #    brew uninstall --ignore-dependencies gettext
-
       - name: Build
         run: |
           python3 -m relenv build --python=${{ matrix.version }}
-
-      - name: Re-install gettext
-        run: |
-          brew install gettext
 
       - name: Verify Build
         run: |
@@ -194,17 +186,9 @@ jobs:
         run: |
           brew install nox
 
-      #- name: Uninstall gettext
-      #  run: |
-      #    brew uninstall --ignore-dependencies gettext
-
       - name: Build
         run: |
           python3 -m relenv build --python=${{ matrix.version }}
-
-#      - name: Re-install gettext
-#        run: |
-#          brew install gettext
 
       - name: Verify Build
         run: |
