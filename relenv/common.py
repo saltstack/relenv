@@ -370,6 +370,7 @@ def fetch_url(url, fp, backoff=3, timeout=30):
     import urllib.error
     import urllib.request
 
+    last = time.time()
     if backoff < 1:
         backoff = 1
     n = 0
@@ -384,16 +385,24 @@ def fetch_url(url, fp, backoff=3, timeout=30):
         ) as exc:
             if n >= backoff:
                 raise RelenvException(f"Error fetching url {url} {exc}")
+            log.debug("Unable to connect %s", url)
             time.sleep(n * 10)
+    log.info("url opened %s", url)
     try:
+        total = 0
         size = 1024 * 300
         block = fin.read(size)
         while block:
+            total += size
+            if time.time() - last > 10:
+                log.info("%s > %d", url, total)
+                last = time.time()
             fp.write(block)
             block = fin.read(10240)
     finally:
         fin.close()
         # fp.close()
+    log.info("Download complete %s", url)
 
 
 def download_url(url, dest, verbose=True, backoff=3, timeout=60):
