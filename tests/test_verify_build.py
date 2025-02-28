@@ -4,6 +4,7 @@
 """
 Verify relenv builds.
 """
+import json
 import os
 import pathlib
 import platform
@@ -16,7 +17,7 @@ import time
 import packaging
 import pytest
 
-from relenv.common import DATA_DIR, build_arch, get_triplet
+from relenv.common import build_arch, get_triplet
 
 from .conftest import get_build_version
 
@@ -554,6 +555,17 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
 
 @pytest.mark.skip_unless_on_linux
 def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
+    p = subprocess.run(
+        [
+            pyexec,
+            "-m",
+            "relenv",
+            "buildenv",
+            "--json",
+        ],
+        capture_output=True,
+    )
+    buildenv = json.loads(p.stdout)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -569,13 +581,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
         stderr=subprocess.PIPE,
     )
     assert p.returncode == 0, "Failed to pip install m2crypto"
-    gcc = str(
-        pathlib.Path(DATA_DIR)
-        / "toolchain"
-        / f"{get_triplet()}"
-        / "bin"
-        / f"{get_triplet()}-gcc"
-    )
+    gcc = str(pathlib.Path(buildenv["TOOLCHAIN_PATH"]) / "bin" / f"{get_triplet()}-gcc")
     include = str(pathlib.Path(build) / "include")
     found_include = False
     for _ in p.stderr.splitlines():
@@ -584,7 +590,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
             for arg in line.split():
                 if arg == f"-I{include}":
                     found_include = True
-    assert found_include
+    assert found_include, f"{include}\n{p.stderr.decode()}"
     p = subprocess.run(
         [str(pyexec), "-c", "import M2Crypto"],
         env=env,
