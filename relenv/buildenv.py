@@ -3,10 +3,16 @@
 """
 Helper for building libraries to install into a relenv environment.
 """
+import json
 import logging
 import sys
 
-from .common import MACOS_DEVELOPMENT_TARGET, RelenvException, get_triplet, work_dirs
+from .common import (
+    MACOS_DEVELOPMENT_TARGET,
+    RelenvException,
+    get_toolchain,
+    get_triplet,
+)
 
 log = logging.getLogger()
 
@@ -22,6 +28,12 @@ def setup_parser(subparsers):
         "buildenv", description="Relenv build environment"
     )
     subparser.set_defaults(func=main)
+    subparser.add_argument(
+        "--json",
+        default=False,
+        action="store_true",
+        help=("Output json to stdout instead of export statments"),
+    )
 
 
 def is_relenv():
@@ -43,9 +55,8 @@ def buildenv(relenv_path=None):
     if sys.platform != "linux":
         raise RelenvException("buildenv is only supported on Linux")
 
-    dirs = work_dirs()
     triplet = get_triplet()
-    toolchain = dirs.toolchain / get_triplet()
+    toolchain = get_toolchain()
     env = {
         "RELENV_BUILDENV": "1",
         "TOOLCHAIN_PATH": f"{toolchain}",
@@ -90,12 +101,13 @@ def main(args):
     if sys.platform != "linux":
         log.error("buildenv is only supported on Linux.")
 
-    # dirs = work_dirs()
-    # triplet = get_triplet()
-    # toolchain = dirs.toolchain / get_triplet()
+    if args.json:
+        print(json.dumps(buildenv()))
+        sys.exit(0)
 
     script = ""
     for k, v in buildenv().items():
         script += f'export {k}="{v}"\n'
 
     print(script)
+    sys.exit(0)
