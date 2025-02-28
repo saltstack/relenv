@@ -155,7 +155,6 @@ def finalize(env, dirs, logfp):
     :type logfp: file
     """
     # Lay down site customize
-    bindir = pathlib.Path(dirs.prefix) / "Scripts"
     sitepackages = dirs.prefix / "Lib" / "site-packages"
 
     install_runtime(sitepackages)
@@ -166,11 +165,12 @@ def finalize(env, dirs, logfp):
 
     def runpip(pkg):
         # XXX Support cross pip installs on windows
-        pip = bindir / "pip3.exe"
         env = os.environ.copy()
         target = None
         cmd = [
-            str(pip),
+            str(python),
+            "-m",
+            "pip",
             "install",
             str(pkg),
         ]
