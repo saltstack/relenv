@@ -3,6 +3,13 @@
 
 * Update openssl to 3.2.4
 * Update libffi to 3.4.7
+* Update python 3.10 to 3.10.16
+* Update python 3.11 to 3.11.11
+* Update python 3.12 to 3.12.19
+* Update python 3.13 to 3.13.2
+* Fix zlib download mirrors for toolchain builds
+* Fix missing `_toolchain` and `_scripts` directory
+
 
 0.18.0
 ======

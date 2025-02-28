@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021-2024 VMware, Inc.
+# Copyright 2021-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 #
 # pylint: skip-file
