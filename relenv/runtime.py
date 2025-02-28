@@ -602,7 +602,20 @@ def wrap_pip_build_wheel(name):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             dirs = common().work_dirs()
-            toolchain = dirs.toolchain / common().get_triplet()
+            cargo_home = str(dirs.data / "cargo")
+            # toolchain = dirs.toolchain / common().get_triplet()
+            ppbt = None
+            try:
+                import ppbt
+            except ImportError:
+                pass
+            if ppbt:
+                env = ppbt.environ(auto_extract=True)
+                toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
+            else:
+                debug("ppbt package not installed")
+                return func(*args, **kwargs)
+
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
@@ -612,7 +625,6 @@ def wrap_pip_build_wheel(name):
                     f"-C link-arg=-L{relenvroot}/lib "
                     f"-C link-arg=-L{toolchain}/sysroot/lib"
                 )
-                cargo_home = str(toolchain / "cargo")
                 set_env_if_not_set("CARGO_HOME", cargo_home)
                 set_env_if_not_set("OPENSSL_DIR", relenvroot)
                 set_env_if_not_set("RUSTFLAGS", rustflags)
@@ -827,11 +839,24 @@ def install_cargo_config():
         return
     triplet = common().get_triplet()
     dirs = common().work_dirs()
-    toolchain = dirs.toolchain / triplet
+
+    ppbt = None
+    try:
+        import ppbt
+    except ImportError:
+        pass
+    if ppbt:
+        env = ppbt.environ(auto_extract=True)
+        toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
+    else:
+        debug("Unable to set CARGO_HOME ppbt package not installed")
+        return
+
     if not toolchain.exists():
         debug("Unable to set CARGO_HOME no toolchain exists")
         return
-    cargo_home = toolchain / "cargo"
+
+    cargo_home = dirs.data / "cargo"
     if not cargo_home.exists():
         cargo_home.mkdir()
     cargo_config = cargo_home / "config.toml"
