@@ -78,7 +78,7 @@ jobs:
             python: 3.10.16
           - platform: linux-gnu
             arch: x86_64
-            python: 3.11.12
+            python: 3.11.11
           - platform: linux-gnu
             arch: x86_64
             python: 3.12.9
@@ -90,7 +90,7 @@ jobs:
             python: 3.10.16
           - platform: linux-gnu
             arch: aarch64
-            python: 3.11.12
+            python: 3.11.11
           - platform: linux-gnu
             arch: aarch64
             python: 3.12.9
@@ -103,7 +103,7 @@ jobs:
             python: 3.10.16
           - platform: win
             arch: x86
-            python: 3.11.12
+            python: 3.11.11
           - platform: win
             arch: x86
             python: 3.12.9
@@ -115,7 +115,7 @@ jobs:
             python: 3.10.16
           - platform: win
             arch: amd64
-            python: 3.11.12
+            python: 3.11.11
           - platform: win
             arch: amd64
             python: 3.12.9
@@ -128,7 +128,7 @@ jobs:
             python: 3.10.16
           - platform: macos
             arch: x86_64
-            python: 3.11.12
+            python: 3.11.11
           - platform: macos
             arch: x86_64
             python: 3.12.9
@@ -140,7 +140,7 @@ jobs:
             python: 3.10.16
           - platform: macos
             arch: arm64
-            python: 3.11.12
+            python: 3.11.11
           - platform: macos
             arch: arm64
             python: 3.12.9
