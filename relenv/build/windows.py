@@ -60,7 +60,9 @@ def build_python(env, dirs, logfp):
         plat,
         "--no-tkinter",
     ]
+    log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    log.info("PCbuild finished")
 
     # This is where build.bat puts everything
     # TODO: For now we'll only support 64bit
