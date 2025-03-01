@@ -498,15 +498,8 @@ def test_pip_install_idem(pipexec):
 
 
 def test_pip_install_and_import_libcloud(pipexec, pyexec):
+    _install_ppbt(pipexec)
     name = "apache-libcloud"
-    p = subprocess.run(
-        [
-            str(pipexec),
-            "install",
-            "ppbt",
-        ]
-    )
-    assert p.returncode == 0, "Failed to install ppbt"
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
