@@ -603,7 +603,7 @@ def wrap_pip_build_wheel(name):
         def wrapper(*args, **kwargs):
             dirs = common().work_dirs()
             cargo_home = str(dirs.data / "cargo")
-            toolchain = common().get_toolchain(extract=True)
+            toolchain = common().get_toolchain()
             if (
                 not toolchain
                 and sys.platform == "linux"
