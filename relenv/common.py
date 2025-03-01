@@ -17,11 +17,6 @@ import textwrap
 import threading
 import time
 
-try:
-    import ppbt
-except ImportError:
-    ppbt = None
-
 # relenv package version
 __version__ = "0.19.4"
 
@@ -230,14 +225,14 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
-    if sys.platform in ["darwin", "win32"]:
-        dirs = work_dirs(root)
-        return dirs.toolchain
+
+    ppbt = None
+
+    import ppbt
+
     if ppbt:
         env = ppbt.environ(auto_extract=True)
         return pathlib.Path(env["TOOLCHAIN_PATH"])
-    else:
-        raise RuntimeError("Please `pip install ppbt` to build on linux")
 
 
 def get_triplet(machine=None, plat=None):
