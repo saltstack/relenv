@@ -878,6 +878,8 @@ class Builder:
             self.toolchain = None
         else:
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
+            if not self.toolchain:
+                raise RuntimeError("No toolchain found")
 
     @property
     def _triplet(self):
