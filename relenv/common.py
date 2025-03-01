@@ -225,6 +225,8 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
+    if sys.platform != "linux":
+        return DATA_DIR
     ppbt = None
 
     try:
