@@ -88,16 +88,6 @@ jobs:
       - get-changed-files
     uses: ./.github/workflows/test-fips-action.yml
 
-  #build-cross:
-  #  name: Python Cross Builds
-  #  uses: ./.github/workflows/build-action.yml
-  #  needs:
-  #    - get-changed-files
-  #    - build-native
-  #  with:
-  #    changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
-  #    kind: "cross"
-
   test:
     name: Test
     needs:

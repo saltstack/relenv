@@ -603,18 +603,10 @@ def wrap_pip_build_wheel(name):
         def wrapper(*args, **kwargs):
             dirs = common().work_dirs()
             cargo_home = str(dirs.data / "cargo")
-            # toolchain = dirs.toolchain / common().get_triplet()
-            ppbt = None
-            try:
-                import ppbt
-            except ImportError:
-                pass
-            if ppbt:
-                env = ppbt.environ(auto_extract=True)
-                toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
+            toolchain = common().get_toolchain(extract=True)
+            if not toolchain and sys.platform == "linux" and os.environ.get("RELENV_BUILDENV", 0):
+                raise RuntimeError("No toolchain installed")
             else:
-                if sys.platform == "linux" and os.environ.get("RELENV_BUILDENV", 0):
-                    raise RuntimeError("No toolchain installed")
                 return func(*args, **kwargs)
 
             if not toolchain.exists():
@@ -841,15 +833,8 @@ def install_cargo_config():
     triplet = common().get_triplet()
     dirs = common().work_dirs()
 
-    ppbt = None
-    try:
-        import ppbt
-    except ImportError:
-        pass
-    if ppbt:
-        env = ppbt.environ(auto_extract=True)
-        toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
-    else:
+    toolchain = common().get_toolchain()
+    if not toolchain:
         debug("Unable to set CARGO_HOME ppbt package not installed")
         return
 
