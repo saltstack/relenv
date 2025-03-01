@@ -1,5 +1,4 @@
-# Copyright 2025 Broadcom.
-# Copyright 2022-2024 VMware, Inc.
+# Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
 """
 Verify relenv builds.
@@ -689,8 +688,14 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
 
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize("cryptography_version", ["40.0.1", "39.0.2"])
-def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version):
+def test_cryptography_rpath(
+    pyexec, pipexec, build, minor_version, cryptography_version
+):
     _install_ppbt(pipexec)
+    p = subprocess.run(
+        [pyexec, "-c", "import ppbt; ppbt.extract()"],
+    )
+    assert p.returncode == 0
 
     def find_library(path, search):
         for root, dirs, files in os.walk(path):
