@@ -125,8 +125,8 @@ if sys.platform == "linux":
     if ppbt:
         env = ppbt.environ(auto_extract=True)
         toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
-    #else:
-    #    log.warning("ppbt package not installed")
+    else:
+        print("ppbt package not installed")
 else:
     toolchain = DATA_DIR / "toolchain" / get_triplet()
 
@@ -878,8 +878,6 @@ class Builder:
             self.toolchain = None
         else:
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
-            if not self.toolchain:
-                raise RuntimeError("No toolchain found")
 
     @property
     def _triplet(self):
@@ -1211,7 +1209,11 @@ class Builder:
         :rtype: list
         """
         fail = []
-        if self.toolchain and not self.toolchain.exists():
+        if (
+            sys.platform == "linux"
+            and not self.toolchain
+            or not self.toolchain.exists()
+        ):
             fail.append(
                 f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
             )
@@ -1601,9 +1603,8 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
     :param logfp: A pointer to the log file
     :type logfp: file
     """
-    if logfp is None:
-        log.info("Current directory %s", os.getcwd())
-        log.info("Creating archive %s", tarfp.name)
+    log.debug("Current directory %s", os.getcwd())
+    log.debug("Creating archive %s", tarfp.name)
     for root, _dirs, files in os.walk(toarchive):
         relroot = pathlib.Path(root).relative_to(toarchive)
         for f in files:
@@ -1614,9 +1615,7 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
                     matches = True
                     break
             if matches:
-                if logfp is None:
-                    log.info("Adding %s", relpath)
+                log.debug("Adding %s", relpath)
                 tarfp.add(relpath, relpath, recursive=False)
             else:
-                if logfp is None:
-                    log.info("Skipping %s", relpath)
+                log.debug("Skipping %s", relpath)
