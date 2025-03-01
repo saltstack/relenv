@@ -842,7 +842,6 @@ class Builder:
         self.build_default = build_default
         self.populate_env = populate_env
         self.force_download = force_download
-        self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
     def copy(self, version, checksum):
@@ -881,6 +880,8 @@ class Builder:
             self.toolchain = None
         else:
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
+            if not self.toolchain:
+                raise RuntimeError("No toolchain found")
 
     @property
     def _triplet(self):
