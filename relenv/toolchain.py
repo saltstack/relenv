@@ -20,7 +20,9 @@ def main(*args, **kwargs):
     """
     Notify users of toolchain command deprecation.
     """
-    print("The relenv toolchain command has been deprecated. Please pip install ppbt.")
+    print(
+        "The relenv toolchain command has been deprecated. Please pip install relenv[toolchain]."
+    )
 
 
 if __name__ == "__main__":
