@@ -604,7 +604,11 @@ def wrap_pip_build_wheel(name):
             dirs = common().work_dirs()
             cargo_home = str(dirs.data / "cargo")
             toolchain = common().get_toolchain(extract=True)
-            if not toolchain and sys.platform == "linux" and os.environ.get("RELENV_BUILDENV", 0):
+            if (
+                not toolchain
+                and sys.platform == "linux"
+                and os.environ.get("RELENV_BUILDENV", 0)
+            ):
                 raise RuntimeError("No toolchain installed")
             else:
                 return func(*args, **kwargs)

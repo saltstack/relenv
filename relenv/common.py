@@ -225,10 +225,12 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
-
     ppbt = None
 
-    import ppbt
+    try:
+        import ppbt
+    except ImportError:
+        pass
 
     if ppbt:
         env = ppbt.environ(auto_extract=True)
