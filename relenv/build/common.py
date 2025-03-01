@@ -125,8 +125,8 @@ if sys.platform == "linux":
     if ppbt:
         env = ppbt.environ(auto_extract=True)
         toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
-    else:
-        log.warning("ppbt package not installed")
+    #else:
+    #    log.warning("ppbt package not installed")
 else:
     toolchain = DATA_DIR / "toolchain" / get_triplet()
 
@@ -1488,6 +1488,9 @@ def finalize(env, dirs, logfp):
         env["RELENV_CROSS"] = dirs.prefix
         python = env["RELENV_NATIVE_PY"]
     logfp.write("\nRUN ENSURE PIP\n")
+
+    env.pop("RELENV_BUILDENV")
+
     runcmd(
         [str(python), "-m", "ensurepip"],
         env=env,

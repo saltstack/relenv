@@ -55,8 +55,11 @@ def buildenv(relenv_path=None):
     if sys.platform != "linux":
         raise RelenvException("buildenv is only supported on Linux")
 
-    triplet = get_triplet()
     toolchain = get_toolchain()
+    if not toolchain:
+        raise RelenvException("buildenv is only supported on Linux")
+
+    triplet = get_triplet()
     env = {
         "RELENV_BUILDENV": "1",
         "TOOLCHAIN_PATH": f"{toolchain}",

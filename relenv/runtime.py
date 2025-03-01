@@ -613,7 +613,8 @@ def wrap_pip_build_wheel(name):
                 env = ppbt.environ(auto_extract=True)
                 toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
             else:
-                debug("ppbt package not installed")
+                if os.environ.get("RELENV_BUILDENV", 0):
+                    raise RuntimeError("No toolchain installed")
                 return func(*args, **kwargs)
 
             if not toolchain.exists():
