@@ -29,8 +29,6 @@ def test_builder_defaults_linux():
     assert builder.prefix == DATA_DIR / "build" / "3.10.10-x86_64-linux-gnu"
     assert builder.sources == DATA_DIR / "src"
     assert builder.downloads == DATA_DIR / "download"
-    assert "ppbt" in str(builder.toolchains)
-    assert "_toolchain" in str(builder.toolchains)
     assert "ppbt" in str(builder.toolchain)
     assert "_toolchain" in str(builder.toolchain)
     assert callable(builder.build_default)
