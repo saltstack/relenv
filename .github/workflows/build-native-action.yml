@@ -76,7 +76,7 @@ jobs:
 
       - name: "Upload artifact: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/upload-artifact@v4
-        if: ${{ matrix.host == matrix.target  && always()}}
+        if: ${{ matrix.host == matrix.target  && always() }}
         with:
           name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
