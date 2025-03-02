@@ -1209,14 +1209,11 @@ class Builder:
         :rtype: list
         """
         fail = []
-        if (
-            sys.platform == "linux"
-            and not self.toolchain
-            or not self.toolchain.exists()
-        ):
-            fail.append(
-                f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
-            )
+        if sys.platform == "linux":
+            if not self.toolchain or not self.toolchain.exists():
+                fail.append(
+                    f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
+                )
         return fail
 
     def __call__(
