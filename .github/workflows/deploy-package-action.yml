@@ -7,7 +7,7 @@ jobs:
     name: Publish Python Wheel
     runs-on: ubuntu-latest
     environment: release
-    premissions:
+    permissions:
       id-token: write
     steps:
       - name: Download Source Tarball Artifact
