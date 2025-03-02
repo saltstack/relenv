@@ -21,6 +21,7 @@ import shutil
 import site
 import subprocess
 import sys
+import tempfile
 import textwrap
 import warnings
 
@@ -590,16 +591,16 @@ def wrap_pip_build_wheel(name):
     def wrap(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            dirs = common().work_dirs()
-            cargo_home = str(dirs.data / "cargo")
+            # dirs = common().work_dirs()
+            # import tempfile
+            # tmpdir = tempfile.TemporaryDirectory(prefix='relenvcargo')
+            # cargo_home = tmpdir.name #str(dirs.data / "cargo")
+            cargo_home = install_cargo_config.tmpdir.name
+            # cargo_home = str(dirs.data / "cargo")
             toolchain = common().get_toolchain()
-            if (
-                not toolchain
-                and sys.platform == "linux"
-                and os.environ.get("RELENV_BUILDENV", 0)
-            ):
-                raise RuntimeError("No toolchain installed")
-            else:
+            if not toolchain:
+                if sys.platform == "linux" and os.environ.get("RELENV_BUILDENV", 0):
+                    raise RuntimeError("No toolchain installed")
                 return func(*args, **kwargs)
 
             if not toolchain.exists():
@@ -823,8 +824,12 @@ def install_cargo_config():
     """
     if sys.platform != "linux":
         return
+
+    install_cargo_config.tmpdir = tempfile.TemporaryDirectory(prefix="relenvcargo")
+    cargo_home = pathlib.Path(install_cargo_config.tmpdir.name)
+
     triplet = common().get_triplet()
-    dirs = common().work_dirs()
+    # dirs = common().work_dirs()
 
     toolchain = common().get_toolchain()
     if not toolchain:
@@ -835,7 +840,7 @@ def install_cargo_config():
         debug("Unable to set CARGO_HOME no toolchain exists")
         return
 
-    cargo_home = dirs.data / "cargo"
+    # cargo_home = dirs.data / "cargo"
     if not cargo_home.exists():
         cargo_home.mkdir()
     cargo_config = cargo_home / "config.toml"

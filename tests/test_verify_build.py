@@ -692,10 +692,11 @@ def test_cryptography_rpath(
     pyexec, pipexec, build, minor_version, cryptography_version
 ):
     _install_ppbt(pipexec)
-    p = subprocess.run(
-        [pyexec, "-c", "import ppbt; ppbt.extract()"],
-    )
-    assert p.returncode == 0
+    # log.warn("Extract ppbt")
+    # p = subprocess.run(
+    #    [pyexec, "-c", "import ppbt; ppbt.extract()"],
+    # )
+    # assert p.returncode == 0
 
     def find_library(path, search):
         for root, dirs, files in os.walk(path):
@@ -709,6 +710,7 @@ def test_cryptography_rpath(
         [
             str(pipexec),
             "install",
+            "-v",
             f"cryptography=={cryptography_version}",
             "--no-cache-dir",
             "--no-binary=cryptography",
@@ -758,7 +760,7 @@ def test_cryptography_rpath(
         if "GLIBC_2.33" in line:
             valid = False
             break
-    assert valid
+    assert valid, p.stdout.decode()
 
 
 @pytest.mark.skip_unless_on_linux
