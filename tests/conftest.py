@@ -25,7 +25,9 @@ def get_build_version():
         if sysplat == sys.platform and arch == platform.machine().lower():
             versions.append(version)
     if versions:
-        return versions[0]
+        version = versions[0]
+        log.warn("Environment RELENV_PY_VERSION not set, detected version %s", version)
+        return version
 
 
 def pytest_report_header(config):
