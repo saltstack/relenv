@@ -25,3 +25,5 @@ jobs:
           print-hash: true
           skip-existing: true
           verify-metadata: true
+          username: dwoz
+          password: ${{ secrets.PYPI_API_TOKEN }}
