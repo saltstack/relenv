@@ -47,10 +47,9 @@ def main():
     """
     parser = setup_cli()
     args = parser.parse_args()
-    # args.func(args)
-    try:
+    if hasattr(args, 'func'):
         args.func(args)
-    except AttributeError:
+    else:
         parser.print_help()
         parser.exit(1, "\nNo subcommand given...\n\n")
 
