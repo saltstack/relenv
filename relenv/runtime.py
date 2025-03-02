@@ -602,15 +602,16 @@ def wrap_pip_build_wheel(name):
     def wrap(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # dirs = common().work_dirs()
-            # import tempfile
-            # tmpdir = tempfile.TemporaryDirectory(prefix='relenvcargo')
-            # cargo_home = tmpdir.name #str(dirs.data / "cargo")
+            if sys.platform != "linux":
+                return func(*args, **kwargs)
+            if not hasattr(install_cargo_config, "tmpdir") and os.environ.get(
+                "RELENV_BUILDENV", 0
+            ):
+                raise RuntimeError("No toolchain installed")
             cargo_home = install_cargo_config.tmpdir.name
-            # cargo_home = str(dirs.data / "cargo")
             toolchain = common().get_toolchain()
             if not toolchain:
-                if sys.platform == "linux" and os.environ.get("RELENV_BUILDENV", 0):
+                if os.environ.get("RELENV_BUILDENV", 0):
                     raise RuntimeError("No toolchain installed")
                 return func(*args, **kwargs)
 
