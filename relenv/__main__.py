@@ -47,7 +47,7 @@ def main():
     """
     parser = setup_cli()
     args = parser.parse_args()
-    if hasattr(args, 'func'):
+    if hasattr(args, "func"):
         args.func(args)
     else:
         parser.print_help()
