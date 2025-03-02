@@ -7,6 +7,8 @@ jobs:
     name: Publish Python Wheel
     runs-on: ubuntu-latest
     environment: release
+    premissions:
+      id-token: write
     steps:
       - name: Download Source Tarball Artifact
         uses: actions/download-artifact@v4
@@ -25,5 +27,5 @@ jobs:
           print-hash: true
           skip-existing: true
           verify-metadata: true
-          username: dwoz
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          #username: dwoz
+          #password: ${{ secrets.PYPI_API_TOKEN }}
