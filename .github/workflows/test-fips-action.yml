@@ -27,7 +27,7 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          yum install -y openssl-fips-provider python3 python3-devel python3-virtualenv git gcc
+          yum install -y openssl-fips-provider python3 python3-devel python3-virtualenv git gcc binutils glibc-devel linux-api-headers libffi-devel
 
       - uses: actions/checkout@v3
 
