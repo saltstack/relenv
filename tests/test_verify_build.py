@@ -47,16 +47,28 @@ def setup(pth_file_path):
 """
 
 
-def _install_ppbt(pipexec):
+def _install_ppbt(pexec):
     if sys.platform in ["win32", "darwin"]:
         return
-    p = subprocess.run(
-        [
-            str(pipexec),
-            "install",
-            "ppbt",
-        ]
-    )
+    if "pip" in str(pexec):
+        p = subprocess.run(
+            [
+                str(pexec),
+                "install",
+                "ppbt",
+            ]
+        )
+    else:
+        p = subprocess.run(
+            [
+                str(pexec),
+                "-m",
+                "pip",
+                "install",
+                "ppbt",
+            ]
+        )
+
     assert p.returncode == 0, "Failed to install ppbt"
 
 
