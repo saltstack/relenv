@@ -1,9 +1,9 @@
-# Copyright 2025 Broadcom.
-# Copyright 2022-2024 VMware, Inc.
+# Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
 """
 Verify relenv builds.
 """
+import json
 import os
 import pathlib
 import platform
@@ -16,13 +16,38 @@ import time
 import packaging
 import pytest
 
-from relenv.common import DATA_DIR, build_arch, get_triplet
+from relenv.common import build_arch, get_triplet
 
 from .conftest import get_build_version
 
 pytestmark = [
     pytest.mark.skipif(not get_build_version(), reason="Build archive does not exist"),
 ]
+
+
+def _install_ppbt(pexec):
+    if sys.platform in ["win32", "darwin"]:
+        return
+    if "pip" in str(pexec):
+        p = subprocess.run(
+            [
+                str(pexec),
+                "install",
+                "ppbt",
+            ]
+        )
+    else:
+        p = subprocess.run(
+            [
+                str(pexec),
+                "-m",
+                "pip",
+                "install",
+                "ppbt",
+            ]
+        )
+
+    assert p.returncode == 0, "Failed to install ppbt"
 
 
 @pytest.fixture(scope="module")
@@ -107,6 +132,8 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
 
+    _install_ppbt(pipexec)
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and shutil.which("git"):
@@ -146,6 +173,9 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
     reason="3.11.7 and greater will not work with 3005.x",
 )
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
+
+    _install_ppbt(pipexec)
+
     packages = [
         "salt==3005",
     ]
@@ -171,6 +201,8 @@ def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
 
 @pytest.mark.skip_on_windows
 def test_symlinked_scripts(pipexec, tmp_path, build):
+    _install_ppbt(pipexec)
+
     name = "chardet==5.1.0"
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
@@ -209,6 +241,8 @@ def test_pip_install_salt_w_static_requirements(
 
     if salt_branch == "3006.x" and sys.platform == "win32":
         pytest.xfail("Known failure")
+
+    _install_ppbt(pipexec)
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -268,6 +302,8 @@ def test_pip_install_salt_w_package_requirements(
 
     if sys.platform == "darwin" and salt_branch == "3006.x":
         pytest.xfail("Known failure")
+
+    _install_ppbt(pipexec)
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -364,6 +400,8 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
     if pyzmq_version == "25.1.2" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
 
+    _install_ppbt(pipexec)
+
     env = os.environ.copy()
 
     p = subprocess.run(
@@ -406,6 +444,7 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
 
 
 def test_pip_install_cryptography(pipexec):
+    _install_ppbt(pipexec)
     packages = [
         "cryptography",
     ]
@@ -417,6 +456,7 @@ def test_pip_install_cryptography(pipexec):
 
 
 def test_pip_install_idem(pipexec):
+    _install_ppbt(pipexec)
     packages = [
         "idem",
     ]
@@ -428,6 +468,7 @@ def test_pip_install_idem(pipexec):
 
 
 def test_pip_install_and_import_libcloud(pipexec, pyexec):
+    _install_ppbt(pipexec)
     name = "apache-libcloud"
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -454,6 +495,7 @@ def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
 
+    _install_ppbt(pipexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -471,6 +513,7 @@ def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
 
 
 def test_nox_virtualenvs(pipexec, build, tmp_path):
+    _install_ppbt(pipexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -554,6 +597,18 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
 
 @pytest.mark.skip_unless_on_linux
 def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
+    _install_ppbt(pipexec)
+    p = subprocess.run(
+        [
+            pyexec,
+            "-m",
+            "relenv",
+            "buildenv",
+            "--json",
+        ],
+        capture_output=True,
+    )
+    buildenv = json.loads(p.stdout)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -569,13 +624,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
         stderr=subprocess.PIPE,
     )
     assert p.returncode == 0, "Failed to pip install m2crypto"
-    gcc = str(
-        pathlib.Path(DATA_DIR)
-        / "toolchain"
-        / f"{get_triplet()}"
-        / "bin"
-        / f"{get_triplet()}-gcc"
-    )
+    gcc = str(pathlib.Path(buildenv["TOOLCHAIN_PATH"]) / "bin" / f"{get_triplet()}-gcc")
     include = str(pathlib.Path(build) / "include")
     found_include = False
     for _ in p.stderr.splitlines():
@@ -584,7 +633,7 @@ def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
             for arg in line.split():
                 if arg == f"-I{include}":
                     found_include = True
-    assert found_include
+    assert found_include, f"{include}\n{p.stderr.decode()}"
     p = subprocess.run(
         [str(pyexec), "-c", "import M2Crypto"],
         env=env,
@@ -622,6 +671,7 @@ def test_shebangs(pipexec, build, minor_version):
 # XXX Mac support
 @pytest.mark.skip_unless_on_linux
 def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
+    _install_ppbt(pipexec)
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_BUILDENV"] = "yes"
@@ -650,7 +700,16 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
 
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize("cryptography_version", ["40.0.1", "39.0.2"])
-def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version):
+def test_cryptography_rpath(
+    pyexec, pipexec, build, minor_version, cryptography_version
+):
+    _install_ppbt(pipexec)
+    # log.warn("Extract ppbt")
+    # p = subprocess.run(
+    #    [pyexec, "-c", "import ppbt; ppbt.extract()"],
+    # )
+    # assert p.returncode == 0
+
     def find_library(path, search):
         for root, dirs, files in os.walk(path):
             for fname in files:
@@ -663,6 +722,7 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
         [
             str(pipexec),
             "install",
+            "-v",
             f"cryptography=={cryptography_version}",
             "--no-cache-dir",
             "--no-binary=cryptography",
@@ -712,11 +772,12 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
         if "GLIBC_2.33" in line:
             valid = False
             break
-    assert valid
+    assert valid, p.stdout.decode()
 
 
 @pytest.mark.skip_unless_on_linux
 def test_install_pycurl(pipexec, build):
+    _install_ppbt(pipexec)
     curlver = "8.0.1"
 
     # Build curl and install it into the relenv environment
@@ -813,7 +874,6 @@ def build_dir(tmp_path):
     ],
 )
 def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
-
     buildscript = textwrap.dedent(
         """\
     set -e
@@ -889,6 +949,7 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_python_ldap(pipexec, build):
+    _install_ppbt(pipexec)
     saslver = "2.1.28"
     ldapver = "2.5.14"
 
