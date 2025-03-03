@@ -7,6 +7,8 @@ import subprocess
 
 import pytest
 
+from tests.test_verify_build import _install_ppbt
+
 from .conftest import get_build_version
 
 
@@ -27,6 +29,7 @@ pytestmark = [
 
 
 def test_fips_mode(pyexec, build):
+    _install_ppbt(pyexec)
     env = os.environ.copy()
     proc = subprocess.run(
         [
