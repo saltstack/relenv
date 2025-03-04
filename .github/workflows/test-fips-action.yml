@@ -41,13 +41,15 @@ jobs:
         run: |
           virtualenv venv
 
+      - name: Pip debug
+        run: |
+          ./venv/bin/python3 -m pip install --upgrade pip
+          ./venv/bin/python3 -c 'import platform; print(platform.libc_ver())'
+          ./venv/bin/pip3 debug --verbose
+
       - name: Install Virtual Environment Dependencies
         run: |
           ./venv/bin/pip3 install -r requirements/tests.txt
-
-      - name: Pip debug
-        run: |
-          ./venv/bin/pip3 debug --verbose
 
       - name: Run Fips Tests
         run: |
