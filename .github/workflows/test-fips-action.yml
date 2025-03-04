@@ -45,6 +45,10 @@ jobs:
         run: |
           ./venv/bin/pip3 install -r requirements/tests.txt
 
+      - name: Pip debug
+        run: |
+          ./venv/bin/pip3 debug --verbose
+
       - name: Run Fips Tests
         run: |
           ./venv/bin/python3 -m pytest -v tests/test_fips_photon.py
