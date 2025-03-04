@@ -1,7 +1,7 @@
 name: Relenv Python Package
 
 on:
-  workflow_dispatcht:
+  workflow_dispatch:
     inputs:
       run_id:
         required: true
