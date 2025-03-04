@@ -8,7 +8,7 @@ jobs:
     name: Test FIPS compatability
     runs-on: ubuntu-latest
     container:
-      image: photon:5.0
+      image: photon:4.0
 
     strategy:
       fail-fast: false
