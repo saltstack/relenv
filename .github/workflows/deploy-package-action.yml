@@ -1,27 +1,38 @@
 name: Relenv Python Package
 
 on:
-  workflow_call:
-    secrets:
-      PYPI_API_TOKEN:
+  workflow_dispatcht:
+    inputs:
+      run_id:
         required: true
 
 jobs:
   build:
     name: Publish Python Wheel
     runs-on: ubuntu-latest
+    environment: release
     steps:
+
       - name: Download Source Tarball Artifact
         uses: actions/download-artifact@v4
         with:
           name: Source Tarball
           path: dist
+          run_id: ${{ inputs.run_id }}
+          gihtub-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download Wheel Artifact
         uses: actions/download-artifact@v4
         with:
           name: Python Wheel
           path: dist
+          run_id: ${{ inputs.run_id }}
+          gihtub-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
+          print-hash: true
+          skip-existing: true
+          verify-metadata: true

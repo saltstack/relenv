@@ -126,9 +126,22 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
+  #deploy-python-package:
+  #  name: Deploy Python Package
+  #  uses: ./.github/workflows/deploy-package-action.yml
+  #  if: ${{ inputs.kind == 'release' && success() }}
+  #  needs:
+  #    - pre-commit
+  #    - test
+  #    - docs
+  #    - build-python-package
+  #    - test-fips
+  #  secrets:
+  #    PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
+
   deploy-python-package:
-    name: Deploy Python Package
-    uses: ./.github/workflows/deploy-package-action.yml
+    name: "Deploy python package"
+    runs-on: ubuntu-latest
     if: ${{ inputs.kind == 'release' && success() }}
     needs:
       - pre-commit
@@ -136,8 +149,12 @@ jobs:
       - docs
       - build-python-package
       - test-fips
-    secrets:
-      PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
+    steps:
+      - name: Run deploy package action
+        uses: the-actions-org/workflow-dispatch@v4
+        with:
+          workflow: Relenv Python Package
+          inputs: '{ "run_id": "${{ github.run_id }}" }'
 
   create-release:
     name: Create Github Release
