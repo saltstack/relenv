@@ -18,7 +18,7 @@ jobs:
         with:
           name: Source Tarball
           path: dist
-          run_id: ${{ inputs.run_id }}
+          run-id: ${{ inputs.run_id }}
           gihtub-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Wheel Artifact
@@ -26,7 +26,7 @@ jobs:
         with:
           name: Python Wheel
           path: dist
-          run_id: ${{ inputs.run_id }}
+          run-id: ${{ inputs.run_id }}
           gihtub-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish distribution to PyPI
