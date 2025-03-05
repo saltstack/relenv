@@ -16,8 +16,6 @@ on:
           build
           --wheel
           --outdir dist/
-    secrets:
-      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
 
 jobs:
   ci:
@@ -31,3 +29,5 @@ jobs:
     with:
       kind: "${{ inputs.kind }}"
       package_command: "${{ inputs.package_command }}"
+    secrets:
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
