@@ -16,6 +16,8 @@ on:
           build
           --wheel
           --outdir dist/
+    secrets:
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
 
 jobs:
   ci:
