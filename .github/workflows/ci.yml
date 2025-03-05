@@ -162,7 +162,7 @@ jobs:
       - name: Run deploy package action
         uses: the-actions-org/workflow-dispatch@v4
         with:
-          workflow: Relenv Python Package
+          workflow: Deploy Python Package
           token: ${{ steps.app-token.outputs.token }}
           inputs: '{ "run_id": "${{ github.run_id }}" }'
 

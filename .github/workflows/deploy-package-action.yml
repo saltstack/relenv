@@ -1,4 +1,4 @@
-name: Relenv Python Package
+name: Deploy Python Package
 
 on:
   workflow_dispatch:
