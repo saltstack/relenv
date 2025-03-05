@@ -160,6 +160,7 @@ class WorkDirs:
 
     def __init__(self, root):
         self.root = root
+        self.data = DATA_DIR
         self.toolchain_config = work_dir("toolchain", self.root)
         self.toolchain = work_dir("toolchain", DATA_DIR)
         self.build = work_dir("build", DATA_DIR)
@@ -224,10 +225,18 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
-    dirs = work_dirs(root)
-    if arch:
-        return dirs.toolchain / "{}-linux-gnu".format(arch)
-    return dirs.toolchain
+    if sys.platform != "linux":
+        return DATA_DIR
+    ppbt = None
+
+    try:
+        import ppbt
+    except ImportError:
+        pass
+
+    if ppbt:
+        env = ppbt.environ(auto_extract=True)
+        return pathlib.Path(env["TOOLCHAIN_PATH"])
 
 
 def get_triplet(machine=None, plat=None):
