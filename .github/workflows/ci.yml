@@ -26,6 +26,10 @@ on:
           -C--global-option=--tag-build=+dev$(git rev-parse --short HEAD)
           --wheel
           --outdir dist/
+    secrets:
+      PRIVATE_KEY:
+        required: true
+
 jobs:
 
   get-changed-files:
