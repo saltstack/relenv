@@ -21,7 +21,6 @@ import shutil
 import site
 import subprocess
 import sys
-import tempfile
 import textwrap
 import warnings
 
@@ -836,6 +835,11 @@ def install_cargo_config():
     """
     if sys.platform != "linux":
         return
+
+    # We need this as a late import for python < 3.12 becuase importing it will
+    # load the ssl module. Causing out setup_openssl method to fail to load
+    # fips module.
+    import tempfile
 
     install_cargo_config.tmpdir = tempfile.TemporaryDirectory(prefix="relenvcargo")
     cargo_home = pathlib.Path(install_cargo_config.tmpdir.name)
