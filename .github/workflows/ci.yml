@@ -28,7 +28,7 @@ on:
           --outdir dist/
     secrets:
       PRIVATE_KEY:
-        required: true
+        required: false
 
 jobs:
 
