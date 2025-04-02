@@ -37,7 +37,7 @@ jobs:
       ( matrix.host  !=  matrix.target  &&  inputs.kind  == "cross" )
 
     runs-on:
-      - ${{ (contains(matrix.host, "x86_64") && "linux-x86_64") || "linux-arm64" }}
+      - ${{ (contains(matrix.host, "x86_64") && "ubuntu-24.04") || "ubuntu-24.04-arm" }}
 
     env:
       RELENV_DATA: ${{ github.workspace }}
