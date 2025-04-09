@@ -130,7 +130,7 @@ def build_python(env, dirs, logfp):
     )
 
 
-build = builds.add("win32", populate_env=populate_env, version="3.10.16")
+build = builds.add("win32", populate_env=populate_env, version="3.10.17")
 
 build.add(
     "python",
@@ -138,7 +138,7 @@ build.add(
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": build.version,
-        "checksum": "401e6a504a956c8f0aab76c4f3ad9df601a83eb1",
+        "checksum": "d31d548cd2c5ca2ae713bebe346ba15e8406633a",
     },
 )
 
@@ -222,6 +222,6 @@ build = build.copy(
 builds.add("win32", builder=build)
 
 build = build.copy(
-    version="3.13.2", checksum="da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    version="3.13.3", checksum="f26085cf12daef7b60b8a6fe93ef988b9a094aea"
 )
 builds.add("win32", builder=build)

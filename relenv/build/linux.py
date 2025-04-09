@@ -444,7 +444,7 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("linux", populate_env=populate_env, version="3.10.16")
+build = builds.add("linux", populate_env=populate_env, version="3.10.17")
 
 build.add(
     "openssl",
@@ -479,8 +479,8 @@ build.add(
     "libxcrypt",
     download={
         "url": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
-        "version": "4.4.36",
-        "checksum": "c040de2fd534f84082c9c42114ba11b4e1a67635",
+        "version": "4.4.38",
+        "checksum": "9aa2fa261be6144af492e9b6bfd03bfaa47f7159",
         "checkfunc": github_version,
         "checkurl": "https://github.com/besser82/libxcrypt/releases/",
     },
@@ -528,8 +528,8 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
         # "fallback_url": "https://woz.io/relenv/dependencies/gdbm-{version}.tar.gz",
-        "version": "1.24",
-        "checksum": "7bd455f28c9e4afacc042e0c712aac1b2391fef2",
+        "version": "1.25",
+        "checksum": "d55bdf2bb5f92f80006166dd8a8323cb2a428bd1",
         "checkfunc": tarball_version,
     },
 )
@@ -649,7 +649,7 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         # "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
-        "checksum": "401e6a504a956c8f0aab76c4f3ad9df601a83eb1",
+        "checksum": "d31d548cd2c5ca2ae713bebe346ba15e8406633a",
         "checkfunc": python_version,
         "checkurl": "https://www.python.org/ftp/python/",
     },
@@ -676,6 +676,6 @@ build = build.copy(
 builds.add("linux", builder=build)
 
 build = build.copy(
-    version="3.13.2", checksum="da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    version="3.13.3", checksum="f26085cf12daef7b60b8a6fe93ef988b9a094aea"
 )
 builds.add("linux", builder=build)
