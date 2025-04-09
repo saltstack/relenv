@@ -75,7 +75,7 @@ jobs:
         include:
           - platform: linux-gnu
             arch: x86_64
-            python: 3.10.16
+            python: 3.10.17
           - platform: linux-gnu
             arch: x86_64
             python: 3.11.11
@@ -84,10 +84,10 @@ jobs:
             python: 3.12.9
           - platform: linux-gnu
             arch: x86_64
-            python: 3.13.2
+            python: 3.13.3
           - platform: linux-gnu
             arch: aarch64
-            python: 3.10.16
+            python: 3.10.17
           - platform: linux-gnu
             arch: aarch64
             python: 3.11.11
@@ -96,11 +96,11 @@ jobs:
             python: 3.12.9
           - platform: linux-gnu
             arch: aarch64
-            python: 3.13.2
+            python: 3.13.3
 
           - platform: win
             arch: x86
-            python: 3.10.16
+            python: 3.10.17
           - platform: win
             arch: x86
             python: 3.11.11
@@ -109,10 +109,10 @@ jobs:
             python: 3.12.9
           - platform: win
             arch: x86
-            python: 3.13.2
+            python: 3.13.3
           - platform: win
             arch: amd64
-            python: 3.10.16
+            python: 3.10.17
           - platform: win
             arch: amd64
             python: 3.11.11
@@ -121,11 +121,11 @@ jobs:
             python: 3.12.9
           - platform: win
             arch: amd64
-            python: 3.13.2
+            python: 3.13.3
 
           - platform: macos
             arch: x86_64
-            python: 3.10.16
+            python: 3.10.17
           - platform: macos
             arch: x86_64
             python: 3.11.11
@@ -134,10 +134,10 @@ jobs:
             python: 3.12.9
           - platform: macos
             arch: x86_64
-            python: 3.13.2
+            python: 3.13.3
           - platform: macos
             arch: arm64
-            python: 3.10.16
+            python: 3.10.17
           - platform: macos
             arch: arm64
             python: 3.11.11
@@ -146,7 +146,7 @@ jobs:
             python: 3.12.9
           - platform: macos
             arch: arm64
-            python: 3.13.2
+            python: 3.13.3
     steps:
       - name: Download Artifacts
         uses: actions/download-artifact@v4
