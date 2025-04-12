@@ -1407,7 +1407,13 @@ def install_runtime(sitepackages):
     relenv = sitepackages / "relenv"
     os.makedirs(relenv, exist_ok=True)
 
-    for name in ["runtime.py", "relocate.py", "common.py", "__init__.py"]:
+    for name in [
+        "runtime.py",
+        "relocate.py",
+        "common.py",
+        "buildenv.py",
+        "__init__.py",
+    ]:
         src = MODULE_DIR / name
         dest = relenv / name
         with io.open(src, "r") as rfp:
@@ -1432,6 +1438,15 @@ def finalize(env, dirs, logfp):
     relenv.relocate.main(dirs.prefix, log_file_name=str(dirs.logs / "relocate.py.log"))
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
+
+    shutil.copy(
+        pathlib.Path(dirs.toolchain)
+        / env["RELENV_HOST"]
+        / "sysroot"
+        / "lib"
+        / "libstdc++.so.6",
+        libdir,
+    )
 
     def find_pythonlib(libdir):
         for root, dirs, files in os.walk(libdir):

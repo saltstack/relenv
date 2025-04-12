@@ -1,11 +1,14 @@
-0.18.2
+0.19.0
 ======
 
 * Update python 3.10 to 3.10.17:
   https://www.python.org/downloads/release/python-31017/
 * Update python 3.13 to 3.13.3
 * Update libxcrypt to 4.4.38
+* Update libffi to 3.4.8
 * Update gdbm to 1.25
+* Include libstdc++ in relenv lib
+* Update environment with buildenv when RELENV_BUILDENV environment is set.
 
 
 0.18.1

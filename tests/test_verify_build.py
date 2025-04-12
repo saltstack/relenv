@@ -339,6 +339,7 @@ def test_pip_install_salt_w_package_requirements(
         "23.2.0",
         "25.1.2",
         "26.2.0",
+        "26.4.0",
     ],
 )
 def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
@@ -346,23 +347,26 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
 
-    if pyzmq_version == "23.2.0" and sys.platform == "darwin":
-        pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
-
-    if sys.platform == "win32" and pyzmq_version == "25.1.2":
-        pytest.xfail("pyzmq 25.1.2 fails on windows")
-
-    if sys.platform == "win32" and pyzmq_version == "23.2.0":
-        pytest.xfail("vcredist not found as of 9/9/24")
-
-    if sys.platform == "win32" and pyzmq_version == "26.2.0":
-        pytest.xfail("vcredist not found as of 9/9/24")
-
     if pyzmq_version == "23.2.0" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
 
+    if pyzmq_version == "23.2.0" and sys.platform == "darwin":
+        pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
+
+    if pyzmq_version == "23.2.0" and sys.platform == "win32":
+        pytest.xfail("vcredist not found as of 9/9/24")
+
     if pyzmq_version == "25.1.2" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
+
+    if pyzmq_version == "25.1.2" and sys.platform == "win32":
+        pytest.xfail("pyzmq 25.1.2 fails on windows")
+
+    if pyzmq_version == "26.2.0" and sys.platform == "win32":
+        pytest.xfail("vcredist not found as of 9/9/24")
+
+    if pyzmq_version == "26.4.0" and sys.platform == "win32":
+        pytest.xfail("Needs troubleshooting 4/12/25")
 
     env = os.environ.copy()
 

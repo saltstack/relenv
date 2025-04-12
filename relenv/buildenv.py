@@ -58,6 +58,11 @@ def buildenv(relenv_path=None):
             f"-I{relenv_path}/include "
             f"-I{toolchain}/sysroot/usr/include"
         ),
+        "CXXFLAGS": (
+            f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include "
+            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+            f"-Wl,-rpath,{relenv_path}/lib"
+        ),
         "CPPFLAGS": (
             #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"

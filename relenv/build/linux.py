@@ -35,38 +35,35 @@ def populate_env(env, dirs):
     :type dirs: ``relenv.build.common.Dirs``
     """
     # CC and CXX need to be to have the full path to the executable
-    env["CC"] = "{}/bin/{}-gcc -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
-    env["CXX"] = "{}/bin/{}-g++ -no-pie".format(dirs.toolchain, env["RELENV_HOST"])
+    env["CC"] = f"{dirs.toolchain}/bin/{env['RELENV_HOST']}-gcc -no-pie"
+    env["CXX"] = f"{dirs.toolchain}/bin/{env['RELENV_HOST']}-g++ -no-pie"
     # Add our toolchain binaries to the path. We also add the bin directory of
     # our prefix so that libtirpc can find krb5-config
-    env["PATH"] = "{}/bin/:{}/bin/:{PATH}".format(dirs.toolchain, dirs.prefix, **env)
+    env["PATH"] = f"{dirs.toolchain}/bin/:{dirs.prefix}/bin/:{env['PATH']}"
     ldflags = [
         "-Wl,--build-id=sha1",
-        "-Wl,--rpath={prefix}/lib",
-        "-L{prefix}/lib",
-        "-L{}/{RELENV_HOST}/sysroot/lib".format(dirs.toolchain, **env),
-        "-static-libstdc++",
+        f"-Wl,--rpath={dirs.prefix}/lib",
+        f"-L{dirs.prefix}/lib",
+        f"-L{dirs.toolchain}/{env['RELENV_HOST']}/sysroot/lib",
     ]
-    env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
+    env["LDFLAGS"] = " ".join(ldflags)
     cflags = [
         "-g",
-        "-I{prefix}/include",
-        "-I{prefix}/include/readline",
-        "-I{prefix}/include/ncursesw",
-        "-I{}/{RELENV_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
+        f"-I{dirs.prefix}/include",
+        f"-I{dirs.prefix}/include/readline",
+        f"-I{dirs.prefix}/include/ncursesw",
+        f"-I{dirs.toolchain}/{env['RELENV_HOST']}/sysroot/usr/include",
     ]
-    env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
+    env["CFLAGS"] = " ".join(cflags)
     # CPPFLAGS are needed for Python's setup.py to find the 'nessicery bits'
     # for things like zlib and sqlite.
     cpplags = [
-        "-I{prefix}/include",
-        "-I{prefix}/include/readline",
-        "-I{prefix}/include/ncursesw",
-        "-I{}/{RELENV_HOST}/sysroot/usr/include".format(dirs.toolchain, **env),
+        f"-I{dirs.prefix}/include",
+        f"-I{dirs.prefix}/include/readline",
+        f"-I{dirs.prefix}/include/ncursesw",
+        f"-I{dirs.toolchain}/{env['RELENV_HOST']}/sysroot/usr/include",
     ]
-    env["CPPFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
-    env["CXXFLAGS"] = " ".join(cpplags).format(prefix=dirs.prefix)
-    env["LD_LIBRARY_PATH"] = "{prefix}/lib"
+    env["CPPFLAGS"] = " ".join(cpplags)
     env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
 
 
@@ -354,9 +351,9 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    env["LDFLAGS"] = "-Wl,--rpath={prefix}/lib {ldflags}".format(
-        prefix=dirs.prefix, ldflags=env["LDFLAGS"]
-    )
+    ldflagopt = f"-Wl,--rpath={dirs.prefix}/lib"
+    if ldflagopt not in env["LDFLAGS"]:
+        env["LDFLAGS"] = f"{ldflagopt} {env['LDFLAGS']}"
 
     # Needed when using a toolchain even if build and host match.
     runcmd(
@@ -433,6 +430,8 @@ def build_python(env, dirs, logfp):
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
+    for _ in ["LDFLAGS", "CFLAGS", "CPPFLAGS", "CXX", "CC"]:
+        env.pop(_)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
@@ -555,8 +554,8 @@ build.add(
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
         # "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
-        "version": "3.4.7",
-        "checksum": "b07136211f47fa30c0512ebd7484fde724978d99",
+        "version": "3.4.8",
+        "checksum": "6930b77aebe2465a8e1a8617c4c9a8fa3199b256",
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
