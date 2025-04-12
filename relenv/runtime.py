@@ -70,6 +70,17 @@ def relocate():
     return relocate.relocate
 
 
+def buildenv():
+    """
+    Late import relenv buildenv.
+    """
+    if not hasattr(buildenv, "builenv"):
+        buildenv.buildenv = path_import(
+            "relenv.buildenv", str(pathlib.Path(__file__).parent / "buildenv.py")
+        )
+    return buildenv.buildenv
+
+
 def get_major_version():
     """
     Current python major version.
@@ -1024,3 +1035,5 @@ def bootstrap():
     setup_crossroot()
     install_cargo_config()
     sys.meta_path = [importer] + sys.meta_path
+    if "RELENV_BUILDENV" in os.environ:
+        os.environ.update(buildenv().buildenv())
