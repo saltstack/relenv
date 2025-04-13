@@ -53,23 +53,18 @@ def buildenv(relenv_path=None):
         "RELENV_PATH": f"{relenv_path}",
         "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
         "CXX": f"{toolchain}/bin/{triplet}-g++ -no-pie",
-        "CFLAGS": (
-            #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
-            f"-I{relenv_path}/include "
-            f"-I{toolchain}/sysroot/usr/include"
-        ),
+        "CFLAGS": f"-I{relenv_path}/include -I{toolchain}/sysroot/usr/include",
         "CXXFLAGS": (
-            f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include "
+            f"-I{relenv_path}/include "
+            f"-I{toolchain}/{triplet}/sysroot/usr/include "
             f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
             f"-Wl,-rpath,{relenv_path}/lib"
         ),
         "CPPFLAGS": (
-            #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
-            f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"
+            f"-I{relenv_path}/include " f"-I{toolchain}/{triplet}/sysroot/usr/include"
         ),
         "CMAKE_CFLAGS": (
-            #   f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
-            f"-I{relenv_path}/include -I{toolchain}/{triplet}/sysroot/usr/include"
+            f"-I{relenv_path}/include " f"-I{toolchain}/{triplet}/sysroot/usr/include"
         ),
         "LDFLAGS": (
             f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "

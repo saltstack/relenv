@@ -63,6 +63,7 @@ def populate_env(env, dirs):
         f"-I{dirs.prefix}/include/ncursesw",
         f"-I{dirs.toolchain}/{env['RELENV_HOST']}/sysroot/usr/include",
     ]
+    # env["CXXFLAGS"] = " ".join(cpplags)
     env["CPPFLAGS"] = " ".join(cpplags)
     env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
 
@@ -82,12 +83,12 @@ def build_bzip2(env, dirs, logfp):
         [
             "make",
             "-j8",
-            "PREFIX={}".format(dirs.prefix),
-            "LDFLAGS={}".format(env["LDFLAGS"]),
+            f"PREFIX={dirs.prefix}",
+            f"LDFLAGS={env['LDFLAGS']}",
             "CFLAGS=-fPIC",
-            "CC={}".format(env["CC"]),
-            "BUILD={}".format("x86_64-linux-gnu"),
-            "HOST={}".format(env["RELENV_HOST"]),
+            f"CC={env['CC']}",
+            "BUILD=x86_64-linux-gnu",
+            f"HOST={env['RELENV_HOST']}",
             "install",
         ],
         env=env,
@@ -99,10 +100,10 @@ def build_bzip2(env, dirs, logfp):
             "make",
             "-f",
             "Makefile-libbz2_so",
-            "CC={}".format(env["CC"]),
-            "LDFLAGS={}".format(env["LDFLAGS"]),
-            "BUILD={}".format("x86_64-linux-gnu"),
-            "HOST={}".format(env["RELENV_HOST"]),
+            f"CC={env['CC']}",
+            f"LDFLAGS={env['LDFLAGS']}",
+            "BUILD=x86_64-linux-gnu",
+            "HOST={env['RELENV_HOST']}",
         ],
         env=env,
         stderr=logfp,
@@ -125,10 +126,10 @@ def build_libxcrypt(env, dirs, logfp):
     runcmd(
         [
             "./configure",
-            "--prefix={}".format(dirs.prefix),
+            f"--prefix={dirs.prefix}",
             # "--enable-libgdbm-compat",
-            "--build={}".format(env["RELENV_BUILD"]),
-            "--host={}".format(env["RELENV_HOST"]),
+            f"--build={env['RELENV_BUILD']}",
+            f"--host={env['RELENV_HOST']}",
         ],
         env=env,
         stderr=logfp,
@@ -152,10 +153,10 @@ def build_gdbm(env, dirs, logfp):
     runcmd(
         [
             "./configure",
-            "--prefix={}".format(dirs.prefix),
+            f"--prefix={dirs.prefix}",
             "--enable-libgdbm-compat",
-            "--build={}".format(env["RELENV_BUILD"]),
-            "--host={}".format(env["RELENV_HOST"]),
+            f"--build={env['RELENV_BUILD']}",
+            f"--host={env['RELENV_HOST']}",
         ],
         env=env,
         stderr=logfp,
@@ -202,19 +203,20 @@ def build_ncurses(env, dirs, logfp):
             "--disable-stripping",
             f"--with-pkg-config={dirs.prefix}/lib/pkgconfig",
             "--enable-pc-files",
-            "--build={}".format(env["RELENV_BUILD"]),
-            "--host={}".format(env["RELENV_HOST"]),
+            f"--build={env['RELENV_BUILD']}",
+            f"--host={env['RELENV_HOST']}",
         ],
         env=env,
         stderr=logfp,
         stdout=logfp,
     )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    ticdir = str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")
     runcmd(
         [
             "make",
-            "DESTDIR={}".format(dirs.prefix),
-            "TIC_PATH={}".format(str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")),
+            f"DESTDIR={dirs.prefix}",
+            f"TIC_PATH={ticdir}",
             "install",
         ],
         env=env,
@@ -237,12 +239,12 @@ def build_readline(env, dirs, logfp):
     env["LDFLAGS"] = f"{env['LDFLAGS']} -ltinfow"
     cmd = [
         "./configure",
-        "--prefix={}".format(dirs.prefix),
+        f"--prefix={dirs.prefix}",
     ]
     if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
-            "--build={}".format(env["RELENV_BUILD"]),
-            "--host={}".format(env["RELENV_HOST"]),
+            f"--build={env['RELENV_BUILD']}",
+            f"--host={env['RELENV_HOST']}",
         ]
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -263,10 +265,10 @@ def build_libffi(env, dirs, logfp):
     runcmd(
         [
             "./configure",
-            "--prefix={}".format(dirs.prefix),
+            f"--prefix={dirs.prefix}",
             "--disable-multi-os-directory",
-            "--build={}".format(env["RELENV_BUILD"]),
-            "--host={}".format(env["RELENV_HOST"]),
+            f"--build={env['RELENV_BUILD']}",
+            "--host={env['RELENV_HOST']}",
         ],
         env=env,
         stderr=logfp,
@@ -291,12 +293,12 @@ def build_zlib(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    env["CFLAGS"] = "-fPIC {}".format(env["CFLAGS"])
+    env["CFLAGS"] = f"-fPIC {env['CFLAGS']}"
     runcmd(
         [
             "./configure",
-            "--prefix={}".format(dirs.prefix),
-            "--libdir={}/lib".format(dirs.prefix),
+            f"--prefix={dirs.prefix}",
+            f"--libdir={dirs.prefix}/lib",
             "--shared",
         ],
         env=env,
@@ -326,11 +328,11 @@ def build_krb(env, dirs, logfp):
     runcmd(
         [
             "./configure",
-            "--prefix={}".format(dirs.prefix),
+            "--prefix={dirs.prefix}",
             "--without-system-verto",
             "--without-libedit",
-            "--build={}".format(env["RELENV_BUILD"]),
-            "--host={}".format(env["RELENV_HOST"]),
+            "--build={env['RELENV_BUILD']}",
+            "--host={env['RELENV_HOST']}",
         ],
         env=env,
         stderr=logfp,
