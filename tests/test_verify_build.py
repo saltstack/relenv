@@ -107,6 +107,8 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
 
+    subprocess.run([pipexec, "--upgrade", "install", "setuptools>=72.2.0"], check=True)
+
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux" and shutil.which("git"):
