@@ -9,6 +9,10 @@
 * Update gdbm to 1.25
 * Include libstdc++ in relenv lib
 * Update environment with buildenv when RELENV_BUILDENV environment is set.
+* Include libstdc++ in relenv's lib directory instead of passing
+  -static-libstdc++
+* Clean up duplicate options in sysconfig data.
+* Work with setuptools >= 72.2.0
 
 
 0.18.1
