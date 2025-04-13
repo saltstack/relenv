@@ -1035,5 +1035,11 @@ def bootstrap():
     setup_crossroot()
     install_cargo_config()
     sys.meta_path = [importer] + sys.meta_path
-    if "RELENV_BUILDENV" in os.environ:
-        os.environ.update(buildenv().buildenv())
+    # XXX This causes our m2crypto test to break
+    # if "RELENV_BUILDENV" in os.environ:
+    #    env = buildenv().buildenv()
+    #    for key in env:
+    #        if key in os.environ:
+    #            os.environ[key] = f"{env[key]} {os.environ[key]}"
+    #        else:
+    #            os.environ[key] = env[key]

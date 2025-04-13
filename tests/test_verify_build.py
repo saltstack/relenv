@@ -342,7 +342,7 @@ def test_pip_install_salt_w_package_requirements(
         "26.4.0",
     ],
 )
-def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
+def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch, build):
 
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
@@ -407,6 +407,21 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch):
         env=env,
     )
     assert p.returncode == 0, "Failed to pip install package requirements"
+
+    if shutil.which("docker"):
+        subprocess.run(
+            [
+                "docker",
+                "run",
+                "-v",
+                f"{build}:/test",
+                "amazonlinux:2",
+                "/test/bin/python3",
+                "-c",
+                "import zmq",
+            ],
+            check=True,
+        )
 
 
 def test_pip_install_cryptography(pipexec):
@@ -557,18 +572,32 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_pip_install_m2crypto_relenv_ssl(pipexec, pyexec, build):
+@pytest.mark.parametrize(
+    "m2crypto_version",
+    [
+        "0.38.0",
+    ],
+)
+def test_pip_install_m2crypto_relenv_ssl(
+    m2crypto_version, pipexec, pyexec, build, minor_version
+):
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
     env["LDFLAGS"] = f"-L{build}lib"
-    env["CFLAGS"] = f"-I{build}/include"
-    env["SWIG_FEATURES"] = f"-I{build}/include"
+    env["CFLAGS"] = f"-I{build}/include -I{build}/include/python{minor_version}"
+    env["SWIG_FEATURES"] = f"-I{build}/include -I{build}/include/python{minor_version}"
     p = subprocess.run(
         ["swig", "-version"],
     )
     p = subprocess.run(
-        [str(pipexec), "install", "m2crypto", "--no-cache-dir", "-v"],
+        [
+            str(pipexec),
+            "install",
+            f"m2crypto=={m2crypto_version}",
+            "--no-cache-dir",
+            "-v",
+        ],
         env=env,
         stderr=subprocess.PIPE,
     )
