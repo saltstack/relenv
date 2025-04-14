@@ -17,6 +17,12 @@
 * Add --download-only option to build
 
 
+0.18.2
+======
+
+* Invalid release should have been 0.19.0
+
+
 0.18.1
 ======
 
