@@ -51,8 +51,8 @@ def buildenv(relenv_path=None):
         "TOOLCHAIN_PATH": f"{toolchain}",
         "TRIPLET": f"{triplet}",
         "RELENV_PATH": f"{relenv_path}",
-        "CC": f"{toolchain}/bin/{triplet}-gcc -no-pie",
-        "CXX": f"{toolchain}/bin/{triplet}-g++ -no-pie",
+        "CC": f"{toolchain}/bin/{triplet}-gcc",
+        "CXX": f"{toolchain}/bin/{triplet}-g++",
         "CFLAGS": f"-I{relenv_path}/include -I{toolchain}/sysroot/usr/include",
         "CXXFLAGS": (
             f"-I{relenv_path}/include "

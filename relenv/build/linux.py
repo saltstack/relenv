@@ -35,8 +35,8 @@ def populate_env(env, dirs):
     :type dirs: ``relenv.build.common.Dirs``
     """
     # CC and CXX need to be to have the full path to the executable
-    env["CC"] = f"{dirs.toolchain}/bin/{env['RELENV_HOST']}-gcc -no-pie"
-    env["CXX"] = f"{dirs.toolchain}/bin/{env['RELENV_HOST']}-g++ -no-pie"
+    env["CC"] = f"{dirs.toolchain}/bin/{env['RELENV_HOST']}-gcc"
+    env["CXX"] = f"{dirs.toolchain}/bin/{env['RELENV_HOST']}-g++"
     # Add our toolchain binaries to the path. We also add the bin directory of
     # our prefix so that libtirpc can find krb5-config
     env["PATH"] = f"{dirs.toolchain}/bin/:{dirs.prefix}/bin/:{env['PATH']}"
