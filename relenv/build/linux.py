@@ -452,7 +452,6 @@ build.add(
     build_func=build_openssl,
     download={
         "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
         "version": "3.2.4",
         "checksum": "2247802a1193c0f8eb41c870e8de45a2241422d5",
         "checkfunc": tarball_version,
@@ -467,7 +466,6 @@ build.add(
     wait_on=["openssl"],
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/openssl-{version}.tar.gz",
         "version": "3.0.8",
         "checksum": "580d8a7232327fe1fa6e7db54ac060d4321f40ab",
         "checkfunc": tarball_version,
@@ -491,7 +489,6 @@ build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/xz-{version}.tar.gz",
         "version": "5.6.2",
         "checksum": "0d6b10e4628fe08e19293c65e8dbcaade084a083",
         "checkfunc": tarball_version,
@@ -503,7 +500,6 @@ build.add(
     build_func=build_sqlite,
     download={
         "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
         "version": "3460100",
         "checksum": "1fdbada080f3285ac864c314bfbfc581b13e804b",
         "checkfunc": sqlite_version,
@@ -516,7 +512,6 @@ build.add(
     build_func=build_bzip2,
     download={
         "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/bzip2-{version}.tar.gz",
         "version": "1.0.8",
         "checksum": "bf7badf7e248e0ecf465d33c2f5aeec774209227",
         "checkfunc": tarball_version,
@@ -528,7 +523,6 @@ build.add(
     build_func=build_gdbm,
     download={
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/gdbm-{version}.tar.gz",
         "version": "1.25",
         "checksum": "d55bdf2bb5f92f80006166dd8a8323cb2a428bd1",
         "checkfunc": tarball_version,
@@ -540,7 +534,6 @@ build.add(
     build_func=build_ncurses,
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/ncurses-{version}.tar.gz",
         # XXX: Need to work out tinfo linkage
         # "version": "6.5",
         # "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
@@ -555,7 +548,6 @@ build.add(
     build_libffi,
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/libffi-{version}.tar.gz",
         "version": "3.4.8",
         "checksum": "6930b77aebe2465a8e1a8617c4c9a8fa3199b256",
         "checkfunc": github_version,
@@ -568,7 +560,6 @@ build.add(
     build_zlib,
     download={
         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/zlib-{version}.tar.gz",
         "version": "1.3.1",
         "checksum": "f535367b1a11e2f9ac3bec723fb007fbc0d189e5",
         "checkfunc": tarball_version,
@@ -579,7 +570,6 @@ build.add(
     "uuid",
     download={
         "url": "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/libuuid-{version}.tar.gz",
         "version": "1.0.3",
         "checksum": "46eaedb875ae6e63677b51ec583656199241d597",
         "checkfunc": uuid_version,
@@ -592,7 +582,6 @@ build.add(
     wait_on=["openssl"],
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/krb5-{version}.tar.gz",
         "version": "1.21",
         "checksum": "e2ee531443122376ac8b62b3848d94376f646089",
         "checkfunc": krb_version,
@@ -606,7 +595,6 @@ build.add(
     wait_on=["ncurses"],
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/readline-{version}.tar.gz",
         "version": "8.2.13",
         "checksum": "5ffb6a334c2422acbe8f4d2cb11e345265c8d930",
         "checkfunc": tarball_version,
@@ -621,7 +609,6 @@ build.add(
     download={
         "url": "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
         # "url": "https://downloads.sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
-        # "fallback_url": "https://woz.io/relenv/dependencies/libtirpc-{version}.tar.bz2",
         "version": "1.3.4",
         "checksum": "63c800f81f823254d2706637bab551dec176b99b",
         "checkfunc": tarball_version,
@@ -648,7 +635,6 @@ build.add(
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
-        # "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.xz",
         "version": build.version,
         "checksum": "d31d548cd2c5ca2ae713bebe346ba15e8406633a",
         "checkfunc": python_version,

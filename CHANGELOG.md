@@ -14,6 +14,7 @@
 * Clean up duplicate options in sysconfig data.
 * Work with setuptools >= 72.2.0
 * Default to positition indipendent code gen
+* Add --download-only option to build
 
 
 0.18.1
