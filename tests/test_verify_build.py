@@ -578,6 +578,7 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
     "m2crypto_version",
     [
         "0.38.0",
+        "0.44.0",
     ],
 )
 def test_pip_install_m2crypto_relenv_ssl(

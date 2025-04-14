@@ -13,6 +13,7 @@
   -static-libstdc++
 * Clean up duplicate options in sysconfig data.
 * Work with setuptools >= 72.2.0
+* Default to positition indipendent code gen
 
 
 0.18.1
