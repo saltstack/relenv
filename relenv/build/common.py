@@ -1439,15 +1439,6 @@ def finalize(env, dirs, logfp):
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
 
-    shutil.copy(
-        pathlib.Path(dirs.toolchain)
-        / env["RELENV_HOST"]
-        / "sysroot"
-        / "lib"
-        / "libstdc++.so.6",
-        libdir,
-    )
-
     def find_pythonlib(libdir):
         for root, dirs, files in os.walk(libdir):
             for _ in dirs:
@@ -1508,6 +1499,15 @@ def finalize(env, dirs, logfp):
             str(pymodules / pyconf / "python-config.py"),
             "#!{}".format(str(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}")),
             format_shebang("../../../bin/python3"),
+        )
+
+        shutil.copy(
+            pathlib.Path(dirs.toolchain)
+            / env["RELENV_HOST"]
+            / "sysroot"
+            / "lib"
+            / "libstdc++.so.6",
+            libdir,
         )
 
     # Moved in python 3.13 or removed?
