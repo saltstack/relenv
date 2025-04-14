@@ -87,6 +87,12 @@ def setup_parser(subparsers):
         help="Force downloading source tarballs even if they exist",
     )
     build_subparser.add_argument(
+        "--download-only",
+        default=False,
+        action="store_true",
+        help="Stop after downloading source tarballs",
+    )
+    build_subparser.add_argument(
         "--step",
         dest="steps",
         metavar="STEP",
@@ -179,6 +185,7 @@ def main(args):
         clean=args.clean,
         cleanup=not args.no_cleanup,
         force_download=args.force_download,
+        download_only=args.download_only,
         show_ui=show_ui,
         log_level=args.log_level.upper(),
     )

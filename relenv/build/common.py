@@ -801,7 +801,6 @@ class Builder:
         recipies=None,
         build_default=build_default,
         populate_env=populate_env,
-        force_download=False,
         arch="x86_64",
         version="",
     ):
@@ -824,7 +823,6 @@ class Builder:
 
         self.build_default = build_default
         self.populate_env = populate_env
-        self.force_download = force_download
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
@@ -842,7 +840,6 @@ class Builder:
             recipies,
             self.build_default,
             self.populate_env,
-            self.force_download,
             self.arch,
             version,
         )
@@ -1207,6 +1204,7 @@ class Builder:
         clean=True,
         cleanup=True,
         force_download=False,
+        download_only=False,
         show_ui=False,
         log_level="WARNING",
     ):
@@ -1267,6 +1265,8 @@ class Builder:
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
         self.download_files(steps, force_download=force_download, show_ui=show_ui)
+        if download_only:
+            return
         self.build(steps, cleanup, show_ui=show_ui, log_level=log_level)
 
     def check_versions(self):
