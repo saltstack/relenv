@@ -107,7 +107,10 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
 
-    subprocess.run([pipexec, "--upgrade", "install", "setuptools>=72.2.0"], check=True)
+    # if sys.platform == "linux":
+    #    subprocess.run(
+    #        [pipexec, "--upgrade", "install", "setuptools>=72.2.0"], check=True
+    #    )
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -582,8 +585,10 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
     ],
 )
 def test_pip_install_m2crypto_relenv_ssl(
-    m2crypto_version, pipexec, pyexec, build, minor_version
+    m2crypto_version, pipexec, pyexec, build, build_version, minor_version
 ):
+    if m2crypto_version == "0.38.0" and minor_version in ["3.12", "3.13"]:
+        pytest.xfail("Fails due to no distutils")
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
