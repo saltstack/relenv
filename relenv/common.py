@@ -413,6 +413,61 @@ def fetch_url(url, fp, backoff=3, timeout=30):
         # fp.close()
     log.info("Download complete %s", url)
 
+def fetch_url_content(url, backoff=3, timeout=30):
+    """
+    Fetch the contents of a url.
+
+    This method will store the contents in the given file like object.
+    """
+    # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import urllib.error
+    import urllib.request
+    import io
+    import gzip
+
+    fp = io.BytesIO()
+
+    last = time.time()
+    if backoff < 1:
+        backoff = 1
+    n = 0
+    while n < backoff:
+        n += 1
+        try:
+            fin = urllib.request.urlopen(url, timeout=timeout)
+        except (
+            urllib.error.HTTPError,
+            urllib.error.URLError,
+            http.client.RemoteDisconnected,
+        ) as exc:
+            if n >= backoff:
+                raise RelenvException(f"Error fetching url {url} {exc}")
+            log.debug("Unable to connect %s", url)
+            time.sleep(n * 10)
+    log.info("url opened %s", url)
+    try:
+        total = 0
+        size = 1024 * 300
+        block = fin.read(size)
+        while block:
+            total += size
+            if time.time() - last > 10:
+                log.info("%s > %d", url, total)
+                last = time.time()
+            fp.write(block)
+            block = fin.read(10240)
+    finally:
+        fin.close()
+        # fp.close()
+    log.info("Download complete %s", url)
+    fp.seek(0)
+    info = fin.info()
+    if 'content-encoding' in info:
+        if info['content-encoding'] == 'gzip':
+            print("GZIPED")
+            fp = gzip.GzipFile(fileobj=fp)
+    return fp.read().decode()
+
 
 def download_url(url, dest, verbose=True, backoff=3, timeout=60):
     """
