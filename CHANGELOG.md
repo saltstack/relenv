@@ -1,3 +1,9 @@
+0.19.1
+======
+
+* Remove ppbt from install requirements.
+
+
 0.19.0
 ======
 
