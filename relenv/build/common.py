@@ -1555,7 +1555,6 @@ def finalize(env, dirs, logfp):
         "/include/*",
         "*.so",
         "/lib/*.so.*",
-        "*.a",
         "*.py",
         # Mac specific, factor this out
         "*.dylib",
