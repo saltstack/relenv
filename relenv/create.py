@@ -10,7 +10,6 @@ import pathlib
 import sys
 import tarfile
 
-from .build import platform_versions
 from .common import RelenvException, arches, archived_build, build_arch
 
 
@@ -61,8 +60,7 @@ def setup_parser(subparsers):
     )
     subparser.add_argument(
         "--python",
-        default=platform_versions()[0],
-        choices=platform_versions(),
+        default="3.10.17",
         type=str,
         help="The python version [default: %(default)s]",
     )
@@ -89,7 +87,7 @@ def create(name, dest=None, arch=None, version=None):
         writeto = pathlib.Path(name).resolve()
 
     if version is None:
-        version = platform_versions()[0]
+        version = "3.10.17"
 
     if pathlib.Path(writeto).exists():
         raise CreateException("The requested path already exists.")
