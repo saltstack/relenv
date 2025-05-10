@@ -55,7 +55,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential bison python3-all patchelf swig python3-virtualenv
           virtualenv venv
-          venv/bin/pip3 install nox
+          env/bin/python3 -m pip install nox ppbt
 
       - name: Python Version
         run: |

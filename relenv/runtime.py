@@ -601,8 +601,19 @@ def wrap_pip_build_wheel(name):
     def wrap(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            dirs = common().work_dirs()
-            toolchain = dirs.toolchain / common().get_triplet()
+            if sys.platform != "linux":
+                return func(*args, **kwargs)
+            if not hasattr(install_cargo_config, "tmpdir") and os.environ.get(
+                "RELENV_BUILDENV", 0
+            ):
+                raise RuntimeError("No toolchain installed")
+            cargo_home = install_cargo_config.tmpdir.name
+            toolchain = common().get_toolchain()
+            if not toolchain:
+                if os.environ.get("RELENV_BUILDENV", 0):
+                    raise RuntimeError("No toolchain installed")
+                return func(*args, **kwargs)
+
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
@@ -612,7 +623,6 @@ def wrap_pip_build_wheel(name):
                     f"-C link-arg=-L{relenvroot}/lib "
                     f"-C link-arg=-L{toolchain}/sysroot/lib"
                 )
-                cargo_home = str(toolchain / "cargo")
                 set_env_if_not_set("CARGO_HOME", cargo_home)
                 set_env_if_not_set("OPENSSL_DIR", relenvroot)
                 set_env_if_not_set("RUSTFLAGS", rustflags)
@@ -697,7 +707,12 @@ def wrap_locations(name):
 
         return wrapper
 
+    # get_scheme is not available on pip-19.2.3
+    # try:
     mod.get_scheme = wrap(mod.get_scheme)
+    # except AttributeError:
+    #    debug(f"Module {mod} does not have attribute get_scheme")
+
     return mod
 
 
@@ -825,13 +840,28 @@ def install_cargo_config():
     """
     if sys.platform != "linux":
         return
+
+    # We need this as a late import for python < 3.12 becuase importing it will
+    # load the ssl module. Causing out setup_openssl method to fail to load
+    # fips module.
+    import tempfile
+
+    install_cargo_config.tmpdir = tempfile.TemporaryDirectory(prefix="relenvcargo")
+    cargo_home = pathlib.Path(install_cargo_config.tmpdir.name)
+
     triplet = common().get_triplet()
-    dirs = common().work_dirs()
-    toolchain = dirs.toolchain / triplet
+    # dirs = common().work_dirs()
+
+    toolchain = common().get_toolchain()
+    if not toolchain:
+        debug("Unable to set CARGO_HOME ppbt package not installed")
+        return
+
     if not toolchain.exists():
         debug("Unable to set CARGO_HOME no toolchain exists")
         return
-    cargo_home = toolchain / "cargo"
+
+    # cargo_home = dirs.data / "cargo"
     if not cargo_home.exists():
         cargo_home.mkdir()
     cargo_config = cargo_home / "config.toml"
