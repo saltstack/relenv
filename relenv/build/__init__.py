@@ -3,12 +3,6 @@
 """
 The ``relenv build`` command.
 """
-try:
-    from packaging.version import Version
-except ImportError:
-    raise RuntimeError(
-        "Required dependencies not found. Please pip install relenv[pyversions]"
-    )
 import sys
 import random
 import codecs
@@ -17,7 +11,7 @@ import signal
 from . import linux, darwin, windows
 from .common import builds, CHECK_VERSIONS_SUPPORT
 
-from ..pyversions import python_versions
+from ..pyversions import python_versions, Version
 
 from ..common import build_arch
 
@@ -166,7 +160,6 @@ def main(args):
     # print(pyversions[0].post)
     # print(pyversions)
     print(f"Build Python {build_version}")
-    sys.exit()
 
     # XXX
     build = builds.builds[sys.platform]
