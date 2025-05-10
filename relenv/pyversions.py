@@ -3,13 +3,13 @@
 """
 Versions utility.
 """
-try:
-    from packaging.version import Version
-except ImportError:
-    raise RuntimeError(
-        "Required dependencies not found. Please pip install relenv[pyversions]"
-    )
-
+# try:
+#    from packaging.version import Version
+# except ImportError:
+#    raise RuntimeError(
+#        "Required dependencies not found. Please pip install relenv[pyversions]"
+#    )
+#
 
 import hashlib
 import json
@@ -31,6 +31,8 @@ KEYSERVERS = [
     "pgp.mit.edu",
 ]
 
+ARCHIVE = "https://www.python.org/ftp/python/{version}/Python-{version}.{ext}"
+
 
 def _ref_version(x):
     _ = x.split("Python ", 1)[1].split("<", 1)[0]
@@ -41,7 +43,100 @@ def _ref_path(x):
     return x.split('href="')[1].split('"')[0]
 
 
-ARCHIVE = "https://www.python.org/ftp/python/{version}/Python-{version}.{ext}"
+class Version:
+    """
+    Version comparrisons.
+    """
+
+    def __init__(self, data):
+        self.major, self.minor, self.micro = self.parse_string(data)
+        self._data = data
+
+    def __str__(self):
+        """
+        Version as string.
+        """
+        _ = f"{self.major}"
+        if self.minor is not None:
+            _ += f".{self.minor}"
+            if self.micro is not None:
+                _ += f".{self.micro}"
+        # XXX What if minor was None but micro was an int.
+        return _
+
+    @staticmethod
+    def parse_string(data):
+        """
+        Parse a version string into major, minor, and micro integers.
+        """
+        parts = data.split(".")
+        if len(parts) == 1:
+            return int(parts[0]), None, None
+        elif len(parts) == 2:
+            return int(parts[0]), int(parts[1]), None
+        elif len(parts) == 3:
+            return int(parts[0]), int(parts[1]), int(parts[2])
+        else:
+            raise RuntimeError("Too many parts to  parse")
+
+    def __eq__(self, other):
+        """
+        Equality comparrison.
+        """
+        mymajor = 0 if self.major is None else self.major
+        myminor = 0 if self.minor is None else self.minor
+        mymicro = 0 if self.micro is None else self.micro
+        major = 0 if other.major is None else other.major
+        minor = 0 if other.minor is None else other.minor
+        micro = 0 if other.micro is None else other.micro
+        return mymajor == major and myminor == minor and mymicro == micro
+
+    def __lt__(self, other):
+        """
+        Less than comparrison.
+        """
+        mymajor = 0 if self.major is None else self.major
+        myminor = 0 if self.minor is None else self.minor
+        mymicro = 0 if self.micro is None else self.micro
+        major = 0 if other.major is None else other.major
+        minor = 0 if other.minor is None else other.minor
+        micro = 0 if other.micro is None else other.micro
+        if mymajor < major:
+            return True
+        elif mymajor == major:
+            if myminor < minor:
+                return True
+            if myminor == minor and mymicro < micro:
+                return True
+        return False
+
+    def __le__(self, other):
+        """
+        Less than or equal to comparrison.
+        """
+        mymajor = 0 if self.major is None else self.major
+        myminor = 0 if self.minor is None else self.minor
+        mymicro = 0 if self.micro is None else self.micro
+        major = 0 if other.major is None else other.major
+        minor = 0 if other.minor is None else other.minor
+        micro = 0 if other.micro is None else other.micro
+        if mymajor <= major:
+            if myminor <= minor:
+                if mymicro <= micro:
+                    return True
+        return False
+
+    def __gt__(self, other):
+        """
+        Greater than comparrison.
+        """
+        return not self.__le__(other)
+
+    def __ge__(self, other):
+        """
+        Greater than or equal to comparrison.
+        """
+        return not self.__lt__(other)
 
 
 def _release_urls(version, gzip=False):
