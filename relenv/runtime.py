@@ -707,7 +707,12 @@ def wrap_locations(name):
 
         return wrapper
 
+    # get_scheme is not available on pip-19.2.3
+    # try:
     mod.get_scheme = wrap(mod.get_scheme)
+    # except AttributeError:
+    #    debug(f"Module {mod} does not have attribute get_scheme")
+
     return mod
 
 
