@@ -28,6 +28,8 @@ DARWIN = "darwin"
 
 MACOS_DEVELOPMENT_TARGET = "10.15"
 
+REQUEST_HEADERS = {"User-Agent": f"relenv {__version__}"}
+
 CHECK_HOSTS = (
     "packages.broadcom.com/artifactory/saltproject-generic",
     "repo.saltproject.io",
@@ -351,17 +353,30 @@ def get_download_location(url, dest):
     return os.path.join(dest, os.path.basename(url))
 
 
-def check_url(url, timeout=30):
+def check_url(url, timestamp=None, timeout=30):
     """
     Check that the url returns a 200.
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import time
     import urllib.request
+
+    headers = dict(REQUEST_HEADERS)
+    req = urllib.request.Request(url)
+
+    if timestamp:
+        headers["If-Modified-Since"] = time.strftime(
+            "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp)
+        )
+
+    for k, v in headers.items():
+        req.add_header(k, v)
 
     fin = None
     try:
-        fin = urllib.request.urlopen(url, timeout=timeout)
-    except Exception:
+        fin = urllib.request.urlopen(req, timeout=timeout)
+    except Exception as exc:
+        print(exc)
         return False
     finally:
         if fin:
@@ -413,6 +428,7 @@ def fetch_url(url, fp, backoff=3, timeout=30):
         # fp.close()
     log.info("Download complete %s", url)
 
+
 def fetch_url_content(url, backoff=3, timeout=30):
     """
     Fetch the contents of a url.
@@ -420,10 +436,10 @@ def fetch_url_content(url, backoff=3, timeout=30):
     This method will store the contents in the given file like object.
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import gzip
+    import io
     import urllib.error
     import urllib.request
-    import io
-    import gzip
 
     fp = io.BytesIO()
 
@@ -462,8 +478,8 @@ def fetch_url_content(url, backoff=3, timeout=30):
     log.info("Download complete %s", url)
     fp.seek(0)
     info = fin.info()
-    if 'content-encoding' in info:
-        if info['content-encoding'] == 'gzip':
+    if "content-encoding" in info:
+        if info["content-encoding"] == "gzip":
             print("GZIPED")
             fp = gzip.GzipFile(fileobj=fp)
     return fp.read().decode()

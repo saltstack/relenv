@@ -785,9 +785,9 @@ class Builds:
         else:
             build = Builder(*args, **kwargs)
         if platform not in self.builds:
-            self.builds[platform] = {build.version: build}
+            self.builds[platform] = build
         else:
-            self.builds[platform][build.version] = build
+            self.builds[platform] = build
         return build
 
 
@@ -826,10 +826,6 @@ class Builder:
         self.build_arch = build_arch()
         self.build_triplet = get_triplet(self.build_arch)
         self.arch = arch
-        self.triplet = get_triplet(self.arch)
-        self.version = version
-        # XXX Refactor WorkDirs, Dirs and Builder so as not to duplicate logic
-        self.prefix = self.dirs.build / f"{self.version}-{self.triplet}"
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
 
@@ -840,6 +836,7 @@ class Builder:
 
         self.build_default = build_default
         self.populate_env = populate_env
+        self.version = version
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
@@ -872,12 +869,18 @@ class Builder:
         :type arch: str
         """
         self.arch = arch
-        self.triplet = get_triplet(self.arch)
-        self.prefix = self.dirs.build / f"{self.version}-{self.triplet}"
         if sys.platform in ["darwin", "win32"]:
             self.toolchain = None
         else:
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
+
+    @property
+    def triplet(self):
+        return get_triplet(self.arch)
+
+    @property
+    def prefix(self):
+        return self.dirs.build / f"{self.version}-{self.triplet}"
 
     @property
     def _triplet(self):

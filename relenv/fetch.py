@@ -7,7 +7,7 @@ The ``relenv fetch`` command.
 import os
 import sys
 
-from .build import platform_module, platform_versions
+from .build import platform_module
 from .common import (
     CHECK_HOSTS,
     DATA_DIR,
@@ -39,9 +39,7 @@ def setup_parser(subparsers):
     )
     subparser.add_argument(
         "--python",
-        default=platform_versions()[0],
-        # Allow fetching of older versions
-        # choices=platform_versions(),
+        default="3.10.17",
         type=str,
         help="The python version [default: %(default)s]",
     )

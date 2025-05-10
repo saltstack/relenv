@@ -3,6 +3,12 @@
 """
 The ``relenv build`` command.
 """
+try:
+    from packaging.version import Version
+except ImportError:
+    raise RuntimeError(
+        "Required dependencies not found. Please pip install relenv[pyversions]"
+    )
 import sys
 import random
 import codecs
@@ -10,6 +16,8 @@ import signal
 
 from . import linux, darwin, windows
 from .common import builds, CHECK_VERSIONS_SUPPORT
+
+from ..pyversions import python_versions
 
 from ..common import build_arch
 
@@ -24,13 +32,6 @@ def platform_module():
         return linux
     elif sys.platform == "win32":
         return windows
-
-
-def platform_versions():
-    """
-    Return the right module based on `sys.platform`.
-    """
-    return list(builds.builds[sys.platform].keys())
 
 
 def setup_parser(subparsers):
@@ -63,8 +64,7 @@ def setup_parser(subparsers):
     )
     build_subparser.add_argument(
         "--python",
-        default=platform_versions()[0],
-        choices=platform_versions(),
+        default="3.10.17",
         type=str,
         help="The python version [default: %(default)s]",
     )
@@ -146,8 +146,33 @@ def main(args):
         print(f"Unsupported platform: {sys.platform}")
         sys.exit(1)
 
+    requested = Version(args.python)
+
+    if requested.micro:
+        pyversions = python_versions()
+        if requested not in pyversions:
+            print(f"Unknown version {requested}")
+            sys.exit(1)
+        build_version = requested
+    else:
+        pyversions = python_versions(args.python)
+        build_version = pyversions[0]
+
+    # print(pyversions)
+    # print(pyversions[0].major)
+    # print(pyversions[0].minor)
+    # print(pyversions[0].micro)
+    # print(pyversions[0].pre)
+    # print(pyversions[0].post)
+    # print(pyversions)
+    print(f"Build Python {build_version}")
+    sys.exit()
+
     # XXX
-    build = builds.builds[sys.platform][args.python]
+    build = builds.builds[sys.platform]
+    build.version = str(build_version)
+    build.dirs.version = str(build_version)
+    build.recipies["python"]["download"].version = str(build_version)
 
     if args.check_versions:
         if not CHECK_VERSIONS_SUPPORT:
