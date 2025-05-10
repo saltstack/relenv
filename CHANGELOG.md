@@ -1,3 +1,9 @@
+0.19.2
+======
+
+* Remove static libraries from lib directory
+
+
 0.19.1
 ======
 
