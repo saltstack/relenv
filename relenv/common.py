@@ -28,6 +28,8 @@ DARWIN = "darwin"
 
 MACOS_DEVELOPMENT_TARGET = "10.15"
 
+REQUEST_HEADERS = {"User-Agent": f"relenv {__version__}"}
+
 CHECK_HOSTS = (
     "packages.broadcom.com/artifactory/saltproject-generic",
     "repo.saltproject.io",
@@ -160,6 +162,7 @@ class WorkDirs:
 
     def __init__(self, root):
         self.root = root
+        self.data = DATA_DIR
         self.toolchain_config = work_dir("toolchain", self.root)
         self.toolchain = work_dir("toolchain", DATA_DIR)
         self.build = work_dir("build", DATA_DIR)
@@ -224,10 +227,18 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
-    dirs = work_dirs(root)
-    if arch:
-        return dirs.toolchain / "{}-linux-gnu".format(arch)
-    return dirs.toolchain
+    if sys.platform != "linux":
+        return DATA_DIR
+    ppbt = None
+
+    try:
+        import ppbt
+    except ImportError:
+        pass
+
+    if ppbt:
+        env = ppbt.environ(auto_extract=True)
+        return pathlib.Path(env["TOOLCHAIN_PATH"])
 
 
 def get_triplet(machine=None, plat=None):
@@ -342,17 +353,30 @@ def get_download_location(url, dest):
     return os.path.join(dest, os.path.basename(url))
 
 
-def check_url(url, timeout=30):
+def check_url(url, timestamp=None, timeout=30):
     """
     Check that the url returns a 200.
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import time
     import urllib.request
+
+    headers = dict(REQUEST_HEADERS)
+    req = urllib.request.Request(url)
+
+    if timestamp:
+        headers["If-Modified-Since"] = time.strftime(
+            "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp)
+        )
+
+    for k, v in headers.items():
+        req.add_header(k, v)
 
     fin = None
     try:
-        fin = urllib.request.urlopen(url, timeout=timeout)
-    except Exception:
+        fin = urllib.request.urlopen(req, timeout=timeout)
+    except Exception as exc:
+        print(exc)
         return False
     finally:
         if fin:
@@ -403,6 +427,62 @@ def fetch_url(url, fp, backoff=3, timeout=30):
         fin.close()
         # fp.close()
     log.info("Download complete %s", url)
+
+
+def fetch_url_content(url, backoff=3, timeout=30):
+    """
+    Fetch the contents of a url.
+
+    This method will store the contents in the given file like object.
+    """
+    # Late import so we do not import hashlib before runtime.bootstrap is called.
+    import gzip
+    import io
+    import urllib.error
+    import urllib.request
+
+    fp = io.BytesIO()
+
+    last = time.time()
+    if backoff < 1:
+        backoff = 1
+    n = 0
+    while n < backoff:
+        n += 1
+        try:
+            fin = urllib.request.urlopen(url, timeout=timeout)
+        except (
+            urllib.error.HTTPError,
+            urllib.error.URLError,
+            http.client.RemoteDisconnected,
+        ) as exc:
+            if n >= backoff:
+                raise RelenvException(f"Error fetching url {url} {exc}")
+            log.debug("Unable to connect %s", url)
+            time.sleep(n * 10)
+    log.info("url opened %s", url)
+    try:
+        total = 0
+        size = 1024 * 300
+        block = fin.read(size)
+        while block:
+            total += size
+            if time.time() - last > 10:
+                log.info("%s > %d", url, total)
+                last = time.time()
+            fp.write(block)
+            block = fin.read(10240)
+    finally:
+        fin.close()
+        # fp.close()
+    log.info("Download complete %s", url)
+    fp.seek(0)
+    info = fin.info()
+    if "content-encoding" in info:
+        if info["content-encoding"] == "gzip":
+            print("GZIPED")
+            fp = gzip.GzipFile(fileobj=fp)
+    return fp.read().decode()
 
 
 def download_url(url, dest, verbose=True, backoff=3, timeout=60):

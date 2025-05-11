@@ -78,7 +78,9 @@ RELENV_PTH = (
 
 
 SYSCONFIGDATA = """
-import pathlib, sys, platform, os
+import pathlib, sys, platform, os, logging
+
+log = logging.getLogger(__name__)
 
 def build_arch():
     machine = platform.machine()
@@ -112,7 +114,22 @@ else:
     DATA_DIR = DEFAULT_DATA_DIR
 
 buildroot = pydir.parent.parent
-toolchain = DATA_DIR / "toolchain" / get_triplet()
+
+if sys.platform == "linux":
+    toolchain = ""
+    ppbt = None
+    try:
+        import ppbt
+    except ImportError:
+        pass
+    if ppbt:
+        env = ppbt.environ(auto_extract=True)
+        toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
+    else:
+        print("ppbt package not installed")
+else:
+    toolchain = DATA_DIR / "toolchain" / get_triplet()
+
 build_time_vars = {}
 for key in _build_time_vars:
     val = _build_time_vars[key]
@@ -768,9 +785,9 @@ class Builds:
         else:
             build = Builder(*args, **kwargs)
         if platform not in self.builds:
-            self.builds[platform] = {build.version: build}
+            self.builds[platform] = build
         else:
-            self.builds[platform][build.version] = build
+            self.builds[platform] = build
         return build
 
 
@@ -809,10 +826,6 @@ class Builder:
         self.build_arch = build_arch()
         self.build_triplet = get_triplet(self.build_arch)
         self.arch = arch
-        self.triplet = get_triplet(self.arch)
-        self.version = version
-        # XXX Refactor WorkDirs, Dirs and Builder so as not to duplicate logic
-        self.prefix = self.dirs.build / f"{self.version}-{self.triplet}"
         self.sources = self.dirs.src
         self.downloads = self.dirs.download
 
@@ -823,6 +836,7 @@ class Builder:
 
         self.build_default = build_default
         self.populate_env = populate_env
+        self.version = version
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
@@ -855,12 +869,18 @@ class Builder:
         :type arch: str
         """
         self.arch = arch
-        self.triplet = get_triplet(self.arch)
-        self.prefix = self.dirs.build / f"{self.version}-{self.triplet}"
         if sys.platform in ["darwin", "win32"]:
             self.toolchain = None
         else:
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
+
+    @property
+    def triplet(self):
+        return get_triplet(self.arch)
+
+    @property
+    def prefix(self):
+        return self.dirs.build / f"{self.version}-{self.triplet}"
 
     @property
     def _triplet(self):
@@ -974,6 +994,7 @@ class Builder:
             env["RELENV_NATIVE_PY"] = str(native_root / "bin" / "python3")
 
         self.populate_env(env, dirs)
+
         _ = dirs.to_dict()
         for k in _:
             log.info("Directory %s %s", k, _[k])
@@ -1191,10 +1212,11 @@ class Builder:
         :rtype: list
         """
         fail = []
-        if self.toolchain and not self.toolchain.exists():
-            fail.append(
-                f"Toolchain for {self.arch} does not exist. Please use relenv toolchain to obtain a toolchain."
-            )
+        if sys.platform == "linux":
+            if not self.toolchain or not self.toolchain.exists():
+                fail.append(
+                    f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
+                )
         return fail
 
     def __call__(
@@ -1470,6 +1492,9 @@ def finalize(env, dirs, logfp):
         env["RELENV_CROSS"] = dirs.prefix
         python = env["RELENV_NATIVE_PY"]
     logfp.write("\nRUN ENSURE PIP\n")
+
+    env.pop("RELENV_BUILDENV")
+
     runcmd(
         [str(python), "-m", "ensurepip"],
         env=env,
@@ -1578,9 +1603,8 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
     :param logfp: A pointer to the log file
     :type logfp: file
     """
-    if logfp is None:
-        log.info("Current directory %s", os.getcwd())
-        log.info("Creating archive %s", tarfp.name)
+    log.debug("Current directory %s", os.getcwd())
+    log.debug("Creating archive %s", tarfp.name)
     for root, _dirs, files in os.walk(toarchive):
         relroot = pathlib.Path(root).relative_to(toarchive)
         for f in files:
@@ -1591,9 +1615,7 @@ def create_archive(tarfp, toarchive, globs, logfp=None):
                     matches = True
                     break
             if matches:
-                if logfp is None:
-                    log.info("Adding %s", relpath)
+                log.debug("Adding %s", relpath)
                 tarfp.add(relpath, relpath, recursive=False)
             else:
-                if logfp is None:
-                    log.info("Skipping %s", relpath)
+                log.debug("Skipping %s", relpath)
