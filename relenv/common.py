@@ -543,6 +543,72 @@ def relative_interpreter(root_dir, scripts_dir, interpreter):
     return relscripts / relinterp
 
 
+def makepath(*paths):
+    """
+    Make a normalized path name from paths.
+    """
+    dir = os.path.join(*paths)
+    try:
+        dir = os.path.abspath(dir)
+    except OSError:
+        pass
+    return dir, os.path.normcase(dir)
+
+
+def addpackage(sitedir, name):
+    """
+    Add editable package to path.
+    """
+    import io
+    import stat
+
+    fullname = os.path.join(sitedir, name)
+    paths = []
+    try:
+        st = os.lstat(fullname)
+    except OSError:
+        return
+    if (getattr(st, "st_flags", 0) & stat.UF_HIDDEN) or (
+        getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_HIDDEN
+    ):
+        # print(f"Skipping hidden .pth file: {fullname!r}")
+        return
+    # print(f"Processing .pth file: {fullname!r}")
+    try:
+        # locale encoding is not ideal especially on Windows. But we have used
+        # it for a long time. setuptools uses the locale encoding too.
+        f = io.TextIOWrapper(io.open_code(fullname), encoding="locale")
+    except OSError:
+        return
+    with f:
+        for n, line in enumerate(f):
+            if line.startswith("#"):
+                continue
+            if line.strip() == "":
+                continue
+            try:
+                if line.startswith(("import ", "import\t")):
+                    exec(line)
+                    continue
+                line = line.rstrip()
+                dir, dircase = makepath(sitedir, line)
+                if dircase not in paths and os.path.exists(dir):
+                    paths.append(dir)
+            except Exception:
+                print(
+                    "Error processing line {:d} of {}:\n".format(n + 1, fullname),
+                    file=sys.stderr,
+                )
+                import traceback
+
+                for record in traceback.format_exception(*sys.exc_info()):
+                    for line in record.splitlines():
+                        print("  " + line, file=sys.stderr)
+                print("\nRemainder of file ignored", file=sys.stderr)
+                break
+    return paths
+
+
 def sanitize_sys_path(sys_path_entries):
     """
     Sanitize `sys.path` to only include paths relative to the onedir environment.
@@ -565,4 +631,10 @@ def sanitize_sys_path(sys_path_entries):
     if "PYTHONPATH" in os.environ:
         for __path in os.environ["PYTHONPATH"].split(os.pathsep):
             __sys_path.append(__path)
+    for known_path in __sys_path[:]:
+        for _ in pathlib.Path(known_path).glob("__editable__.*.pth"):
+            paths = addpackage(known_path, _)
+            for p in paths:
+                if p not in __sys_path:
+                    __sys_path.append(p)
     return __sys_path

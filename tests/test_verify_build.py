@@ -25,6 +25,28 @@ pytestmark = [
 ]
 
 
+EXTRAS_PY = """
+import pathlib
+import sys
+
+
+def setup(pth_file_path):
+    # Discover the extras-<py-major>.<py-minor> directory
+    extras_parent_path = pathlib.Path(pth_file_path).resolve().parent.parent
+    if not sys.platform.startswith("win"):
+        extras_parent_path = extras_parent_path.parent
+
+    extras_path = str(extras_parent_path / "extras-{}.{}".format(*sys.version_info))
+
+    if extras_path in sys.path and sys.path[0] != extras_path:
+        # The extras directory must come first
+        sys.path.remove(extras_path)
+
+    if extras_path not in sys.path:
+        sys.path.insert(0, extras_path)
+"""
+
+
 @pytest.fixture(scope="module")
 def arch():
     return build_arch()
@@ -1454,3 +1476,57 @@ def test_install_pyinotify_w_latest_pip(pipexec, build, minor_version):
     )
     assert p.returncode == 0, "Failed install pyinotify"
     assert (extras / "pyinotify.py").exists()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_path):
+    os.chdir(tmp_path)
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
+    p = subprocess.run(
+        [
+            "git",
+            "clone",
+            "https://github.com/salt-extensions/saltext-zabbix.git",
+            "--depth",
+            "1",
+        ],
+        env=env,
+    )
+    assert p.returncode == 0
+    p = subprocess.run([str(pipexec), "install", "-e", "saltext-zabbix"], env=env)
+    assert p.returncode == 0
+    p = subprocess.run([str(pyexec), "-c", "import saltext.zabbix"], env=env)
+    assert p.returncode == 0
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_editable_package_in_extras(
+    pipexec, pyexec, build, minor_version, tmp_path
+):
+    sitepkgs = pathlib.Path(build) / "lib" / f"python{minor_version}" / "site-packages"
+
+    (sitepkgs / "_extras.pth").write_text("import _extras; _extras.setup(__file__)")
+    (sitepkgs / "_extras.py").write_text(EXTRAS_PY)
+    extras = pathlib.Path(build) / f"extras-{minor_version}"
+    extras.mkdir()
+    os.chdir(tmp_path)
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
+    p = subprocess.run(
+        [
+            "git",
+            "clone",
+            "https://github.com/salt-extensions/saltext-zabbix.git",
+            "--depth",
+            "1",
+        ],
+        env=env,
+    )
+    assert p.returncode == 0
+    p = subprocess.run(
+        [str(pipexec), "install", f"--target={extras}", "-e", "saltext-zabbix"], env=env
+    )
+    assert p.returncode == 0
+    p = subprocess.run([str(pyexec), "-c", "import saltext.zabbix"], env=env)
+    assert p.returncode == 0
