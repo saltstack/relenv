@@ -499,9 +499,9 @@ build.add(
     name="SQLite",
     build_func=build_sqlite,
     download={
-        "url": "https://sqlite.org/2024/sqlite-autoconf-{version}.tar.gz",
-        "version": "3460100",
-        "checksum": "1fdbada080f3285ac864c314bfbfc581b13e804b",
+        "url": "https://sqlite.org/2025/sqlite-autoconf-{version}.tar.gz",
+        "version": "3500100",
+        "checksum": "837f8f5c5ddbaf806f0555fd7d62f4c290c0e2c2",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
