@@ -336,13 +336,13 @@ def build_sqlite(env, dirs, logfp):
     # ]
     cmd = [
         "./configure",
-        "--with-shared",
-        "--without-static",
+        #     "--with-shared",
+        #    "--without-static",
         "--enable-threadsafe",
         "--disable-readline",
         "--disable-dependency-tracking",
         "--prefix={}".format(dirs.prefix),
-        "--enable-add-ons=nptl,ports",
+        #    "--enable-add-ons=nptl,ports",
     ]
     if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
