@@ -1,3 +1,10 @@
+0.19.3
+======
+
+* Upgrade sqlite to address CVE-2025-29087
+* Fix editable pip (pip -e) installation
+
+
 0.19.2
 ======
 
