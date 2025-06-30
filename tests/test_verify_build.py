@@ -1530,3 +1530,88 @@ def test_install_editable_package_in_extras(
     assert p.returncode == 0
     p = subprocess.run([str(pyexec), "-c", "import saltext.zabbix"], env=env)
     assert p.returncode == 0
+
+
+@pytest.fixture
+def rockycontainer(build):
+    if not shutil.which("docker"):
+        pytest.skip(reason="No docker binary found")
+    name = "rocky10"
+    subprocess.run(
+        [
+            "docker",
+            "create",
+            "--name",
+            name,
+            "-v",
+            f"{build}:/test",
+            "--entrypoint",
+            "tail",
+            "rockylinux/rockylinux:10",
+            "-f",
+            "/dev/null",
+        ],
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        [
+            "docker",
+            "start",
+            name,
+        ],
+        capture_output=True,
+        check=True,
+    )
+    try:
+        yield name
+    finally:
+        subprocess.run(
+            [
+                "docker",
+                "stop",
+                name,
+            ],
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "docker",
+                "rm",
+                name,
+            ],
+            capture_output=True,
+            check=True,
+        )
+
+
+@pytest.mark.skip_on_windows
+def test_no_openssl_binary(rockycontainer, pipexec):
+    env = os.environ.copy()
+    env["RELENV_BUILDENV"] = "yes"
+    proc = subprocess.run(
+        [
+            str(pipexec),
+            "install",
+            "cryptography",
+            "--no-binary=:all:",
+            "--no-cache-dir",
+        ],
+        env=env,
+    )
+    assert proc.returncode == 0
+    proc = subprocess.run(
+        [
+            "docker",
+            "exec",
+            rockycontainer,
+            "test/bin/python3",
+            "-c",
+            "import cryptography.exceptions",
+        ],
+        capture_output=True,
+    )
+
+    errors = proc.stderr.decode()
+    assert "legacy provider failed to load" not in errors
