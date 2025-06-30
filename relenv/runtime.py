@@ -859,6 +859,13 @@ def setup_openssl():
     openssl_bin = shutil.which("openssl")
     if not openssl_bin:
         debug("Could not find the 'openssl' binary in the path")
+        set_openssl_modules_dir(str(sys.RELENV / "lib" / "ossl-modules"))
+
+        if load_openssl_provider("default") == 0:
+            debug("Unable to load the default openssl provider")
+        if load_openssl_provider("legacy") == 0:
+            debug("Unable to load the legacy openssl provider")
+
         return
 
     if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
