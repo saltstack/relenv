@@ -781,7 +781,7 @@ def test_cryptography_rpath(pipexec, build, minor_version, cryptography_version)
 @pytest.mark.skip_unless_on_darwin
 @pytest.mark.parametrize("cryptography_version", ["42.0.5", "40.0.1"])
 def test_cryptography_rpath_darwin(pipexec, build, minor_version, cryptography_version):
-    #def find_library(path, search):
+    # def find_library(path, search):
     #    for root, dirs, files in os.walk(path):
     #        for fname in files:
     #            if fname.startswith(search) and fname.endswith(".so"):
@@ -801,12 +801,14 @@ def test_cryptography_rpath_darwin(pipexec, build, minor_version, cryptography_v
         env=env,
     )
     assert p.returncode != 1, "Failed to pip install cryptography"
-    p = subprocess.run([
-        "otool",
-        "-L",
-        f"{build}/lib/python{minor_version}/site-packages/cryptography/hazmat/bindings/_rust.abi3.so",
+    p = subprocess.run(
+        [
+            "otool",
+            "-L",
+            f"{build}/lib/python{minor_version}/site-packages/cryptography/hazmat/bindings/_rust.abi3.so",
+        ],
         capture_output=True,
-    ]
+    )
 
     assert False, (p.stdout.decode(), p.stderr.decode())
 
