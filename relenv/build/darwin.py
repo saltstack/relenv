@@ -99,8 +99,8 @@ build.add(
     download={
         "url": "https://sqlite.org/2025/sqlite-autoconf-{version}.tar.gz",
         "fallback_url": "https://woz.io/relenv/dependencies/sqlite-autoconf-{version}.tar.gz",
-        "version": "3500100",
-        "checksum": "837f8f5c5ddbaf806f0555fd7d62f4c290c0e2c2",
+        "version": "3500200",
+        "checksum": "f57c0e54fcddf91f73916987d5c52e743c8bfa76",
     },
 )
 
@@ -140,6 +140,6 @@ build = build.copy(
 builds.add("darwin", builder=build)
 
 build = build.copy(
-    version="3.13.3", checksum="f26085cf12daef7b60b8a6fe93ef988b9a094aea"
+    version="3.13.5", checksum="dbf3aed444cbb2221eabfb52688aa371423aa0ba"
 )
 builds.add("darwin", builder=build)

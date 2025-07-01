@@ -500,8 +500,8 @@ build.add(
     build_func=build_sqlite,
     download={
         "url": "https://sqlite.org/2025/sqlite-autoconf-{version}.tar.gz",
-        "version": "3500100",
-        "checksum": "837f8f5c5ddbaf806f0555fd7d62f4c290c0e2c2",
+        "version": "3500200",
+        "checksum": "f57c0e54fcddf91f73916987d5c52e743c8bfa76",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
@@ -548,8 +548,8 @@ build.add(
     build_libffi,
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
-        "version": "3.4.8",
-        "checksum": "6930b77aebe2465a8e1a8617c4c9a8fa3199b256",
+        "version": "3.5.1",
+        "checksum": "5375e956b0d662e118e47758bd656861e43ba3ef",
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
@@ -663,6 +663,6 @@ build = build.copy(
 builds.add("linux", builder=build)
 
 build = build.copy(
-    version="3.13.3", checksum="f26085cf12daef7b60b8a6fe93ef988b9a094aea"
+    version="3.13.5", checksum="dbf3aed444cbb2221eabfb52688aa371423aa0ba"
 )
 builds.add("linux", builder=build)
