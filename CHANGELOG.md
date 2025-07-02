@@ -1,3 +1,12 @@
+0.19.4
+======
+
+* Upgrade sqlite to address CVE-2025-29087
+* Update sqlite to 3500200
+* Update libffi to 3.5.1
+* Update python 3.13 to 3.13.5
+
+
 0.19.3
 ======
 
