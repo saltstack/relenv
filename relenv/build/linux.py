@@ -445,7 +445,7 @@ def build_python(env, dirs, logfp):
     # runcmd([str(python), "-m", "ensurepip", "-U"], env=env, stderr=logfp, stdout=logfp)
 
 
-build = builds.add("linux", populate_env=populate_env, version="3.10.17")
+build = builds.add("linux", populate_env=populate_env)  # , version="3.10.17")
 
 build.add(
     "openssl",
@@ -652,17 +652,17 @@ build.add(
     ],
 )
 
-build = build.copy(
-    version="3.11.11", checksum="acf539109b024d3c5f1fc63d6e7f08cd294ba56d"
-)
-builds.add("linux", builder=build)
-
-build = build.copy(
-    version="3.12.9", checksum="465d8a664e63dc5aa1f0d90cd1d0000a970ee2fb"
-)
-builds.add("linux", builder=build)
-
-build = build.copy(
-    version="3.13.5", checksum="dbf3aed444cbb2221eabfb52688aa371423aa0ba"
-)
-builds.add("linux", builder=build)
+# build = build.copy(
+#    version="3.11.11", checksum="acf539109b024d3c5f1fc63d6e7f08cd294ba56d"
+# )
+# builds.add("linux", builder=build)
+#
+# build = build.copy(
+#    version="3.12.9", checksum="465d8a664e63dc5aa1f0d90cd1d0000a970ee2fb"
+# )
+# builds.add("linux", builder=build)
+#
+# build = build.copy(
+#    version="3.13.3", checksum="f26085cf12daef7b60b8a6fe93ef988b9a094aea"
+# )
+# builds.add("linux", builder=build)

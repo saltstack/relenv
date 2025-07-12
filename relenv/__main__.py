@@ -6,7 +6,7 @@ The entrypoint into relenv.
 
 from argparse import ArgumentParser
 
-from . import build, buildenv, check, create, fetch, toolchain
+from . import build, buildenv, check, create, fetch, pyversions, toolchain
 from .common import __version__
 
 
@@ -34,6 +34,7 @@ def setup_cli():
         fetch,
         check,
         buildenv,
+        pyversions,
     ]
     for mod in modules_to_setup:
         mod.setup_parser(subparsers)
@@ -47,10 +48,9 @@ def main():
     """
     parser = setup_cli()
     args = parser.parse_args()
-    # args.func(args)
-    try:
+    if hasattr(args, "func"):
         args.func(args)
-    except AttributeError:
+    else:
         parser.print_help()
         parser.exit(1, "\nNo subcommand given...\n\n")
 
