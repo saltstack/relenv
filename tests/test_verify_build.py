@@ -1648,6 +1648,7 @@ def rockycontainer(build):
 
 @pytest.mark.skip_on_windows
 def test_no_openssl_binary(rockycontainer, pipexec):
+    _install_ppbt(pipexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     proc = subprocess.run(
