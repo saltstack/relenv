@@ -1538,6 +1538,7 @@ def test_install_pyinotify_w_latest_pip(pipexec, build, minor_version):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_path):
+    _install_ppbt(pipexec)
     os.chdir(tmp_path)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -1562,6 +1563,7 @@ def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_pat
 def test_install_editable_package_in_extras(
     pipexec, pyexec, build, minor_version, tmp_path
 ):
+    _install_ppbt(pipexec)
     sitepkgs = pathlib.Path(build) / "lib" / f"python{minor_version}" / "site-packages"
 
     (sitepkgs / "_extras.pth").write_text("import _extras; _extras.setup(__file__)")
