@@ -357,6 +357,13 @@ def setup_parser(subparsers):
     )
     subparser.set_defaults(func=main)
     subparser.add_argument(
+        "-u",
+        "--update",
+        default=False,
+        action="store_true",
+        help="Update versions",
+    )
+    subparser.add_argument(
         "-l",
         "--list",
         default=False,
@@ -375,6 +382,8 @@ def main(args):
     """
     Versions utility main method.
     """
+    if args.update:
+        python_versions(create=True)
     if args.list:
         for version in python_versions():
             print(version)
@@ -399,4 +408,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main()
+    print("WTF")
+    _main()
