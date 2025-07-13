@@ -480,7 +480,7 @@ def fetch_url_content(url, backoff=3, timeout=30):
     info = fin.info()
     if "content-encoding" in info:
         if info["content-encoding"] == "gzip":
-            print("GZIPED")
+            log.debug("Found gzipped content")
             fp = gzip.GzipFile(fileobj=fp)
     return fp.read().decode()
 
