@@ -894,6 +894,9 @@ def setup_openssl():
     """
     Configure openssl certificate locations.
     """
+    if sys.platform == "win32":
+        return
+
     openssl_bin = shutil.which("openssl")
     if not openssl_bin:
         debug("Could not find the 'openssl' binary in the path")
@@ -906,7 +909,7 @@ def setup_openssl():
 
         return
 
-    if "OPENSSL_MODULES" not in os.environ and sys.platform != "win32":
+    if "OPENSSL_MODULES" not in os.environ:
         # First try and load the system's fips provider. Then load relenv's
         # legacy and default providers. The fips provider must be loaded first
         # in order OpenSSl to work properly..
@@ -946,7 +949,7 @@ def setup_openssl():
     # Use system openssl dirs
     # XXX Should we also setup SSL_CERT_FILE, OPENSSL_CONF &
     # OPENSSL_CONF_INCLUDE?
-    if "SSL_CERT_DIR" not in os.environ and sys.platform != "win32":
+    if "SSL_CERT_DIR" not in os.environ:
         proc = subprocess.run(
             [openssl_bin, "version", "-d"],
             universal_newlines=True,
