@@ -146,6 +146,8 @@ def main(args):
         pyversions = python_versions()
         if requested not in pyversions:
             print(f"Unknown version {requested}")
+            strversions = "\n".join([str(_) for _ in pyversions])
+            print(f"Known versions are:\n{strversions}")
             sys.exit(1)
         build_version = requested
     else:

@@ -130,7 +130,7 @@ def build_python(env, dirs, logfp):
     )
 
 
-build = builds.add("win32", populate_env=populate_env, version="3.10.17")
+build = builds.add("win32", populate_env=populate_env)  # version="3.10.17")
 
 build.add(
     "python",
@@ -211,17 +211,17 @@ build.add(
     wait_on=["python"],
 )
 
-build = build.copy(
-    version="3.11.11", checksum="acf539109b024d3c5f1fc63d6e7f08cd294ba56d"
-)
-builds.add("win32", builder=build)
-
-build = build.copy(
-    version="3.12.9", checksum="465d8a664e63dc5aa1f0d90cd1d0000a970ee2fb"
-)
-builds.add("win32", builder=build)
-
-build = build.copy(
-    version="3.13.5", checksum="dbf3aed444cbb2221eabfb52688aa371423aa0ba"
-)
-builds.add("win32", builder=build)
+# build = build.copy(
+#    version="3.11.11", checksum="acf539109b024d3c5f1fc63d6e7f08cd294ba56d"
+# )
+# builds.add("win32", builder=build)
+#
+# build = build.copy(
+#    version="3.12.9", checksum="465d8a664e63dc5aa1f0d90cd1d0000a970ee2fb"
+# )
+# builds.add("win32", builder=build)
+#
+# build = build.copy(
+#    version="3.13.5", checksum="dbf3aed444cbb2221eabfb52688aa371423aa0ba"
+# )
+# builds.add("win32", builder=build)
