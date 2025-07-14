@@ -1676,3 +1676,12 @@ def test_no_openssl_binary(rockycontainer, pipexec):
 
     errors = proc.stderr.decode()
     assert "legacy provider failed to load" not in errors
+
+
+def test_import_ssl_module(pyexec):
+    proc = subprocess.run(
+        [pyexec, "-c", "import ssl"], capture_output=True, check=False
+    )
+    assert proc.returncode == 0
+    assert proc.stdout.decode() == ""
+    assert proc.stderr.decode() == ""
