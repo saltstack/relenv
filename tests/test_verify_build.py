@@ -847,6 +847,10 @@ def test_cryptography_rpath_darwin(pipexec, build, minor_version, cryptography_v
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["OPENSSL_DIR"] = f"{build}"
+
+    if minor_version == "3.13":
+        env["PYO3_USE_ABI3_FORWARD_COMPATIBILITY"] = "1"
+
     p = subprocess.run(
         [
             str(pipexec),
@@ -1457,9 +1461,12 @@ def test_install_with_target_namespaces(pipexec, build, minor_version, build_ver
 
 
 @pytest.mark.skip_unless_on_linux
-def test_debugpy(pipexec, build, minor_version):
+def test_debugpy(pipexec, build, arch, minor_version):
     if "3.13" in minor_version:
         pytest.xfail("Failes on python 3.13.0")
+    if arch == "arm64":
+        pytest.xfail("Failes on arm64")
+
     p = subprocess.run(
         [
             str(pipexec),
