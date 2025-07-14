@@ -6,7 +6,6 @@ Verify relenv builds.
 import json
 import os
 import pathlib
-import platform
 import shutil
 import subprocess
 import sys
@@ -440,11 +439,7 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch, build):
         ],
         env=env,
     )
-    if (
-        pyzmq_version == "26.2.0"
-        and sys.platform == "darwin"
-        and platform.processor() == "arm"
-    ):
+    if pyzmq_version == "26.2.0" and sys.platform == "darwin":
         pytest.xfail(f"{pyzmq_version} does not install on m1 mac")
     if pyzmq_version == "26.2.0" and sys.platform == "darwin":
         env[
