@@ -337,7 +337,13 @@ def install_wheel_wrapper(func):
                     debug(f"Relenv - Found elf {file}")
                     relocate().handle_elf(plat / file, rootdir / "lib", True, rootdir)
                 elif relocate().is_macho(file):
-                    relocate().handle_macho(str(plat / file), str(rootdir), True)
+                    otool_bin = shutil.which("otool")
+                    if otool_bin:
+                        relocate().handle_macho(str(plat / file), str(rootdir), True)
+                    else:
+                        debug(
+                            "The otool command is not available, please run `xcode-select --install`"
+                        )
 
     return wrapper
 
