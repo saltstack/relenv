@@ -337,7 +337,7 @@ def install_wheel_wrapper(func):
                     debug(f"Relenv - Found elf {file}")
                     relocate().handle_elf(plat / file, rootdir / "lib", True, rootdir)
                 elif relocate().is_macho(file):
-                    relocate().handle_macho(plat / file, rootdir, True)
+                    relocate().handle_macho(str(plat / file), str(rootdir), True)
 
     return wrapper
 
