@@ -866,8 +866,7 @@ def test_cryptography_rpath_darwin(pipexec, build, minor_version, cryptography_v
         ],
         capture_output=True,
     )
-
-    assert False, (p.stdout.decode(), p.stderr.decode())
+    assert "/usr/local" not in p.stdout.decode(), p.stdout.decode()
 
 
 @pytest.mark.skip_unless_on_linux
