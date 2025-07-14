@@ -246,6 +246,10 @@ jobs:
         run: |
           python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ matrix.version }}
 
+      - name: Check openssl binary
+        run: |
+          mv $(which openssl) /tmp/openssl
+
       - name: Verify Build
         if: ${{ matrix.arch == 'amd64' }}
         run: |
