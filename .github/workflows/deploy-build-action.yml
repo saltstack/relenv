@@ -22,75 +22,75 @@ jobs:
         include:
           - platform: linux-gnu
             arch: x86_64
-            python: 3.10.17
+            python: 3.10.18
           - platform: linux-gnu
             arch: x86_64
-            python: 3.11.11
+            python: 3.11.13
           - platform: linux-gnu
             arch: x86_64
-            python: 3.12.9
+            python: 3.12.11
           - platform: linux-gnu
             arch: x86_64
             python: 3.13.5
           - platform: linux-gnu
             arch: aarch64
-            python: 3.10.17
+            python: 3.10.18
           - platform: linux-gnu
             arch: aarch64
-            python: 3.11.11
+            python: 3.11.13
           - platform: linux-gnu
             arch: aarch64
-            python: 3.12.9
+            python: 3.12.11
           - platform: linux-gnu
             arch: aarch64
             python: 3.13.5
 
           - platform: win
             arch: x86
-            python: 3.10.17
+            python: 3.10.18
           - platform: win
             arch: x86
-            python: 3.11.11
+            python: 3.11.13
           - platform: win
             arch: x86
-            python: 3.12.9
+            python: 3.12.11
           - platform: win
             arch: x86
             python: 3.13.5
           - platform: win
             arch: amd64
-            python: 3.10.17
+            python: 3.10.18
           - platform: win
             arch: amd64
-            python: 3.11.11
+            python: 3.11.13
           - platform: win
             arch: amd64
-            python: 3.12.9
+            python: 3.12.11
           - platform: win
             arch: amd64
             python: 3.13.5
 
           - platform: macos
             arch: x86_64
-            python: 3.10.17
+            python: 3.10.18
           - platform: macos
             arch: x86_64
-            python: 3.11.11
+            python: 3.11.13
           - platform: macos
             arch: x86_64
-            python: 3.12.9
+            python: 3.12.11
           - platform: macos
             arch: x86_64
             python: 3.13.5
           - platform: macos
             arch: arm64
-            python: 3.10.17
+            python: 3.10.18
           - platform: macos
             arch: arm64
-            python: 3.11.11
+            python: 3.11.13
           - platform: macos
             arch: arm64
-            python: 3.12.9
+            python: 3.12.11
           - platform: macos
             arch: arm64
             python: 3.13.5
