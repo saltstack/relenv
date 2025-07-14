@@ -1718,3 +1718,12 @@ def test_no_openssl_binary(rockycontainer, pipexec):
 def test_darwin_python_linking(pipexec, pyexec, build, minor_version):
     proc = subprocess.run(["otool", "-L", str(pyexec)], capture_output=True, check=True)
     assert "/usr/local/opt" not in proc.stdout.decode()
+
+
+def test_import_ssl_module(pyexec):
+    proc = subprocess.run(
+        [pyexec, "-c", "import ssl"], capture_output=True, check=False
+    )
+    assert proc.returncode == 0
+    assert proc.stdout.decode() == ""
+    assert proc.stderr.decode() == ""
