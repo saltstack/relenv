@@ -1676,3 +1676,9 @@ def test_no_openssl_binary(rockycontainer, pipexec):
 
     errors = proc.stderr.decode()
     assert "legacy provider failed to load" not in errors
+
+
+@pytest.mark.skip_unless_on_darwin
+def test_darwin_python_linking(pipexec, pyexec, build, minor_version):
+    proc = subprocess.run(["otool", "-L", str(pyexec)], capture_output=True, check=True)
+    assert "/usr/local/opt" not in proc.stdout.decode()
