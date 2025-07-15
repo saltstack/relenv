@@ -1,3 +1,12 @@
+0.20.0
+======
+
+* Use ppbt python package for toolchain. The relenv toolchain command has been
+  deprecated. Please pip install relenv[toolchain] instead.
+* Ensure we do not link to /usr/local when building macos builds
+* Verify pip installations do not link to /usr/local on macos
+
+
 0.19.4
 ======
 
