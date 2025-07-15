@@ -127,18 +127,18 @@ jobs:
   #  secrets:
   #    PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
   #
-  upload-build-artifacts:
-    name: Deploy Prebuilt Python Builds
-    if: ${{ inputs.kind == 'release' && success() }}
-    uses: ./.github/workflows/deploy-build-action.yml
-    needs:
-      - build-python-package
-      - build-native
-      - verify-native
-      - test-fips
-      #- build-cross
-    with:
-      version: "${{ needs.build-python-package.outputs.version }}"
+  # upload-build-artifacts:
+  #   name: Deploy Prebuilt Python Builds
+  #   if: ${{ inputs.kind == 'release' && success() }}
+  #   uses: ./.github/workflows/deploy-build-action.yml
+  #   needs:
+  #     - build-python-package
+  #     - build-native
+  #     - verify-native
+  #     - test-fips
+  #     #- build-cross
+  #   with:
+  #     version: "${{ needs.build-python-package.outputs.version }}"
 
   deploy-python-package:
     name: "Deploy python package"
@@ -151,7 +151,6 @@ jobs:
       - build-python-package
       - test-fips
       - verify-native
-      - upload-build-artifacts
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -189,7 +188,6 @@ jobs:
       #- build-cross
       - test
       - docs
-      - upload-build-artifacts
       - deploy-python-package
       - create-release
     steps:
