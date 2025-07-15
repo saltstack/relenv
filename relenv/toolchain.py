@@ -3,6 +3,7 @@
 """
 The ``relenv toolchain`` command.
 """
+import sys
 
 
 def setup_parser(subparsers):
@@ -20,9 +21,11 @@ def main(*args, **kwargs):
     """
     Notify users of toolchain command deprecation.
     """
-    print(
-        "The relenv toolchain command has been deprecated. Please pip install relenv[toolchain]."
+    sys.stderr.write(
+        "The relenv toolchain command has been deprecated. Please pip install relenv[toolchain].\n"
     )
+    sys.stderr.flush()
+    sys.exit(1)
 
 
 if __name__ == "__main__":
