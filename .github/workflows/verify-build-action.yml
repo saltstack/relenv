@@ -1,4 +1,4 @@
-name: Build
+name: Verify Build
 
 on:
   workflow_call:
@@ -11,7 +11,6 @@ on:
 jobs:
 
   build_linux:
-
     strategy:
       fail-fast: false
       matrix:
@@ -56,9 +55,16 @@ jobs:
           venv/bin/python3 --version
           venv/bin/python3 -c 'import os; print(os.name)'
 
-      - name: Build
+      - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
+          path: build/
+
+      - name: Verify Build
+        if: ${{ matrix.host == matrix.target }}
         run: |
-          venv/bin/python3 -m relenv build --no-pretty --arch=${{ matrix.target }} --python=${{ matrix.version }}
+          venv/bin/python3 -m nox -e tests -- -s tests/test_verify_build.py
 
       - name: Linux Logs
         uses: actions/upload-artifact@v4
@@ -68,15 +74,7 @@ jobs:
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz"
-        uses: actions/upload-artifact@v4
-        if: ${{ matrix.host == matrix.target  && always() }}
-        with:
-          name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
-          retention-days: 5
-
-  build_macos_12_x86_64:
+  test_macos_13_x86_64:
     name: "Python macOS"
 
     runs-on: macos-13
@@ -98,11 +96,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Patch /usr/local
-        run: |
-          sudo mkdir /tmp/local
-          sudo mv -f /usr/local/* /tmp/local/
-
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -116,9 +109,15 @@ jobs:
         run: |
           pip3 install nox
 
-      - name: Build
+      - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          path: build/
+
+      - name: Verify Build
         run: |
-          python3 -m relenv build --no-pretty --python=${{ matrix.version }}
+          python3 -m nox -e tests -- tests/test_verify_build.py
 
       - name: MacOS Logs
         uses: actions/upload-artifact@v4
@@ -128,14 +127,7 @@ jobs:
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz"
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
-          retention-days: 5
-
-  build_macos_13_arm64:
+  test_macos_13_arm64:
     name: "Python macOS"
 
     runs-on: macos-15
@@ -175,9 +167,15 @@ jobs:
         run: |
           brew install nox
 
-      - name: Build
+      - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          path: build/
+
+      - name: Verify Build
         run: |
-          python3 -m relenv build --no-pretty --python=${{ matrix.version }}
+          nox -e tests -- tests/test_verify_build.py
 
       - name: MacOS Logs
         uses: actions/upload-artifact@v4
@@ -187,14 +185,8 @@ jobs:
           path: logs/*
           retention-days: 5
 
-      - name: Python build
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
-          retention-days: 5
 
-  build_windows:
+  test_windows:
     name: "Python Windows"
     runs-on: windows-latest
 
@@ -229,18 +221,16 @@ jobs:
         run: |
           pip3 install nox
 
-      - name: Fetch Native Build
-        if: ${{ matrix.arch != 'amd64' }}
-        env:
-          RELENV_FETCH_VERSION: 0.18.0
-        run: |
-          python3 -m relenv fetch --python=3.10.15
+      - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
+          path: build/
 
-      - name: Build Python with Relenv
-        env:
-          RELENV_NATIVE_PY_VERSION: 3.10.15
+      - name: Verify Build
+        if: ${{ matrix.arch == 'amd64' }}
         run: |
-          python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ matrix.version }}
+          nox -e tests -- tests/test_verify_build.py
 
       - name: Upload Build Logs
         uses: actions/upload-artifact@v4
@@ -248,11 +238,4 @@ jobs:
         with:
           name: ${{ matrix.version }}-${{ matrix.arch }}-windows-logs
           path: logs/*
-          retention-days: 5
-
-      - name: Upload Zipfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
           retention-days: 5
