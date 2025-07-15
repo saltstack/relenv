@@ -134,6 +134,7 @@ jobs:
     needs:
       - build-python-package
       - build-native
+      - verify-native
       - test-fips
       #- build-cross
     with:
@@ -149,6 +150,7 @@ jobs:
       - docs
       - build-python-package
       - test-fips
+      - verify-native
       - upload-build-artifacts
     steps:
       - uses: actions/create-github-app-token@v1
@@ -183,6 +185,7 @@ jobs:
     needs:
       - pre-commit
       - build-native
+      - verify-native
       #- build-cross
       - test
       - docs
