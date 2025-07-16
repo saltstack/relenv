@@ -125,8 +125,6 @@ if sys.platform == "linux":
     if ppbt:
         env = ppbt.environ(auto_extract=True)
         toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
-    else:
-        print("ppbt package not installed")
 else:
     toolchain = DATA_DIR / "toolchain" / get_triplet()
 
