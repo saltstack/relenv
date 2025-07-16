@@ -114,32 +114,6 @@ jobs:
     with:
       changed-files: ${{ needs.get-changed-files.outputs.changed-files }}
 
-  #deploy-python-package:
-  #  name: Deploy Python Package
-  #  uses: ./.github/workflows/deploy-package-action.yml
-  #  if: ${{ inputs.kind == 'release' && success() }}
-  #  needs:
-  #    - pre-commit
-  #    - test
-  #    - docs
-  #    - build-python-package
-  #    - test-fips
-  #  secrets:
-  #    PYPI_API_TOKEN: "${{ secrets.PYPI_API_TOKEN }}"
-  #
-  # upload-build-artifacts:
-  #   name: Deploy Prebuilt Python Builds
-  #   if: ${{ inputs.kind == 'release' && success() }}
-  #   uses: ./.github/workflows/deploy-build-action.yml
-  #   needs:
-  #     - build-python-package
-  #     - build-native
-  #     - verify-native
-  #     - test-fips
-  #     #- build-cross
-  #   with:
-  #     version: "${{ needs.build-python-package.outputs.version }}"
-
   deploy-python-package:
     name: "Deploy python package"
     runs-on: ubuntu-latest

@@ -28,7 +28,7 @@ jobs:
           - host: aarch64
             target: aarch64
 
-    name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
+    name: "Verify Linux"
     runs-on:
       - ${{ (contains(matrix.host, 'x86_64') && 'ubuntu-24.04') || 'ubuntu-24.04-arm' }}
 
@@ -75,7 +75,7 @@ jobs:
           retention-days: 5
 
   test_macos_13_x86_64:
-    name: "Python macOS"
+    name: "Verify MacOS"
 
     runs-on: macos-13
 
@@ -128,7 +128,7 @@ jobs:
           retention-days: 5
 
   test_macos_13_arm64:
-    name: "Python macOS"
+    name: "Verify MacOS (M1)"
 
     runs-on: macos-15
 
@@ -187,7 +187,7 @@ jobs:
 
 
   test_windows:
-    name: "Python Windows"
+    name: "Verify Windows"
     runs-on: windows-latest
 
     strategy:
