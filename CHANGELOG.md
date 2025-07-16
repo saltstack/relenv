@@ -1,3 +1,9 @@
+0.20.1
+======
+
+* Fix rogue print statment.
+
+
 0.20.0
 ======
 
