@@ -1,3 +1,10 @@
+0.20.2
+======
+
+* Extract ppbt toolchain to relenv data directory so it can be re-used accross
+  environments.
+
+
 0.20.1
 ======
 

@@ -18,7 +18,7 @@ import threading
 import time
 
 # relenv package version
-__version__ = "0.20.1"
+__version__ = "0.20.2"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -232,13 +232,19 @@ def get_toolchain(arch=None, root=None):
     ppbt = None
 
     try:
-        import ppbt
+        import ppbt.common
     except ImportError:
         pass
 
     if ppbt:
-        env = ppbt.environ(auto_extract=True)
-        return pathlib.Path(env["TOOLCHAIN_PATH"])
+        DATA_DIR.mkdir(exist_ok=True)
+        TOOLCHAIN_ROOT = DATA_DIR / "toolchain"
+        TOOLCHAIN_ROOT.mkdir(exist_ok=True)
+        TOOLCHAIN_PATH = TOOLCHAIN_ROOT / get_triplet()
+        if TOOLCHAIN_PATH.exists():
+            return TOOLCHAIN_PATH
+        ppbt.common.extract_archive(str(TOOLCHAIN_ROOT), str(ppbt.common.ARCHIVE))
+        return TOOLCHAIN_PATH
 
 
 def get_triplet(machine=None, plat=None):
