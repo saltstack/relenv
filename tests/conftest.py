@@ -26,7 +26,9 @@ def get_build_version():
             versions.append(version)
     if versions:
         version = versions[0]
-        log.warn("Environment RELENV_PY_VERSION not set, detected version %s", version)
+        log.warning(
+            "Environment RELENV_PY_VERSION not set, detected version %s", version
+        )
         return version
 
 

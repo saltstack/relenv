@@ -611,17 +611,9 @@ def wrap_pip_build_wheel(name):
         def wrapper(*args, **kwargs):
             if sys.platform != "linux":
                 return func(*args, **kwargs)
-            if not hasattr(install_cargo_config, "tmpdir") and os.environ.get(
-                "RELENV_BUILDENV", 0
-            ):
-                raise RuntimeError("No toolchain installed")
+            base_dir = common().DATA_DIR / "toolchain"
+            toolchain = base_dir / common().get_triplet()
             cargo_home = install_cargo_config.tmpdir.name
-            toolchain = common().get_toolchain()
-            if not toolchain:
-                if os.environ.get("RELENV_BUILDENV", 0):
-                    raise RuntimeError("No toolchain installed")
-                return func(*args, **kwargs)
-
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
@@ -1083,11 +1075,3 @@ def bootstrap():
     setup_crossroot()
     install_cargo_config()
     sys.meta_path = [importer] + sys.meta_path
-    # XXX This causes our m2crypto test to break
-    # if "RELENV_BUILDENV" in os.environ:
-    #    env = buildenv().buildenv()
-    #    for key in env:
-    #        if key in os.environ:
-    #            os.environ[key] = f"{env[key]} {os.environ[key]}"
-    #        else:
-    #            os.environ[key] = env[key]

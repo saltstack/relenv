@@ -127,7 +127,7 @@ def test_get_toolchain(tmp_path):
         if sys.platform in ["darwin", "win32"]:
             assert "data" in str(ret)
         else:
-            assert "ppbt" in str(ret)
+            assert f"{data_dir}/toolchain" in str(ret)
 
 
 def test_get_toolchain_no_arch(tmp_path):
@@ -137,7 +137,7 @@ def test_get_toolchain_no_arch(tmp_path):
         if sys.platform in ["darwin", "win32"]:
             assert "data" in str(ret)
         else:
-            assert "ppbt" in str(ret)
+            assert f"{data_dir}/toolchain" in str(ret)
 
 
 @pytest.mark.parametrize("open_arg", (":gz", ":xz", ":bz2", ""))

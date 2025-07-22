@@ -115,18 +115,7 @@ else:
 
 buildroot = pydir.parent.parent
 
-if sys.platform == "linux":
-    toolchain = ""
-    ppbt = None
-    try:
-        import ppbt
-    except ImportError:
-        pass
-    if ppbt:
-        env = ppbt.environ(auto_extract=True)
-        toolchain = pathlib.Path(env["TOOLCHAIN_PATH"])
-else:
-    toolchain = DATA_DIR / "toolchain" / get_triplet()
+toolchain = DATA_DIR / "toolchain" / get_triplet()
 
 build_time_vars = {}
 for key in _build_time_vars:

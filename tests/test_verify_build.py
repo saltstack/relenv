@@ -49,26 +49,20 @@ def setup(pth_file_path):
 def _install_ppbt(pexec):
     if sys.platform in ["win32", "darwin"]:
         return
-    if "pip" in str(pexec):
-        p = subprocess.run(
-            [
-                str(pexec),
-                "install",
-                "ppbt",
-            ]
-        )
-    else:
-        p = subprocess.run(
-            [
-                str(pexec),
-                "-m",
-                "pip",
-                "install",
-                "ppbt",
-            ]
-        )
-
+    p = subprocess.run(
+        [
+            str(pexec),
+            "-m",
+            "pip",
+            "install",
+            "ppbt",
+        ]
+    )
     assert p.returncode == 0, "Failed to install ppbt"
+    p = subprocess.run(
+        [str(pexec), "-c", "from relenv import common; assert common.get_toolchain()"]
+    )
+    assert p.returncode == 0, "Failed to extract toolchain"
 
 
 @pytest.fixture(scope="module")
@@ -153,7 +147,7 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
 
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -195,7 +189,7 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
 )
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
 
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
 
     packages = [
         "salt==3005",
@@ -221,8 +215,8 @@ def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
 
 
 @pytest.mark.skip_on_windows
-def test_symlinked_scripts(pipexec, tmp_path, build):
-    _install_ppbt(pipexec)
+def test_symlinked_scripts(pipexec, pyexec, tmp_path, build):
+    _install_ppbt(pyexec)
 
     name = "chardet==5.1.0"
     env = os.environ.copy()
@@ -248,7 +242,7 @@ def test_symlinked_scripts(pipexec, tmp_path, build):
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "3007.x", "master"])
 def test_pip_install_salt_w_static_requirements(
-    pipexec, build, tmp_path, salt_branch, build_version
+    pipexec, pyexec, build, tmp_path, salt_branch, build_version
 ):
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
@@ -263,7 +257,7 @@ def test_pip_install_salt_w_static_requirements(
     if salt_branch == "3006.x" and sys.platform == "win32":
         pytest.xfail("Known failure")
 
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
 
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -308,7 +302,7 @@ def test_pip_install_salt_w_static_requirements(
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
 def test_pip_install_salt_w_package_requirements(
-    pipexec, tmp_path, salt_branch, build_version
+    pipexec, pyexec, tmp_path, salt_branch, build_version
 ):
 
     for py_version in ("3.11", "3.12", "3.13"):
@@ -324,9 +318,29 @@ def test_pip_install_salt_w_package_requirements(
     if sys.platform == "darwin" and salt_branch == "3006.x":
         pytest.xfail("Known failure")
 
-    _install_ppbt(pipexec)
-
+    _install_ppbt(pyexec)
     env = os.environ.copy()
+
+    # if sys.platform == "linux":
+    #    p = subprocess.run(
+    #        [
+    #            pyexec,
+    #            "-m",
+    #            "relenv",
+    #            "buildenv",
+    #            "--json",
+    #        ],
+    #        capture_output=True,
+    #    )
+    #    try:
+    #        buildenv = json.loads(p.stdout)
+    #    except json.JSONDecodeError:
+    #        assert (
+    #            False
+    #        ), f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
+    #    for k in buildenv:
+    #        env[k] = buildenv[k]
+
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
     p = subprocess.run(
@@ -399,7 +413,7 @@ def test_pip_install_salt_w_package_requirements(
         "26.4.0",
     ],
 )
-def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch, build):
+def test_pip_install_pyzmq(pipexec, pyexec, pyzmq_version, build_version, arch, build):
 
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
@@ -425,7 +439,7 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch, build):
     if pyzmq_version == "26.4.0" and sys.platform == "win32":
         pytest.xfail("Needs troubleshooting 4/12/25")
 
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
 
     env = os.environ.copy()
 
@@ -445,6 +459,26 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch, build):
         env[
             "CFLAGS"
         ] = f"{env.get('CFLAGS', '')} -DCMAKE_OSX_ARCHITECTURES='arm64' -DZMQ_HAVE_CURVE=0"
+    env = os.environ.copy()
+    if sys.platform == "linux":
+        p = subprocess.run(
+            [
+                pyexec,
+                "-m",
+                "relenv",
+                "buildenv",
+                "--json",
+            ],
+            capture_output=True,
+        )
+        try:
+            buildenv = json.loads(p.stdout)
+        except json.JSONDecodeError:
+            assert (
+                False
+            ), f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
+        for k in buildenv:
+            env[k] = buildenv[k]
 
     env["ZMQ_PREFIX"] = "bundled"
     env["RELENV_BUILDENV"] = "yes"
@@ -479,8 +513,8 @@ def test_pip_install_pyzmq(pipexec, pyzmq_version, build_version, arch, build):
         )
 
 
-def test_pip_install_cryptography(pipexec):
-    _install_ppbt(pipexec)
+def test_pip_install_cryptography(pipexec, pyexec):
+    _install_ppbt(pyexec)
     packages = [
         "cryptography",
     ]
@@ -491,8 +525,8 @@ def test_pip_install_cryptography(pipexec):
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
-def test_pip_install_idem(pipexec):
-    _install_ppbt(pipexec)
+def test_pip_install_idem(pipexec, pyexec):
+    _install_ppbt(pyexec)
     packages = [
         "idem",
     ]
@@ -504,7 +538,7 @@ def test_pip_install_idem(pipexec):
 
 
 def test_pip_install_and_import_libcloud(pipexec, pyexec):
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
     name = "apache-libcloud"
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -516,7 +550,7 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
     assert import_ret.returncode == 0, f"Failed to import {import_name}"
 
 
-def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
+def test_pip_install_salt_pip_dir(pipexec, pyexec, build, build_version, arch):
 
     if "3.12" in build_version:
         pytest.xfail("Don't try to install on 3.12 yet")
@@ -531,7 +565,7 @@ def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
 
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -548,8 +582,8 @@ def test_pip_install_salt_pip_dir(pipexec, build, build_version, arch):
         assert script.exists()
 
 
-def test_nox_virtualenvs(pipexec, build, tmp_path):
-    _install_ppbt(pipexec)
+def test_nox_virtualenvs(pipexec, pyexec, build, tmp_path):
+    _install_ppbt(pyexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
@@ -645,7 +679,7 @@ def test_pip_install_m2crypto_relenv_ssl(
     if m2crypto_version == "0.38.0" and minor_version in ["3.12", "3.13"]:
         pytest.xfail("Fails due to no distutils")
 
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
 
     p = subprocess.run(
         [
@@ -657,12 +691,18 @@ def test_pip_install_m2crypto_relenv_ssl(
         ],
         capture_output=True,
     )
-    buildenv = json.loads(p.stdout)
+    try:
+        buildenv = json.loads(p.stdout)
+    except json.JSONDecodeError:
+        assert False, f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
     env = os.environ.copy()
+    for k in buildenv:
+        env[k] = buildenv[k]
+
+    # assert False, buildenv["TOOLCHAIN_PATH"]
     env["RELENV_BUILDENV"] = "yes"
     env["RELENV_DEBUG"] = "yes"
-    env["LDFLAGS"] = f"-L{build}lib"
-    env["CFLAGS"] = f"-I{build}/include -I{build}/include/python{minor_version}"
+    env["CFLAGS"] = f"{env['CFLAGS']} -I{build}/include/python{minor_version}"
     env["SWIG_FEATURES"] = f"-I{build}/include -I{build}/include/python{minor_version}"
     p = subprocess.run(
         ["swig", "-version"],
@@ -673,6 +713,7 @@ def test_pip_install_m2crypto_relenv_ssl(
             "install",
             f"m2crypto=={m2crypto_version}",
             "--no-cache-dir",
+            "--no-binary=':all:'",
             "-v",
         ],
         env=env,
@@ -688,14 +729,16 @@ def test_pip_install_m2crypto_relenv_ssl(
             for arg in line.split():
                 if arg == f"-I{include}":
                     found_include = True
-    assert found_include, f"{include}\n{p.stderr.decode()}"
+    assert found_include, f"{gcc}\n{include}\n{p.stderr.decode()}"
+    env.pop("RELENV_DEBUG")
     p = subprocess.run(
         [str(pyexec), "-c", "import M2Crypto"],
         env=env,
         stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
         check=False,
     )
-    assert p.returncode == 0, p.stderr
+    assert p.returncode == 0, (p.stdout, p.stderr)
 
 
 @pytest.mark.skip_on_windows
@@ -725,8 +768,8 @@ def test_shebangs(pipexec, build, minor_version):
 
 # XXX Mac support
 @pytest.mark.skip_unless_on_linux
-def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
-    _install_ppbt(pipexec)
+def test_moving_pip_installed_c_extentions(pipexec, pyexec, build, minor_version):
+    _install_ppbt(pyexec)
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_BUILDENV"] = "yes"
@@ -758,7 +801,7 @@ def test_moving_pip_installed_c_extentions(pipexec, build, minor_version):
 def test_cryptography_rpath(
     pyexec, pipexec, build, minor_version, cryptography_version
 ):
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
     # log.warn("Extract ppbt")
     # p = subprocess.run(
     #    [pyexec, "-c", "import ppbt; ppbt.extract()"],
@@ -869,8 +912,8 @@ def test_cryptography_rpath_darwin(pipexec, build, minor_version, cryptography_v
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_pycurl(pipexec, build):
-    _install_ppbt(pipexec)
+def test_install_pycurl(pipexec, pyexec, build):
+    _install_ppbt(pyexec)
     curlver = "8.0.1"
 
     # Build curl and install it into the relenv environment
@@ -1041,8 +1084,8 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_python_ldap(pipexec, build):
-    _install_ppbt(pipexec)
+def test_install_python_ldap(pipexec, pyexec, build):
+    _install_ppbt(pyexec)
     saslver = "2.1.28"
     ldapver = "2.5.14"
 
@@ -1574,7 +1617,7 @@ def test_install_pyinotify_w_latest_pip(pipexec, build, minor_version):
 
 @pytest.mark.skip_unless_on_linux
 def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_path):
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
     os.chdir(tmp_path)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
@@ -1599,7 +1642,7 @@ def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_pat
 def test_install_editable_package_in_extras(
     pipexec, pyexec, build, minor_version, tmp_path
 ):
-    _install_ppbt(pipexec)
+    _install_ppbt(pyexec)
     sitepkgs = pathlib.Path(build) / "lib" / f"python{minor_version}" / "site-packages"
 
     (sitepkgs / "_extras.pth").write_text("import _extras; _extras.setup(__file__)")
@@ -1683,8 +1726,8 @@ def rockycontainer(build):
 
 
 @pytest.mark.skip_on_windows
-def test_no_openssl_binary(rockycontainer, pipexec):
-    _install_ppbt(pipexec)
+def test_no_openssl_binary(rockycontainer, pipexec, pyexec):
+    _install_ppbt(pyexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     proc = subprocess.run(
