@@ -18,7 +18,7 @@ import threading
 import time
 
 # relenv package version
-__version__ = "0.20.2"
+__version__ = "0.20.3"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -227,6 +227,7 @@ def get_toolchain(arch=None, root=None):
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
+    os.makedirs(DATA_DIR, exist_ok=True)
     if sys.platform != "linux":
         return DATA_DIR
 
@@ -243,7 +244,6 @@ def get_toolchain(arch=None, root=None):
         pass
 
     if ppbt:
-        DATA_DIR.mkdir(exist_ok=True)
         TOOLCHAIN_ROOT.mkdir(exist_ok=True)
         ppbt.common.extract_archive(str(TOOLCHAIN_ROOT), str(ppbt.common.ARCHIVE))
         return TOOLCHAIN_PATH

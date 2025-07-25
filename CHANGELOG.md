@@ -1,3 +1,9 @@
+0.20.3
+======
+
+* Ensure relenv data directory always exists
+
+
 0.20.2
 ======
 
