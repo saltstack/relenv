@@ -18,7 +18,7 @@ import threading
 import time
 
 # relenv package version
-__version__ = "0.20.3"
+__version__ = "0.20.4"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -32,7 +32,6 @@ REQUEST_HEADERS = {"User-Agent": f"relenv {__version__}"}
 
 CHECK_HOSTS = (
     "packages.broadcom.com/artifactory/saltproject-generic",
-    "repo.saltproject.io",
     "woz.io",
 )
 

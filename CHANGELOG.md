@@ -1,3 +1,10 @@
+0.20.4
+======
+
+* Fix relenv fetch default version
+* Remove repo.saltproject.io from fetch locations
+
+
 0.20.3
 ======
 

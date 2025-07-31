@@ -39,7 +39,7 @@ def setup_parser(subparsers):
     )
     subparser.add_argument(
         "--python",
-        default="3.10.17",
+        default="3.10.18",
         type=str,
         help="The python version [default: %(default)s]",
     )
