@@ -18,9 +18,11 @@ import threading
 import time
 
 # relenv package version
-__version__ = "0.20.4"
+__version__ = "0.20.5"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
+
+DEFAULT_PYTHON = "3.10.18"
 
 LINUX = "linux"
 WIN32 = "win32"

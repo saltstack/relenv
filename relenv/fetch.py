@@ -11,6 +11,7 @@ from .build import platform_module
 from .common import (
     CHECK_HOSTS,
     DATA_DIR,
+    DEFAULT_PYTHON,
     __version__,
     build_arch,
     check_url,
@@ -39,7 +40,7 @@ def setup_parser(subparsers):
     )
     subparser.add_argument(
         "--python",
-        default="3.10.18",
+        default=DEFAULT_PYTHON,
         type=str,
         help="The python version [default: %(default)s]",
     )

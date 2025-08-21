@@ -500,8 +500,8 @@ build.add(
     build_func=build_sqlite,
     download={
         "url": "https://sqlite.org/2025/sqlite-autoconf-{version}.tar.gz",
-        "version": "3500200",
-        "checksum": "f57c0e54fcddf91f73916987d5c52e743c8bfa76",
+        "version": "3500400",
+        "checksum": "145048005c777796dd8494aa1cfed304e8c34283",
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
@@ -523,8 +523,8 @@ build.add(
     build_func=build_gdbm,
     download={
         "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
-        "version": "1.25",
-        "checksum": "d55bdf2bb5f92f80006166dd8a8323cb2a428bd1",
+        "version": "1.26",
+        "checksum": "6cee3657de948e691e8df26509157be950cef4d4",
         "checkfunc": tarball_version,
     },
 )
@@ -548,8 +548,8 @@ build.add(
     build_libffi,
     download={
         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
-        "version": "3.5.1",
-        "checksum": "5375e956b0d662e118e47758bd656861e43ba3ef",
+        "version": "3.5.2",
+        "checksum": "2bd35b135b0eeb5c631e02422c9dbe786ddb626a",
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
@@ -595,8 +595,8 @@ build.add(
     wait_on=["ncurses"],
     download={
         "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
-        "version": "8.2.13",
-        "checksum": "5ffb6a334c2422acbe8f4d2cb11e345265c8d930",
+        "version": "8.3",
+        "checksum": "2c05ae9350b695f69d70b47f17f092611de2081f",
         "checkfunc": tarball_version,
     },
 )
