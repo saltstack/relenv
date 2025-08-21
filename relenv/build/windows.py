@@ -36,6 +36,23 @@ def populate_env(env, dirs):
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
+def patch_file(path, old, new):
+    with open(path, "r") as fp:
+        content = fp.read()
+    new_content = ""
+    for line in content.splitlines():
+        line.replace(old, new)
+        new_content += line + os.linesp
+    with open(path, "w") as fp:
+        fp.write(new_content)
+
+
+def override_dependency_string(dirs, old, new):
+    patch_file(dirs.source / "PCbuild" / "python.props", old, new)
+    patch_file(dirs.source / "PCbuild" / "get_externals.bat", old, new)
+
+
+
 def build_python(env, dirs, logfp):
     """
     Run the commands to build Python.
@@ -47,6 +64,10 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+
+    # Override default versions
+    override_dependency(dirs, "sqlite-3.40.1.0", "sqlite-3.50.4.0")
+
     arch_to_plat = {
         "amd64": "x64",
         "x86": "win32",
