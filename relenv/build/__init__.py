@@ -13,7 +13,7 @@ from .common import builds, CHECK_VERSIONS_SUPPORT
 
 from ..pyversions import python_versions, Version
 
-from ..common import build_arch
+from ..common import build_arch, DEFAULT_PYTHON
 
 
 def platform_module():
@@ -58,7 +58,7 @@ def setup_parser(subparsers):
     )
     build_subparser.add_argument(
         "--python",
-        default="3.10.17",
+        default=DEFAULT_PYTHON,
         type=str,
         help="The python version [default: %(default)s]",
     )
