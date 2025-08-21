@@ -150,7 +150,7 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
                                 "--add Microsoft.VisualStudio.Component.VC.140", `
                                 "--lang en-US", `
                                 "--includeRecommended", `
-                                "--quiet", `
+                               # "--quiet", `
                                 "--wait" `
                   -Wait -WindowStyle Hidden
     if ( Test-Path -Path "$env:TEMP\build_tools\vs_buildtools.exe" ) {
