@@ -187,7 +187,7 @@ jobs:
 
       - name: Install VS Build Tools
         run: |
-          relenv/_scripts/install_vc_build.ps1
+          relenv/_scripts/install_vc_build.ps1 -CICD
 
       - name: Install nox
         run: |
