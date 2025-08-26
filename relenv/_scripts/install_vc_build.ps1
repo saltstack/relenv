@@ -34,7 +34,6 @@ Write-Host $("-" * 80)
 $VS_BLD_TOOLS   = "https://aka.ms/vs/15/release/vs_buildtools.exe"
 $VS_CL_BIN      = "${env:ProgramFiles(x86)}\Microsoft Visual Studio 14.0\VC\bin\cl.exe"
 $MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
-$WIN10_SDK_RC   = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.17763.0\x64\rc.exe"
 
 #-------------------------------------------------------------------------------
 # Visual Studio
@@ -42,7 +41,7 @@ $WIN10_SDK_RC   = "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.0.17763.0\x64
 
 $install_build_tools = $false
 Write-Host "Confirming Presence of Visual Studio Build Tools: " -NoNewline
-@($VS_CL_BIN, $MSBUILD_BIN, $WIN10_SDK_RC) | ForEach-Object {
+@($VS_CL_BIN, $MSBUILD_BIN) | ForEach-Object {
     if ( ! (Test-Path -Path $_) ) {
         $install_build_tools = $true
     }
@@ -79,10 +78,7 @@ if ( $install_build_tools ) {
                   -ArgumentList "--layout `"$env:TEMP\build_tools`"", `
                                 "--add Microsoft.VisualStudio.Workload.MSBuildTools", `
                                 "--add Microsoft.VisualStudio.Workload.VCTools", `
-                                "--add Microsoft.VisualStudio.Component.Windows81SDK", `
-                                "--add Microsoft.VisualStudio.Component.Windows10SDK.17763", `
                                 "--add Microsoft.VisualStudio.Component.VC.140", `
-                                "--add Microsoft.Component.VC.Runtime.UCRTSDK", `
                                 "--lang en-US", `
                                 "--includeRecommended", `
                                 "--quiet", `
@@ -131,7 +127,7 @@ if ( $install_build_tools ) {
     Start-Process -FilePath "$env:TEMP\build_tools\vs_setup.exe" `
                   -ArgumentList "--wait", "--noweb", "--quiet" `
                   -Wait
-    @($VS_CL_BIN, $MSBUILD_BIN, $WIN10_SDK_RC) | ForEach-Object {
+    @($VS_CL_BIN, $MSBUILD_BIN) | ForEach-Object {
         if ( ! (Test-Path -Path $_) ) {
             Write-Host "Failed" -ForegroundColor Red
             exit 1
