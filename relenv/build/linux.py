@@ -582,8 +582,8 @@ build.add(
     wait_on=["openssl"],
     download={
         "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
-        "version": "1.21",
-        "checksum": "e2ee531443122376ac8b62b3848d94376f646089",
+        "version": "1.22",
+        "checksum": "3ad930ab036a8dc3678356fbb9de9246567e7984",
         "checkfunc": krb_version,
         "checkurl": "https://kerberos.org/dist/krb5/",
     },
