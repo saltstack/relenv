@@ -10,8 +10,30 @@ on:
 
 jobs:
 
-  build_linux:
+  download-dependencies:
+    name: Download Python Build Dependencies
+    runs-on:
+      - ubuntu-24.04
+    strategy:
+      fail-fast: true
+    env:
+      RELENV_DATA: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download Dependencies
+        run: |
+          python3 -m relenv build --download-only
+      - name: Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/download
+          key: ${{ github.run_id }}-dependencies
 
+  build_linux:
     strategy:
       fail-fast: false
       matrix:
@@ -28,16 +50,16 @@ jobs:
             target: x86_64
           - host: aarch64
             target: aarch64
-
+    needs:
+      - download-dependencies
     name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
     runs-on:
       - ${{ (contains(matrix.host, 'x86_64') && 'ubuntu-24.04') || 'ubuntu-24.04-arm' }}
-
     env:
       RELENV_DATA: ${{ github.workspace }}
-
     steps:
       - name: "Throttle Builds"
+        if: false
         shell: bash
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
@@ -61,6 +83,12 @@ jobs:
           venv/bin/python3 --version
           venv/bin/python3 -c 'import os; print(os.name)'
 
+      - name: Restore Cached Dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/download
+          key: ${{ github.run_id }}-dependencies
+
       - name: Build
         run: |
           venv/bin/python3 -m relenv build --no-pretty --arch=${{ matrix.target }} --python=${{ matrix.version }}
@@ -83,9 +111,7 @@ jobs:
 
   build_macos_12_x86_64:
     name: "Python macOS"
-
     runs-on: macos-13
-
     strategy:
       fail-fast: false
       matrix:
@@ -96,12 +122,11 @@ jobs:
           - 3.13.5
         arch:
           - x86_64
-
     env:
       RELENV_DATA: ${{ github.workspace }}
-
     steps:
       - name: "Throttle Builds"
+        if: false
         shell: bash
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
@@ -160,11 +185,15 @@ jobs:
           - 3.13.5
         arch:
           - arm64
-
     env:
       RELENV_DATA: ${{ github.workspace }}
-
     steps:
+      - name: "Throttle Builds"
+        if: false
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
 
       - name: Patch include
@@ -207,7 +236,6 @@ jobs:
   build_windows:
     name: "Python Windows"
     runs-on: windows-latest
-
     strategy:
       fail-fast: false
       matrix:
@@ -219,12 +247,11 @@ jobs:
         arch:
           - amd64
           - x86
-
     env:
       RELENV_DATA: ${{ github.workspace }}
-
     steps:
       - name: "Throttle Builds"
+        if: false
         shell: bash
         run: |
           t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
