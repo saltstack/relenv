@@ -1251,7 +1251,7 @@ class Builder:
             steps = self.recipies
 
         failures = self.check_prereqs()
-        if failures:
+        if not download_only and failures:
             for _ in failures:
                 sys.stderr.write(f"{_}\n")
             sys.stderr.flush()
