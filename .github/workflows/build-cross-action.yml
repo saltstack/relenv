@@ -32,12 +32,10 @@ jobs:
 
     name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
 
-    if: |
-      ( matrix.host  ==  matrix.target  &&  inputs.kind  == "native" ) ||
-      ( matrix.host  !=  matrix.target  &&  inputs.kind  == "cross" )
+    # if: ${{ ( matrix.host  ==  matrix.target  &&  inputs.kind  == 'native' ) || ( matrix.host  !=  matrix.target  &&  inputs.kind  == 'cross' ) }}
 
     runs-on:
-      - ${{ (contains(matrix.host, "x86_64") && "ubuntu-24.04") || "ubuntu-24.04-arm" }}
+      - ${{ (contains(matrix.host, 'x86_64') && 'ubuntu-24.04') || 'ubuntu-24.04-arm' }}
 
     env:
       RELENV_DATA: ${{ github.workspace }}
