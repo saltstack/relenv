@@ -37,6 +37,11 @@ jobs:
       RELENV_DATA: ${{ github.workspace }}
 
     steps:
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
 
       - name: Set up Python 3.10
@@ -96,6 +101,11 @@ jobs:
       RELENV_DATA: ${{ github.workspace }}
 
     steps:
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
 
       - name: Patch /usr/local
@@ -214,6 +224,11 @@ jobs:
       RELENV_DATA: ${{ github.workspace }}
 
     steps:
+      - name: "Throttle Builds"
+        shell: bash
+        run: |
+          t=$(python3 -c 'import random, sys; sys.stdout.write(str(random.randint(0, 600)))'); echo "Sleeping $t seconds"; sleep "$t"
+
       - uses: actions/checkout@v3
 
       - name: Set up Python 3.10
