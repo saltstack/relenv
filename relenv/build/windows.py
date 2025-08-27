@@ -86,7 +86,11 @@ def build_python(env, dirs, logfp):
     :type logfp: file
     """
     # Override default versions
-    override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
+    if env["RELENV_PY_MAJOR_VERSION"] in [
+        "3.10",
+        "3.11",
+    ]:
+        override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
 
     arch_to_plat = {
         "amd64": "x64",
