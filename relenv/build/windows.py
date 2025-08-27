@@ -37,20 +37,41 @@ def populate_env(env, dirs):
 
 
 def patch_file(path, old, new):
+    """
+    Search a file line by line for a string to replace.
+
+    :param path: Location of the file to search
+    :type path: str
+    :param old: The value that will be replaced
+    :type path: str
+    :param new: The value that will replace the 'old' value.
+    :type path: str
+    """
+    import re
+
     with open(path, "r") as fp:
         content = fp.read()
     new_content = ""
     for line in content.splitlines():
-        line.replace(old, new)
-        new_content += line + os.linesp
+        re.sub(old, new, line)
+        new_content += line + os.linesep
     with open(path, "w") as fp:
         fp.write(new_content)
 
 
-def override_dependency_string(dirs, old, new):
-    patch_file(dirs.source / "PCbuild" / "python.props", old, new)
-    patch_file(dirs.source / "PCbuild" / "get_externals.bat", old, new)
+def override_dependency(source, old, new):
+    """
+    Overwrite a dependency string for Windoes PCBuild.
 
+    :param source: Python's source directory
+    :type path: str
+    :param old: Regular expression to search for
+    :type path: str
+    :param new: Replacement text
+    :type path: str
+    """
+    patch_file(source / "PCbuild" / "python.props", old, new)
+    patch_file(source / "PCbuild" / "get_externals.bat", old, new)
 
 
 def build_python(env, dirs, logfp):
@@ -64,9 +85,8 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-
     # Override default versions
-    override_dependency(dirs, "sqlite-3.40.1.0", "sqlite-3.50.4.0")
+    override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
 
     arch_to_plat = {
         "amd64": "x64",
