@@ -613,7 +613,7 @@ def wrap_pip_build_wheel(name):
                 return func(*args, **kwargs)
             base_dir = common().DATA_DIR / "toolchain"
             toolchain = base_dir / common().get_triplet()
-            cargo_home = install_cargo_config.tmpdir.name
+            cargo_home = str(common().DATA_DIR / "cargo")
             if not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
@@ -844,13 +844,9 @@ def install_cargo_config():
     # We need this as a late import for python < 3.12 becuase importing it will
     # load the ssl module. Causing out setup_openssl method to fail to load
     # fips module.
-    import tempfile
-
-    install_cargo_config.tmpdir = tempfile.TemporaryDirectory(prefix="relenvcargo")
-    cargo_home = pathlib.Path(install_cargo_config.tmpdir.name)
-
+    dirs = common().work_dirs()
     triplet = common().get_triplet()
-    # dirs = common().work_dirs()
+    cargo_home = dirs.data / "cargo"
 
     toolchain = common().get_toolchain()
     if not toolchain:

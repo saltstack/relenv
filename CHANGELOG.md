@@ -1,10 +1,17 @@
+0.20.6
+======
+
+* Revert relenv's cargo home from temp directory back to relenv's data
+  directory.
+
+
 0.20.5
 ======
 
 * Update gdbm from 1.25 to 1.26
 * Update libffi from 3.5.1 to 3.5.2
 * Update readline from 8.2.13 to 8.3
-* Update sqlite from 3.50.2 to 3.50.4 
+* Update sqlite from 3.50.2 to 3.50.4
 
 
 0.20.4
