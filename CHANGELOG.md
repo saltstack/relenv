@@ -3,6 +3,7 @@
 
 * Revert relenv's cargo home from temp directory back to relenv's data
   directory.
+* Update Openssl FIPS module to 3.1.2
 
 
 0.20.5
