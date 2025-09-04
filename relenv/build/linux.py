@@ -466,8 +466,8 @@ build.add(
     wait_on=["openssl"],
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
-        "version": "3.0.8",
-        "checksum": "580d8a7232327fe1fa6e7db54ac060d4321f40ab",
+        "version": "3.1.2",
+        "checksum": "206036c21264e53f0196f715d81d905742e6245b",
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
