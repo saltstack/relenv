@@ -55,16 +55,16 @@ def populate_env(env, dirs):
         f"-I{dirs.toolchain}/{env['RELENV_HOST']}/sysroot/usr/include",
     ]
     env["CFLAGS"] = " ".join(cflags)
-    # CPPFLAGS are needed for Python's setup.py to find the 'nessicery bits'
+    # CPPFLAGS are needed for Python's setup.py to find the 'necessary bits'
     # for things like zlib and sqlite.
-    cpplags = [
+    cppflags = [
         f"-I{dirs.prefix}/include",
         f"-I{dirs.prefix}/include/readline",
         f"-I{dirs.prefix}/include/ncursesw",
         f"-I{dirs.toolchain}/{env['RELENV_HOST']}/sysroot/usr/include",
     ]
-    # env["CXXFLAGS"] = " ".join(cpplags)
-    env["CPPFLAGS"] = " ".join(cpplags)
+    # env["CXXFLAGS"] = " ".join(cppflags)
+    env["CPPFLAGS"] = " ".join(cppflags)
     env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
 
 
@@ -164,65 +164,6 @@ def build_gdbm(env, dirs, logfp):
     )
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
-
-
-def build_ncurses(env, dirs, logfp):
-    """
-    Build ncurses.
-
-    :param env: The environment dictionary
-    :type env: dict
-    :param dirs: The working directories
-    :type dirs: ``relenv.build.common.Dirs``
-    :param logfp: A handle for the log file
-    :type logfp: file
-    """
-    configure = pathlib.Path(dirs.source) / "configure"
-    if env["RELENV_BUILD_ARCH"] == "aarch64" or env["RELENV_HOST_ARCH"] == "aarch64":
-        os.chdir(dirs.tmpbuild)
-        runcmd([str(configure)], stderr=logfp, stdout=logfp)
-        runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
-        runcmd(["make", "-C", "progs", "tic"], stderr=logfp, stdout=logfp)
-    os.chdir(dirs.source)
-
-    # Configure with a prefix of '/' so things will be installed to '/lib'
-    # instead of '/usr/local/lib'. The root of the install will be specified
-    # via the DESTDIR make argument.
-    runcmd(
-        [
-            str(configure),
-            "--prefix=/",
-            "--with-shared",
-            "--enable-termcap",
-            "--with-termlib",
-            "--without-cxx-shared",
-            "--without-static",
-            "--without-cxx",
-            "--enable-widec",
-            "--without-normal",
-            "--disable-stripping",
-            f"--with-pkg-config={dirs.prefix}/lib/pkgconfig",
-            "--enable-pc-files",
-            f"--build={env['RELENV_BUILD']}",
-            f"--host={env['RELENV_HOST']}",
-        ],
-        env=env,
-        stderr=logfp,
-        stdout=logfp,
-    )
-    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
-    ticdir = str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")
-    runcmd(
-        [
-            "make",
-            f"DESTDIR={dirs.prefix}",
-            f"TIC_PATH={ticdir}",
-            "install",
-        ],
-        env=env,
-        stderr=logfp,
-        stdout=logfp,
-    )
 
 
 def build_readline(env, dirs, logfp):
@@ -535,10 +476,8 @@ build.add(
     download={
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
         # XXX: Need to work out tinfo linkage
-        # "version": "6.5",
-        # "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
-        "version": "6.4",
-        "checksum": "bb5eb3f34b3ecd5bac8d0b58164b847f135b3d62",
+        "version": "6.5",
+        "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
         "checkfunc": tarball_version,
     },
 )

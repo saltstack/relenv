@@ -358,6 +358,65 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def build_ncurses(env, dirs, logfp):
+    """
+    Build ncurses.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
+    configure = pathlib.Path(dirs.source) / "configure"
+    if env["RELENV_BUILD_ARCH"] == "aarch64" or env["RELENV_HOST_ARCH"] == "aarch64":
+        os.chdir(dirs.tmpbuild)
+        runcmd([str(configure)], stderr=logfp, stdout=logfp)
+        runcmd(["make", "-C", "include"], stderr=logfp, stdout=logfp)
+        runcmd(["make", "-C", "progs", "tic"], stderr=logfp, stdout=logfp)
+    os.chdir(dirs.source)
+
+    # Configure with a prefix of '/' so things will be installed to '/lib'
+    # instead of '/usr/local/lib'. The root of the install will be specified
+    # via the DESTDIR make argument.
+    runcmd(
+        [
+            str(configure),
+            "--prefix=/",
+            "--with-shared",
+            "--enable-termcap",
+            "--with-termlib",
+            "--without-cxx-shared",
+            "--without-static",
+            "--without-cxx",
+            "--enable-widec",
+            "--without-normal",
+            "--disable-stripping",
+            f"--with-pkg-config={dirs.prefix}/lib/pkgconfig",
+            "--enable-pc-files",
+            f"--build={env['RELENV_BUILD']}",
+            f"--host={env['RELENV_HOST']}",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
+    runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
+    ticdir = str(pathlib.Path(dirs.tmpbuild) / "progs" / "tic")
+    runcmd(
+        [
+            "make",
+            f"DESTDIR={dirs.prefix}",
+            f"TIC_PATH={ticdir}",
+            "install",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
+
+
 def tarball_version(href):
     if href.endswith("tar.gz"):
         try:
@@ -666,7 +725,7 @@ class Dirs:
     """
 
     def __init__(self, dirs, name, arch, version):
-        # XXX name is the specific to a step where as everything
+        # XXX name is specific to a step whereas everything
         # else here is generalized to the entire build
         self.name = name
         self.version = version

@@ -6,7 +6,15 @@ The darwin build process.
 import io
 
 from ..common import arches, DARWIN, MACOS_DEVELOPMENT_TARGET
-from .common import runcmd, finalize, build_openssl, build_sqlite, builds
+from .common import (
+    runcmd,
+    finalize,
+    build_openssl,
+    build_sqlite,
+    builds,
+    build_ncurses,
+    tarball_version,
+)
 
 ARCHES = arches[DARWIN]
 
@@ -22,17 +30,24 @@ def populate_env(env, dirs):
     """
     env["CC"] = "clang"
     ldflags = [
-        "-Wl,-rpath,{prefix}/lib",
-        "-L{prefix}/lib",
+        f"-Wl,-rpath,{dirs.prefix}/lib",
+        f"-L{dirs.prefix}/lib",
     ]
     env["LDFLAGS"] = " ".join(ldflags).format(prefix=dirs.prefix)
     env["MACOSX_DEPLOYMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
     cflags = [
-        "-L{prefix}/lib",
-        "-I{prefix}/include",
-        "-I{prefix}/include/readline",
+        f"-L{dirs.prefix}/lib",
+        f"-I{dirs.prefix}/include",
+        f"-I{dirs.prefix}/include/readline",
+        f"-I{dirs.prefix}/include/ncursesw",
     ]
     env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
+    cppflags = [
+        f"-I{dirs.prefix}/include",
+        f"-I{dirs.prefix}/include/readline",
+        f"-I{dirs.prefix}/include/ncursesw",
+    ]
+    env["CPPFLAGS"] = " ".join(cppflags)
 
 
 def build_python(env, dirs, logfp):
@@ -104,6 +119,20 @@ build.add(
     },
 )
 
+
+build.add(
+    name="ncurses",
+    build_func=build_ncurses,
+    download={
+        "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
+        # XXX: Need to work out tinfo linkage
+        "version": "6.5",
+        "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
+        "checkfunc": tarball_version,
+    },
+)
+
+
 build.add(
     "python",
     build_func=build_python,
@@ -111,6 +140,7 @@ build.add(
         "openssl",
         "XZ",
         "SQLite",
+        "ncurses",
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
