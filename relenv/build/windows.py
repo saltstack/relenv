@@ -92,6 +92,8 @@ def build_python(env, dirs, logfp):
     ]:
         override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
 
+    override_dependency(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
+
     arch_to_plat = {
         "amd64": "x64",
         "x86": "win32",
