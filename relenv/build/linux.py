@@ -489,7 +489,6 @@ build.add(
     },
 )
 
-
 build.add(
     "openssl-fips-module",
     build_func=build_openssl_fips,
@@ -519,8 +518,8 @@ build.add(
     "XZ",
     download={
         "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "version": "5.6.2",
-        "checksum": "0d6b10e4628fe08e19293c65e8dbcaade084a083",
+        "version": "5.8.1",
+        "checksum": "ed4d5589c4cfe84e1697bd02a9954b76af336931",
         "checkfunc": tarball_version,
     },
 )
