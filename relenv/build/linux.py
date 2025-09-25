@@ -429,6 +429,14 @@ def build_python(env, dirs, logfp):
             "Modules/Setup",
         ]
     )
+    runcmd(
+        [
+            "sed",
+            "-i",
+            "s/#_curses -lncurses -lncursesw -ltermcap _cursesmodule.c/_curses -lncursesw -ltinfow _cursesmodule.c/g",
+            "Modules/Setup",
+        ]
+    )
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
