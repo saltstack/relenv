@@ -731,7 +731,7 @@ def sanitize_sys_path(sys_path_entries):
 
 class Version:
     """
-    Version comparrisons.
+    Version comparisons.
     """
 
     def __init__(self, data):
@@ -767,7 +767,7 @@ class Version:
 
     def __eq__(self, other):
         """
-        Equality comparrison.
+        Equality comparisons.
         """
         mymajor = 0 if self.major is None else self.major
         myminor = 0 if self.minor is None else self.minor
