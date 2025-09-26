@@ -6,7 +6,7 @@ The linux build process.
 import pathlib
 import tempfile
 from .common import *
-from ..common import arches, LINUX
+from ..common import arches, LINUX, Version
 
 
 ARCHES = arches[LINUX]
@@ -393,6 +393,43 @@ def build_python(env, dirs, logfp):
     env["OPENSSL_LDFLAGS"] = f"-L{dirs.prefix}/lib"
     env["CFLAGS"] = f"-Wno-coverage-mismatch {env['CFLAGS']}"
 
+    runcmd(
+        [
+            "sed",
+            "-i",
+            "s/#readline readline.c -lreadline -ltermcap/readline readline.c -lreadline -ltinfow/g",
+            "Modules/Setup",
+        ]
+    )
+    if Version.parse_string(env["RELENV_PY_MAJOR_VERSION"]) <= Version.parse_string(
+        "3.10"
+    ):
+        runcmd(
+            [
+                "sed",
+                "-i",
+                (
+                    "s/#_curses -lncurses -lncursesw -ltermcap _cursesmodule.c"
+                    "/_curses -lncursesw -ltinfow _cursesmodule.c/g"
+                ),
+                "Modules/Setup",
+            ]
+        )
+        runcmd(
+            [
+                "sed",
+                "-i",
+                (
+                    "s/#_curses_panel _curses_panel.c -lpanel -lncurses"
+                    "/_curses_panel _curses_panel.c -lpanelw -lncursesw/g"
+                ),
+                "Modules/Setup",
+            ]
+        )
+    else:
+        env["CURSES_LIBS"] = "-lncursesw -ltinfow"
+        env["PANEL_LIBS"] = "-lpanelw"
+
     cmd = [
         "./configure",
         "-v",
@@ -421,22 +458,7 @@ def build_python(env, dirs, logfp):
     ]
 
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
-    runcmd(
-        [
-            "sed",
-            "-i",
-            "s/#readline readline.c -lreadline -ltermcap/readline readline.c -lreadline -ltinfow/g",
-            "Modules/Setup",
-        ]
-    )
-    runcmd(
-        [
-            "sed",
-            "-i",
-            "s/#_curses -lncurses -lncursesw -ltermcap _cursesmodule.c/_curses -lncursesw -ltinfow _cursesmodule.c/g",
-            "Modules/Setup",
-        ]
-    )
+
     with io.open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
         fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
