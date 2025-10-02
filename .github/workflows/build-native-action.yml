@@ -89,6 +89,10 @@ jobs:
           path: ${{ github.workspace }}/download
           key: ${{ github.run_id }}-dependencies
 
+      - name: List downloads
+        run: |
+          tree $RELENV_DATA
+
       - name: Build
         run: |
           venv/bin/python3 -m relenv build --no-pretty --arch=${{ matrix.target }} --python=${{ matrix.version }}
