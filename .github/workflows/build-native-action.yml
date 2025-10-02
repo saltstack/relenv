@@ -91,7 +91,7 @@ jobs:
 
       - name: List downloads
         run: |
-          tree $RELENV_DATA
+          tree $RELENV_DATA/download
 
       - name: Build
         run: |
