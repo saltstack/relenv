@@ -551,7 +551,7 @@ build.add(
     name="gdbm",
     build_func=build_gdbm,
     download={
-        "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz",
+        "url": "https://mirrors.ocf.berkeley.edu/gnu/gdbm/gdbm-{version}.tar.gz",
         "version": "1.26",
         "checksum": "6cee3657de948e691e8df26509157be950cef4d4",
         "checkfunc": tarball_version,
@@ -562,7 +562,7 @@ build.add(
     name="ncurses",
     build_func=build_ncurses,
     download={
-        "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-{version}.tar.gz",
+        "url": "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz",
         "version": "6.5",
         "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
         "checkfunc": tarball_version,
@@ -620,7 +620,7 @@ build.add(
     build_func=build_readline,
     wait_on=["ncurses"],
     download={
-        "url": "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz",
+        "url": "https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{version}.tar.gz",
         "version": "8.3",
         "checksum": "2c05ae9350b695f69d70b47f17f092611de2081f",
         "checkfunc": tarball_version,
