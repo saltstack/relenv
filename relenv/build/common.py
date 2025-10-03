@@ -535,6 +535,7 @@ class Download:
             if self.fallback_url:
                 print(f"Download failed {self.url} ({exc}); trying fallback url")
                 return download_url(self.fallback_url, self.destination, CICD), True
+            raise
 
     def fetch_signature(self, version):
         """
