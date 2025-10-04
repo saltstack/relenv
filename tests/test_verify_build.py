@@ -677,9 +677,7 @@ def test_pip_install_m2crypto_relenv_ssl(
     if m2crypto_version == "0.38.0" and minor_version in ["3.12", "3.13"]:
         pytest.xfail("Fails due to no distutils")
 
-    if ssl.OPENSSL_VERSION_INFO >= (3, 5) and (
-        m2crypto_version.startswith("0.38") or m2crypto_version.startswith("0.44")
-    ):
+    if ssl.OPENSSL_VERSION_INFO >= (3, 5) and m2crypto_version in ["0.38.0", "0.44.0"]:
         pytest.xfail("Openssl Needs newer m2crypto")
 
     _install_ppbt(pyexec)
