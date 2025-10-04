@@ -179,6 +179,10 @@ def test_shebang_tpl_macos():
     assert proc.returncode == 0
 
 
+def test_format_shebang_newline():
+    assert format_shebang("python3", SHEBANG_TPL_LINUX).endswith("\n")
+
+
 def test_relative_interpreter_default_location():
     assert relative_interpreter(
         "/tmp/relenv", "/tmp/relenv/bin", "/tmp/relenv/bin/python3"
