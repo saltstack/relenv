@@ -7,7 +7,6 @@ import json
 import os
 import pathlib
 import shutil
-import ssl
 import subprocess
 import sys
 import textwrap
@@ -666,9 +665,59 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
     assert p.returncode == 0, p.stderr
 
 
+SSLVERSION = """
+import ctypes
+import ctypes.util
+import platform
+
+def get_openssl_version():
+    '''
+    Programmatically discovers the OpenSSL version using ctypes.
+    '''
+    # Determine the library name based on the operating system
+    if platform.system() == "Windows":
+        lib_name = ctypes.util.find_library("libcrypto-3") or ctypes.util.find_library("libcrypto-1_1")
+    else:
+        lib_name = ctypes.util.find_library("crypto")
+
+    if not lib_name:
+        print("Could not find OpenSSL libcrypto library.")
+        return None, None
+
+    libcrypto = ctypes.CDLL(lib_name)
+
+    # Define the C function prototypes
+    libcrypto.OpenSSL_version_num.restype = ctypes.c_ulong
+    libcrypto.OpenSSL_version.argtypes = [ctypes.c_int]
+    libcrypto.OpenSSL_version.restype = ctypes.c_char_p
+
+    # Call the C functions
+    version_num_hex = libcrypto.OpenSSL_version_num()
+    version_str = libcrypto.OpenSSL_version(0).decode("utf-8")
+
+    # Parse the numeric version
+    # The version number format is MNNFFPPS
+    major = (version_num_hex >> 28) & 0xFF
+    minor = (version_num_hex >> 20) & 0xFF
+    patch = (version_num_hex >> 4) & 0xFF
+
+    return (major, minor, patch)
+
+if __name__ == "__main__":
+    print(
+        ",".join([str(x) for x in get_openssl_version()]
+        )
+    )
+"""
+
+
 @pytest.fixture
-def ssl_version():
-    return ssl.OPENSSL_VERSION_INFO
+def ssl_version(pyexec, tmp_path):
+    file = tmp_path / "script.py"
+    file.write_text(SSLVERSION)
+    ret = subprocess.run([pyexec, str(file)], capture_output=True)
+    print(ret)
+    return tuple([int(x) for x in ret.stdout.decode().strip().split(",")])
 
 
 @pytest.mark.skip_unless_on_linux
