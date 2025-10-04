@@ -105,7 +105,7 @@ def format_shebang(python, tpl=SHEBANG_TPL):
     """
     Return a formatted shebang.
     """
-    return tpl.format(python).strip()
+    return tpl.format(python).strip() + "\n"
 
 
 def build_arch():
