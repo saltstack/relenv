@@ -666,18 +666,23 @@ def test_pip_install_m2crypto_system_ssl(pipexec, pyexec):
     assert p.returncode == 0, p.stderr
 
 
+@pytest.fixture
+def ssl_version():
+    return ssl.OPENSSL_VERSION_INFO
+
+
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize(
     "m2crypto_version",
     ["0.38.0", "0.44.0", "0.46.0"],
 )
 def test_pip_install_m2crypto_relenv_ssl(
-    m2crypto_version, pipexec, pyexec, build, build_version, minor_version
+    m2crypto_version, pipexec, pyexec, build, build_version, minor_version, ssl_version
 ):
     if m2crypto_version == "0.38.0" and minor_version in ["3.12", "3.13"]:
         pytest.xfail("Fails due to no distutils")
 
-    if ssl.OPENSSL_VERSION_INFO >= (3, 5) and m2crypto_version in ["0.38.0", "0.44.0"]:
+    if ssl_version >= (3, 5) and m2crypto_version in ["0.38.0", "0.44.0"]:
         pytest.xfail("Openssl Needs newer m2crypto")
 
     _install_ppbt(pyexec)
