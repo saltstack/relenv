@@ -1225,6 +1225,40 @@ def test_install_with_target_shebang(pipexec, build, minor_version):
 
 
 @pytest.mark.skip_unless_on_linux
+def test_install_shebang_pip_24_2(pipexec, build, minor_version):
+    subprocess.run(
+        [str(pipexec), "install", "--upgrade", "pip==24.2"],
+        check=True,
+    )
+    subprocess.run(
+        [str(pipexec), "install", "cowsay"],
+        check=True,
+    )
+    ret = subprocess.run(
+        [str(build / "bin" / "cowsay"), "-t", "moo"],
+        check=False,
+    )
+    assert ret.returncode == 0
+
+
+@pytest.mark.skip_unless_on_linux
+def test_install_shebang_pip_25_2(pipexec, build, minor_version):
+    subprocess.run(
+        [str(pipexec), "install", "--upgrade", "pip==25.2"],
+        check=True,
+    )
+    subprocess.run(
+        [str(pipexec), "install", "cowsay"],
+        check=True,
+    )
+    ret = subprocess.run(
+        [str(build / "bin" / "cowsay"), "-t", "moo"],
+        check=False,
+    )
+    assert ret.returncode == 0
+
+
+@pytest.mark.skip_unless_on_linux
 def test_install_with_target_uninstall(pipexec, build):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
