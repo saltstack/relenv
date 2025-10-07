@@ -38,10 +38,10 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         host:
           - x86_64
           - aarch64
@@ -50,6 +50,8 @@ jobs:
             target: x86_64
           - host: aarch64
             target: aarch64
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     needs:
       - download-dependencies
     name: "Python ${{ matrix.version }}  Linux ${{ matrix.target }} on ${{ matrix.host }}"
@@ -66,10 +68,10 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Dependencies
         run: |
@@ -93,15 +95,20 @@ jobs:
         run: |
           tree $RELENV_DATA/download
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: Build
         run: |
-          venv/bin/python3 -m relenv build --no-pretty --arch=${{ matrix.target }} --python=${{ matrix.version }}
+          venv/bin/python3 -m relenv build --no-pretty --arch=${{ matrix.target }} --python=${{ steps.python-version.outputs.version }}
 
       - name: Linux Logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
           path: logs/*
           retention-days: 5
 
@@ -109,8 +116,8 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ matrix.host == matrix.target  && always() }}
         with:
-          name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.target }}-linux-gnu.tar.xz
+          path: build/${{ steps.python-version.outputs.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           retention-days: 5
 
   build_macos_12_x86_64:
@@ -120,12 +127,14 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         arch:
           - x86_64
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     env:
       RELENV_DATA: ${{ github.workspace }}
     steps:
@@ -155,23 +164,28 @@ jobs:
         run: |
           pip3 install nox
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: Build
         run: |
-          python3 -m relenv build --no-pretty --python=${{ matrix.version }}
+          python3 -m relenv build --no-pretty --python=${{ steps.python-version.outputs.version }}
 
       - name: MacOS Logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos-logs
           path: logs/*
           retention-days: 5
 
-      - name: "Upload artifact: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz"
+      - name: "Upload artifact: build/${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz"
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz
+          path: build/${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz
           retention-days: 5
 
   build_macos_13_arm64:
@@ -183,12 +197,14 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         arch:
           - arm64
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     env:
       RELENV_DATA: ${{ github.workspace }}
     steps:
@@ -218,23 +234,28 @@ jobs:
         run: |
           brew install nox
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: Build
         run: |
-          python3 -m relenv build --no-pretty --python=${{ matrix.version }}
+          python3 -m relenv build --no-pretty --python=${{ steps.python-version.outputs.version }}
 
       - name: MacOS Logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos-logs
           path: logs/*
           retention-days: 5
 
       - name: Python build
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz
+          path: build/${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz
           retention-days: 5
 
   build_windows:
@@ -244,15 +265,17 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         arch:
           - amd64
           - x86
     env:
       RELENV_DATA: ${{ github.workspace }}
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     steps:
       - name: "Throttle Builds"
         if: false
@@ -262,10 +285,10 @@ jobs:
 
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install VS Build Tools
         run: |
@@ -282,23 +305,28 @@ jobs:
         run: |
           python3 -m relenv fetch --python=3.10.15
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$env:GITHUB_OUTPUT"
+
       - name: Build Python with Relenv
         env:
           RELENV_NATIVE_PY_VERSION: 3.10.15
         run: |
-          python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ matrix.version }}
+          python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ steps.python-version.outputs.version }}
 
       - name: Upload Build Logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-windows-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-windows-logs
           path: logs/*
           retention-days: 5
 
       - name: Upload Zipfile
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
-          path: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
+          path: build/${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
           retention-days: 5

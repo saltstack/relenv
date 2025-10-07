@@ -15,10 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         host:
           - x86_64
           - aarch64
@@ -27,6 +27,8 @@ jobs:
             target: x86_64
           - host: aarch64
             target: aarch64
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
 
     name: "Verify Linux"
     runs-on:
@@ -50,15 +52,20 @@ jobs:
           virtualenv venv
           venv/bin/python3 -m pip install nox ppbt
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: Python Version
         run: |
           venv/bin/python3 --version
           venv/bin/python3 -c 'import os; print(os.name)'
 
-      - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz"
+      - name: "Download artifact: build/${{ steps.python-version.outputs.version }}-${{ matrix.target }}-linux-gnu.tar.xz"
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.target }}-linux-gnu.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.target }}-linux-gnu.tar.xz
           path: build/
 
       - name: Verify Build
@@ -70,7 +77,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.host }}-${{ matrix.target }}-linux-gnu-logs
           path: logs/*
           retention-days: 5
 
@@ -83,13 +90,15 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         arch:
           - x86_64
 
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     env:
       RELENV_DATA: ${{ github.workspace }}
 
@@ -105,6 +114,11 @@ jobs:
         run: |
           env
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: Install nox
         run: |
           pip3 install nox
@@ -112,7 +126,7 @@ jobs:
       - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz"
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz
           path: build/
 
       - name: Verify Build
@@ -123,7 +137,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos-logs
           path: logs/*
           retention-days: 5
 
@@ -136,13 +150,15 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         arch:
           - arm64
 
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     env:
       RELENV_DATA: ${{ github.workspace }}
 
@@ -167,10 +183,15 @@ jobs:
         run: |
           brew install nox
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz"
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos.tar.xz
           path: build/
 
       - name: Verify Build
@@ -181,7 +202,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-macos-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-macos-logs
           path: logs/*
           retention-days: 5
 
@@ -194,14 +215,16 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 3.10.18
-          - 3.11.13
-          - 3.12.11
-          - 3.13.5
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
         arch:
           - amd64
           - x86
 
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     env:
       RELENV_DATA: ${{ github.workspace }}
 
@@ -221,10 +244,15 @@ jobs:
         run: |
           pip3 install nox
 
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$env:GITHUB_OUTPUT"
+
       - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz"
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
           path: build/
 
       - name: Verify Build
@@ -236,6 +264,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ${{ matrix.version }}-${{ matrix.arch }}-windows-logs
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-windows-logs
           path: logs/*
           retention-days: 5

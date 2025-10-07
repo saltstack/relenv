@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       url: ${{ steps.output_url.outputs.url }}
+      version: ${{ steps.python-version.outputs.version }}
     steps:
       - name: Download Python Build Artifacts
         uses: actions/download-artifact@v4
@@ -75,91 +76,101 @@ jobs:
         include:
           - platform: linux-gnu
             arch: x86_64
-            python: 3.10.18
+            python: '3.10'
           - platform: linux-gnu
             arch: x86_64
-            python: 3.11.13
+            python: '3.11'
           - platform: linux-gnu
             arch: x86_64
-            python: 3.12.11
+            python: '3.12'
           - platform: linux-gnu
             arch: x86_64
-            python: 3.13.5
+            python: '3.13'
           - platform: linux-gnu
             arch: aarch64
-            python: 3.10.18
+            python: '3.10'
           - platform: linux-gnu
             arch: aarch64
-            python: 3.11.13
+            python: '3.11'
           - platform: linux-gnu
             arch: aarch64
-            python: 3.12.11
+            python: '3.12'
           - platform: linux-gnu
             arch: aarch64
-            python: 3.13.5
+            python: '3.13'
 
           - platform: win
             arch: x86
-            python: 3.10.18
+            python: '3.10'
           - platform: win
             arch: x86
-            python: 3.11.13
+            python: '3.11'
           - platform: win
             arch: x86
-            python: 3.12.11
+            python: '3.12'
           - platform: win
             arch: x86
-            python: 3.13.5
+            python: '3.13'
           - platform: win
             arch: amd64
-            python: 3.10.18
+            python: '3.10'
           - platform: win
             arch: amd64
-            python: 3.11.13
+            python: '3.11'
           - platform: win
             arch: amd64
-            python: 3.12.11
+            python: '3.12'
           - platform: win
             arch: amd64
-            python: 3.13.5
+            python: '3.13'
 
           - platform: macos
             arch: x86_64
-            python: 3.10.18
+            python: '3.10'
           - platform: macos
             arch: x86_64
-            python: 3.11.13
+            python: '3.11'
           - platform: macos
             arch: x86_64
-            python: 3.12.11
+            python: '3.12'
           - platform: macos
             arch: x86_64
-            python: 3.13.5
+            python: '3.13'
           - platform: macos
             arch: arm64
-            python: 3.10.18
+            python: '3.10'
           - platform: macos
             arch: arm64
-            python: 3.11.13
+            python: '3.11'
           - platform: macos
             arch: arm64
-            python: 3.12.11
+            python: '3.12'
           - platform: macos
             arch: arm64
-            python: 3.13.5
+            python: '3.13'
     steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
           path: ./
-      - name: Upload ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+      - name: Upload ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
         id: upload-python-build-assets
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.release.outputs.url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_name: ${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
-          asset_path: ./${{ matrix.python }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+          asset_name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
+          asset_path: ./${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-${{ matrix.platform }}.tar.xz
           asset_content_type: application/tar+xz
