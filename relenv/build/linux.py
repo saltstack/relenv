@@ -378,43 +378,50 @@ def build_python(env, dirs, logfp):
         ]
     )
 
-    # Patch libexpat
-    bash_refresh = pathlib.Path(dirs.source) / "Modules" / "expat" / "refresh.sh"
-    runcmd(
-        [
-            "sed",
-            "-i",
-            's/^expected_libexpat_tag.*$/expected_libexpat_tag="R_2_7_3"/',
-            str(bash_refresh),
-        ]
-    )
-    runcmd(
-        [
-            "sed",
-            "-i",
-            's/^expected_libexpat_ver.*$/expected_libexpat_version="2.7.3"/',
-            str(bash_refresh),
-        ]
-    )
-    expat_hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
-    runcmd(
-        [
-            "sed",
-            "-i",
-            f's/^expected_libexpat_sha.*$/expected_libexpat_sha256="{expat_hash}"/',
-            str(bash_refresh),
-        ]
-    )
-    runcmd([str(bash_refresh)])
+    # Patch libexpat on these versions and below
+    # - 3.10.18
+    # - 3.11.13
+    # - 3.12.11
+    # - 3.13.7
+    update_expat = False
+    relenv_version = Version.parse_string(env["RELENV_PY_MAJOR_VERSION"])
+    if relenv_version <= Version.parse_string("3.10.18"):
+        update_expat = True
+    elif relenv_version <= Version.parse_string("3.11.13"):
+        update_expat = True
+    elif relenv_version <= Version.parse_string("3.12.11"):
+        update_expat = True
+    elif relenv_version <= Version.parse_string("3.13.7"):
+        update_expat = True
 
-    print("#" * 80)
-    expat_root = pathlib.Path(dirs.source) / "Modules" / "expat"
-    runcmd(["cat", str(expat_root / "expat.h")], stderr=logfp, stdout=logfp)
-    runcmd(["cat", str(expat_root / "internal.h")], stderr=logfp, stdout=logfp)
-    runcmd(["cat", str(expat_root / "refresh.sh")], stderr=logfp, stdout=logfp)
-    runcmd(["cat", str(expat_root / "xmlparse.c")], stderr=logfp, stdout=logfp)
-    runcmd(["cat", str(expat_root / "xmlrole.h")], stderr=logfp, stdout=logfp)
-    print("#" * 80)
+    if update_expat:
+        bash_refresh = pathlib.Path(dirs.source) / "Modules" / "expat" / "refresh.sh"
+        runcmd(
+            [
+                "sed",
+                "-i",
+                's/^expected_libexpat_tag.*$/expected_libexpat_tag="R_2_7_3"/',
+                str(bash_refresh),
+            ]
+        )
+        runcmd(
+            [
+                "sed",
+                "-i",
+                's/^expected_libexpat_ver.*$/expected_libexpat_version="2.7.3"/',
+                str(bash_refresh),
+            ]
+        )
+        expat_hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+        runcmd(
+            [
+                "sed",
+                "-i",
+                f's/^expected_libexpat_sha.*$/expected_libexpat_sha256="{expat_hash}"/',
+                str(bash_refresh),
+            ]
+        )
+        runcmd([str(bash_refresh)])
 
     if pathlib.Path("setup.py").exists():
         with tempfile.NamedTemporaryFile(mode="w", suffix="_patch") as patch_file:
@@ -439,9 +446,7 @@ def build_python(env, dirs, logfp):
             "Modules/Setup",
         ]
     )
-    if Version.parse_string(env["RELENV_PY_MAJOR_VERSION"]) <= Version.parse_string(
-        "3.10"
-    ):
+    if relenv_version <= Version.parse_string("3.10"):
         runcmd(
             [
                 "sed",
