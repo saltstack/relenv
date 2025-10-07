@@ -385,7 +385,7 @@ def build_python(env, dirs, logfp):
             "sed",
             "-i",
             's/^expected_libexpat_tag.*$/expected_libexpat_tag="R_2_7_3"',
-            bash_refresh,
+            str(bash_refresh),
         ]
     )
     runcmd(
@@ -393,7 +393,7 @@ def build_python(env, dirs, logfp):
             "sed",
             "-i",
             's/^expected_libexpat_ver.*$/expected_libexpat_version="2.7.3"',
-            bash_refresh,
+            str(bash_refresh),
         ]
     )
     expat_hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
@@ -402,18 +402,18 @@ def build_python(env, dirs, logfp):
             "sed",
             "-i",
             f's/^expected_libexpat_sha.*$/expected_libexpat_sha256="{expat_hash}"',
-            bash_refresh,
+            str(bash_refresh),
         ]
     )
     run_cmd([bash_refresh])
 
     print("#" * 80)
     expat_root = pathlib.Path(dirs.source) / "Modules" / "expat"
-    run_cmd(["cat", expat_root / "expat.h"])
-    run_cmd(["cat", expat_root / "internal.h"])
-    run_cmd(["cat", expat_root / "refresh.sh"])
-    run_cmd(["cat", expat_root / "xmlparse.c"])
-    run_cmd(["cat", expat_root / "xmlrole.h"])
+    run_cmd(["cat", str(expat_root / "expat.h")])
+    run_cmd(["cat", str(expat_root / "internal.h")])
+    run_cmd(["cat", str(expat_root / "refresh.sh")])
+    run_cmd(["cat", str(expat_root / "xmlparse.c")])
+    run_cmd(["cat", str(expat_root / "xmlrole.h")])
     print("#" * 80)
 
     if pathlib.Path("setup.py").exists():
