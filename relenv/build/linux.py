@@ -380,9 +380,31 @@ def build_python(env, dirs, logfp):
 
     # Patch libexpat
     bash_refresh = pathlib.Path(dirs.source) / "Modules" / "expat" / "refresh.sh"
-    runcmd(["sed", "-i", 's/^expected_libexpat_tag.*$\expected_libexpat_tag="R_2_7_3"', bash_refresh])
-    runcmd(["sed", "-i", 's/^expected_libexpat_ver.*$\expected_libexpat_version="2.7.3"', bash_refresh])
-    runcmd(["sed", "-i", 's/^expected_libexpat_sha.*$\expected_libexpat_sha256="821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"', bash_refresh])
+    runcmd(
+        [
+            "sed",
+            "-i",
+            's/^expected_libexpat_tag.*$/expected_libexpat_tag="R_2_7_3"',
+            bash_refresh,
+        ]
+    )
+    runcmd(
+        [
+            "sed",
+            "-i",
+            's/^expected_libexpat_ver.*$/expected_libexpat_version="2.7.3"',
+            bash_refresh,
+        ]
+    )
+    expat_hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+    runcmd(
+        [
+            "sed",
+            "-i",
+            f's/^expected_libexpat_sha.*$/expected_libexpat_sha256="{expat_hash}"',
+            bash_refresh,
+        ]
+    )
     run_cmd([bash_refresh])
 
     print("#" * 80)
