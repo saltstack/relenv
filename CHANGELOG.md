@@ -1,3 +1,13 @@
+0.20.7
+======
+
+* Update LZMA to 5.8.2 (#240)
+* Update ncurses to 6.5 (#242)
+* Update openssl to 3.5.4 (#245)
+* Fix shebang creating to work with pip >=25.2 (#247)
+* Fix python source hash checking (#249)
+
+
 0.20.6
 ======
 
