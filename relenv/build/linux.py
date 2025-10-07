@@ -342,6 +342,31 @@ def build_krb(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def update_expat(version):
+    """
+    Check if the given python version should get an updated libexpat.
+
+    Patch libexpat on these versions and below:
+      - 3.9.23
+      - 3.10.18
+      - 3.11.13
+      - 3.12.11
+      - 3.13.7
+    """
+    relenv_version = Version(env["RELENV_PY_MAJOR_VERSION"])
+    if relenv_version.minor == 9 and relenv_version.micro <= 23:
+        return True
+    elif relenv_version.minor == 10 and relenv_version.micro <= 18:
+        return True
+    elif relenv_version.minor == 11 and relenv_version.micro <= 13:
+        return True
+    elif relenv_version.minor == 12 and relenv_version.micro <= 11:
+        return True
+    elif relenv_version.minor == 13 and relenv_version.micro <= 7:
+        return True
+    return False
+
+
 def build_python(env, dirs, logfp):
     """
     Run the commands to build Python.
@@ -378,26 +403,7 @@ def build_python(env, dirs, logfp):
         ]
     )
 
-    # Patch libexpat on these versions and below
-    # - 3.9.23
-    # - 3.10.18
-    # - 3.11.13
-    # - 3.12.11
-    # - 3.13.7
-    update_expat = False
-    relenv_version = Version(env["RELENV_PY_MAJOR_VERSION"])
-    if relenv_version.minor == 9 and relenv_version.micro <= 23:
-        update_expat = True
-    elif relenv_version.minor == 10 and relenv_version.micro <= 18:
-        update_expat = True
-    elif relenv_version.minor == 11 and relenv_version.micro <= 13:
-        update_expat = True
-    elif relenv_version.minor == 12 and relenv_version.micro <= 11:
-        update_expat = True
-    elif relenv_version.minor == 13 and relenv_version.micro <= 7:
-        update_expat = True
-
-    if update_expat:
+    if update_expat(env["RELENV_PY_MAJOR_VERSION"]):
         bash_refresh = pathlib.Path(dirs.source) / "Modules" / "expat" / "refresh.sh"
         runcmd(
             [
