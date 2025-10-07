@@ -379,19 +379,22 @@ def build_python(env, dirs, logfp):
     )
 
     # Patch libexpat on these versions and below
+    # - 3.9.23
     # - 3.10.18
     # - 3.11.13
     # - 3.12.11
     # - 3.13.7
     update_expat = False
-    relenv_version = Version.parse_string(env["RELENV_PY_MAJOR_VERSION"])
-    if relenv_version <= Version.parse_string("3.10.18"):
+    relenv_version = Version(env["RELENV_PY_MAJOR_VERSION"])
+    if relenv_version.minor == 9 and relenv_version.micro <= 23:
         update_expat = True
-    elif relenv_version <= Version.parse_string("3.11.13"):
+    elif relenv_version.minor == 10 and relenv_version.micro <= 18:
         update_expat = True
-    elif relenv_version <= Version.parse_string("3.12.11"):
+    elif relenv_version.minor == 11 and relenv_version.micro <= 13:
         update_expat = True
-    elif relenv_version <= Version.parse_string("3.13.7"):
+    elif relenv_version.minor == 12 and relenv_version.micro <= 11:
+        update_expat = True
+    elif relenv_version.minor == 13 and relenv_version.micro <= 7:
         update_expat = True
 
     if update_expat:
@@ -446,7 +449,9 @@ def build_python(env, dirs, logfp):
             "Modules/Setup",
         ]
     )
-    if relenv_version <= Version.parse_string("3.10"):
+    if Version.parse_string(env["RELENV_PY_MAJOR_VERSION"]) <= Version.parse_string(
+        "3.10"
+    ):
         runcmd(
             [
                 "sed",
