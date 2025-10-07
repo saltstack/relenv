@@ -353,7 +353,7 @@ def update_expat(version):
       - 3.12.11
       - 3.13.7
     """
-    relenv_version = Version(env["RELENV_PY_MAJOR_VERSION"])
+    relenv_version = Version(version)
     if relenv_version.minor == 9 and relenv_version.micro <= 23:
         return True
     elif relenv_version.minor == 10 and relenv_version.micro <= 18:
@@ -403,7 +403,7 @@ def build_python(env, dirs, logfp):
         ]
     )
 
-    if update_expat(env["RELENV_PY_MAJOR_VERSION"]):
+    if update_expat(env["RELENV_PY_VERSION"]):
         bash_refresh = pathlib.Path(dirs.source) / "Modules" / "expat" / "refresh.sh"
         runcmd(
             [
