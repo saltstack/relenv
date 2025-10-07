@@ -750,6 +750,14 @@ class Version:
         # XXX What if minor was None but micro was an int.
         return _
 
+    def __hash__(self):
+        """
+        Hash of the version.
+
+        Hash the major, minor, and micro attributes.
+        """
+        return hash((self.major, self.minor, self.micro))
+
     @staticmethod
     def parse_string(data):
         """

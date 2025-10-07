@@ -152,7 +152,7 @@ def main(args):
         build_version = requested
     else:
         pyversions = python_versions(args.python)
-        build_version = pyversions[0]
+        build_version = pyversions.keys()[0]
 
     # print(pyversions)
     # print(pyversions[0].major)
@@ -168,6 +168,7 @@ def main(args):
     build.version = str(build_version)
     build.dirs.version = str(build_version)
     build.recipies["python"]["download"].version = str(build_version)
+    build.recipies["python"]["download"].checksum = pyversions[build_version]
 
     if args.check_versions:
         if not CHECK_VERSIONS_SUPPORT:

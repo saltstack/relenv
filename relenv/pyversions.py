@@ -110,7 +110,7 @@ def digest(file):
     """
     SHA-256 digest of file.
     """
-    hsh = hashlib.sha256()
+    hsh = hashlib.sha1()
     with open(file, "rb") as fp:
         hsh.update(fp.read())
     return hsh.hexdigest()
@@ -205,9 +205,9 @@ def _main():
                         out[str(version)] = {url: digest(path)}
 
     if PRINT:
-        vfile.write_text(json.dumps(pyversions))
+        vfile.write_text(json.dumps(pyversions, indent=1))
     elif not CHECK and out:
-        vfile.write_text(json.dumps(out))
+        vfile.write_text(json.dumps(out, indent=1))
 
 
 def create_pyversions(path):
@@ -217,9 +217,41 @@ def create_pyversions(path):
     url = "https://www.python.org/downloads/"
     content = fetch_url_content(url)
     matched = re.findall(r'<a href="/downloads/.*">Python.*</a>', content)
+    cwd = os.getcwd()
     parsed_versions = sorted([_ref_version(_) for _ in matched], reverse=True)
     versions = [_ for _ in parsed_versions if _.major >= 3]
-    path.write_text(json.dumps({"versions": [str(_) for _ in versions]}))
+
+    if path.exists():
+        data = json.loads(path.read_text())
+    else:
+        data = {}
+
+    for version in versions:
+
+        if str(version) in data:
+            continue
+
+        if version <= Version("3.2") and version.micro == 0:
+            url_version = Version(f"{version.major}.{version.minor}")
+        else:
+            url_version = version
+        if version >= Version("3.1.4"):
+            url = ARCHIVE.format(version=url_version, ext="tar.xz")
+        else:
+            url = ARCHIVE.format(version=url_version, ext="tgz")
+        download_path = download_url(url, cwd)
+        sig_path = download_url(f"{url}.asc", cwd)
+        verified = verify_signature(download_path, sig_path)
+        if verified:
+            print(f"Version {version} has digest {digest(download_path)}")
+            data[str(version)] = digest(download_path)
+        else:
+            raise Exception("Signature failed to verify: {url}")
+
+        path.write_text(json.dumps(data, indent=1))
+
+    # path.write_text(json.dumps({"versions": [str(_) for _ in versions]}))
+    path.write_text(json.dumps(data, indent=1))
 
 
 def python_versions(minor=None, create=False, update=False):
@@ -241,11 +273,11 @@ def python_versions(minor=None, create=False, update=False):
     else:
         raise RuntimeError("No versions file found")
     pyversions = json.loads(readfrom.read_text())
-    versions = [Version(_) for _ in pyversions["versions"]]
+    versions = [Version(_) for _ in pyversions]
     if minor:
         mv = Version(minor)
         versions = [_ for _ in versions if _.major == mv.major and _.minor == mv.minor]
-    return versions
+    return {_: pyversions[str(_)] for _ in versions}
 
 
 def setup_parser(subparsers):
@@ -306,7 +338,7 @@ def main(args):
             if not pyversions:
                 print(f"Unknown minor version {requested}")
                 sys.exit(1)
-            build_version = pyversions[0]
+            build_version = list(pyversions.keys())[0]
         print(build_version)
         sys.exit()
 
