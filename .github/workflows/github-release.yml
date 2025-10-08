@@ -21,6 +21,12 @@ jobs:
           name: Source Tarball
           path: dist
 
+      - name: Download Python Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Python Wheel
+          path: dist
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
