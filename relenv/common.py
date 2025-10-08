@@ -18,7 +18,7 @@ import threading
 import time
 
 # relenv package version
-__version__ = "0.20.8"
+__version__ = "0.20.9"
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 

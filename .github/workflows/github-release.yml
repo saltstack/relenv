@@ -13,20 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       url: ${{ steps.output_url.outputs.url }}
-      version: ${{ steps.python-version.outputs.version }}
     steps:
+
       - name: Download Python Build Artifacts
         uses: actions/download-artifact@v4
         with:
           name: Source Tarball
           path: dist
-
-      - name: Download Python Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Python Wheel
-          path: dist
-
 
       - name: Create Release
         id: create_release
@@ -160,7 +153,7 @@ jobs:
       - name: Determine Python Version
         id: python-version
         run: |
-          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.python }})" | tee -a "$GITHUB_OUTPUT"
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
