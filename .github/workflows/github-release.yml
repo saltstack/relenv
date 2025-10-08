@@ -71,6 +71,8 @@ jobs:
     name: Create Github Release
     needs: [release]
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
     strategy:
       matrix:
         include:
@@ -159,6 +161,7 @@ jobs:
         id: python-version
         run: |
           echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$GITHUB_OUTPUT"
+
       - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
