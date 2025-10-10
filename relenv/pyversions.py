@@ -227,6 +227,8 @@ def create_pyversions(path):
         data = {}
 
     for version in versions:
+        if version >= Version("3.14"):
+            continue
 
         if str(version) in data:
             continue
