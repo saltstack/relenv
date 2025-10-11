@@ -340,7 +340,7 @@ def main(args):
             if not pyversions:
                 print(f"Unknown minor version {requested}")
                 sys.exit(1)
-            build_version = list(pyversions.keys())[0]
+            build_version = sorted(list(pyversions.keys()))[-1]
         print(build_version)
         sys.exit()
 

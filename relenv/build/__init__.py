@@ -152,7 +152,7 @@ def main(args):
         build_version = requested
     else:
         pyversions = python_versions(args.python)
-        build_version = pyversions.keys()[0]
+        build_version = sorted(list(pyversions.keys()))[-1]
 
     # print(pyversions)
     # print(pyversions[0].major)

@@ -1,3 +1,9 @@
+0.21.1
+======
+
+* Fix issue determinion micro version from minor
+
+
 0.21.0
 ======
 
