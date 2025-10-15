@@ -358,6 +358,66 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def update_ensurepip(source_dir):
+    """
+    Update bundled dependencies for ensurepip (pip & setuptools).
+    """
+    # Download whl files
+    # pip
+    pip_version = "25.2"
+    whl = f"pip-{pip_version}-py3-none-any.whl"
+    whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
+    url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+    dest = source_dir / "Lib" / "ensurepip" / "_bundled" / whl
+    log.debug("Downloading: %s", url)
+    download_url(url=url, dest=dest)
+
+    # setuptools
+    setuptools_version = "80.9.0"
+    whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
+    whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
+    url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+    dest = source_dir / "Lib" / "ensurepip" / "_bundled" / whl
+    log.debug("Downloading: %s", url)
+    download_url(url=url, dest=dest)
+
+    # Update __init__.py
+    init_file = source_dir / "Lib" / "ensurepip" / "__init__.py"
+    # pip
+    old = "^_PIP_VERSION.*$"
+    new = f'_PIP_VERSION="{pip_version}"'
+    patch_file(path=init_file, old=old, new=new)
+
+    # setuptools
+    old = "^_SETUPTOOLS_VERSION.*$"
+    new = f'_SETUPTOOLS_VERSION="{setuptools_version}"'
+    patch_file(path=init_file, old=old, new=new)
+
+
+def patch_file(path, old, new):
+    """
+    Search a file line by line for a string to replace.
+
+    :param path: Location of the file to search
+    :type path: str
+    :param old: The value that will be replaced
+    :type path: str
+    :param new: The value that will replace the 'old' value.
+    :type path: str
+    """
+    log.debug("Patching file: %s", path)
+    import re
+
+    with open(path, "r") as fp:
+        content = fp.read()
+    new_content = ""
+    for line in content.splitlines():
+        re.sub(old, new, line)
+        new_content += line + os.linesep
+    with open(path, "w") as fp:
+        fp.write(new_content)
+
+
 def tarball_version(href):
     if href.endswith("tar.gz"):
         try:

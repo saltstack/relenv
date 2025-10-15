@@ -6,7 +6,14 @@ The darwin build process.
 import io
 
 from ..common import arches, DARWIN, MACOS_DEVELOPMENT_TARGET
-from .common import runcmd, finalize, build_openssl, build_sqlite, builds
+from .common import (
+    runcmd,
+    finalize,
+    build_openssl,
+    build_sqlite,
+    builds,
+    update_ensurepip,
+)
 
 ARCHES = arches[DARWIN]
 
@@ -45,6 +52,9 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    # Update ensurepip
+    update_ensurepip(dirs.source)
+
     env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"]
     )

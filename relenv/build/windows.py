@@ -10,7 +10,15 @@ import os
 import pathlib
 import tarfile
 import logging
-from .common import runcmd, create_archive, MODULE_DIR, builds, install_runtime
+from .common import (
+    runcmd,
+    create_archive,
+    MODULE_DIR,
+    builds,
+    install_runtime,
+    patch_file,
+    update_ensurepip,
+)
 from ..common import arches, WIN32
 
 log = logging.getLogger(__name__)
@@ -36,39 +44,16 @@ def populate_env(env, dirs):
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
-def patch_file(path, old, new):
-    """
-    Search a file line by line for a string to replace.
-
-    :param path: Location of the file to search
-    :type path: str
-    :param old: The value that will be replaced
-    :type path: str
-    :param new: The value that will replace the 'old' value.
-    :type path: str
-    """
-    import re
-
-    with open(path, "r") as fp:
-        content = fp.read()
-    new_content = ""
-    for line in content.splitlines():
-        re.sub(old, new, line)
-        new_content += line + os.linesep
-    with open(path, "w") as fp:
-        fp.write(new_content)
-
-
 def override_dependency(source, old, new):
     """
-    Overwrite a dependency string for Windoes PCBuild.
+    Overwrite a dependency string for Windows PCBuild.
 
     :param source: Python's source directory
-    :type path: str
+    :type source: str
     :param old: Regular expression to search for
-    :type path: str
+    :type old: str
     :param new: Replacement text
-    :type path: str
+    :type new: str
     """
     patch_file(source / "PCbuild" / "python.props", old, new)
     patch_file(source / "PCbuild" / "get_externals.bat", old, new)
@@ -85,6 +70,9 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    # Update ensurepip
+    update_ensurepip(dirs.source)
+
     # Override default versions
     if env["RELENV_PY_MAJOR_VERSION"] in [
         "3.10",
