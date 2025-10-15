@@ -363,23 +363,22 @@ def update_ensurepip(source_dir):
     Update bundled dependencies for ensurepip (pip & setuptools).
     """
     # Download whl files
+    dest_dir = source_dir / "Lib" / "ensurepip" / "_bundled"
     # pip
     pip_version = "25.2"
     whl = f"pip-{pip_version}-py3-none-any.whl"
     whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
     url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
-    dest = source_dir / "Lib" / "ensurepip" / "_bundled" / whl
     log.debug("Downloading: %s", url)
-    download_url(url=url, dest=dest)
+    download_url(url=url, dest=dest_dir)
 
     # setuptools
     setuptools_version = "80.9.0"
     whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
     whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
     url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
-    dest = source_dir / "Lib" / "ensurepip" / "_bundled" / whl
     log.debug("Downloading: %s", url)
-    download_url(url=url, dest=dest)
+    download_url(url=url, dest=dest_dir)
 
     # Update __init__.py
     init_file = source_dir / "Lib" / "ensurepip" / "__init__.py"
