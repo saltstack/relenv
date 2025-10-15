@@ -365,7 +365,7 @@ def update_ensurepip(source_dir):
     # ensurepip bundle location
     bundle_dir = source_dir / "Lib" / "ensurepip" / "_bundled"
 
-     # Remove existing whl files
+    # Remove existing whl files
     for file in bundle_dir.glob("*.whl"):
         if file.is_file():
             file.unlink()
@@ -376,16 +376,16 @@ def update_ensurepip(source_dir):
     whl = f"pip-{pip_version}-py3-none-any.whl"
     whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
     url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
-    log.debug("Downloading: %s", url)
     download_url(url=url, dest=bundle_dir)
+    assert (bundle_dir / whl).exists()
 
     # setuptools
     setuptools_version = "80.9.0"
     whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
     whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
     url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
-    log.debug("Downloading: %s", url)
     download_url(url=url, dest=bundle_dir)
+    assert (bundle_dir / whl).exists()
 
     # Update __init__.py
     init_file = source_dir / "Lib" / "ensurepip" / "__init__.py"
@@ -398,6 +398,9 @@ def update_ensurepip(source_dir):
     old = "^_SETUPTOOLS_VERSION.*$"
     new = f'_SETUPTOOLS_VERSION="{setuptools_version}"'
     patch_file(path=init_file, old=old, new=new)
+
+    log.debug("ensurepip __init__.py contents:")
+    log.debug(init_file.read_text())
 
 
 def patch_file(path, old, new):
