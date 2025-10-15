@@ -52,9 +52,6 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    # Update ensurepip
-    update_ensurepip(dirs.source)
-
     env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
         prefix=dirs.prefix, ldflags=env["LDFLAGS"]
     )

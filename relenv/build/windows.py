@@ -70,9 +70,6 @@ def build_python(env, dirs, logfp):
     :param logfp: A handle for the log file
     :type logfp: file
     """
-    # Update ensurepip
-    update_ensurepip(dirs.source)
-
     # Override default versions
     if env["RELENV_PY_MAJOR_VERSION"] in [
         "3.10",
@@ -192,6 +189,9 @@ def finalize(env, dirs, logfp):
     sitepackages = dirs.prefix / "Lib" / "site-packages"
 
     install_runtime(sitepackages)
+
+    # update ensurepip
+    update_ensurepip(dirs.prefix)
 
     # Install pip
     python = dirs.prefix / "Scripts" / "python.exe"
