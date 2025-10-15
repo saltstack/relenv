@@ -342,6 +342,31 @@ def build_krb(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def update_expat(version):
+    """
+    Check if the given python version should get an updated libexpat.
+
+    Patch libexpat on these versions and below:
+      - 3.9.23
+      - 3.10.18
+      - 3.11.13
+      - 3.12.11
+      - 3.13.7
+    """
+    relenv_version = Version(version)
+    if relenv_version.minor == 9 and relenv_version.micro <= 23:
+        return True
+    elif relenv_version.minor == 10 and relenv_version.micro <= 18:
+        return True
+    elif relenv_version.minor == 11 and relenv_version.micro <= 13:
+        return True
+    elif relenv_version.minor == 12 and relenv_version.micro <= 11:
+        return True
+    elif relenv_version.minor == 13 and relenv_version.micro <= 7:
+        return True
+    return False
+
+
 def build_python(env, dirs, logfp):
     """
     Run the commands to build Python.
@@ -377,6 +402,35 @@ def build_python(env, dirs, logfp):
             "configure",
         ]
     )
+
+    if update_expat(env["RELENV_PY_VERSION"]):
+        bash_refresh = pathlib.Path(dirs.source) / "Modules" / "expat" / "refresh.sh"
+        runcmd(
+            [
+                "sed",
+                "-i",
+                's/^expected_libexpat_tag.*$/expected_libexpat_tag="R_2_7_3"/',
+                str(bash_refresh),
+            ]
+        )
+        runcmd(
+            [
+                "sed",
+                "-i",
+                's/^expected_libexpat_ver.*$/expected_libexpat_version="2.7.3"/',
+                str(bash_refresh),
+            ]
+        )
+        expat_hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+        runcmd(
+            [
+                "sed",
+                "-i",
+                f's/^expected_libexpat_sha.*$/expected_libexpat_sha256="{expat_hash}"/',
+                str(bash_refresh),
+            ]
+        )
+        runcmd([str(bash_refresh)])
 
     if pathlib.Path("setup.py").exists():
         with tempfile.NamedTemporaryFile(mode="w", suffix="_patch") as patch_file:
