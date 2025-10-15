@@ -6,14 +6,7 @@ The darwin build process.
 import io
 
 from ..common import arches, DARWIN, MACOS_DEVELOPMENT_TARGET
-from .common import (
-    runcmd,
-    finalize,
-    build_openssl,
-    build_sqlite,
-    builds,
-    update_ensurepip,
-)
+from .common import runcmd, finalize, build_openssl, build_sqlite, builds
 
 ARCHES = arches[DARWIN]
 
