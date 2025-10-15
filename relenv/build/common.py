@@ -422,7 +422,7 @@ def patch_file(path, old, new):
     new_content = ""
     for line in content.splitlines():
         re.sub(old, new, line)
-        new_content += line + os.linesep
+        new_content += line + "\n"
     with open(path, "w") as fp:
         fp.write(new_content)
 
