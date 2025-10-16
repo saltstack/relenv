@@ -90,7 +90,9 @@ def build_python(env, dirs, logfp):
         "-p",
         plat,
         "--no-tkinter",
+        "-e",
     ]
+
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
