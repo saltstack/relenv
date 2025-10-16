@@ -393,13 +393,13 @@ def update_ensurepip(source_dir):
     # Update __init__.py
     init_file = source_dir / "Lib" / "ensurepip" / "__init__.py"
     # pip
-    old = "^_PIP_VERSION.*$"
-    new = f'_PIP_VERSION="{pip_version}"'
+    old = "^_PIP_VERSION.*"
+    new = f'_PIP_VERSION = "{pip_version}"'
     patch_file(path=init_file, old=old, new=new)
 
     # setuptools
-    old = "^_SETUPTOOLS_VERSION.*$"
-    new = f'_SETUPTOOLS_VERSION="{setuptools_version}"'
+    old = "^_SETUPTOOLS_VERSION.*"
+    new = f'_SETUPTOOLS_VERSION = "{setuptools_version}"'
     patch_file(path=init_file, old=old, new=new)
 
     log.debug("ensurepip __init__.py contents:")
@@ -424,8 +424,8 @@ def patch_file(path, old, new):
         content = fp.read()
     new_content = ""
     for line in content.splitlines():
-        re.sub(old, new, line)
-        new_content += line + "\n"
+        line = re.sub(old, new, line)
+        new_content += line + os.linesep
     with open(path, "w") as fp:
         fp.write(new_content)
 
