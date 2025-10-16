@@ -365,6 +365,9 @@ def update_ensurepip(source_dir):
     # ensurepip bundle location
     bundle_dir = source_dir / "Lib" / "ensurepip" / "_bundled"
 
+    # Make sure the destination directory exists
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+
     # Remove existing whl files
     for file in bundle_dir.glob("*.whl"):
         if file.is_file():
