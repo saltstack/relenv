@@ -77,6 +77,11 @@ def build_python(env, dirs, logfp):
     ]:
         override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
         override_dependency(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
+        # We don't have a way to pass --organization to build.bat, so we need to
+        # patch it
+        old = f'.*get_externals\.bat"'
+        new = 'get_externals.bat --organization saltstack"'
+        patch_file(dirs.source / "PCbuild" / "build.bat", old=old, new=new)
 
     arch_to_plat = {
         "amd64": "x64",
