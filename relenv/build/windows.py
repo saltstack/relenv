@@ -10,7 +10,15 @@ import os
 import pathlib
 import tarfile
 import logging
-from .common import runcmd, create_archive, MODULE_DIR, builds, install_runtime
+from .common import (
+    runcmd,
+    create_archive,
+    MODULE_DIR,
+    builds,
+    install_runtime,
+    patch_file,
+    update_ensurepip,
+)
 from ..common import arches, WIN32
 
 log = logging.getLogger(__name__)
@@ -36,39 +44,16 @@ def populate_env(env, dirs):
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
-def patch_file(path, old, new):
-    """
-    Search a file line by line for a string to replace.
-
-    :param path: Location of the file to search
-    :type path: str
-    :param old: The value that will be replaced
-    :type path: str
-    :param new: The value that will replace the 'old' value.
-    :type path: str
-    """
-    import re
-
-    with open(path, "r") as fp:
-        content = fp.read()
-    new_content = ""
-    for line in content.splitlines():
-        re.sub(old, new, line)
-        new_content += line + os.linesep
-    with open(path, "w") as fp:
-        fp.write(new_content)
-
-
 def override_dependency(source, old, new):
     """
-    Overwrite a dependency string for Windoes PCBuild.
+    Overwrite a dependency string for Windows PCBuild.
 
     :param source: Python's source directory
-    :type path: str
+    :type source: str
     :param old: Regular expression to search for
-    :type path: str
+    :type old: str
     :param new: Replacement text
-    :type path: str
+    :type new: str
     """
     patch_file(source / "PCbuild" / "python.props", old, new)
     patch_file(source / "PCbuild" / "get_externals.bat", old, new)
@@ -92,6 +77,14 @@ def build_python(env, dirs, logfp):
     ]:
         override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
         override_dependency(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
+        # We don't have a way to pass --organization to build.bat, so we need to
+        # patch it
+        old = r'.*get_externals\.bat"'
+        new = 'get_externals.bat --organization saltstack"'
+        patch_file(dirs.source / "PCbuild" / "build.bat", old=old, new=new)
+
+    # update ensurepip
+    update_ensurepip(dirs.source)
 
     arch_to_plat = {
         "amd64": "x64",
@@ -105,7 +98,9 @@ def build_python(env, dirs, logfp):
         "-p",
         plat,
         "--no-tkinter",
+        "-e",
     ]
+
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
