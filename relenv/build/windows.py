@@ -79,7 +79,7 @@ def build_python(env, dirs, logfp):
         override_dependency(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
         # We don't have a way to pass --organization to build.bat, so we need to
         # patch it
-        old = f'.*get_externals\.bat"'
+        old = r'.*get_externals\.bat"'
         new = 'get_externals.bat --organization saltstack"'
         patch_file(dirs.source / "PCbuild" / "build.bat", old=old, new=new)
 
