@@ -1547,9 +1547,6 @@ def finalize(env, dirs, logfp):
     sitepackages = pymodules / "site-packages"
     install_runtime(sitepackages)
 
-    # update ensurepip
-    update_ensurepip(dirs.prefix)
-
     # Install pip
     python = dirs.prefix / "bin" / "python3"
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
