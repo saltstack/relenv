@@ -4,19 +4,21 @@
 The windows build process.
 """
 import glob
-import shutil
-import sys
+import logging
 import os
 import pathlib
+import shutil
+import sys
 import tarfile
-import logging
 from .common import (
-    runcmd,
-    create_archive,
-    MODULE_DIR,
     builds,
+    create_archive,
+    download_url,
+    extract_archive,
     install_runtime,
+    MODULE_DIR,
     patch_file,
+    runcmd,
     update_ensurepip,
 )
 from ..common import arches, WIN32
@@ -44,7 +46,7 @@ def populate_env(env, dirs):
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
-def override_dependency(source, old, new):
+def update_props(source, old, new):
     """
     Overwrite a dependency string for Windows PCBuild.
 
@@ -56,7 +58,30 @@ def override_dependency(source, old, new):
     :type new: str
     """
     patch_file(source / "PCbuild" / "python.props", old, new)
-    patch_file(source / "PCbuild" / "get_externals.bat", old, new)
+
+
+def get_externals_source(source_root, url):
+    """
+    Download external source code dependency.
+
+    Download source code and extract to the "externals" directory in the root of
+    the python source. Only works with a tarball
+    """
+    externals_dir = source_root / "externals"
+    externals_dir.mkdir(parents=True, exist_ok=True)
+    local_file = download_url(url, str(externals_dir))
+    extract_archive(str(local_file), str(externals_dir))
+    os.path.unlink(str(local_file))
+
+
+def get_externals_bin(source_root, url):
+    """
+    Download external binary dependency.
+
+    Download binaries to the "externals" directory in the root of the python
+    source.
+    """
+    pass
 
 
 def build_python(env, dirs, logfp):
@@ -71,17 +96,30 @@ def build_python(env, dirs, logfp):
     :type logfp: file
     """
     # Override default versions
-    if env["RELENV_PY_MAJOR_VERSION"] in [
-        "3.10",
-        "3.11",
-    ]:
-        override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
-        override_dependency(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
-        # We don't have a way to pass --organization to build.bat, so we need to
-        # patch it
-        old = r'.*get_externals\.bat"'
-        new = 'get_externals.bat --organization saltstack"'
-        patch_file(dirs.source / "PCbuild" / "build.bat", old=old, new=new)
+    # SQLITE
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
+        version = "3.50.4.0"
+        update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-{ver}")
+        url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
+        get_externals_source(dirs.source, url=url)
+        # we need to fix the name of the extracted directory
+        extracted_dir = dirs.source / "externals" / "sqlite-src-3500400"
+        target_dir = dirs.source / "externals" / f"sqlite-{version}"
+        shutil.move(str(extracted_dir), str(target_dir))
+
+    # XZ-Utils
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
+        update_props(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
+        url = "https://github.com/tukaani-project/xz/releases/download/v5.6.2/xz-5.6.2.tar.xz"
+        get_externals_source(dirs.source, url=url)
+
+    # zlib (3.14 uses zlib-ng)
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13"]:
+        # already in python.props with the correct version in all the above versions
+        # update_props(dirs.source, r"zlib-\d+.\d+.\d+", "zlib-1.3.1")
+        # but it still needs to be in "externals"
+        url = "https://zlib.net/zlib-1.3.1.tar.gz"
+        get_externals_source(dirs.source, url=url)
 
     arch_to_plat = {
         "amd64": "x64",
