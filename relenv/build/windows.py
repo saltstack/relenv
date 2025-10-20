@@ -83,9 +83,6 @@ def build_python(env, dirs, logfp):
         new = 'get_externals.bat --organization saltstack"'
         patch_file(dirs.source / "PCbuild" / "build.bat", old=old, new=new)
 
-    # update ensurepip
-    update_ensurepip(dirs.source)
-
     arch_to_plat = {
         "amd64": "x64",
         "x86": "win32",
@@ -197,8 +194,10 @@ def finalize(env, dirs, logfp):
     """
     # Lay down site customize
     sitepackages = dirs.prefix / "Lib" / "site-packages"
-
     install_runtime(sitepackages)
+
+    # update ensurepip
+    update_ensurepip(dirs.prefix / "Lib")
 
     # Install pip
     python = dirs.prefix / "Scripts" / "python.exe"

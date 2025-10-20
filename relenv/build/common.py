@@ -358,40 +358,50 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def update_ensurepip(source_dir):
+def update_ensurepip(lib_dir):
     """
     Update bundled dependencies for ensurepip (pip & setuptools).
     """
     # ensurepip bundle location
-    bundle_dir = source_dir / "Lib" / "ensurepip" / "_bundled"
+    bundle_dir = lib_dir / "ensurepip" / "_bundled"
 
     # Make sure the destination directory exists
     bundle_dir.mkdir(parents=True, exist_ok=True)
 
-    # Remove existing whl files
+    # Detect existing whl files and delete them. Later versions of python don't
+    # include setuptools. We only want to update whl files that are a part of
+    # python
+    update_pip = False
+    update_setuptools = False
     for file in bundle_dir.glob("*.whl"):
-        if file.is_file():
+        if "pip" in file:
+            update_pip = True
+            file.unlink()
+        if "setuptools" in file:
+            update_setuptools = True
             file.unlink()
 
     # Download whl files
     # pip
-    pip_version = "25.2"
-    whl = f"pip-{pip_version}-py3-none-any.whl"
-    whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
-    url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
-    download_url(url=url, dest=bundle_dir)
-    assert (bundle_dir / whl).exists()
+    if update_pip:
+        pip_version = "25.2"
+        whl = f"pip-{pip_version}-py3-none-any.whl"
+        whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
+        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        download_url(url=url, dest=bundle_dir)
+        assert (bundle_dir / whl).exists()
 
     # setuptools
-    setuptools_version = "80.9.0"
-    whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
-    whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
-    url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
-    download_url(url=url, dest=bundle_dir)
-    assert (bundle_dir / whl).exists()
+    if update_setuptools:
+        setuptools_version = "80.9.0"
+        whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
+        whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
+        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        download_url(url=url, dest=bundle_dir)
+        assert (bundle_dir / whl).exists()
 
     # Update __init__.py
-    init_file = source_dir / "Lib" / "ensurepip" / "__init__.py"
+    init_file = lib_dir / "ensurepip" / "__init__.py"
     # pip
     old = "^_PIP_VERSION.*"
     new = f'_PIP_VERSION = "{pip_version}"'
@@ -425,7 +435,7 @@ def patch_file(path, old, new):
     new_content = ""
     for line in content.splitlines():
         line = re.sub(old, new, line)
-        new_content += line + os.linesep
+        new_content += line + "\n"
     with open(path, "w") as fp:
         fp.write(new_content)
 
@@ -1520,6 +1530,9 @@ def finalize(env, dirs, logfp):
     relenv.relocate.main(dirs.prefix, log_file_name=str(dirs.logs / "relocate.py.log"))
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
+
+    # update ensurepip
+    update_ensurepip(libdir)
 
     def find_pythonlib(libdir):
         for root, dirs, files in os.walk(libdir):
