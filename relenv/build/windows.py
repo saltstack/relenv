@@ -58,20 +58,24 @@ def update_props(source, old, new):
     :type new: str
     """
     patch_file(source / "PCbuild" / "python.props", old, new)
+    patch_file(source / "PCbuild" / "get_externals.bat", old, new)
 
 
-def get_externals_source(source_root, url):
+def get_externals_source(externals_dir, url):
     """
     Download external source code dependency.
 
     Download source code and extract to the "externals" directory in the root of
     the python source. Only works with a tarball
     """
-    externals_dir = source_root / "externals"
-    externals_dir.mkdir(parents=True, exist_ok=True)
-    local_file = download_url(url, str(externals_dir))
-    extract_archive(str(local_file), str(externals_dir))
-    os.path.unlink(str(local_file))
+    zips_dir = externals_dir / "zips"
+    zips_dir.mkdir(parents=True, exist_ok=True)
+    local_file = download_url(url=url, dest=str(zips_dir))
+    extract_archive(archive=str(local_file), to_dir=str(externals_dir))
+    try:
+        os.remove(local_file)
+    except OSError:
+        log.exception("Failed to remove temporary file")
 
 
 def get_externals_bin(source_root, url):
@@ -96,30 +100,39 @@ def build_python(env, dirs, logfp):
     :type logfp: file
     """
     # Override default versions
+
+    # Create externals directory
+    externals_dir = dirs.source / "externals"
+    externals_dir.mkdir(parents=True, exist_ok=True)
+
     # SQLITE
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
         version = "3.50.4.0"
-        update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-{ver}")
-        url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
-        get_externals_source(dirs.source, url=url)
-        # we need to fix the name of the extracted directory
-        extracted_dir = dirs.source / "externals" / "sqlite-src-3500400"
-        target_dir = dirs.source / "externals" / f"sqlite-{version}"
-        shutil.move(str(extracted_dir), str(target_dir))
+        target_dir = externals_dir / f"sqlite-{version}"
+        if not target_dir.exists():
+            update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
+            url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
+            get_externals_source(externals_dir=externals_dir, url=url)
+            # # we need to fix the name of the extracted directory
+            extracted_dir = externals_dir / "sqlite-autoconf-3500400"
+            shutil.move(str(extracted_dir), str(target_dir))
 
     # XZ-Utils
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
-        update_props(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
-        url = "https://github.com/tukaani-project/xz/releases/download/v5.6.2/xz-5.6.2.tar.xz"
-        get_externals_source(dirs.source, url=url)
-
-    # zlib (3.14 uses zlib-ng)
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13"]:
-        # already in python.props with the correct version in all the above versions
-        # update_props(dirs.source, r"zlib-\d+.\d+.\d+", "zlib-1.3.1")
-        # but it still needs to be in "externals"
-        url = "https://zlib.net/zlib-1.3.1.tar.gz"
-        get_externals_source(dirs.source, url=url)
+        version = "5.6.2"
+        target_dir = externals_dir / f"xz-{version}"
+        if not target_dir.exists():
+            update_props(dirs.source, r"xz-\d+.\d+.\d+", f"xz-{version}")
+            url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
+            get_externals_source(externals_dir=externals_dir, url=url)
+        # Starting with version v5.5.0, XZ-Utils removed the ability to compile
+        # with MSBuild. We are bringing the config.h from the last version that
+        # had it, 5.4.7
+        config_file = target_dir / "windows" / "config.h"
+        config_file = target_dir / "src" / "common" / "config.h"
+        config_file_source = dirs.root / "_resources" / "xz" / "config.h"
+        if not config_file.exists():
+            shutil.copy(str(config_file_source), str(config_file))
 
     arch_to_plat = {
         "amd64": "x64",
@@ -133,7 +146,6 @@ def build_python(env, dirs, logfp):
         "-p",
         plat,
         "--no-tkinter",
-        "-e",
     ]
 
     log.info("Start PCbuild")
@@ -275,6 +287,7 @@ def finalize(env, dirs, logfp):
         "*.pyd",
         "*.dll",
         "*.lib",
+        "*.whl",
         "/Include/*",
         "/Lib/site-packages/*",
     ]

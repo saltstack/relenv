@@ -336,12 +336,19 @@ def extract_archive(to_dir, archive):
     :type archive: str
     """
     if archive.endswith("tgz"):
+        log.debug("Found tgz archive")
+        read_type = "r:gz"
+    elif archive.endswith("tar.gz"):
+        log.debug("Found tar.gz archive")
         read_type = "r:gz"
     elif archive.endswith("xz"):
+        log.debug("Found xz archive")
         read_type = "r:xz"
     elif archive.endswith("bz2"):
+        log.debug("Found bz2 archive")
         read_type = "r:bz2"
     else:
+        log.warning("Found unknown archive type: %s", archive)
         read_type = "r"
     with tarfile.open(archive, read_type) as t:
         t.extractall(to_dir)
@@ -411,6 +418,7 @@ def fetch_url(url, fp, backoff=3, timeout=30):
         n += 1
         try:
             fin = urllib.request.urlopen(url, timeout=timeout)
+            break
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
@@ -420,6 +428,8 @@ def fetch_url(url, fp, backoff=3, timeout=30):
                 raise RelenvException(f"Error fetching url {url} {exc}")
             log.debug("Unable to connect %s", url)
             time.sleep(n * 10)
+    else:
+        raise RelenvException(f"Error fetching url: {url}")
     log.info("url opened %s", url)
     try:
         total = 0
@@ -434,7 +444,6 @@ def fetch_url(url, fp, backoff=3, timeout=30):
             block = fin.read(10240)
     finally:
         fin.close()
-        # fp.close()
     log.info("Download complete %s", url)
 
 
@@ -514,18 +523,21 @@ def download_url(url, dest, verbose=True, backoff=3, timeout=60):
     """
     local = get_download_location(url, dest)
     if verbose:
-        print(f"Downloading {url} -> {local}")
+        log.debug(f"Downloading {url} -> {local}")
     fout = open(local, "wb")
     try:
         fetch_url(url, fout, backoff, timeout)
     except Exception as exc:
         if verbose:
-            print(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
+            log.error(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
         try:
             os.unlink(local)
         except OSError:
             pass
         raise
+    finally:
+        fout.close()
+        log.debug(f"Finished downloading {url} -> {local}")
     return local
 
 

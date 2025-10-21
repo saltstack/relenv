@@ -368,49 +368,60 @@ def update_ensurepip(lib_dir):
     # Make sure the destination directory exists
     bundle_dir.mkdir(parents=True, exist_ok=True)
 
-    # Detect existing whl files and delete them. Later versions of python don't
-    # include setuptools. We only want to update whl files that are a part of
-    # python
+    # Detect existing whl. Later versions of python don't include setuptools. We
+    # only want to update whl files that python expects to be there
+    pip_version = "25.2"
+    setuptools_version = "80.9.0"
     update_pip = False
     update_setuptools = False
     for file in bundle_dir.glob("*.whl"):
-        if "pip" in file:
-            update_pip = True
-            file.unlink()
-        if "setuptools" in file:
-            update_setuptools = True
-            file.unlink()
 
-    # Download whl files
-    # pip
+        log.debug("Checking whl: %s", str(file))
+        if file.name.startswith("pip-"):
+            found_version = file.name.split("-")[1]
+            log.debug("Found version %s", found_version)
+            if LooseVersion(found_version) >= LooseVersion(pip_version):
+                log.debug("Found correct pip version or newer: %s", found_version)
+            else:
+                file.unlink()
+                update_pip = True
+        if file.name.startswith("setuptools-"):
+            found_version = file.name.split("-")[1]
+            log.debug("Found version %s", found_version)
+            if LooseVersion(found_version) >= LooseVersion(setuptools_version):
+                log.debug(
+                    "Found correct setuptools version or newer: %s", found_version
+                )
+            else:
+                file.unlink()
+                update_setuptools = True
+
+    # Download whl files and update __init__.py
+    init_file = lib_dir / "ensurepip" / "__init__.py"
     if update_pip:
-        pip_version = "25.2"
         whl = f"pip-{pip_version}-py3-none-any.whl"
         whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
         url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
         download_url(url=url, dest=bundle_dir)
         assert (bundle_dir / whl).exists()
 
+        # Update __init__.py
+        old = "^_PIP_VERSION.*"
+        new = f'_PIP_VERSION = "{pip_version}"'
+        patch_file(path=init_file, old=old, new=new)
+
     # setuptools
     if update_setuptools:
-        setuptools_version = "80.9.0"
         whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
         whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
         url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
         download_url(url=url, dest=bundle_dir)
         assert (bundle_dir / whl).exists()
 
-    # Update __init__.py
-    init_file = lib_dir / "ensurepip" / "__init__.py"
-    # pip
-    old = "^_PIP_VERSION.*"
-    new = f'_PIP_VERSION = "{pip_version}"'
-    patch_file(path=init_file, old=old, new=new)
-
-    # setuptools
-    old = "^_SETUPTOOLS_VERSION.*"
-    new = f'_SETUPTOOLS_VERSION = "{setuptools_version}"'
-    patch_file(path=init_file, old=old, new=new)
+        # setuptools
+        old = "^_SETUPTOOLS_VERSION.*"
+        new = f'_SETUPTOOLS_VERSION = "{setuptools_version}"'
+        patch_file(path=init_file, old=old, new=new)
 
     log.debug("ensurepip __init__.py contents:")
     log.debug(init_file.read_text())
