@@ -4,6 +4,7 @@
 The windows build process.
 """
 import glob
+import json
 import logging
 import os
 import pathlib
@@ -120,19 +121,34 @@ def build_python(env, dirs, logfp):
     # XZ-Utils
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
         version = "5.6.2"
+        url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
+        sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
+        ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
         target_dir = externals_dir / f"xz-{version}"
         if not target_dir.exists():
             update_props(dirs.source, r"xz-\d+.\d+.\d+", f"xz-{version}")
-            url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
             get_externals_source(externals_dir=externals_dir, url=url)
         # Starting with version v5.5.0, XZ-Utils removed the ability to compile
         # with MSBuild. We are bringing the config.h from the last version that
         # had it, 5.4.7
-        config_file = target_dir / "windows" / "config.h"
         config_file = target_dir / "src" / "common" / "config.h"
         config_file_source = dirs.root / "_resources" / "xz" / "config.h"
         if not config_file.exists():
             shutil.copy(str(config_file_source), str(config_file))
+        # Update externals.spdx.json with the correct version, url, and hash
+        # This became a thing in 3.12
+        if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+            spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "xz":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
 
     arch_to_plat = {
         "amd64": "x64",
@@ -146,7 +162,6 @@ def build_python(env, dirs, logfp):
         "-p",
         plat,
         "--no-tkinter",
-        "-vv",
     ]
 
     log.info("Start PCbuild")
