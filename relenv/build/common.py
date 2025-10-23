@@ -38,6 +38,7 @@ from relenv.common import (
     runcmd,
     work_dirs,
     fetch_url,
+    Version,
 )
 import relenv.relocate
 
@@ -356,6 +357,99 @@ def build_sqlite(env, dirs, logfp):
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
+
+
+def update_ensurepip(directory):
+    """
+    Update bundled dependencies for ensurepip (pip & setuptools).
+    """
+    # ensurepip bundle location
+    bundle_dir = directory / "ensurepip" / "_bundled"
+
+    # Make sure the destination directory exists
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+
+    # Detect existing whl. Later versions of python don't include setuptools. We
+    # only want to update whl files that python expects to be there
+    pip_version = "25.2"
+    setuptools_version = "80.9.0"
+    update_pip = False
+    update_setuptools = False
+    for file in bundle_dir.glob("*.whl"):
+
+        log.debug("Checking whl: %s", str(file))
+        if file.name.startswith("pip-"):
+            found_version = file.name.split("-")[1]
+            log.debug("Found version %s", found_version)
+            if Version(found_version) >= Version(pip_version):
+                log.debug("Found correct pip version or newer: %s", found_version)
+            else:
+                file.unlink()
+                update_pip = True
+        if file.name.startswith("setuptools-"):
+            found_version = file.name.split("-")[1]
+            log.debug("Found version %s", found_version)
+            if Version(found_version) >= Version(setuptools_version):
+                log.debug(
+                    "Found correct setuptools version or newer: %s", found_version
+                )
+            else:
+                file.unlink()
+                update_setuptools = True
+
+    # Download whl files and update __init__.py
+    init_file = directory / "ensurepip" / "__init__.py"
+    if update_pip:
+        whl = f"pip-{pip_version}-py3-none-any.whl"
+        whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
+        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        download_url(url=url, dest=bundle_dir)
+        assert (bundle_dir / whl).exists()
+
+        # Update __init__.py
+        old = "^_PIP_VERSION.*"
+        new = f'_PIP_VERSION = "{pip_version}"'
+        patch_file(path=init_file, old=old, new=new)
+
+    # setuptools
+    if update_setuptools:
+        whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
+        whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
+        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        download_url(url=url, dest=bundle_dir)
+        assert (bundle_dir / whl).exists()
+
+        # setuptools
+        old = "^_SETUPTOOLS_VERSION.*"
+        new = f'_SETUPTOOLS_VERSION = "{setuptools_version}"'
+        patch_file(path=init_file, old=old, new=new)
+
+    log.debug("ensurepip __init__.py contents:")
+    log.debug(init_file.read_text())
+
+
+def patch_file(path, old, new):
+    """
+    Search a file line by line for a string to replace.
+
+    :param path: Location of the file to search
+    :type path: str
+    :param old: The value that will be replaced
+    :type path: str
+    :param new: The value that will replace the 'old' value.
+    :type path: str
+    """
+    log.debug("Patching file: %s", path)
+    import re
+
+    with open(path, "r") as fp:
+        content = fp.read()
+    new_content = ""
+    for line in content.splitlines():
+        line = re.sub(old, new, line)
+        new_content += line + "\n"
+    with open(path, "w") as fp:
+        fp.write(new_content)
 
 
 def tarball_version(href):
@@ -1457,6 +1551,9 @@ def finalize(env, dirs, logfp):
 
     pymodules = libdir / find_pythonlib(libdir)
 
+    # update ensurepip
+    update_ensurepip(pymodules)
+
     cwd = os.getcwd()
     modname = find_sysconfigdata(pymodules)
     path = sys.path
@@ -1474,6 +1571,7 @@ def finalize(env, dirs, logfp):
     bindir = pathlib.Path(dirs.prefix) / "bin"
     sitepackages = pymodules / "site-packages"
     install_runtime(sitepackages)
+
     # Install pip
     python = dirs.prefix / "bin" / "python3"
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:

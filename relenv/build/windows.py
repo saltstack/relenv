@@ -4,13 +4,23 @@
 The windows build process.
 """
 import glob
-import shutil
-import sys
+import logging
 import os
 import pathlib
+import shutil
+import sys
 import tarfile
-import logging
-from .common import runcmd, create_archive, MODULE_DIR, builds, install_runtime
+from .common import (
+    builds,
+    create_archive,
+    download_url,
+    extract_archive,
+    install_runtime,
+    MODULE_DIR,
+    patch_file,
+    runcmd,
+    update_ensurepip,
+)
 from ..common import arches, WIN32
 
 log = logging.getLogger(__name__)
@@ -36,42 +46,46 @@ def populate_env(env, dirs):
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
-def patch_file(path, old, new):
+def update_props(source, old, new):
     """
-    Search a file line by line for a string to replace.
-
-    :param path: Location of the file to search
-    :type path: str
-    :param old: The value that will be replaced
-    :type path: str
-    :param new: The value that will replace the 'old' value.
-    :type path: str
-    """
-    import re
-
-    with open(path, "r") as fp:
-        content = fp.read()
-    new_content = ""
-    for line in content.splitlines():
-        re.sub(old, new, line)
-        new_content += line + os.linesep
-    with open(path, "w") as fp:
-        fp.write(new_content)
-
-
-def override_dependency(source, old, new):
-    """
-    Overwrite a dependency string for Windoes PCBuild.
+    Overwrite a dependency string for Windows PCBuild.
 
     :param source: Python's source directory
-    :type path: str
+    :type source: str
     :param old: Regular expression to search for
-    :type path: str
+    :type old: str
     :param new: Replacement text
-    :type path: str
+    :type new: str
     """
     patch_file(source / "PCbuild" / "python.props", old, new)
     patch_file(source / "PCbuild" / "get_externals.bat", old, new)
+
+
+def get_externals_source(externals_dir, url):
+    """
+    Download external source code dependency.
+
+    Download source code and extract to the "externals" directory in the root of
+    the python source. Only works with a tarball
+    """
+    zips_dir = externals_dir / "zips"
+    zips_dir.mkdir(parents=True, exist_ok=True)
+    local_file = download_url(url=url, dest=str(zips_dir))
+    extract_archive(archive=str(local_file), to_dir=str(externals_dir))
+    try:
+        os.remove(local_file)
+    except OSError:
+        log.exception("Failed to remove temporary file")
+
+
+def get_externals_bin(source_root, url):
+    """
+    Download external binary dependency.
+
+    Download binaries to the "externals" directory in the root of the python
+    source.
+    """
+    pass
 
 
 def build_python(env, dirs, logfp):
@@ -86,12 +100,39 @@ def build_python(env, dirs, logfp):
     :type logfp: file
     """
     # Override default versions
-    if env["RELENV_PY_MAJOR_VERSION"] in [
-        "3.10",
-        "3.11",
-    ]:
-        override_dependency(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", "sqlite-3.50.4.0")
-        override_dependency(dirs.source, r"xz-\d+.\d+.\d+", "xz-5.6.2")
+
+    # Create externals directory
+    externals_dir = dirs.source / "externals"
+    externals_dir.mkdir(parents=True, exist_ok=True)
+
+    # SQLITE
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
+        version = "3.50.4.0"
+        target_dir = externals_dir / f"sqlite-{version}"
+        if not target_dir.exists():
+            update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
+            url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
+            get_externals_source(externals_dir=externals_dir, url=url)
+            # # we need to fix the name of the extracted directory
+            extracted_dir = externals_dir / "sqlite-autoconf-3500400"
+            shutil.move(str(extracted_dir), str(target_dir))
+
+    # XZ-Utils
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
+        version = "5.6.2"
+        target_dir = externals_dir / f"xz-{version}"
+        if not target_dir.exists():
+            update_props(dirs.source, r"xz-\d+.\d+.\d+", f"xz-{version}")
+            url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
+            get_externals_source(externals_dir=externals_dir, url=url)
+        # Starting with version v5.5.0, XZ-Utils removed the ability to compile
+        # with MSBuild. We are bringing the config.h from the last version that
+        # had it, 5.4.7
+        config_file = target_dir / "windows" / "config.h"
+        config_file = target_dir / "src" / "common" / "config.h"
+        config_file_source = dirs.root / "_resources" / "xz" / "config.h"
+        if not config_file.exists():
+            shutil.copy(str(config_file_source), str(config_file))
 
     arch_to_plat = {
         "amd64": "x64",
@@ -106,6 +147,7 @@ def build_python(env, dirs, logfp):
         plat,
         "--no-tkinter",
     ]
+
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
@@ -202,8 +244,10 @@ def finalize(env, dirs, logfp):
     """
     # Lay down site customize
     sitepackages = dirs.prefix / "Lib" / "site-packages"
-
     install_runtime(sitepackages)
+
+    # update ensurepip
+    update_ensurepip(dirs.prefix / "Lib")
 
     # Install pip
     python = dirs.prefix / "Scripts" / "python.exe"
@@ -243,6 +287,7 @@ def finalize(env, dirs, logfp):
         "*.pyd",
         "*.dll",
         "*.lib",
+        "*.whl",
         "/Include/*",
         "/Lib/site-packages/*",
     ]

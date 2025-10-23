@@ -379,11 +379,11 @@ def build_python(env, dirs, logfp):
     )
 
     if pathlib.Path("setup.py").exists():
-        with tempfile.NamedTemporaryFile(mode="w", suffix="_patch") as patch_file:
-            patch_file.write(PATCH)
-            patch_file.flush()
+        with tempfile.NamedTemporaryFile(mode="w", suffix="_patch") as p_file:
+            p_file.write(PATCH)
+            p_file.flush()
             runcmd(
-                ["patch", "-p0", "-i", patch_file.name],
+                ["patch", "-p0", "-i", p_file.name],
                 env=env,
                 stderr=logfp,
                 stdout=logfp,
