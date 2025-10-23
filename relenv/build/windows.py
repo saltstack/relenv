@@ -146,6 +146,7 @@ def build_python(env, dirs, logfp):
         "-p",
         plat,
         "--no-tkinter",
+        "-vv",
     ]
 
     log.info("Start PCbuild")
