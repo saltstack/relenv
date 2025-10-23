@@ -38,6 +38,7 @@ from relenv.common import (
     runcmd,
     work_dirs,
     fetch_url,
+    Version,
 )
 import relenv.relocate
 
@@ -358,12 +359,12 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def update_ensurepip(lib_dir):
+def update_ensurepip(directory):
     """
     Update bundled dependencies for ensurepip (pip & setuptools).
     """
     # ensurepip bundle location
-    bundle_dir = lib_dir / "ensurepip" / "_bundled"
+    bundle_dir = directory / "ensurepip" / "_bundled"
 
     # Make sure the destination directory exists
     bundle_dir.mkdir(parents=True, exist_ok=True)
@@ -380,7 +381,7 @@ def update_ensurepip(lib_dir):
         if file.name.startswith("pip-"):
             found_version = file.name.split("-")[1]
             log.debug("Found version %s", found_version)
-            if LooseVersion(found_version) >= LooseVersion(pip_version):
+            if Version(found_version) >= Version(pip_version):
                 log.debug("Found correct pip version or newer: %s", found_version)
             else:
                 file.unlink()
@@ -388,7 +389,7 @@ def update_ensurepip(lib_dir):
         if file.name.startswith("setuptools-"):
             found_version = file.name.split("-")[1]
             log.debug("Found version %s", found_version)
-            if LooseVersion(found_version) >= LooseVersion(setuptools_version):
+            if Version(found_version) >= Version(setuptools_version):
                 log.debug(
                     "Found correct setuptools version or newer: %s", found_version
                 )
@@ -397,7 +398,7 @@ def update_ensurepip(lib_dir):
                 update_setuptools = True
 
     # Download whl files and update __init__.py
-    init_file = lib_dir / "ensurepip" / "__init__.py"
+    init_file = directory / "ensurepip" / "__init__.py"
     if update_pip:
         whl = f"pip-{pip_version}-py3-none-any.whl"
         whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
@@ -1542,9 +1543,6 @@ def finalize(env, dirs, logfp):
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
 
-    # update ensurepip
-    update_ensurepip(libdir)
-
     def find_pythonlib(libdir):
         for root, dirs, files in os.walk(libdir):
             for _ in dirs:
@@ -1552,6 +1550,9 @@ def finalize(env, dirs, logfp):
                     return _
 
     pymodules = libdir / find_pythonlib(libdir)
+
+    # update ensurepip
+    update_ensurepip(pymodules)
 
     cwd = os.getcwd()
     modname = find_sysconfigdata(pymodules)

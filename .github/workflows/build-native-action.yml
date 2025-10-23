@@ -298,10 +298,6 @@ jobs:
         run: |
           pip3 install nox
 
-      - name: Install Dependencies
-        run: |
-          pip3 install looseversion packaging
-
       - name: Fetch Native Build
         if: ${{ matrix.arch != 'amd64' }}
         env:
