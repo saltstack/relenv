@@ -110,24 +110,40 @@ def build_python(env, dirs, logfp):
     # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
     # TODO: updating sqlite so SBOM creation is failing. Gating here until we
     # TODO: fix this. Here's the original gate:
-    # TODO: if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
+    # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
         version = "3.50.4.0"
+        url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
+        sha256 = "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18"
+        ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
         target_dir = externals_dir / f"sqlite-{version}"
         if not target_dir.exists():
             update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
-            url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
             get_externals_source(externals_dir=externals_dir, url=url)
             # # we need to fix the name of the extracted directory
             extracted_dir = externals_dir / "sqlite-autoconf-3500400"
             shutil.move(str(extracted_dir), str(target_dir))
+        # Update externals.spdx.json with the correct version, url, and hash
+        # This became a thing in 3.12
+        if env["RELENV_PY_MAJOR_VERSION"] in ["3.12"]:
+            spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "sqlite":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
 
     # XZ-Utils
     # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
     # TODO: updating XZ so SBOM creation is failing. Gating here until we fix
     # TODO: this. Here's the original gate:
-    # TODO: if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
+    # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
         version = "5.6.2"
         url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
         sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
