@@ -107,7 +107,11 @@ def build_python(env, dirs, logfp):
     externals_dir.mkdir(parents=True, exist_ok=True)
 
     # SQLITE
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
+    # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
+    # TODO: updating sqlite so SBOM creation is failing. Gating here until we
+    # TODO: fix this. Here's the original gate:
+    # TODO: if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
         version = "3.50.4.0"
         target_dir = externals_dir / f"sqlite-{version}"
         if not target_dir.exists():
@@ -119,7 +123,11 @@ def build_python(env, dirs, logfp):
             shutil.move(str(extracted_dir), str(target_dir))
 
     # XZ-Utils
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
+    # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
+    # TODO: updating XZ so SBOM creation is failing. Gating here until we fix
+    # TODO: this. Here's the original gate:
+    # TODO: if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
         version = "5.6.2"
         url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
         sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
