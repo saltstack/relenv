@@ -4,8 +4,12 @@
 The ``relenv fetch`` command.
 """
 
+from __future__ import annotations
+
+import argparse
 import os
 import sys
+from collections.abc import Sequence
 
 from .build import platform_module
 from .common import (
@@ -21,7 +25,9 @@ from .common import (
 )
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``fetch`` command.
 
@@ -46,7 +52,12 @@ def setup_parser(subparsers):
     )
 
 
-def fetch(version, triplet, python, check_hosts=CHECK_HOSTS):
+def fetch(
+    version: str,
+    triplet: str,
+    python: str,
+    check_hosts: Sequence[str] = CHECK_HOSTS,
+) -> None:
     """
     Fetch the specified python build.
     """
@@ -66,7 +77,7 @@ def fetch(version, triplet, python, check_hosts=CHECK_HOSTS):
     download_url(url, builddir)
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """
     The entrypoint into the ``relenv fetch`` command.
 

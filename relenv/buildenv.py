@@ -3,8 +3,12 @@
 """
 Helper for building libraries to install into a relenv environment.
 """
+from __future__ import annotations
+
+import argparse
 import json
 import logging
+import os
 import sys
 
 from .common import (
@@ -17,7 +21,9 @@ from .common import (
 log = logging.getLogger()
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``relenv buildenv`` command.
 
@@ -36,14 +42,16 @@ def setup_parser(subparsers):
     )
 
 
-def is_relenv():
+def is_relenv() -> bool:
     """
     True when we are in a relenv environment.
     """
     return hasattr(sys, "RELENV")
 
 
-def buildenv(relenv_path=None):
+def buildenv(
+    relenv_path: str | os.PathLike[str] | None = None,
+) -> dict[str, str]:
     """
     Relenv build environment variable mapping.
     """
@@ -90,7 +98,7 @@ def buildenv(relenv_path=None):
     return env
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """
     The entrypoint into the ``relenv buildenv`` command.
 

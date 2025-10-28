@@ -4,22 +4,30 @@
 """
 Relenv manifest.
 """
+from __future__ import annotations
+
 import hashlib
 import os
+import pathlib
 import sys
 
 
-def manifest(root=None):
+def manifest(root: str | os.PathLike[str] | None = None) -> None:
     """
     List all the file in a relenv and their hashes.
     """
-    if root is None:
-        root = getattr(sys, "RELENV", os.getcwd())
-    for root, dirs, files in os.walk(root):
+    base = (
+        pathlib.Path(root)
+        if root is not None
+        else pathlib.Path(getattr(sys, "RELENV", os.getcwd()))
+    )
+    for dirpath, _dirs, files in os.walk(base):
+        directory = pathlib.Path(dirpath)
         for file in files:
             hsh = hashlib.sha256()
+            file_path = directory / file
             try:
-                with open(root + os.path.sep + file, "rb") as fp:
+                with open(file_path, "rb") as fp:
                     while True:
                         chunk = fp.read(9062)
                         if not chunk:
@@ -27,7 +35,7 @@ def manifest(root=None):
                         hsh.update(chunk)
             except OSError:
                 pass
-            print(f"{root + os.path.sep + file} => {hsh.hexdigest()}")
+            print(f"{file_path} => {hsh.hexdigest()}")
 
 
 if __name__ == "__main__":

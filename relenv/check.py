@@ -3,6 +3,9 @@
 """
 Check the integrety of a relenv environment.
 """
+from __future__ import annotations
+
+import argparse
 import logging
 import pathlib
 import sys
@@ -12,7 +15,9 @@ from . import relocate
 log = logging.getLogger()
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``relenv check`` command.
 
@@ -23,7 +28,7 @@ def setup_parser(subparsers):
     subparser.set_defaults(func=main)
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """
     The entrypoint into the ``relenv check`` command.
 

@@ -3,10 +3,16 @@
 """
 The ``relenv toolchain`` command.
 """
+
+from __future__ import annotations
+
+import argparse
 import sys
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``toolchain`` command.
 
@@ -17,7 +23,7 @@ def setup_parser(subparsers):
     subparser.set_defaults(func=main)
 
 
-def main(*args, **kwargs):
+def main(*args: object, **kwargs: object) -> None:
     """
     Notify users of toolchain command deprecation.
     """
