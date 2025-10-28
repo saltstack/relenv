@@ -4,13 +4,17 @@
 The entrypoint into relenv.
 """
 
+from __future__ import annotations
+
+import argparse
 from argparse import ArgumentParser
+from types import ModuleType
 
 from . import build, buildenv, check, create, fetch, pyversions, toolchain
 from .common import __version__
 
 
-def setup_cli():
+def setup_cli() -> ArgumentParser:
     """
     Build the argparser with its subparsers.
 
@@ -25,9 +29,11 @@ def setup_cli():
         description="Relenv",
     )
     argparser.add_argument("--version", action="version", version=__version__)
-    subparsers = argparser.add_subparsers()
+    subparsers: argparse._SubParsersAction[
+        argparse.ArgumentParser
+    ] = argparser.add_subparsers()
 
-    modules_to_setup = [
+    modules_to_setup: list[ModuleType] = [
         build,
         toolchain,
         create,
@@ -42,7 +48,7 @@ def setup_cli():
     return argparser
 
 
-def main():
+def main() -> None:
     """
     Run the relenv cli and disbatch to subcommands.
     """

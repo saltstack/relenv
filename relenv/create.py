@@ -4,17 +4,21 @@
 The ``relenv create`` command.
 """
 
+from __future__ import annotations
+
+import argparse
 import contextlib
 import os
 import pathlib
 import sys
 import tarfile
+from collections.abc import Iterator
 
 from .common import RelenvException, arches, archived_build, build_arch
 
 
 @contextlib.contextmanager
-def chdir(path):
+def chdir(path: str | os.PathLike[str]) -> Iterator[None]:
     """
     Context manager that changes to the specified directory and back.
 
@@ -35,7 +39,9 @@ class CreateException(RelenvException):
     """
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``create`` command.
 
@@ -66,7 +72,12 @@ def setup_parser(subparsers):
     )
 
 
-def create(name, dest=None, arch=None, version=None):
+def create(
+    name: str,
+    dest: str | os.PathLike[str] | None = None,
+    arch: str | None = None,
+    version: str | None = None,
+) -> None:
     """
     Create a relenv environment.
 
@@ -124,7 +135,7 @@ def create(name, dest=None, arch=None, version=None):
             fp.extract(f, writeto)
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """
     The entrypoint into the ``relenv create`` command.
 

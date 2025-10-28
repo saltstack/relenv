@@ -4,11 +4,14 @@
 A script to ensure the proper rpaths are in place for the relenv environment.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
 import shutil
 import subprocess
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +50,7 @@ LC_LOAD_DYLIB = "LC_LOAD_DYLIB"
 LC_RPATH = "LC_RPATH"
 
 
-def is_macho(path):
+def is_macho(path: str | os.PathLike[str]) -> bool:
     """
     Determines whether the given file is a macho file.
 
@@ -63,7 +66,7 @@ def is_macho(path):
     return magic in [b"\xcf\xfa\xed\xfe"]
 
 
-def is_elf(path):
+def is_elf(path: str | os.PathLike[str]) -> bool:
     """
     Determines whether the given file is an ELF file.
 
@@ -78,7 +81,7 @@ def is_elf(path):
     return magic == b"\x7f\x45\x4c\x46"
 
 
-def parse_otool_l(stdout):
+def parse_otool_l(stdout: str) -> dict[str, list[str | None]]:
     """
     Parse the output of ``otool -l <path>``.
 
@@ -89,9 +92,9 @@ def parse_otool_l(stdout):
     :rtype: dict
     """
     in_cmd = False
-    cmd = None
-    name = None
-    data = {}
+    cmd: Optional[str] = None
+    name: Optional[str] = None
+    data: dict[str, list[str | None]] = {}
     for line in [x.strip() for x in stdout.split("\n")]:
 
         if not line:
@@ -123,7 +126,7 @@ def parse_otool_l(stdout):
     return data
 
 
-def parse_readelf_d(stdout):
+def parse_readelf_d(stdout: str) -> list[str]:
     """
     Parse the output of ``readelf -d <path>``.
 
@@ -141,7 +144,7 @@ def parse_readelf_d(stdout):
     return []
 
 
-def parse_macho(path):
+def parse_macho(path: str | os.PathLike[str]) -> dict[str, list[str | None]] | None:
     """
     Run ``otool -l <path>`` and return its parsed output.
 
@@ -156,11 +159,11 @@ def parse_macho(path):
     )
     stdout = proc.stdout.decode()
     if stdout.find("is not an object file") != -1:
-        return
+        return None
     return parse_otool_l(stdout)
 
 
-def parse_rpath(path):
+def parse_rpath(path: str | os.PathLike[str]) -> list[str]:
     """
     Run ``readelf -d <path>`` and return its parsed output.
 
@@ -176,7 +179,11 @@ def parse_rpath(path):
     return parse_readelf_d(proc.stdout.decode())
 
 
-def handle_macho(path, root_dir, rpath_only):
+def handle_macho(
+    path: str | os.PathLike[str],
+    root_dir: str | os.PathLike[str],
+    rpath_only: bool,
+) -> dict[str, list[str | None]] | None:
     """
     Ensure the given macho file has the correct rpath and is in th correct location.
 
@@ -191,6 +198,8 @@ def handle_macho(path, root_dir, rpath_only):
     """
     obj = parse_macho(path)
     log.info("Processing file %s %r", path, obj)
+    if not obj:
+        return None
     if LC_LOAD_DYLIB in obj:
         for x in obj[LC_LOAD_DYLIB]:
             if path.startswith("@"):
@@ -216,7 +225,9 @@ def handle_macho(path, root_dir, rpath_only):
     return obj
 
 
-def is_in_dir(filepath, directory):
+def is_in_dir(
+    filepath: str | os.PathLike[str], directory: str | os.PathLike[str]
+) -> bool:
     """
     Determines whether a file is contained within a directory.
 
@@ -231,7 +242,11 @@ def is_in_dir(filepath, directory):
     return os.path.realpath(filepath).startswith(os.path.realpath(directory) + os.sep)
 
 
-def patch_rpath(path, new_rpath, only_relative=True):
+def patch_rpath(
+    path: str | os.PathLike[str],
+    new_rpath: str,
+    only_relative: bool = True,
+) -> str | bool:
     """
     Patch the rpath of a given ELF file.
 
@@ -266,7 +281,12 @@ def patch_rpath(path, new_rpath, only_relative=True):
     return ":".join(old_rpath)
 
 
-def handle_elf(path, libs, rpath_only, root=None):
+def handle_elf(
+    path: str | os.PathLike[str],
+    libs: str | os.PathLike[str],
+    rpath_only: bool,
+    root: str | os.PathLike[str] | None = None,
+) -> None:
     """
     Handle the parsing and pathcing of an ELF file.
 
@@ -333,8 +353,12 @@ def handle_elf(path, libs, rpath_only, root=None):
 
 
 def main(
-    root, libs_dir=None, rpath_only=True, log_level="DEBUG", log_file_name="<stdout>"
-):
+    root: str | os.PathLike[str],
+    libs_dir: str | os.PathLike[str] | None = None,
+    rpath_only: bool = True,
+    log_level: str = "DEBUG",
+    log_file_name: str = "<stdout>",
+) -> None:
     """
     The entrypoint into the relocate script.
 
@@ -364,7 +388,7 @@ def main(
         libs_dir = pathlib.Path(root_dir, "lib")
     libs_dir = str(pathlib.Path(libs_dir).resolve())
     rpath_only = rpath_only
-    processed = {}
+    processed: dict[str, dict[str, list[str | None]] | None] = {}
     found = True
     while found:
         found = False

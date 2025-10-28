@@ -11,6 +11,9 @@ Versions utility.
 #    )
 #
 
+from __future__ import annotations
+
+import argparse
 import hashlib
 import json
 import logging
@@ -20,6 +23,7 @@ import re
 import subprocess
 import sys
 import time
+from typing import Any
 
 from relenv.common import Version, check_url, download_url, fetch_url_content
 
@@ -34,16 +38,16 @@ KEYSERVERS = [
 ARCHIVE = "https://www.python.org/ftp/python/{version}/Python-{version}.{ext}"
 
 
-def _ref_version(x):
+def _ref_version(x: str) -> Version:
     _ = x.split("Python ", 1)[1].split("<", 1)[0]
     return Version(_)
 
 
-def _ref_path(x):
+def _ref_path(x: str) -> str:
     return x.split('href="')[1].split('"')[0]
 
 
-def _release_urls(version, gzip=False):
+def _release_urls(version: Version, gzip: bool = False) -> tuple[str, str | None]:
     if gzip:
         tarball = f"https://www.python.org/ftp/python/{version}/Python-{version}.tgz"
     else:
@@ -54,7 +58,7 @@ def _release_urls(version, gzip=False):
     return tarball, f"{tarball}.asc"
 
 
-def _receive_key(keyid, server):
+def _receive_key(keyid: str, server: str) -> bool:
     proc = subprocess.run(
         ["gpg", "--keyserver", server, "--recv-keys", keyid], capture_output=True
     )
@@ -63,25 +67,28 @@ def _receive_key(keyid, server):
     return False
 
 
-def _get_keyid(proc):
+def _get_keyid(proc: subprocess.CompletedProcess[bytes]) -> str | None:
     try:
         err = proc.stderr.decode()
         return err.splitlines()[1].rsplit(" ", 1)[-1]
     except (AttributeError, IndexError):
-        return False
+        return None
 
 
-def verify_signature(path, signature):
+def verify_signature(
+    path: str | os.PathLike[str],
+    signature: str | os.PathLike[str],
+) -> bool:
     """
     Verify gpg signature.
     """
     proc = subprocess.run(["gpg", "--verify", signature, path], capture_output=True)
     keyid = _get_keyid(proc)
     if proc.returncode == 0:
-        print(f"Valid signature {path} {keyid}")
+        print(f"Valid signature {path} {keyid or ''}")
         return True
     err = proc.stderr.decode()
-    if "No public key" in err:
+    if keyid and "No public key" in err:
         for server in KEYSERVERS:
             if _receive_key(keyid, server):
                 print(f"found public key {keyid} on {server}")
@@ -106,7 +113,7 @@ VERSION = None  # '3.13.2'
 UPDATE = False
 
 
-def digest(file):
+def digest(file: str | os.PathLike[str]) -> str:
     """
     SHA-256 digest of file.
     """
@@ -116,9 +123,9 @@ def digest(file):
     return hsh.hexdigest()
 
 
-def _main():
+def _main() -> None:
 
-    pyversions = {"versions": []}
+    pyversions: dict[str, Any] = {"versions": []}
 
     vfile = pathlib.Path(".pyversions")
     cfile = pathlib.Path(".content")
@@ -130,6 +137,8 @@ def _main():
         content = fetch_url_content(url)
         cfile.write_text(content)
         tsfile.write_text(str(ts))
+        pyversions = {"versions": []}
+        vfile.write_text(json.dumps(pyversions, indent=1))
     elif CHECK:
         ts = int(tsfile.read_text())
         if check_url(url, timestamp=ts):
@@ -152,7 +161,7 @@ def _main():
     versions = [_ for _ in parsed_versions if _.major >= 3]
     cwd = os.getcwd()
 
-    out = {}
+    out: dict[str, dict[str, str]] = {}
 
     for version in versions:
         if VERSION and Version(VERSION) != version:
@@ -210,7 +219,7 @@ def _main():
         vfile.write_text(json.dumps(out, indent=1))
 
 
-def create_pyversions(path):
+def create_pyversions(path: pathlib.Path) -> None:
     """
     Create python-versions.json file.
     """
@@ -222,7 +231,7 @@ def create_pyversions(path):
     versions = [_ for _ in parsed_versions if _.major >= 3]
 
     if path.exists():
-        data = json.loads(path.read_text())
+        data: dict[str, str] = json.loads(path.read_text())
     else:
         data = {}
 
@@ -256,12 +265,20 @@ def create_pyversions(path):
     path.write_text(json.dumps(data, indent=1))
 
 
-def python_versions(minor=None, create=False, update=False):
+def python_versions(
+    minor: str | None = None,
+    *,
+    create: bool = False,
+    update: bool = False,
+) -> dict[Version, str]:
     """
     List python versions.
     """
     packaged = pathlib.Path(__file__).parent / "python-versions.json"
     local = pathlib.Path("~/.local/relenv/python-versions.json")
+
+    if update:
+        create = True
 
     if create:
         create_pyversions(packaged)
@@ -279,10 +296,12 @@ def python_versions(minor=None, create=False, update=False):
     if minor:
         mv = Version(minor)
         versions = [_ for _ in versions if _.major == mv.major and _.minor == mv.minor]
-    return {_: pyversions[str(_)] for _ in versions}
+    return {version: pyversions[str(version)] for version in versions}
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``versions`` command.
 
@@ -316,7 +335,7 @@ def setup_parser(subparsers):
     )
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """
     Versions utility main method.
     """
