@@ -332,20 +332,23 @@ def build_python(env, dirs, logfp):
     # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
     # TODO: updating sqlite so SBOM creation is failing. Gating here until we
     # TODO: fix this. Here's the original gate:
-    # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
+    # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
         update_sqlite(dirs=dirs, env=env)
 
     # XZ-Utils
     # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
     # TODO: updating XZ so SBOM creation is failing. Gating here until we fix
     # TODO: this. Here's the original gate:
-    # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
+    # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
         update_xz(dirs=dirs, env=env)
 
-    if update_expat_check(env=env):
-        update_expat(dirs=dirs, env=env)
+    # TODO: This was my attempt to fix the expat error during build... it failed
+    # TODO: so we're just skipping for now.
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
+        if update_expat_check(env=env):
+            update_expat(dirs=dirs, env=env)
 
     arch_to_plat = {
         "amd64": "x64",
