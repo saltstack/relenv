@@ -11,6 +11,7 @@ import pathlib
 import shutil
 import sys
 import tarfile
+
 from .common import (
     builds,
     create_archive,
@@ -22,7 +23,7 @@ from .common import (
     runcmd,
     update_ensurepip,
 )
-from ..common import arches, WIN32
+from ..common import arches, WIN32, Version
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +90,227 @@ def get_externals_bin(source_root, url):
     pass
 
 
+def update_sqlite(dirs, env):
+    """
+    Update the SQLITE library.
+    """
+    version = "3.50.4.0"
+    url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
+    sha256 = "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18"
+    ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
+    target_dir = dirs.source / "externals" / f"sqlite-{version}"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        # # we need to fix the name of the extracted directory
+        extracted_dir = dirs.source / "externals" / "sqlite-autoconf-3500400"
+        shutil.move(str(extracted_dir), str(target_dir))
+    # Update externals.spdx.json with the correct version, url, and hash
+    # This became a thing in 3.12
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        with open(str(spdx_json), "r") as f:
+            data = json.load(f)
+            for pkg in data["packages"]:
+                if pkg["name"] == "sqlite":
+                    pkg["versionInfo"] = version
+                    pkg["downloadLocation"] = url
+                    pkg["checksums"][0]["checksumValue"] = sha256
+                    pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+        with open(str(spdx_json), "w") as f:
+            json.dump(data, f, indent=2)
+
+
+def update_xz(dirs, env):
+    """
+    Update the XZ library.
+    """
+    version = "5.6.2"
+    url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
+    sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
+    ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
+    target_dir = dirs.source / "externals" / f"xz-{version}"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        update_props(dirs.source, r"xz-\d+.\d+.\d+", f"xz-{version}")
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+    # Starting with version v5.5.0, XZ-Utils removed the ability to compile
+    # with MSBuild. We are bringing the config.h from the last version that
+    # had it, 5.4.7
+    config_file = target_dir / "src" / "common" / "config.h"
+    config_file_source = dirs.root / "_resources" / "xz" / "config.h"
+    if not config_file.exists():
+        shutil.copy(str(config_file_source), str(config_file))
+    # Update externals.spdx.json with the correct version, url, and hash
+    # This became a thing in 3.12
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        with open(str(spdx_json), "r") as f:
+            data = json.load(f)
+            for pkg in data["packages"]:
+                if pkg["name"] == "xz":
+                    pkg["versionInfo"] = version
+                    pkg["downloadLocation"] = url
+                    pkg["checksums"][0]["checksumValue"] = sha256
+                    pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+        with open(str(spdx_json), "w") as f:
+            json.dump(data, f, indent=2)
+
+
+def update_expat(dirs, env):
+    """
+    Update the EXPAT library.
+    """
+    # Patch <src>/Modules/expat/refresh.sh. When the SBOM is created, refresh.sh
+    # is scanned for the expat version, even though it doesn't run on Windows.
+    version = "2.7.3"
+    hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+    url = f'https://github.com/libexpat/libexpat/releases/download/R_{version.replace(".", "_")}/expat-{version}.tar.xz'
+    bash_refresh = dirs.source / "Modules" / "expat" / "refresh.sh"
+    old = r'expected_libexpat_tag="R_\d+_\d+_\d"'
+    new = f'expected_libexpat_tag="R_{version.replace(".", "_")}"'
+    patch_file(bash_refresh, old=old, new=new)
+    old = r'expected_libexpat_version="\d+.\d+.\d"'
+    new = f'expected_libexpat_version="{version}"'
+    patch_file(bash_refresh, old=old, new=new)
+    old = 'expected_libexpat_sha256=".*"'
+    new = f'expected_libexpat_sha256="{hash}"'
+    patch_file(bash_refresh, old=old, new=new)
+    get_externals_source(externals_dir=dirs.source / "Modules" / "expat", url=url)
+    # Copy *.h and *.c to expat directory
+    expat_lib_dir = dirs.source / "Modules" / "expat" / f"expat-{version}" / "lib"
+    expat_dir = dirs.source / "Modules" / "expat"
+    for file in glob.glob(str(expat_lib_dir / "*.h")):
+        if expat_dir / os.path.basename(file):
+            (expat_dir / os.path.basename(file)).unlink()
+        shutil.move(file, str(expat_dir))
+    for file in glob.glob(str(expat_lib_dir / "*.c")):
+        if expat_dir / os.path.basename(file):
+            (expat_dir / os.path.basename(file)).unlink()
+        shutil.move(file, str(expat_dir))
+    # Update sbom.spdx.json with the correct hashes. This became a thing in 3.12
+    # python Tools/build/generate_sbom.py doesn't work because it requires a git
+    # repository, so we have to do it manually.
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+        checksums = {
+            "Modules/expat/expat.h": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "a4395dd0589a97aab0904f7a5f5dc5781a086aa2",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "610b844bbfa3ec955772cc825db4d4db470827d57adcb214ad372d0eaf00e591",
+                },
+            ],
+            "Modules/expat/expat_external.h": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "8fdf2e79a7ab46a3c76c74ed7e5fe641cbef308d",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "ffb960af48b80935f3856a16e87023524b104f7fc1e58104f01db88ba7bfbcc9",
+                },
+            ],
+            "Modules/expat/internal.h": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "7dce7d98943c5db33ae05e54801dcafb4547b9dd",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "6bfe307d52e7e4c71dbc30d3bd902a4905cdd83bbe4226a7e8dfa8e4c462a157",
+                },
+            ],
+            "Modules/expat/refresh.sh": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "71812ca27328697a8dcae1949cd638717538321a",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "64fd1368de41e4ebc14593c65f5a676558aed44bd7d71c43ae05d06f9086d3b0",
+                },
+            ],
+            "Modules/expat/xmlparse.c": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "4c81a1f04fc653877c63c834145c18f93cd95f3e",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "04a379615f476d55f95ca1853107e20627b48ca4afe8d0fd5981ac77188bf0a6",
+                },
+            ],
+            "Modules/expat/xmlrole.h": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "ac2964cca107f62dd133bfd4736a9a17defbc401",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "92e41f373b67f6e0dcd7735faef3c3f1e2c17fe59e007e6b74beef6a2e70fa88",
+                },
+            ],
+            "Modules/expat/xmltok.c": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "1e2d35d90a1c269217f83d3bdf3c71cc22cb4c3f",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "98d0fc735041956cc2e7bbbe2fb8f03130859410e0aee5e8015f406a37c02a3c",
+                },
+            ],
+            "Modules/expat/xmltok.h": [
+                {
+                    "algorithm": "SHA1",
+                    "checksumValue": "d126831eaa5158cff187a8c93f4bc1c8118f3b17",
+                },
+                {
+                    "algorithm": "SHA256",
+                    "checksumValue": "91bf003a725a675761ea8d92cebc299a76fd28c3a950572f41bc7ce5327ee7b5",
+                },
+            ],
+        }
+        spdx_json = dirs.source / "Misc" / "sbom.spdx.json"
+        with open(str(spdx_json), "r") as f:
+            data = json.load(f)
+            for file in data["files"]:
+                if file["fileName"] in checksums.keys():
+                    print(file["fileName"])
+                    file["checksums"] = checksums[file["fileName"]]
+        with open(str(spdx_json), "w") as f:
+            json.dump(data, f, indent=2)
+
+
+def update_expat_check(env):
+    """
+    Check if the given python version should get an updated libexpat.
+
+    Patch libexpat on these versions and below:
+      - 3.9.23
+      - 3.10.18
+      - 3.11.13
+      - 3.12.11
+      - 3.13.7
+    """
+    relenv_version = Version(env["RELENV_PY_VERSION"])
+    if relenv_version.minor == 9 and relenv_version.micro <= 23:
+        return True
+    elif relenv_version.minor == 10 and relenv_version.micro <= 18:
+        return True
+    elif relenv_version.minor == 11 and relenv_version.micro <= 13:
+        return True
+    elif relenv_version.minor == 12 and relenv_version.micro <= 11:
+        return True
+    elif relenv_version.minor == 13 and relenv_version.micro <= 7:
+        return True
+    return False
+
+
 def build_python(env, dirs, logfp):
     """
     Run the commands to build Python.
@@ -112,31 +334,7 @@ def build_python(env, dirs, logfp):
     # TODO: fix this. Here's the original gate:
     # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12"]:
-        version = "3.50.4.0"
-        url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
-        sha256 = "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18"
-        ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
-        target_dir = externals_dir / f"sqlite-{version}"
-        if not target_dir.exists():
-            update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
-            get_externals_source(externals_dir=externals_dir, url=url)
-            # # we need to fix the name of the extracted directory
-            extracted_dir = externals_dir / "sqlite-autoconf-3500400"
-            shutil.move(str(extracted_dir), str(target_dir))
-        # Update externals.spdx.json with the correct version, url, and hash
-        # This became a thing in 3.12
-        if env["RELENV_PY_MAJOR_VERSION"] in ["3.12"]:
-            spdx_json = dirs.source / "Misc" / "externals.spdx.json"
-            with open(str(spdx_json), "r") as f:
-                data = json.load(f)
-                for pkg in data["packages"]:
-                    if pkg["name"] == "sqlite":
-                        pkg["versionInfo"] = version
-                        pkg["downloadLocation"] = url
-                        pkg["checksums"][0]["checksumValue"] = sha256
-                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
-            with open(str(spdx_json), "w") as f:
-                json.dump(data, f, indent=2)
+        update_sqlite(dirs=dirs, env=env)
 
     # XZ-Utils
     # TODO: Python 3.12 started creating an SBOM. We're doing something wrong
@@ -144,35 +342,10 @@ def build_python(env, dirs, logfp):
     # TODO: this. Here's the original gate:
     # if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11"]:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.10", "3.11", "3.12", "3.13", "3.14"]:
-        version = "5.6.2"
-        url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
-        sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
-        ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
-        target_dir = externals_dir / f"xz-{version}"
-        if not target_dir.exists():
-            update_props(dirs.source, r"xz-\d+.\d+.\d+", f"xz-{version}")
-            get_externals_source(externals_dir=externals_dir, url=url)
-        # Starting with version v5.5.0, XZ-Utils removed the ability to compile
-        # with MSBuild. We are bringing the config.h from the last version that
-        # had it, 5.4.7
-        config_file = target_dir / "src" / "common" / "config.h"
-        config_file_source = dirs.root / "_resources" / "xz" / "config.h"
-        if not config_file.exists():
-            shutil.copy(str(config_file_source), str(config_file))
-        # Update externals.spdx.json with the correct version, url, and hash
-        # This became a thing in 3.12
-        if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
-            spdx_json = dirs.source / "Misc" / "externals.spdx.json"
-            with open(str(spdx_json), "r") as f:
-                data = json.load(f)
-                for pkg in data["packages"]:
-                    if pkg["name"] == "xz":
-                        pkg["versionInfo"] = version
-                        pkg["downloadLocation"] = url
-                        pkg["checksums"][0]["checksumValue"] = sha256
-                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
-            with open(str(spdx_json), "w") as f:
-                json.dump(data, f, indent=2)
+        update_xz(dirs=dirs, env=env)
+
+    if update_expat_check(env=env):
+        update_expat(dirs=dirs, env=env)
 
     arch_to_plat = {
         "amd64": "x64",

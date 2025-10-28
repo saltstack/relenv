@@ -529,7 +529,7 @@ def download_url(url, dest, verbose=True, backoff=3, timeout=60):
         fetch_url(url, fout, backoff, timeout)
     except Exception as exc:
         if verbose:
-            log.error(f"Unable to download: {url} {exc}", file=sys.stderr, flush=True)
+            log.error("Unable to download: %s\n%s", url, exc)
         try:
             os.unlink(local)
         except OSError:
