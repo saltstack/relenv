@@ -750,7 +750,66 @@ def wrap_req_install(name):
     mod = importlib.import_module(name)
 
     def wrap(func):
-        if mod.InstallRequirement.install.__code__.co_argcount == 9:
+        if mod.InstallRequirement.install.__code__.co_argcount == 7:
+
+            @functools.wraps(func)
+            def wrapper(
+                self,
+                root=None,
+                home=None,
+                prefix=None,
+                warn_script_location=True,
+                use_user_site=False,
+                pycompile=True,
+            ):
+                try:
+                    if TARGET.TARGET:
+                        TARGET.INSTALL = True
+                        home = TARGET.PATH
+                    return func(
+                        self,
+                        root,
+                        home,
+                        prefix,
+                        warn_script_location,
+                        use_user_site,
+                        pycompile,
+                    )
+                finally:
+                    TARGET.INSTALL = False
+
+        elif mod.InstallRequirement.install.__code__.co_argcount == 8:
+
+            @functools.wraps(func)
+            def wrapper(
+                self,
+                global_options=None,
+                root=None,
+                home=None,
+                prefix=None,
+                warn_script_location=True,
+                use_user_site=False,
+                pycompile=True,
+            ):
+                try:
+                    if TARGET.TARGET:
+                        TARGET.INSTALL = True
+                        home = TARGET.PATH
+                    return func(
+                        self,
+                        global_options,
+                        root,
+                        home,
+                        prefix,
+                        warn_script_location,
+                        use_user_site,
+                        pycompile,
+                    )
+                finally:
+                    TARGET.INSTALL = False
+
+        else:
+            # Oldest version of this method sigature with 9 arguments.
 
             @functools.wraps(func)
             def wrapper(
@@ -771,36 +830,6 @@ def wrap_req_install(name):
                     return func(
                         self,
                         install_options,
-                        global_options,
-                        root,
-                        home,
-                        prefix,
-                        warn_script_location,
-                        use_user_site,
-                        pycompile,
-                    )
-                finally:
-                    TARGET.INSTALL = False
-
-        else:
-
-            @functools.wraps(func)
-            def wrapper(
-                self,
-                global_options=None,
-                root=None,
-                home=None,
-                prefix=None,
-                warn_script_location=True,
-                use_user_site=False,
-                pycompile=True,
-            ):
-                try:
-                    if TARGET.TARGET:
-                        TARGET.INSTALL = True
-                        home = TARGET.PATH
-                    return func(
-                        self,
                         global_options,
                         root,
                         home,
@@ -845,8 +874,8 @@ def install_cargo_config():
     # load the ssl module. Causing out setup_openssl method to fail to load
     # fips module.
     dirs = common().work_dirs()
-    triplet = common().get_triplet()
     cargo_home = dirs.data / "cargo"
+    triplet = common().get_triplet()
 
     toolchain = common().get_toolchain()
     if not toolchain:
