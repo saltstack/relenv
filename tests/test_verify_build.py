@@ -1863,12 +1863,12 @@ def test_import_ssl_module(pyexec):
 
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize("pip_version", ["25.2", "25.3"])
-def test_install_setuptools_25_2_to_25_3(pipexec, build, minor_version):
+def test_install_setuptools_25_2_to_25_3(pipexec, build, minor_version, pip_version):
     """
     Validate we handle the changes to pip._internal.req.InstallRequirement.install signature.
     """
     subprocess.run(
-        [str(pipexec), "install", "--upgrade", "pip==25.2"],
+        [str(pipexec), "install", "--upgrade", f"pip=={pip_version}"],
         check=True,
     )
     subprocess.run(
