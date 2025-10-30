@@ -389,21 +389,21 @@ def install_legacy_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
 
     @functools.wraps(func)
     def wrapper(
-        install_options,
-        global_options,
-        root,
-        home,
-        prefix,
-        use_user_site,
-        pycompile,
-        scheme,
-        setup_py_path,
-        isolated,
-        req_name,
-        build_env,
-        unpacked_source_directory,
-        req_description,
-    ):
+        install_options: Any,
+        global_options: Any,
+        root: Any,
+        home: Any,
+        prefix: Any,
+        use_user_site: Any,
+        pycompile: Any,
+        scheme: Any,
+        setup_py_path: Any,
+        isolated: Any,
+        req_name: Any,
+        build_env: Any,
+        unpacked_source_directory: Any,
+        req_description: Any,
+    ) -> Any:
 
         pkginfo = pathlib.Path(setup_py_path).parent / "PKG-INFO"
         with open(pkginfo) as fp:
@@ -489,7 +489,7 @@ class Wrapper:
         self.matcher = matcher
         self.loading = _loading
 
-    def matches(self, module: str) -> bool:
+    def matches(self: "Wrapper", module: str) -> bool:
         """
         Check if wrapper metches module being imported.
         """
@@ -497,7 +497,7 @@ class Wrapper:
             return module.startswith(self.module)
         return self.module == module
 
-    def __call__(self, module_name: str) -> ModuleType:
+    def __call__(self: "Wrapper", module_name: str) -> ModuleType:
         """
         Preform the wrapper operation.
         """
@@ -522,7 +522,7 @@ class RelenvImporter:
         self._loads: Dict[str, ModuleType] = _loads
 
     def find_spec(
-        self,
+        self: "RelenvImporter",
         module_name: str,
         package_path: Optional[Sequence[str]] = None,
         target: Any = None,
@@ -537,7 +537,9 @@ class RelenvImporter:
                 return importlib.util.spec_from_loader(module_name, self)
 
     def find_module(
-        self, module_name: str, package_path: Optional[Sequence[str]] = None
+        self: "RelenvImporter",
+        module_name: str,
+        package_path: Optional[Sequence[str]] = None,
     ) -> Optional["RelenvImporter"]:
         """
         Find modules being imported.
@@ -548,26 +550,29 @@ class RelenvImporter:
                 wrapper.loading = True
                 return self
 
-    def load_module(self, name: str) -> ModuleType:
+    def load_module(self: "RelenvImporter", name: str) -> ModuleType:
         """
         Load an imported module.
         """
+        mod: Optional[ModuleType] = None
         for wrapper in self.wrappers:
             if wrapper.matches(name):
                 debug(f"RelenvImporter - load_module {name}")
                 mod = wrapper(name)
                 wrapper.loading = False
                 break
+        if mod is None:
+            mod = importlib.import_module(name)
         sys.modules[name] = mod
         return mod
 
-    def create_module(self, spec: ModuleSpec) -> Optional[ModuleType]:
+    def create_module(self: "RelenvImporter", spec: ModuleSpec) -> Optional[ModuleType]:
         """
         Create the module via a spec.
         """
         return self.load_module(spec.name)
 
-    def exec_module(self, module: ModuleType) -> None:
+    def exec_module(self: "RelenvImporter", module: ModuleType) -> None:
         """
         Exec module noop.
         """

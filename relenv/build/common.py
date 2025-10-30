@@ -3,25 +3,39 @@
 """
 Build process common methods.
 """
-import logging
-import os.path
-import hashlib
-import pathlib
+from __future__ import annotations
+
 import glob
+import hashlib
+import io
+import logging
+import multiprocessing
+import os
+import os.path
+import pathlib
+import pprint
+import random
+import re
 import shutil
-import tarfile
+import subprocess
+import sys
 import tempfile
 import time
-import subprocess
-import random
-import sys
-import io
-import os
-import multiprocessing
-import pprint
-import re
+import tarfile
 from html.parser import HTMLParser
-
+from types import ModuleType
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    IO,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from relenv.common import (
     DATA_DIR,
@@ -39,8 +53,12 @@ from relenv.common import (
     work_dirs,
     fetch_url,
     Version,
+    WorkDirs,
 )
 import relenv.relocate
+
+
+PathLike = Union[str, os.PathLike[str]]
 
 
 CHECK_VERSIONS_SUPPORT = True
@@ -131,7 +149,12 @@ for key in _build_time_vars:
 """
 
 
-def print_ui(events, processes, fails, flipstat=None):
+def print_ui(
+    events: MutableMapping[str, "multiprocessing.synchronize.Event"],
+    processes: MutableMapping[str, multiprocessing.Process],
+    fails: Sequence[str],
+    flipstat: Optional[Dict[str, Tuple[int, float]]] = None,
+) -> None:
     """
     Prints the UI during the relenv building process.
 
@@ -171,7 +194,7 @@ def print_ui(events, processes, fails, flipstat=None):
     sys.stdout.flush()
 
 
-def verify_checksum(file, checksum):
+def verify_checksum(file: PathLike, checksum: Optional[str]) -> bool:
     """
     Verify the checksum of a files.
 
@@ -197,7 +220,7 @@ def verify_checksum(file, checksum):
     return True
 
 
-def all_dirs(root, recurse=True):
+def all_dirs(root: PathLike, recurse: bool = True) -> List[str]:
     """
     Get all directories under and including the given root.
 
@@ -216,11 +239,11 @@ def all_dirs(root, recurse=True):
     return paths
 
 
-def populate_env(dirs, env):
+def populate_env(dirs: "Dirs", env: MutableMapping[str, str]) -> None:
     pass
 
 
-def build_default(env, dirs, logfp):
+def build_default(env: MutableMapping[str, str], dirs: "Dirs", logfp: IO[str]) -> None:
     """
     The default build function if none is given during the build process.
 
@@ -245,11 +268,18 @@ def build_default(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_openssl_fips(env, dirs, logfp):
+def build_openssl_fips(
+    env: MutableMapping[str, str], dirs: "Dirs", logfp: IO[str]
+) -> None:
     return build_openssl(env, dirs, logfp, fips=True)
 
 
-def build_openssl(env, dirs, logfp, fips=False):
+def build_openssl(
+    env: MutableMapping[str, str],
+    dirs: "Dirs",
+    logfp: IO[str],
+    fips: bool = False,
+) -> None:
     """
     Build openssl.
 
@@ -313,7 +343,7 @@ def build_openssl(env, dirs, logfp, fips=False):
         runcmd(["make", "install_sw"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_sqlite(env, dirs, logfp):
+def build_sqlite(env: MutableMapping[str, str], dirs: "Dirs", logfp: IO[str]) -> None:
     """
     Build sqlite.
 
@@ -359,7 +389,7 @@ def build_sqlite(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def update_ensurepip(directory):
+def update_ensurepip(directory: pathlib.Path) -> None:
     """
     Update bundled dependencies for ensurepip (pip & setuptools).
     """
@@ -428,7 +458,7 @@ def update_ensurepip(directory):
     log.debug(init_file.read_text())
 
 
-def patch_file(path, old, new):
+def patch_file(path: PathLike, old: str, new: str) -> None:
     """
     Search a file line by line for a string to replace.
 
@@ -452,7 +482,7 @@ def patch_file(path, old, new):
         fp.write(new_content)
 
 
-def tarball_version(href):
+def tarball_version(href: str) -> Optional[str]:
     if href.endswith("tar.gz"):
         try:
             x = href.split("-", 1)[1][:-7]
@@ -462,33 +492,33 @@ def tarball_version(href):
             return None
 
 
-def sqlite_version(href):
+def sqlite_version(href: str) -> Optional[str]:
     if "releaselog" in href:
         link = href.split("/")[1][:-5]
         return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split("_")])
 
 
-def github_version(href):
+def github_version(href: str) -> Optional[str]:
     if "tag/" in href:
         return href.split("/v")[-1]
 
 
-def krb_version(href):
+def krb_version(href: str) -> Optional[str]:
     if re.match(r"\d\.\d\d/", href):
         return href[:-1]
 
 
-def python_version(href):
+def python_version(href: str) -> Optional[str]:
     if re.match(r"(\d+\.)+\d/", href):
         return href[:-1]
 
 
-def uuid_version(href):
+def uuid_version(href: str) -> Optional[str]:
     if "download" in href and "latest" not in href:
         return href[:-16].rsplit("/")[-1].replace("libuuid-", "")
 
 
-def parse_links(text):
+def parse_links(text: str) -> List[str]:
     class HrefParser(HTMLParser):
         hrefs = []
 
@@ -503,7 +533,12 @@ def parse_links(text):
     return parser.hrefs
 
 
-def check_files(name, location, func, current):
+def check_files(
+    name: str,
+    location: str,
+    func: Callable[[str], Optional[str]],
+    current: str,
+) -> None:
     fp = io.BytesIO()
     fetch_url(location, fp)
     fp.seek(0)
@@ -531,7 +566,7 @@ def check_files(name, location, func, current):
     compare_versions(name, current, versions)
 
 
-def compare_versions(name, current, versions):
+def compare_versions(name: str, current: Any, versions: Sequence[Any]) -> None:
     for version in versions:
         try:
             if version > current:
@@ -561,16 +596,16 @@ class Download:
 
     def __init__(
         self,
-        name,
-        url,
-        fallback_url=None,
-        signature=None,
-        destination="",
-        version="",
-        checksum=None,
-        checkfunc=None,
-        checkurl=None,
-    ):
+        name: str,
+        url: str,
+        fallback_url: Optional[str] = None,
+        signature: Optional[str] = None,
+        destination: str = "",
+        version: str = "",
+        checksum: Optional[str] = None,
+        checkfunc: Optional[Callable[[str], Optional[str]]] = None,
+        checkurl: Optional[str] = None,
+    ) -> None:
         self.name = name
         self.url_tpl = url
         self.fallback_url_tpl = fallback_url
@@ -581,7 +616,7 @@ class Download:
         self.checkfunc = checkfunc
         self.checkurl = checkurl
 
-    def copy(self):
+    def copy(self) -> "Download":
         return Download(
             self.name,
             self.url_tpl,
@@ -595,28 +630,31 @@ class Download:
         )
 
     @property
-    def url(self):
+    def url(self) -> str:
         return self.url_tpl.format(version=self.version)
 
     @property
-    def fallback_url(self):
+    def fallback_url(self) -> Optional[str]:
         if self.fallback_url_tpl:
             return self.fallback_url_tpl.format(version=self.version)
+        return None
 
     @property
-    def signature_url(self):
+    def signature_url(self) -> str:
+        if self.signature_tpl is None:
+            raise RelenvException("Signature template not configured")
         return self.signature_tpl.format(version=self.version)
 
     @property
-    def filepath(self):
+    def filepath(self) -> pathlib.Path:
         _, name = self.url.rsplit("/", 1)
         return pathlib.Path(self.destination) / name
 
     @property
-    def formatted_url(self):
+    def formatted_url(self) -> str:
         return self.url.format(version=self.version)
 
-    def fetch_file(self):
+    def fetch_file(self) -> Tuple[str, bool]:
         """
         Download the file.
 
@@ -626,21 +664,22 @@ class Download:
         try:
             return download_url(self.url, self.destination, CICD), True
         except Exception as exc:
-            if self.fallback_url:
+            fallback = self.fallback_url
+            if fallback:
                 print(f"Download failed {self.url} ({exc}); trying fallback url")
-                return download_url(self.fallback_url, self.destination, CICD), True
+                return download_url(fallback, self.destination, CICD), True
             raise
 
-    def fetch_signature(self, version):
+    def fetch_signature(self, version: Optional[str] = None) -> Tuple[str, bool]:
         """
         Download the file signature.
 
         :return: The path to the downloaded signature.
         :rtype: str
         """
-        return download_url(self.signature_url, self.destination, CICD)
+        return download_url(self.signature_url, self.destination, CICD), True
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         True when the artifact already exists on disk.
 
@@ -649,11 +688,11 @@ class Download:
         """
         return self.filepath.exists()
 
-    def valid_hash(self):
+    def valid_hash(self) -> None:
         pass
 
     @staticmethod
-    def validate_signature(archive, signature):
+    def validate_signature(archive: PathLike, signature: Optional[PathLike]) -> bool:
         """
         True when the archive's signature is valid.
 
@@ -680,7 +719,7 @@ class Download:
             return False
 
     @staticmethod
-    def validate_checksum(archive, checksum):
+    def validate_checksum(archive: PathLike, checksum: Optional[str]) -> bool:
         """
         True when when the archive matches the sha1 hash.
 
@@ -698,7 +737,12 @@ class Download:
             log.error("sha1 validation failed on %s: %s", archive, exc)
             return False
 
-    def __call__(self, force_download=False, show_ui=False, exit_on_failure=False):
+    def __call__(
+        self,
+        force_download: bool = False,
+        show_ui: bool = False,
+        exit_on_failure: bool = False,
+    ) -> bool:
         """
         Downloads the url and validates the signature and sha1 sum.
 
@@ -740,7 +784,7 @@ class Download:
             sys.exit(1)
         return valid
 
-    def check_version(self):
+    def check_version(self) -> None:
         if self.checkurl:
             url = self.checkurl
         else:
@@ -760,7 +804,7 @@ class Dirs:
     :type arch: str
     """
 
-    def __init__(self, dirs, name, arch, version):
+    def __init__(self, dirs: WorkDirs, name: str, arch: str, version: str) -> None:
         # XXX name is the specific to a step where as everything
         # else here is generalized to the entire build
         self.name = name
@@ -774,7 +818,7 @@ class Dirs:
         self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
 
     @property
-    def toolchain(self):
+    def toolchain(self) -> Optional[pathlib.Path]:
         if sys.platform == "darwin":
             return get_toolchain(root=self.root)
         elif sys.platform == "win32":
@@ -783,7 +827,7 @@ class Dirs:
             return get_toolchain(self.arch, self.root)
 
     @property
-    def _triplet(self):
+    def _triplet(self) -> str:
         if sys.platform == "darwin":
             return "{}-macos".format(self.arch)
         elif sys.platform == "win32":
@@ -792,10 +836,10 @@ class Dirs:
             return "{}-linux-gnu".format(self.arch)
 
     @property
-    def prefix(self):
+    def prefix(self) -> pathlib.Path:
         return self.build / f"{self.version}-{self._triplet}"
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         """
         Return an object used for pickling.
 
@@ -812,7 +856,7 @@ class Dirs:
             "tmpbuild": self.tmpbuild,
         }
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict[str, Any]) -> None:
         """
         Unwrap the object returned from unpickling.
 
@@ -828,7 +872,7 @@ class Dirs:
         self.build = state["build"]
         self.tmpbuild = state["tmpbuild"]
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         """
         Get a dictionary representation of the directories in this collection.
 
@@ -854,10 +898,10 @@ class Builds:
     Collection of builds.
     """
 
-    def __init__(self):
-        self.builds = {}
+    def __init__(self) -> None:
+        self.builds: Dict[str, "Builder"] = {}
 
-    def add(self, platform, *args, **kwargs):
+    def add(self, platform: str, *args: Any, **kwargs: Any) -> "Builder":
         if "builder" in kwargs:
             build = kwargs.pop("builder")
             if args or kwargs:
@@ -896,15 +940,15 @@ class Builder:
 
     def __init__(
         self,
-        root=None,
-        recipies=None,
-        build_default=build_default,
-        populate_env=populate_env,
-        arch="x86_64",
-        version="",
-    ):
+        root: Optional[PathLike] = None,
+        recipies: Optional[Dict[str, Dict[str, Any]]] = None,
+        build_default: Callable[..., Any] = build_default,
+        populate_env: Callable[["Dirs", MutableMapping[str, str]], None] = populate_env,
+        arch: str = "x86_64",
+        version: str = "",
+    ) -> None:
         self.root = root
-        self.dirs = work_dirs(root)
+        self.dirs: WorkDirs = work_dirs(root)
         self.build_arch = build_arch()
         self.build_triplet = get_triplet(self.build_arch)
         self.arch = arch
@@ -912,7 +956,7 @@ class Builder:
         self.downloads = self.dirs.download
 
         if recipies is None:
-            self.recipies = {}
+            self.recipies: Dict[str, Dict[str, Any]] = {}
         else:
             self.recipies = recipies
 
@@ -922,7 +966,7 @@ class Builder:
         self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
-    def copy(self, version, checksum):
+    def copy(self, version: str, checksum: Optional[str]) -> "Builder":
         recipies = {}
         for name in self.recipies:
             _ = self.recipies[name]
@@ -943,7 +987,7 @@ class Builder:
         build.recipies["python"]["download"].checksum = checksum
         return build
 
-    def set_arch(self, arch):
+    def set_arch(self, arch: str) -> None:
         """
         Set the architecture for the build.
 
@@ -957,15 +1001,15 @@ class Builder:
             self.toolchain = get_toolchain(self.arch, self.dirs.root)
 
     @property
-    def triplet(self):
+    def triplet(self) -> str:
         return get_triplet(self.arch)
 
     @property
-    def prefix(self):
+    def prefix(self) -> pathlib.Path:
         return self.dirs.build / f"{self.version}-{self.triplet}"
 
     @property
-    def _triplet(self):
+    def _triplet(self) -> str:
         if sys.platform == "darwin":
             return "{}-macos".format(self.arch)
         elif sys.platform == "win32":
@@ -973,7 +1017,13 @@ class Builder:
         else:
             return "{}-linux-gnu".format(self.arch)
 
-    def add(self, name, build_func=None, wait_on=None, download=None):
+    def add(
+        self,
+        name: str,
+        build_func: Optional[Callable[..., Any]] = None,
+        wait_on: Optional[Sequence[str]] = None,
+        download: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """
         Add a step to the build process.
 
@@ -999,8 +1049,14 @@ class Builder:
         }
 
     def run(
-        self, name, event, build_func, download, show_ui=False, log_level="WARNING"
-    ):
+        self,
+        name: str,
+        event: "multiprocessing.synchronize.Event",
+        build_func: Callable[..., Any],
+        download: Optional[Download],
+        show_ui: bool = False,
+        log_level: str = "WARNING",
+    ) -> Any:
         """
         Run a build step.
 
@@ -1092,13 +1148,13 @@ class Builder:
             log.removeHandler(handler)
             logfp.close()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """
         Clean up the build directories.
         """
         shutil.rmtree(self.prefix)
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Completely clean up the remnants of a relenv build.
         """
@@ -1118,7 +1174,12 @@ class Builder:
             except FileNotFoundError:
                 pass
 
-    def download_files(self, steps=None, force_download=False, show_ui=False):
+    def download_files(
+        self,
+        steps: Optional[Sequence[str]] = None,
+        force_download: bool = False,
+        show_ui: bool = False,
+    ) -> None:
         """
         Download all of the needed archives.
 
@@ -1178,7 +1239,13 @@ class Builder:
                 sys.stderr.flush()
             sys.exit(1)
 
-    def build(self, steps=None, cleanup=True, show_ui=False, log_level="WARNING"):
+    def build(
+        self,
+        steps: Optional[Sequence[str]] = None,
+        cleanup: bool = True,
+        show_ui: bool = False,
+        log_level: str = "WARNING",
+    ) -> None:
         """
         Build!
 
@@ -1284,7 +1351,7 @@ class Builder:
             log.debug("Performing cleanup.")
             self.cleanup()
 
-    def check_prereqs(self):
+    def check_prereqs(self) -> List[str]:
         """
         Check pre-requsists for build.
 
@@ -1303,15 +1370,15 @@ class Builder:
 
     def __call__(
         self,
-        steps=None,
-        arch=None,
-        clean=True,
-        cleanup=True,
-        force_download=False,
-        download_only=False,
-        show_ui=False,
-        log_level="WARNING",
-    ):
+        steps: Optional[Sequence[str]] = None,
+        arch: Optional[str] = None,
+        clean: bool = True,
+        cleanup: bool = True,
+        force_download: bool = False,
+        download_only: bool = False,
+        show_ui: bool = False,
+        log_level: str = "WARNING",
+    ) -> None:
         """
         Set the architecture, define the steps, clean if needed, download what is needed, and build.
 
@@ -1373,7 +1440,7 @@ class Builder:
             return
         self.build(steps, cleanup, show_ui=show_ui, log_level=log_level)
 
-    def check_versions(self):
+    def check_versions(self) -> bool:
         success = True
         for step in list(self.recipies):
             download = self.recipies[step]["download"]
@@ -1384,7 +1451,7 @@ class Builder:
         return success
 
 
-def patch_shebang(path, old, new):
+def patch_shebang(path: PathLike, old: str, new: str) -> bool:
     """
     Replace a file's shebang.
 
@@ -1416,7 +1483,7 @@ def patch_shebang(path, old, new):
     return True
 
 
-def patch_shebangs(path, old, new):
+def patch_shebangs(path: PathLike, old: str, new: str) -> None:
     """
     Traverse directory and patch shebangs.
 
@@ -1432,7 +1499,12 @@ def patch_shebangs(path, old, new):
             patch_shebang(os.path.join(root, file), old, new)
 
 
-def install_sysdata(mod, destfile, buildroot, toolchain):
+def install_sysdata(
+    mod: ModuleType,
+    destfile: PathLike,
+    buildroot: PathLike,
+    toolchain: Optional[PathLike],
+) -> None:
     """
     Create a Relenv Python environment's sysconfigdata.
 
@@ -1483,7 +1555,7 @@ def install_sysdata(mod, destfile, buildroot, toolchain):
         f.write(SYSCONFIGDATA)
 
 
-def find_sysconfigdata(pymodules):
+def find_sysconfigdata(pymodules: PathLike) -> str:
     """
     Find sysconfigdata directory for python installation.
 
@@ -1499,7 +1571,7 @@ def find_sysconfigdata(pymodules):
                 return file[:-3]
 
 
-def install_runtime(sitepackages):
+def install_runtime(sitepackages: PathLike) -> None:
     """
     Install a base relenv runtime.
     """
@@ -1525,7 +1597,11 @@ def install_runtime(sitepackages):
                 wfp.write(rfp.read())
 
 
-def finalize(env, dirs, logfp):
+def finalize(
+    env: MutableMapping[str, str],
+    dirs: Dirs,
+    logfp: IO[str],
+) -> None:
     """
     Run after we've fully built python.
 
@@ -1676,7 +1752,12 @@ def finalize(env, dirs, logfp):
         create_archive(fp, dirs.prefix, globs, logfp)
 
 
-def create_archive(tarfp, toarchive, globs, logfp=None):
+def create_archive(
+    tarfp: tarfile.TarFile,
+    toarchive: PathLike,
+    globs: Sequence[str],
+    logfp: Optional[IO[str]] = None,
+) -> None:
     """
     Create an archive.
 

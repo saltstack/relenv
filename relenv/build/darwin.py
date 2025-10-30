@@ -3,15 +3,18 @@
 """
 The darwin build process.
 """
-import io
+from __future__ import annotations
 
-from ..common import arches, DARWIN, MACOS_DEVELOPMENT_TARGET
-from .common import runcmd, finalize, build_openssl, build_sqlite, builds
+import io
+from typing import IO, MutableMapping
+
+from ..common import DARWIN, MACOS_DEVELOPMENT_TARGET, arches
+from .common import Dirs, build_openssl, build_sqlite, builds, finalize, runcmd
 
 ARCHES = arches[DARWIN]
 
 
-def populate_env(env, dirs):
+def populate_env(env: MutableMapping[str, str], dirs: Dirs) -> None:
     """
     Make sure we have the correct environment variables set.
 
@@ -34,7 +37,7 @@ def populate_env(env, dirs):
     env["CFLAGS"] = " ".join(cflags).format(prefix=dirs.prefix)
 
 
-def build_python(env, dirs, logfp):
+def build_python(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
 

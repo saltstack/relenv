@@ -3,6 +3,8 @@
 """
 The windows build process.
 """
+from __future__ import annotations
+
 import glob
 import json
 import logging
@@ -11,23 +13,27 @@ import pathlib
 import shutil
 import sys
 import tarfile
+from typing import IO, MutableMapping
 
 from .common import (
+    Dirs,
+    MODULE_DIR,
     builds,
     create_archive,
     download_url,
     extract_archive,
     install_runtime,
-    MODULE_DIR,
     patch_file,
     runcmd,
     update_ensurepip,
 )
-from ..common import arches, WIN32, Version
+from ..common import WIN32, Version, arches
 
 log = logging.getLogger(__name__)
 
 ARCHES = arches[WIN32]
+
+EnvMapping = MutableMapping[str, str]
 
 if sys.platform == WIN32:
     import ctypes
@@ -36,7 +42,7 @@ if sys.platform == WIN32:
     kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
 
-def populate_env(env, dirs):
+def populate_env(env: EnvMapping, dirs: Dirs) -> None:
     """
     Make sure we have the correct environment variables set.
 
@@ -48,7 +54,7 @@ def populate_env(env, dirs):
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
 
-def update_props(source, old, new):
+def update_props(source: pathlib.Path, old: str, new: str) -> None:
     """
     Overwrite a dependency string for Windows PCBuild.
 
@@ -63,7 +69,7 @@ def update_props(source, old, new):
     patch_file(source / "PCbuild" / "get_externals.bat", old, new)
 
 
-def get_externals_source(externals_dir, url):
+def get_externals_source(externals_dir: pathlib.Path, url: str) -> None:
     """
     Download external source code dependency.
 
@@ -80,7 +86,7 @@ def get_externals_source(externals_dir, url):
         log.exception("Failed to remove temporary file")
 
 
-def get_externals_bin(source_root, url):
+def get_externals_bin(source_root: pathlib.Path, url: str) -> None:
     """
     Download external binary dependency.
 
@@ -90,7 +96,7 @@ def get_externals_bin(source_root, url):
     pass
 
 
-def update_sqlite(dirs, env):
+def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the SQLITE library.
     """
@@ -122,7 +128,7 @@ def update_sqlite(dirs, env):
             json.dump(data, f, indent=2)
 
 
-def update_xz(dirs, env):
+def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the XZ library.
     """
@@ -158,7 +164,7 @@ def update_xz(dirs, env):
             json.dump(data, f, indent=2)
 
 
-def update_expat(dirs, env):
+def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the EXPAT library.
     """
@@ -286,7 +292,7 @@ def update_expat(dirs, env):
             json.dump(data, f, indent=2)
 
 
-def update_expat_check(env):
+def update_expat_check(env: EnvMapping) -> bool:
     """
     Check if the given python version should get an updated libexpat.
 
@@ -311,7 +317,7 @@ def update_expat_check(env):
     return False
 
 
-def build_python(env, dirs, logfp):
+def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
 
@@ -447,7 +453,7 @@ build.add(
 )
 
 
-def finalize(env, dirs, logfp):
+def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Finalize sitecustomize, relenv runtime, and pip for Windows.
 
