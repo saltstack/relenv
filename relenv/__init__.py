@@ -1,8 +1,15 @@
 # Copyright 2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
+from __future__ import annotations
+
 import sys
 
-if sys.version_info < (3, 10):
+from relenv.common import __version__
+
+MIN_SUPPORTED_PYTHON = (3, 10)
+
+if sys.version_info < MIN_SUPPORTED_PYTHON:
     raise RuntimeError("Relenv requires Python 3.10 or newer.")
 
-from relenv.common import __version__
+
+__all__ = ["__version__"]

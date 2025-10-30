@@ -18,7 +18,7 @@ import tarfile
 import textwrap
 import threading
 import time
-from typing import Any, BinaryIO, Iterable, Mapping, Optional, Union
+from typing import IO, Any, BinaryIO, Iterable, Mapping, Optional, Union
 
 # relenv package version
 __version__ = "0.21.2"
@@ -168,7 +168,7 @@ class WorkDirs:
     :type root: str
     """
 
-    def __init__(self, root: Union[str, os.PathLike[str]]) -> None:
+    def __init__(self: "WorkDirs", root: Union[str, os.PathLike[str]]) -> None:
         self.root: pathlib.Path = pathlib.Path(root)
         self.data: pathlib.Path = DATA_DIR
         self.toolchain_config: pathlib.Path = work_dir("toolchain", self.root)
@@ -178,7 +178,7 @@ class WorkDirs:
         self.logs: pathlib.Path = work_dir("logs", DATA_DIR)
         self.download: pathlib.Path = work_dir("download", DATA_DIR)
 
-    def __getstate__(self) -> dict[str, pathlib.Path]:
+    def __getstate__(self: "WorkDirs") -> dict[str, pathlib.Path]:
         """
         Return an object used for pickling.
 
@@ -194,7 +194,7 @@ class WorkDirs:
             "download": self.download,
         }
 
-    def __setstate__(self, state: Mapping[str, pathlib.Path]) -> None:
+    def __setstate__(self: "WorkDirs", state: Mapping[str, pathlib.Path]) -> None:
         """
         Unwrap the object returned from unpickling.
 
@@ -602,22 +602,27 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
 
     else:
 
-        def enqueue_stream(stream, queue, type):
+        def enqueue_stream(
+            stream: IO[str], item_queue: "queue.Queue[tuple[int | str, str]]", kind: int
+        ) -> None:
             NOOP = object()
             for line in iter(stream.readline, NOOP):
                 if line is NOOP or line == "":
                     break
                 if line:
-                    queue.put((type, line))
-            log.debug("stream close %r %r", type, line)
+                    item_queue.put((kind, line))
+            log.debug("stream close %r %r", kind, line)
             stream.close()
 
-        def enqueue_process(process, queue):
+        def enqueue_process(
+            process: subprocess.Popen[str],
+            item_queue: "queue.Queue[tuple[int | str, str]]",
+        ) -> None:
             process.wait()
-            queue.put(("x", "x"))
+            item_queue.put(("x", ""))
 
         p = subprocess.Popen(*args, **kwargs)
-        q = queue.Queue()
+        q: "queue.Queue[tuple[int | str, str]]" = queue.Queue()
         to = threading.Thread(target=enqueue_stream, args=(p.stdout, q, 1))
         te = threading.Thread(target=enqueue_stream, args=(p.stderr, q, 2))
         tp = threading.Thread(target=enqueue_process, args=(p, q))
@@ -778,7 +783,7 @@ class Version:
         self.micro: Optional[int] = micro
         self._data: str = data
 
-    def __str__(self) -> str:
+    def __str__(self: "Version") -> str:
         """
         Version as string.
         """
@@ -790,7 +795,7 @@ class Version:
         # XXX What if minor was None but micro was an int.
         return _
 
-    def __hash__(self) -> int:
+    def __hash__(self: "Version") -> int:
         """
         Hash of the version.
 
@@ -813,10 +818,12 @@ class Version:
         else:
             raise RuntimeError("Too many parts to  parse")
 
-    def __eq__(self, other: "Version") -> bool:
+    def __eq__(self: "Version", other: object) -> bool:
         """
         Equality comparisons.
         """
+        if not isinstance(other, Version):
+            return NotImplemented
         mymajor = 0 if self.major is None else self.major
         myminor = 0 if self.minor is None else self.minor
         mymicro = 0 if self.micro is None else self.micro
@@ -825,10 +832,12 @@ class Version:
         micro = 0 if other.micro is None else other.micro
         return mymajor == major and myminor == minor and mymicro == micro
 
-    def __lt__(self, other: "Version") -> bool:
+    def __lt__(self: "Version", other: object) -> bool:
         """
         Less than comparrison.
         """
+        if not isinstance(other, Version):
+            return NotImplemented
         mymajor = 0 if self.major is None else self.major
         myminor = 0 if self.minor is None else self.minor
         mymicro = 0 if self.micro is None else self.micro
@@ -844,10 +853,12 @@ class Version:
                 return True
         return False
 
-    def __le__(self, other: "Version") -> bool:
+    def __le__(self: "Version", other: object) -> bool:
         """
         Less than or equal to comparrison.
         """
+        if not isinstance(other, Version):
+            return NotImplemented
         mymajor = 0 if self.major is None else self.major
         myminor = 0 if self.minor is None else self.minor
         mymicro = 0 if self.micro is None else self.micro
@@ -860,14 +871,18 @@ class Version:
                     return True
         return False
 
-    def __gt__(self, other: "Version") -> bool:
+    def __gt__(self: "Version", other: object) -> bool:
         """
         Greater than comparrison.
         """
+        if not isinstance(other, Version):
+            return NotImplemented
         return not self.__le__(other)
 
-    def __ge__(self, other: "Version") -> bool:
+    def __ge__(self: "Version", other: object) -> bool:
         """
         Greater than or equal to comparrison.
         """
+        if not isinstance(other, Version):
+            return NotImplemented
         return not self.__lt__(other)

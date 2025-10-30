@@ -3,20 +3,22 @@
 """
 The ``relenv build`` command.
 """
-import sys
-import random
+from __future__ import annotations
+
+import argparse
 import codecs
+import random
 import signal
+import sys
+from types import ModuleType
 
-from . import linux, darwin, windows
-from .common import builds, CHECK_VERSIONS_SUPPORT
-
-from ..pyversions import python_versions, Version
-
-from ..common import build_arch, DEFAULT_PYTHON
+from . import darwin, linux, windows
+from .common import CHECK_VERSIONS_SUPPORT, builds
+from ..common import DEFAULT_PYTHON, build_arch
+from ..pyversions import Version, python_versions
 
 
-def platform_module():
+def platform_module() -> ModuleType:
     """
     Return the right module based on `sys.platform`.
     """
@@ -26,9 +28,12 @@ def platform_module():
         return linux
     elif sys.platform == "win32":
         return windows
+    raise RuntimeError(f"Unsupported platform: {sys.platform}")
 
 
-def setup_parser(subparsers):
+def setup_parser(
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
+) -> None:
     """
     Setup the subparser for the ``build`` command.
 
@@ -124,7 +129,7 @@ def setup_parser(subparsers):
     )
 
 
-def main(args):
+def main(args: argparse.Namespace) -> None:
     """
     The entrypoint to the ``build`` command.
 

@@ -3,13 +3,36 @@
 """
 The linux build process.
 """
+from __future__ import annotations
+
+import io
+import os
 import pathlib
+import shutil
 import tempfile
-from .common import *
-from ..common import arches, LINUX, Version
+from typing import IO, MutableMapping
+
+from .common import (
+    Dirs,
+    build_openssl,
+    build_openssl_fips,
+    build_sqlite,
+    builds,
+    finalize,
+    github_version,
+    runcmd,
+    sqlite_version,
+    tarball_version,
+    krb_version,
+    python_version,
+    uuid_version,
+)
+from ..common import LINUX, Version, arches
 
 
 ARCHES = arches[LINUX]
+
+EnvMapping = MutableMapping[str, str]
 
 # Patch for Python's setup.py
 PATCH = """--- ./setup.py
@@ -25,7 +48,7 @@ PATCH = """--- ./setup.py
 """
 
 
-def populate_env(env, dirs):
+def populate_env(env: EnvMapping, dirs: Dirs) -> None:
     """
     Make sure we have the correct environment variables set.
 
@@ -68,7 +91,7 @@ def populate_env(env, dirs):
     env["PKG_CONFIG_PATH"] = f"{dirs.prefix}/lib/pkgconfig"
 
 
-def build_bzip2(env, dirs, logfp):
+def build_bzip2(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build bzip2.
 
@@ -112,7 +135,7 @@ def build_bzip2(env, dirs, logfp):
     shutil.copy2("libbz2.so.1.0.8", os.path.join(dirs.prefix, "lib"))
 
 
-def build_libxcrypt(env, dirs, logfp):
+def build_libxcrypt(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build libxcrypt.
 
@@ -139,7 +162,7 @@ def build_libxcrypt(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_gdbm(env, dirs, logfp):
+def build_gdbm(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build gdbm.
 
@@ -166,7 +189,7 @@ def build_gdbm(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_ncurses(env, dirs, logfp):
+def build_ncurses(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build ncurses.
 
@@ -225,7 +248,7 @@ def build_ncurses(env, dirs, logfp):
     )
 
 
-def build_readline(env, dirs, logfp):
+def build_readline(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build readline library.
 
@@ -251,7 +274,7 @@ def build_readline(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_libffi(env, dirs, logfp):
+def build_libffi(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build libffi.
 
@@ -282,7 +305,7 @@ def build_libffi(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_zlib(env, dirs, logfp):
+def build_zlib(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build zlib.
 
@@ -309,7 +332,7 @@ def build_zlib(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_krb(env, dirs, logfp):
+def build_krb(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build kerberos.
 
@@ -342,7 +365,7 @@ def build_krb(env, dirs, logfp):
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_python(env, dirs, logfp):
+def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
 
