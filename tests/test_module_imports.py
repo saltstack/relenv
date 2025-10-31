@@ -1,15 +1,18 @@
 # Copyright 2025 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 #
+from __future__ import annotations
+
 import importlib
 import pathlib
+from typing import List
 
 import pytest
 
 
-def _top_level_modules():
+def _top_level_modules() -> List[pytest.ParameterSet]:
     relenv_dir = pathlib.Path(__file__).resolve().parents[1] / "relenv"
-    params = []
+    params: List[pytest.ParameterSet] = []
     for path in sorted(relenv_dir.iterdir()):
         if not path.is_file() or path.suffix != ".py":
             continue
