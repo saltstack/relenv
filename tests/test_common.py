@@ -15,6 +15,7 @@ from typing import BinaryIO
 from unittest.mock import patch
 
 import pytest
+from typing_extensions import Literal
 
 import relenv.common
 from relenv.common import (
@@ -43,7 +44,9 @@ from relenv.common import (
 from tests._pytest_typing import mark_skipif, parametrize
 
 
-def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str) -> None:
+def _mock_ppbt_module(
+    monkeypatch: pytest.MonkeyPatch, triplet: str, archive_path: pathlib.Path
+) -> None:
     """
     Provide a lightweight ppbt.common stub so get_toolchain() skips the real extraction.
     """
@@ -55,7 +58,7 @@ def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str) -> None:
     monkeypatch.setitem(sys.modules, "ppbt", stub_package)
     monkeypatch.setitem(sys.modules, "ppbt.common", stub_common)
 
-    setattr(stub_common, "ARCHIVE", pathlib.Path("dummy-toolchain.tar.xz"))
+    setattr(stub_common, "ARCHIVE", archive_path)
 
     def fake_extract_archive(dest: str, archive: str) -> None:
         dest_path = pathlib.Path(dest)
@@ -160,7 +163,10 @@ def test_get_toolchain(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(relenv.common.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.common, "get_triplet", lambda: triplet)
-    _mock_ppbt_module(monkeypatch, triplet)
+    monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
+    archive_path = tmp_path / "dummy-toolchain.tar.xz"
+    archive_path.write_bytes(b"")
+    _mock_ppbt_module(monkeypatch, triplet, archive_path)
     ret = get_toolchain(arch="aarch64")
     assert ret == data_dir / "toolchain" / triplet
 
@@ -172,7 +178,10 @@ def test_get_toolchain_linux_existing(tmp_path: pathlib.Path) -> None:
     toolchain_path.mkdir(parents=True)
     with patch("relenv.common.DATA_DIR", data_dir), patch(
         "relenv.common.sys.platform", "linux"
-    ), patch("relenv.common.get_triplet", return_value=triplet):
+    ), patch("relenv.common.get_triplet", return_value=triplet), patch.dict(
+        os.environ,
+        {"RELENV_TOOLCHAIN_CACHE": str(data_dir / "toolchain")},
+    ):
         ret = get_toolchain()
     assert ret == toolchain_path
 
@@ -185,9 +194,15 @@ def test_get_toolchain_no_arch(
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(relenv.common.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.common, "get_triplet", lambda: triplet)
-    _mock_ppbt_module(monkeypatch, triplet)
+    monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
+    archive_path = tmp_path / "dummy-toolchain.tar.xz"
+    archive_path.write_bytes(b"")
+    _mock_ppbt_module(monkeypatch, triplet, archive_path)
     ret = get_toolchain()
     assert ret == data_dir / "toolchain" / triplet
+
+
+WriteMode = Literal["w:gz", "w:xz", "w:bz2", "w"]
 
 
 @parametrize(
@@ -200,14 +215,14 @@ def test_get_toolchain_no_arch(
         (".tar", "w"),
     ),
 )
-def test_extract_archive(tmp_path: pathlib.Path, suffix: str, mode: str) -> None:
+def test_extract_archive(tmp_path: pathlib.Path, suffix: str, mode: WriteMode) -> None:
     to_be_archived = tmp_path / "to_be_archived"
     to_be_archived.mkdir()
     test_file = to_be_archived / "testfile"
     test_file.touch()
     tar_file = tmp_path / f"fake_archive{suffix}"
     to_dir = tmp_path / "extracted"
-    with tarfile.open(str(tar_file), mode) as tar:
+    with tarfile.open(str(tar_file), mode=mode) as tar:
         tar.add(str(to_be_archived), to_be_archived.name)
     extract_archive(str(to_dir), str(tar_file))
     assert to_dir.exists()
@@ -251,9 +266,20 @@ def test_download_url_failure_cleans_up(tmp_path: pathlib.Path) -> None:
     assert not created.exists()
 
 
+def _extract_shell_snippet(tpl: str) -> str:
+    rendered = format_shebang("python3", tpl)
+    lines = rendered.splitlines()[1:]  # skip #!/bin/sh
+    snippet: list[str] = []
+    for line in lines:
+        if line.startswith("'''"):
+            break
+        snippet.append(line)
+    return "\n".join(snippet)
+
+
 @mark_skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
 def test_shebang_tpl_linux() -> None:
-    sh = format_shebang("python3", SHEBANG_TPL_LINUX).split("'''")[1].strip("'")
+    sh = _extract_shell_snippet(SHEBANG_TPL_LINUX)
     proc = subprocess.Popen(["shellcheck", "-s", "sh", "-"], stdin=subprocess.PIPE)
     assert proc.stdin is not None
     proc.stdin.write(sh.encode())
@@ -263,7 +289,7 @@ def test_shebang_tpl_linux() -> None:
 
 @mark_skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
 def test_shebang_tpl_macos() -> None:
-    sh = format_shebang("python3", SHEBANG_TPL_MACOS).split("'''")[1].strip("'")
+    sh = _extract_shell_snippet(SHEBANG_TPL_MACOS)
     proc = subprocess.Popen(["shellcheck", "-s", "sh", "-"], stdin=subprocess.PIPE)
     assert proc.stdin is not None
     proc.stdin.write(sh.encode())

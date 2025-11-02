@@ -7,7 +7,15 @@ import importlib
 import pathlib
 from typing import Any, Callable, List, Sequence, TypeVar, cast
 
+try:
+    from typing import TYPE_CHECKING
+except ImportError:  # pragma: no cover
+    TYPE_CHECKING = False
+
 import pytest
+
+if TYPE_CHECKING:
+    from _pytest.mark.structures import ParameterSet
 
 F = TypeVar("F", bound=Callable[..., object])
 
@@ -18,9 +26,9 @@ def typed_parametrize(*args: Any, **kwargs: Any) -> Callable[[F], F]:
     return cast(Callable[[F], F], decorator)
 
 
-def _top_level_modules() -> Sequence[pytest.ParameterSet]:
+def _top_level_modules() -> Sequence["ParameterSet"]:
     relenv_dir = pathlib.Path(__file__).resolve().parents[1] / "relenv"
-    params: List[pytest.ParameterSet] = []
+    params: List["ParameterSet"] = []
     for path in sorted(relenv_dir.iterdir()):
         if not path.is_file() or path.suffix != ".py":
             continue

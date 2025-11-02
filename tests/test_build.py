@@ -6,7 +6,7 @@ import pathlib
 import pytest
 
 from relenv.build.common import Builder, verify_checksum
-from relenv.common import DATA_DIR, RelenvException
+from relenv.common import DATA_DIR, RelenvException, toolchain_root_dir
 
 # mypy: ignore-errors
 
@@ -32,7 +32,7 @@ def test_builder_defaults_linux() -> None:
     assert builder.prefix == DATA_DIR / "build" / "3.10.10-x86_64-linux-gnu"
     assert builder.sources == DATA_DIR / "src"
     assert builder.downloads == DATA_DIR / "download"
-    assert "relenv/toolchain" in str(builder.toolchain)
+    assert builder.toolchain == toolchain_root_dir() / builder.triplet
     assert callable(builder.build_default)
     assert callable(builder.populate_env)
     assert builder.recipies == {}
