@@ -5,12 +5,7 @@ from __future__ import annotations
 
 import importlib
 import pathlib
-from typing import Any, Callable, List, Sequence, TypeVar, cast
-
-try:
-    from typing import TYPE_CHECKING
-except ImportError:  # pragma: no cover
-    TYPE_CHECKING = False
+from typing import TYPE_CHECKING, Any, Callable, List, Sequence, TypeVar, cast
 
 import pytest
 
