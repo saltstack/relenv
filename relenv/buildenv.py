@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import sys
+from typing import Any, cast
 
 from .common import (
     MACOS_DEVELOPMENT_TARGET,
@@ -58,7 +59,7 @@ def buildenv(
     if not relenv_path:
         if not is_relenv():
             raise RelenvException("Not in a relenv environment")
-        relenv_path = sys.RELENV
+        relenv_path = cast(str | os.PathLike[str], cast(Any, sys).RELENV)
 
     if sys.platform != "linux":
         raise RelenvException("buildenv is only supported on Linux")

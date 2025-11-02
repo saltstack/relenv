@@ -6,6 +6,7 @@ Build process common methods.
 from __future__ import annotations
 
 import glob
+import fnmatch
 import hashlib
 import io
 import logging
@@ -25,17 +26,27 @@ import tarfile
 from html.parser import HTMLParser
 from types import ModuleType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
+    cast,
     Dict,
     IO,
+    Iterable,
     List,
     MutableMapping,
     Optional,
     Sequence,
     Tuple,
+    TypedDict,
     Union,
+    Protocol,
 )
+
+if TYPE_CHECKING:
+    from multiprocessing.synchronize import Event as SyncEvent
+else:
+    SyncEvent = Any
 
 from relenv.common import (
     DATA_DIR,
@@ -232,15 +243,24 @@ def all_dirs(root: PathLike, recurse: bool = True) -> List[str]:
     :return: A list of directories found
     :rtype: list
     """
-    paths = [root]
-    for root, dirs, files in os.walk(root):
+    root_str = os.fspath(root)
+    paths: List[str] = [root_str]
+    for current_root, dirs, _files in os.walk(root_str):
+        if not recurse and current_root != root_str:
+            continue
         for name in dirs:
-            paths.append(os.path.join(root, name))
+            paths.append(os.path.join(current_root, name))
     return paths
 
 
-def populate_env(dirs: "Dirs", env: MutableMapping[str, str]) -> None:
-    pass
+def populate_env(env: MutableMapping[str, str], dirs: "Dirs") -> None:
+    """Populate environment variables for a build step.
+
+    This default implementation intentionally does nothing; specific steps may
+    provide their own implementation via the ``populate_env`` hook.
+    """
+    _ = env
+    _ = dirs
 
 
 def build_default(env: MutableMapping[str, str], dirs: "Dirs", logfp: IO[str]) -> None:
@@ -490,41 +510,51 @@ def tarball_version(href: str) -> Optional[str]:
                 return x
         except IndexError:
             return None
+    return None
 
 
 def sqlite_version(href: str) -> Optional[str]:
     if "releaselog" in href:
         link = href.split("/")[1][:-5]
         return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split("_")])
+    return None
 
 
 def github_version(href: str) -> Optional[str]:
     if "tag/" in href:
         return href.split("/v")[-1]
+    return None
 
 
 def krb_version(href: str) -> Optional[str]:
     if re.match(r"\d\.\d\d/", href):
         return href[:-1]
+    return None
 
 
 def python_version(href: str) -> Optional[str]:
     if re.match(r"(\d+\.)+\d/", href):
         return href[:-1]
+    return None
 
 
 def uuid_version(href: str) -> Optional[str]:
     if "download" in href and "latest" not in href:
         return href[:-16].rsplit("/")[-1].replace("libuuid-", "")
+    return None
 
 
 def parse_links(text: str) -> List[str]:
     class HrefParser(HTMLParser):
-        hrefs = []
+        def __init__(self) -> None:
+            super().__init__()
+            self.hrefs: List[str] = []
 
-        def handle_starttag(self, tag, attrs):
+        def handle_starttag(
+            self, tag: str, attrs: List[Tuple[str, Optional[str]]]
+        ) -> None:
             if tag == "a":
-                link = dict(attrs).get("href", "")
+                link = dict(attrs).get("href")
                 if link:
                     self.hrefs.append(link)
 
@@ -533,10 +563,18 @@ def parse_links(text: str) -> List[str]:
     return parser.hrefs
 
 
+class Comparable(Protocol):
+    def __lt__(self, other: Any) -> bool:
+        ...
+
+    def __gt__(self, other: Any) -> bool:
+        ...
+
+
 def check_files(
     name: str,
     location: str,
-    func: Callable[[str], Optional[str]],
+    func: Optional[Callable[[str], Optional[str]]],
     current: str,
 ) -> None:
     fp = io.BytesIO()
@@ -544,29 +582,33 @@ def check_files(
     fp.seek(0)
     text = fp.read().decode()
     loose = False
+    current_version: Comparable
     try:
-        current = parse(current)
+        current_version = cast(Comparable, parse(current))
     except InvalidVersion:
-        current = LooseVersion(current)
+        current_version = LooseVersion(current)
         loose = True
 
-    versions = []
-    for _ in parse_links(text):
-        version = func(_)
+    versions: List[Comparable] = []
+    if func is None:
+        return
+    for link in parse_links(text):
+        version = func(link)
         if version:
             if loose:
                 versions.append(LooseVersion(version))
             else:
                 try:
-                    versions.append(parse(version))
+                    versions.append(cast(Comparable, parse(version)))
                 except InvalidVersion:
                     pass
-
     versions.sort()
-    compare_versions(name, current, versions)
+    compare_versions(name, current_version, versions)
 
 
-def compare_versions(name: str, current: Any, versions: Sequence[Any]) -> None:
+def compare_versions(
+    name: str, current: Comparable, versions: Sequence[Comparable]
+) -> None:
     for version in versions:
         try:
             if version > current:
@@ -600,7 +642,7 @@ class Download:
         url: str,
         fallback_url: Optional[str] = None,
         signature: Optional[str] = None,
-        destination: str = "",
+        destination: PathLike = "",
         version: str = "",
         checksum: Optional[str] = None,
         checkfunc: Optional[Callable[[str], Optional[str]]] = None,
@@ -630,6 +672,17 @@ class Download:
         )
 
     @property
+    def destination(self) -> pathlib.Path:
+        return self._destination
+
+    @destination.setter
+    def destination(self, value: Optional[PathLike]) -> None:
+        if value:
+            self._destination = pathlib.Path(value)
+        else:
+            self._destination = pathlib.Path()
+
+    @property
     def url(self) -> str:
         return self.url_tpl.format(version=self.version)
 
@@ -648,11 +701,11 @@ class Download:
     @property
     def filepath(self) -> pathlib.Path:
         _, name = self.url.rsplit("/", 1)
-        return pathlib.Path(self.destination) / name
+        return self.destination / name
 
     @property
     def formatted_url(self) -> str:
-        return self.url.format(version=self.version)
+        return self.url_tpl.format(version=self.version)
 
     def fetch_file(self) -> Tuple[str, bool]:
         """
@@ -784,12 +837,21 @@ class Download:
             sys.exit(1)
         return valid
 
-    def check_version(self) -> None:
+    def check_version(self) -> bool:
+        if self.checkfunc is None:
+            return True
         if self.checkurl:
             url = self.checkurl
         else:
             url = self.url.rsplit("/", 1)[0]
         check_files(self.name, url, self.checkfunc, self.version)
+        return True
+
+
+class Recipe(TypedDict):
+    build_func: Callable[[MutableMapping[str, str], "Dirs", IO[str]], None]
+    wait_on: List[str]
+    download: Optional[Download]
 
 
 class Dirs:
@@ -816,6 +878,7 @@ class Dirs:
         self.logs = dirs.logs
         self.sources = dirs.src
         self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
+        self.source: Optional[pathlib.Path] = None
 
     @property
     def toolchain(self) -> Optional[pathlib.Path]:
@@ -893,33 +956,6 @@ class Dirs:
         }
 
 
-class Builds:
-    """
-    Collection of builds.
-    """
-
-    def __init__(self) -> None:
-        self.builds: Dict[str, "Builder"] = {}
-
-    def add(self, platform: str, *args: Any, **kwargs: Any) -> "Builder":
-        if "builder" in kwargs:
-            build = kwargs.pop("builder")
-            if args or kwargs:
-                raise RuntimeError(
-                    "builder keyword can not be used with other kwargs or args"
-                )
-        else:
-            build = Builder(*args, **kwargs)
-        if platform not in self.builds:
-            self.builds[platform] = build
-        else:
-            self.builds[platform] = build
-        return build
-
-
-builds = Builds()
-
-
 class Builder:
     """
     Utility that handles the build process.
@@ -941,9 +977,11 @@ class Builder:
     def __init__(
         self,
         root: Optional[PathLike] = None,
-        recipies: Optional[Dict[str, Dict[str, Any]]] = None,
-        build_default: Callable[..., Any] = build_default,
-        populate_env: Callable[["Dirs", MutableMapping[str, str]], None] = populate_env,
+        recipies: Optional[Dict[str, Recipe]] = None,
+        build_default: Callable[
+            [MutableMapping[str, str], "Dirs", IO[str]], None
+        ] = build_default,
+        populate_env: Callable[[MutableMapping[str, str], "Dirs"], None] = populate_env,
         arch: str = "x86_64",
         version: str = "",
     ) -> None:
@@ -956,7 +994,7 @@ class Builder:
         self.downloads = self.dirs.download
 
         if recipies is None:
-            self.recipies: Dict[str, Dict[str, Any]] = {}
+            self.recipies: Dict[str, Recipe] = {}
         else:
             self.recipies = recipies
 
@@ -967,13 +1005,13 @@ class Builder:
         self.set_arch(self.arch)
 
     def copy(self, version: str, checksum: Optional[str]) -> "Builder":
-        recipies = {}
+        recipies: Dict[str, Recipe] = {}
         for name in self.recipies:
-            _ = self.recipies[name]
+            recipe = self.recipies[name]
             recipies[name] = {
-                "build_func": _["build_func"],
-                "wait_on": _["wait_on"],
-                "download": _["download"].copy() if _["download"] else None,
+                "build_func": recipe["build_func"],
+                "wait_on": list(recipe["wait_on"]),
+                "download": recipe["download"].copy() if recipe["download"] else None,
             }
         build = Builder(
             self.root,
@@ -983,8 +1021,11 @@ class Builder:
             self.arch,
             version,
         )
-        build.recipies["python"]["download"].version = version
-        build.recipies["python"]["download"].checksum = checksum
+        python_download = build.recipies["python"].get("download")
+        if python_download is None:
+            raise RelenvException("Python recipe is missing a download entry")
+        python_download.version = version
+        python_download.checksum = checksum
         return build
 
     def set_arch(self, arch: str) -> None:
@@ -1037,15 +1078,18 @@ class Builder:
         :type download: dict, optional
         """
         if wait_on is None:
-            wait_on = []
+            wait_on_list: List[str] = []
+        else:
+            wait_on_list = list(wait_on)
         if build_func is None:
             build_func = self.build_default
+        download_obj: Optional[Download] = None
         if download is not None:
-            download = Download(name, destination=self.downloads, **download)
+            download_obj = Download(name, destination=self.downloads, **download)
         self.recipies[name] = {
             "build_func": build_func,
-            "wait_on": wait_on,
-            "download": download,
+            "wait_on": wait_on_list,
+            "download": download_obj,
         }
 
     def run(
@@ -1123,7 +1167,10 @@ class Builder:
         env["RELENV_HOST_ARCH"] = self.arch
         env["RELENV_BUILD"] = self.build_triplet
         env["RELENV_BUILD_ARCH"] = self.build_arch
-        env["RELENV_PY_VERSION"] = self.recipies["python"]["download"].version
+        python_download = self.recipies["python"].get("download")
+        if python_download is None:
+            raise RelenvException("Python recipe is missing download configuration")
+        env["RELENV_PY_VERSION"] = python_download.version
         env["RELENV_PY_MAJOR_VERSION"] = env["RELENV_PY_VERSION"].rsplit(".", 1)[0]
         if "RELENV_DATA" in os.environ:
             env["RELENV_DATA"] = os.environ["RELENV_DATA"]
@@ -1186,18 +1233,17 @@ class Builder:
         :param steps: The steps to download archives for, defaults to None
         :type steps: list, optional
         """
-        if steps is None:
-            steps = list(self.recipies)
+        step_names = list(steps) if steps is not None else list(self.recipies)
 
-        fails = []
-        processes = {}
-        events = {}
+        fails: List[str] = []
+        processes: Dict[str, multiprocessing.Process] = {}
+        events: Dict[str, SyncEvent] = {}
         if show_ui:
             sys.stdout.write("Starting downloads \n")
         log.info("Starting downloads")
         if show_ui:
             print_ui(events, processes, fails)
-        for name in steps:
+        for name in step_names:
             download = self.recipies[name]["download"]
             if download is None:
                 continue
@@ -1254,10 +1300,10 @@ class Builder:
         :param cleanup: Whether to clean up or not, defaults to True
         :type cleanup: bool, optional
         """  # noqa: D400
-        fails = []
-        events = {}
-        waits = {}
-        processes = {}
+        fails: List[str] = []
+        events: Dict[str, SyncEvent] = {}
+        waits: Dict[str, List[str]] = {}
+        processes: Dict[str, multiprocessing.Process] = {}
 
         if show_ui:
             sys.stdout.write("Starting builds\n")
@@ -1265,20 +1311,24 @@ class Builder:
             print_ui(events, processes, fails)
         log.info("Starting builds")
 
-        for name in steps:
+        step_names = list(steps) if steps is not None else list(self.recipies)
+
+        for name in step_names:
             event = multiprocessing.Event()
             events[name] = event
-            kwargs = dict(self.recipies[name])
+            recipe = self.recipies[name]
+            kwargs = dict(recipe)
             kwargs["show_ui"] = show_ui
             kwargs["log_level"] = log_level
 
             # Determine needed dependency recipies.
-            wait_on = kwargs.pop("wait_on", [])
-            for _ in wait_on[:]:
-                if _ not in steps:
-                    wait_on.remove(_)
+            wait_on_seq = cast(List[str], kwargs.pop("wait_on", []))
+            wait_on_list = list(wait_on_seq)
+            for dependency in wait_on_list[:]:
+                if dependency not in step_names:
+                    wait_on_list.remove(dependency)
 
-            waits[name] = wait_on
+            waits[name] = wait_on_list
             if not waits[name]:
                 event.set()
 
@@ -1360,7 +1410,7 @@ class Builder:
         :return: Returns a list of string describing failed checks
         :rtype: list
         """
-        fail = []
+        fail: List[str] = []
         if sys.platform == "linux":
             if not self.toolchain or not self.toolchain.exists():
                 fail.append(
@@ -1396,21 +1446,21 @@ class Builder:
         log = logging.getLogger(None)
         log.setLevel(logging.NOTSET)
 
+        stream_handler: Optional[logging.Handler] = None
         if not show_ui:
-            handler = logging.StreamHandler()
-            handler.setLevel(logging.getLevelName(log_level))
-            log.addHandler(handler)
+            stream_handler = logging.StreamHandler()
+            stream_handler.setLevel(logging.getLevelName(log_level))
+            log.addHandler(stream_handler)
 
         os.makedirs(self.dirs.logs, exist_ok=True)
-        handler = logging.FileHandler(self.dirs.logs / "build.log")
-        handler.setLevel(logging.INFO)
-        log.addHandler(handler)
+        file_handler = logging.FileHandler(self.dirs.logs / "build.log")
+        file_handler.setLevel(logging.INFO)
+        log.addHandler(file_handler)
 
         if arch:
             self.set_arch(arch)
 
-        if steps is None:
-            steps = self.recipies
+        step_names = list(steps) if steps is not None else list(self.recipies)
 
         failures = self.check_prereqs()
         if not download_only and failures:
@@ -1435,10 +1485,17 @@ class Builder:
 
         # Start a process for each build passing it an event used to notify each
         # process if it's dependencies have finished.
-        self.download_files(steps, force_download=force_download, show_ui=show_ui)
-        if download_only:
-            return
-        self.build(steps, cleanup, show_ui=show_ui, log_level=log_level)
+        try:
+            self.download_files(
+                step_names, force_download=force_download, show_ui=show_ui
+            )
+            if download_only:
+                return
+            self.build(step_names, cleanup, show_ui=show_ui, log_level=log_level)
+        finally:
+            log.removeHandler(file_handler)
+            if stream_handler is not None:
+                log.removeHandler(stream_handler)
 
     def check_versions(self) -> bool:
         success = True
@@ -1449,6 +1506,29 @@ class Builder:
             if not download.check_version():
                 success = False
         return success
+
+
+class Builds:
+    """Collection of platform-specific builders."""
+
+    def __init__(self) -> None:
+        self.builds: Dict[str, Builder] = {}
+
+    def add(self, platform: str, *args: Any, **kwargs: Any) -> Builder:
+        if "builder" in kwargs:
+            build_candidate = kwargs.pop("builder")
+            if args or kwargs:
+                raise RuntimeError(
+                    "builder keyword can not be used with other kwargs or args"
+                )
+            build = cast(Builder, build_candidate)
+        else:
+            build = Builder(*args, **kwargs)
+        self.builds[platform] = build
+        return build
+
+
+builds = Builds()
 
 
 def patch_shebang(path: PathLike, old: str, new: str) -> bool:
@@ -1569,18 +1649,20 @@ def find_sysconfigdata(pymodules: PathLike) -> str:
         for file in files:
             if file.find("sysconfigdata") > -1 and file.endswith(".py"):
                 return file[:-3]
+    raise RelenvException("Unable to locate sysconfigdata module")
 
 
 def install_runtime(sitepackages: PathLike) -> None:
     """
     Install a base relenv runtime.
     """
-    relenv_pth = sitepackages / "relenv.pth"
+    site_dir = pathlib.Path(sitepackages)
+    relenv_pth = site_dir / "relenv.pth"
     with io.open(str(relenv_pth), "w") as fp:
         fp.write(RELENV_PTH)
 
     # Lay down relenv.runtime, we'll pip install the rest later
-    relenv = sitepackages / "relenv"
+    relenv = site_dir / "relenv"
     os.makedirs(relenv, exist_ok=True)
 
     for name in [
@@ -1619,13 +1701,18 @@ def finalize(
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
 
-    def find_pythonlib(libdir):
-        for root, dirs, files in os.walk(libdir):
-            for _ in dirs:
-                if _.startswith("python"):
-                    return _
+    def find_pythonlib(libdir: pathlib.Path) -> Optional[str]:
+        for _root, dirs, _files in os.walk(libdir):
+            for entry in dirs:
+                if entry.startswith("python"):
+                    return entry
+        return None
 
-    pymodules = libdir / find_pythonlib(libdir)
+    python_lib = find_pythonlib(libdir)
+    if python_lib is None:
+        raise RelenvException("Unable to locate python library directory")
+
+    pymodules = libdir / python_lib
 
     # update ensurepip
     update_ensurepip(pymodules)
@@ -1649,16 +1736,16 @@ def finalize(
     install_runtime(sitepackages)
 
     # Install pip
-    python = dirs.prefix / "bin" / "python3"
+    python_exe = str(dirs.prefix / "bin" / "python3")
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
-        env["RELENV_CROSS"] = dirs.prefix
-        python = env["RELENV_NATIVE_PY"]
+        env["RELENV_CROSS"] = str(dirs.prefix)
+        python_exe = env["RELENV_NATIVE_PY"]
     logfp.write("\nRUN ENSURE PIP\n")
 
     env.pop("RELENV_BUILDENV")
 
     runcmd(
-        [str(python), "-m", "ensurepip"],
+        [python_exe, "-m", "ensurepip"],
         env=env,
         stderr=logfp,
         stdout=logfp,
@@ -1688,8 +1775,11 @@ def finalize(
             format_shebang("../../../bin/python3"),
         )
 
+        toolchain_path = dirs.toolchain
+        if toolchain_path is None:
+            raise RelenvException("Toolchain path is required for linux builds")
         shutil.copy(
-            pathlib.Path(dirs.toolchain)
+            pathlib.Path(toolchain_path)
             / env["RELENV_HOST"]
             / "sysroot"
             / "lib"
@@ -1705,16 +1795,16 @@ def finalize(
             format_shebang("../../bin/python3"),
         )
 
-    def runpip(pkg, upgrade=False):
+    def runpip(pkg: Union[str, os.PathLike[str]], upgrade: bool = False) -> None:
         logfp.write(f"\nRUN PIP {pkg} {upgrade}\n")
-        target = None
-        python = dirs.prefix / "bin" / "python3"
+        target: Optional[pathlib.Path] = None
+        python_exe = str(dirs.prefix / "bin" / "python3")
         if sys.platform == LINUX:
             if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
                 target = pymodules / "site-packages"
-                python = env["RELENV_NATIVE_PY"]
+                python_exe = env["RELENV_NATIVE_PY"]
         cmd = [
-            str(python),
+            python_exe,
             "-m",
             "pip",
             "install",
@@ -1778,11 +1868,12 @@ def create_archive(
             relpath = relroot / f
             matches = False
             for g in globs:
-                if glob.fnmatch.fnmatch("/" / relpath, g):
+                candidate = pathlib.Path("/") / relpath
+                if fnmatch.fnmatch(str(candidate), g):
                     matches = True
                     break
             if matches:
                 log.debug("Adding %s", relpath)
-                tarfp.add(relpath, relpath, recursive=False)
+                tarfp.add(relpath, arcname=str(relpath), recursive=False)
             else:
                 log.debug("Skipping %s", relpath)

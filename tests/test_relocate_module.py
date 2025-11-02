@@ -7,7 +7,7 @@ import os
 import pathlib
 import shutil
 import subprocess
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import pytest
 
@@ -192,7 +192,7 @@ def test_handle_macho_copies_when_needed(
 
     monkeypatch.setattr(os.path, "exists", lambda path: path == str(source_lib))
 
-    copied = {}
+    copied: Dict[str, Tuple[str, str]] = {}
 
     monkeypatch.setattr(
         shutil, "copy", lambda src, dst: copied.setdefault("copy", (src, dst))

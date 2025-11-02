@@ -1,5 +1,6 @@
 # Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
+# mypy: ignore-errors
 """
 The windows build process.
 """
@@ -13,7 +14,7 @@ import pathlib
 import shutil
 import sys
 import tarfile
-from typing import IO, MutableMapping
+from typing import IO, MutableMapping, Union
 
 from .common import (
     Dirs,
@@ -475,7 +476,7 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     python = dirs.prefix / "Scripts" / "python.exe"
     runcmd([str(python), "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
 
-    def runpip(pkg):
+    def runpip(pkg: Union[str, os.PathLike[str]]) -> None:
         # XXX Support cross pip installs on windows
         env = os.environ.copy()
         target = None

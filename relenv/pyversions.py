@@ -17,17 +17,28 @@ import argparse
 import hashlib
 import json
 import logging
-import os
+import os as _os
 import pathlib
 import re
-import subprocess
-import sys
+import subprocess as _subprocess
+import sys as _sys
 import time
 from typing import Any
 
 from relenv.common import Version, check_url, download_url, fetch_url_content
 
 log = logging.getLogger(__name__)
+
+os = _os
+subprocess = _subprocess
+sys = _sys
+
+__all__ = [
+    "Version",
+    "os",
+    "subprocess",
+    "sys",
+]
 
 KEYSERVERS = [
     "keyserver.ubuntu.com",

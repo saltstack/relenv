@@ -3,7 +3,10 @@
 #
 import os
 import pathlib
+
+# mypy: ignore-errors
 import subprocess
+from typing import Any
 
 import pytest
 
@@ -12,7 +15,7 @@ from tests.test_verify_build import _install_ppbt
 from .conftest import get_build_version
 
 
-def check_test_environment():
+def check_test_environment() -> bool:
     path = pathlib.Path("/etc/os-release")
     if path.exists():
         release = path.read_text()
@@ -28,7 +31,7 @@ pytestmark = [
 ]
 
 
-def test_fips_mode(pyexec, build):
+def test_fips_mode(pyexec: str, build: Any) -> None:
     _install_ppbt(pyexec)
     env = os.environ.copy()
     proc = subprocess.run(

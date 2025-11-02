@@ -7,18 +7,23 @@ from __future__ import annotations
 
 import http.client
 import logging
-import os
+import os as _os
 import pathlib
 import platform
 import queue
 import selectors
-import subprocess
-import sys
+import subprocess as _subprocess
+import sys as _sys
 import tarfile
 import textwrap
 import threading
 import time
-from typing import IO, Any, BinaryIO, Iterable, Mapping, Optional, Union
+from typing import IO, Any, BinaryIO, Iterable, Mapping, Optional, Union, cast
+
+# Re-export frequently monkeypatched modules for type checking.
+os = _os
+subprocess = _subprocess
+sys = _sys
 
 # relenv package version
 __version__ = "0.21.2"
@@ -108,7 +113,10 @@ def format_shebang(python: str, tpl: str = SHEBANG_TPL) -> str:
     """
     Return a formatted shebang.
     """
-    return tpl.format(python).strip() + "\n"
+    shebang = tpl.format(python).strip()
+    if shebang.endswith("'''"):
+        return shebang + "\n\n"
+    return shebang + "\n"
 
 
 def build_arch() -> str:
@@ -240,26 +248,35 @@ def get_toolchain(
     :return: The directory holding the toolchain
     :rtype: ``pathlib.Path``
     """
+    del root  # Kept for backward compatibility; location driven by DATA_DIR
     os.makedirs(DATA_DIR, exist_ok=True)
     if sys.platform != "linux":
         return DATA_DIR
 
-    TOOLCHAIN_ROOT = DATA_DIR / "toolchain"
-    TOOLCHAIN_PATH = TOOLCHAIN_ROOT / get_triplet()
-    if TOOLCHAIN_PATH.exists():
-        return TOOLCHAIN_PATH
-
-    ppbt = None
+    toolchain_root = DATA_DIR / "toolchain"
+    try:
+        triplet = get_triplet(machine=arch)
+    except TypeError:
+        triplet = get_triplet()
+    toolchain_path = toolchain_root / triplet
+    if toolchain_path.exists():
+        return toolchain_path
 
     try:
-        import ppbt.common
-    except ImportError:
-        pass
+        from importlib import import_module
 
-    if ppbt:
-        TOOLCHAIN_ROOT.mkdir(exist_ok=True)
-        ppbt.common.extract_archive(str(TOOLCHAIN_ROOT), str(ppbt.common.ARCHIVE))
-        return TOOLCHAIN_PATH
+        ppbt_common = import_module("ppbt.common")
+    except ImportError:
+        return None
+    archive_attr = getattr(ppbt_common, "ARCHIVE", None)
+    extract = getattr(ppbt_common, "extract_archive", None)
+    if archive_attr is None or not callable(extract):
+        raise RelenvException("ppbt.common missing ARCHIVE or extract_archive")
+
+    toolchain_root.mkdir(parents=True, exist_ok=True)
+    archive_path = pathlib.Path(archive_attr)
+    extract(str(toolchain_root), str(archive_path))
+    return toolchain_path
 
 
 def get_triplet(machine: Optional[str] = None, plat: Optional[str] = None) -> str:
@@ -310,12 +327,13 @@ def list_archived_builds() -> list[tuple[str, str, str]]:
     Return a list of version, architecture and platforms for builds.
     """
     builds: list[tuple[str, str, str]] = []
-    dirs = work_dirs(DATA_DIR)
-    for root, dirs, files in os.walk(dirs.build):
-        for file in files:
-            if file.endswith(".tar.xz"):
-                file = file[:-7]
-                version, triplet = file.split("-", 1)
+    working_dirs = work_dirs(DATA_DIR)
+    for root_dir, dirnames, filenames in os.walk(working_dirs.build):
+        del dirnames  # unused
+        for filename in filenames:
+            if filename.endswith(".tar.xz"):
+                base_name = filename[:-7]
+                version, triplet = base_name.split("-", 1)
                 arch, plat = triplet.split("-", 1)
                 builds.append((version, arch, plat))
     return builds
@@ -349,23 +367,26 @@ def extract_archive(
     :param archive: The archive to extract
     :type archive: str
     """
-    if archive.endswith("tgz"):
+    archive_path = pathlib.Path(archive)
+    archive_str = str(archive_path)
+    to_path = pathlib.Path(to_dir)
+    if archive_str.endswith(".tgz"):
         log.debug("Found tgz archive")
         read_type = "r:gz"
-    elif archive.endswith("tar.gz"):
+    elif archive_str.endswith(".tar.gz"):
         log.debug("Found tar.gz archive")
         read_type = "r:gz"
-    elif archive.endswith("xz"):
+    elif archive_str.endswith(".xz"):
         log.debug("Found xz archive")
         read_type = "r:xz"
-    elif archive.endswith("bz2"):
+    elif archive_str.endswith(".bz2"):
         log.debug("Found bz2 archive")
         read_type = "r:bz2"
     else:
-        log.warning("Found unknown archive type: %s", archive)
+        log.warning("Found unknown archive type: %s", archive_path)
         read_type = "r"
-    with tarfile.open(archive, read_type) as t:
-        t.extractall(to_dir)
+    with tarfile.open(archive_path, read_type) as tar:
+        tar.extractall(to_path)
 
 
 def get_download_location(url: str, dest: Union[str, os.PathLike[str]]) -> str:
@@ -380,7 +401,7 @@ def get_download_location(url: str, dest: Union[str, os.PathLike[str]]) -> str:
     :return: The path to where the url will be downloaded to
     :rtype: str
     """
-    return os.path.join(dest, os.path.basename(url))
+    return os.path.join(os.fspath(dest), os.path.basename(url))
 
 
 def check_url(url: str, timestamp: Optional[float] = None, timeout: float = 30) -> bool:
@@ -425,39 +446,37 @@ def fetch_url(url: str, fp: BinaryIO, backoff: int = 3, timeout: float = 30) -> 
     import urllib.request
 
     last = time.time()
-    if backoff < 1:
-        backoff = 1
-    n = 0
-    while n < backoff:
-        n += 1
+    attempts = max(backoff, 1)
+    response: http.client.HTTPResponse | None = None
+    for attempt in range(1, attempts + 1):
         try:
-            fin = urllib.request.urlopen(url, timeout=timeout)
+            response = urllib.request.urlopen(url, timeout=timeout)
             break
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
             http.client.RemoteDisconnected,
         ) as exc:
-            if n >= backoff:
+            if attempt >= attempts:
                 raise RelenvException(f"Error fetching url {url} {exc}")
             log.debug("Unable to connect %s", url)
-            time.sleep(n * 10)
-    else:
-        raise RelenvException(f"Error fetching url: {url}")
+            time.sleep(attempt * 10)
+    if response is None:
+        raise RelenvException(f"Unable to open url {url}")
     log.info("url opened %s", url)
     try:
         total = 0
         size = 1024 * 300
-        block = fin.read(size)
+        block = response.read(size)
         while block:
             total += size
             if time.time() - last > 10:
                 log.info("%s > %d", url, total)
                 last = time.time()
             fp.write(block)
-            block = fin.read(10240)
+            block = response.read(10240)
     finally:
-        fin.close()
+        response.close()
     log.info("Download complete %s", url)
 
 
@@ -469,52 +488,37 @@ def fetch_url_content(url: str, backoff: int = 3, timeout: float = 30) -> str:
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
     import gzip
-    import io
     import urllib.error
     import urllib.request
 
-    fp = io.BytesIO()
-
-    last = time.time()
-    if backoff < 1:
-        backoff = 1
-    n = 0
-    while n < backoff:
-        n += 1
+    attempts = max(backoff, 1)
+    response: http.client.HTTPResponse | None = None
+    for attempt in range(1, attempts + 1):
         try:
-            fin = urllib.request.urlopen(url, timeout=timeout)
+            response = urllib.request.urlopen(url, timeout=timeout)
+            break
         except (
             urllib.error.HTTPError,
             urllib.error.URLError,
             http.client.RemoteDisconnected,
         ) as exc:
-            if n >= backoff:
+            if attempt >= attempts:
                 raise RelenvException(f"Error fetching url {url} {exc}")
             log.debug("Unable to connect %s", url)
-            time.sleep(n * 10)
+            time.sleep(attempt * 10)
+    if response is None:
+        raise RelenvException(f"Unable to open url {url}")
     log.info("url opened %s", url)
     try:
-        total = 0
-        size = 1024 * 300
-        block = fin.read(size)
-        while block:
-            total += size
-            if time.time() - last > 10:
-                log.info("%s > %d", url, total)
-                last = time.time()
-            fp.write(block)
-            block = fin.read(10240)
+        data = response.read()
+        encoding = response.headers.get("content-encoding", "").lower()
     finally:
-        fin.close()
-        # fp.close()
+        response.close()
+    if encoding == "gzip":
+        log.debug("Found gzipped content")
+        data = gzip.decompress(data)
     log.info("Download complete %s", url)
-    fp.seek(0)
-    info = fin.info()
-    if "content-encoding" in info:
-        if info["content-encoding"] == "gzip":
-            log.debug("Found gzipped content")
-            fp = gzip.GzipFile(fileobj=fp)
-    return fp.read().decode()
+    return data.decode()
 
 
 def download_url(
@@ -572,7 +576,9 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
 
     :raises RelenvException: If the command finishes with a non zero exit code
     """
-    log.debug("Running command: %s", " ".join(args[0]))
+    if not args:
+        raise RelenvException("No command provided to runcmd")
+    log.debug("Running command: %s", " ".join(map(str, args[0])))
     # if "stdout" not in kwargs:
     kwargs["stdout"] = subprocess.PIPE
     # if "stderr" not in kwargs:
@@ -582,20 +588,27 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
     if sys.platform != "win32":
 
         p = subprocess.Popen(*args, **kwargs)
+        stdout_stream = p.stdout
+        stderr_stream = p.stderr
+        if stdout_stream is None or stderr_stream is None:
+            p.wait()
+            raise RelenvException("Process pipes are unavailable")
         # Read both stdout and stderr simultaneously
         sel = selectors.DefaultSelector()
-        sel.register(p.stdout, selectors.EVENT_READ)
-        sel.register(p.stderr, selectors.EVENT_READ)
+        sel.register(stdout_stream, selectors.EVENT_READ)
+        sel.register(stderr_stream, selectors.EVENT_READ)
         ok = True
         while ok:
             for key, val1 in sel.select():
-                line = key.fileobj.readline()
+                del val1  # unused
+                stream = cast(IO[str], key.fileobj)
+                line = stream.readline()
                 if not line:
                     ok = False
                     break
                 if line.endswith("\n"):
                     line = line[:-1]
-                if key.fileobj is p.stdout:
+                if stream is stdout_stream:
                     log.info(line)
                 else:
                     log.error(line)
@@ -603,15 +616,17 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
     else:
 
         def enqueue_stream(
-            stream: IO[str], item_queue: "queue.Queue[tuple[int | str, str]]", kind: int
+            stream: IO[str],
+            item_queue: "queue.Queue[tuple[int | str, str]]",
+            kind: int,
         ) -> None:
-            NOOP = object()
-            for line in iter(stream.readline, NOOP):
-                if line is NOOP or line == "":
+            last_line = ""
+            for line in iter(stream.readline, ""):
+                if line == "":
                     break
-                if line:
-                    item_queue.put((kind, line))
-            log.debug("stream close %r %r", kind, line)
+                item_queue.put((kind, line))
+                last_line = line
+            log.debug("stream close %r %r", kind, last_line)
             stream.close()
 
         def enqueue_process(
@@ -622,9 +637,14 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
             item_queue.put(("x", ""))
 
         p = subprocess.Popen(*args, **kwargs)
+        stdout_stream = p.stdout
+        stderr_stream = p.stderr
+        if stdout_stream is None or stderr_stream is None:
+            p.wait()
+            raise RelenvException("Process pipes are unavailable")
         q: "queue.Queue[tuple[int | str, str]]" = queue.Queue()
-        to = threading.Thread(target=enqueue_stream, args=(p.stdout, q, 1))
-        te = threading.Thread(target=enqueue_stream, args=(p.stderr, q, 2))
+        to = threading.Thread(target=enqueue_stream, args=(stdout_stream, q, 1))
+        te = threading.Thread(target=enqueue_stream, args=(stderr_stream, q, 2))
         tp = threading.Thread(target=enqueue_process, args=(p, q))
         te.start()
         to.start()
@@ -691,24 +711,26 @@ def addpackage(sitedir: str, name: Union[str, os.PathLike[str]]) -> list[str] | 
     import io
     import stat
 
-    fullname = os.path.join(sitedir, name)
+    fullname = os.path.join(sitedir, os.fspath(name))
     paths: list[str] = []
     try:
         st = os.lstat(fullname)
     except OSError:
-        return
-    if (getattr(st, "st_flags", 0) & stat.UF_HIDDEN) or (
-        getattr(st, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_HIDDEN
+        return None
+    file_attr_hidden = getattr(stat, "FILE_ATTRIBUTE_HIDDEN", 0)
+    uf_hidden = getattr(stat, "UF_HIDDEN", 0)
+    if (getattr(st, "st_flags", 0) & uf_hidden) or (
+        getattr(st, "st_file_attributes", 0) & file_attr_hidden
     ):
         # print(f"Skipping hidden .pth file: {fullname!r}")
-        return
+        return None
     # print(f"Processing .pth file: {fullname!r}")
     try:
         # locale encoding is not ideal especially on Windows. But we have used
         # it for a long time. setuptools uses the locale encoding too.
         f = io.TextIOWrapper(io.open_code(fullname), encoding="locale")
     except OSError:
-        return
+        return None
     with f:
         for n, line in enumerate(f):
             if line.startswith("#"):
@@ -787,13 +809,13 @@ class Version:
         """
         Version as string.
         """
-        _ = f"{self.major}"
+        result = f"{self.major}"
         if self.minor is not None:
-            _ += f".{self.minor}"
+            result += f".{self.minor}"
             if self.micro is not None:
-                _ += f".{self.micro}"
+                result += f".{self.micro}"
         # XXX What if minor was None but micro was an int.
-        return _
+        return result
 
     def __hash__(self: "Version") -> int:
         """

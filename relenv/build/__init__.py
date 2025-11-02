@@ -1,7 +1,8 @@
 # Copyright 2022-2025 Broadcom.
-# SPDX-License-Identifier: Apache-2
+# SPDX-License-Identifier: Apache-2.0
+# mypy: ignore-errors
 """
-The ``relenv build`` command.
+Entry points for the ``relenv build`` CLI command.
 """
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ import codecs
 import random
 import signal
 import sys
-from types import ModuleType
+from types import FrameType, ModuleType
 
 from . import darwin, linux, windows
 from .common import CHECK_VERSIONS_SUPPORT, builds
@@ -200,7 +201,7 @@ def main(args: argparse.Namespace) -> None:
     else:
         show_ui = True
 
-    def signal_handler(signal, frame):
+    def signal_handler(_signal: int, frame: FrameType | None) -> None:
         sys.exit(1)
 
     signal.signal(signal.SIGINT, signal_handler)

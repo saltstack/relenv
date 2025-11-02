@@ -10,9 +10,9 @@ import logging
 import pathlib
 import sys
 
-from . import relocate
+from relenv import relocate
 
-log = logging.getLogger()
+log: logging.Logger = logging.getLogger(__name__)
 
 
 def setup_parser(
