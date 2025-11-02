@@ -1,46 +1,46 @@
-# Copyright 2022 VMware, Inc.
-# SPDX-License-Identifier: Apache-2
-
 default_language_version:
-    python: python3
-
+  python: python3
 repos:
-  # ----- Local Hooks ----------------------------------------------------------------------------------------------->
-  - repo: local
-    hooks:
-      - id: check-changelog-entries
-        name: Check Changelog Entries
-        entry: python .pre-commit-hooks/check_changelog_entries.py
-        language: system
-
-  - repo: local
-    hooks:
-      - id: check-copyright-headers
-        name: Check python modules for appropriate copyright headers
-        files: ^.*\.py$
-        exclude: setup\.py
-        entry: python .pre-commit-hooks/copyright_headers.py
-        language: system
-  # <---- Local Hooks ------------------------------------------------------------------------------------------------
-
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-
-  - repo: https://github.com/psf/black
-    rev: 22.6.0
-    hooks:
-      - id: black
-
-  # ----- Code Analysis --------------------------------------------------------------------------------------------->
-  - repo: https://github.com/pycqa/flake8
-    rev: '5.0.4'
-    hooks:
-      - id: flake8
-        exclude: ^(\.pre-commit-hooks/.*\.py)$
-        additional_dependencies:
-        - flake8-mypy-fork
-        - flake8-docstrings
-        - flake8-typing-imports
-  # <---- Code Analysis ---------------------------------------------------------------------------------------------
+- repo: local
+  hooks:
+  - id: check-changelog-entries
+    name: Check Changelog Entries
+    entry: python .pre-commit-hooks/check_changelog_entries.py
+    language: system
+- repo: local
+  hooks:
+  - id: check-copyright-headers
+    name: Check python modules for appropriate copyright headers
+    files: ^.*\.py$
+    exclude: setup\.py
+    entry: python .pre-commit-hooks/copyright_headers.py
+    language: system
+- repo: https://github.com/timothycrosley/isort
+  rev: 5.12.0
+  hooks:
+  - id: isort
+- repo: https://github.com/psf/black
+  rev: 22.6.0
+  hooks:
+  - id: black
+- repo: https://github.com/pycqa/flake8
+  rev: 5.0.4
+  hooks:
+  - id: flake8
+    exclude: ^(\.pre-commit-hooks/.*\.py)$
+    additional_dependencies:
+    - flake8-mypy-fork
+    - flake8-docstrings
+    - flake8-typing-imports
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v1.11.1
+  hooks:
+  - id: mypy
+    args:
+    - --strict
+    - --config-file=pyproject.toml
+    - relenv/
+    - tests/
+    additional_dependencies:
+    - types-requests
+    pass_filenames: false

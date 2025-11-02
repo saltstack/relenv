@@ -7,13 +7,34 @@ A script to ensure the proper rpaths are in place for the relenv environment.
 from __future__ import annotations
 
 import logging
-import os
+import os as _os
 import pathlib
-import shutil
-import subprocess
+import shutil as _shutil
+import subprocess as _subprocess
 from typing import Optional
 
 log = logging.getLogger(__name__)
+
+os = _os
+shutil = _shutil
+subprocess = _subprocess
+
+__all__ = [
+    "is_macho",
+    "is_elf",
+    "parse_otool_l",
+    "parse_readelf_d",
+    "parse_macho",
+    "parse_rpath",
+    "handle_macho",
+    "is_in_dir",
+    "handle_elf",
+    "patch_rpath",
+    "main",
+    "os",
+    "shutil",
+    "subprocess",
+]
 
 
 LIBCLIBS = [
@@ -81,7 +102,7 @@ def is_elf(path: str | os.PathLike[str]) -> bool:
     return magic == b"\x7f\x45\x4c\x46"
 
 
-def parse_otool_l(stdout: str) -> dict[str, list[str | None]]:
+def parse_otool_l(stdout: str) -> dict[str, list[str]]:
     """
     Parse the output of ``otool -l <path>``.
 
@@ -94,7 +115,7 @@ def parse_otool_l(stdout: str) -> dict[str, list[str | None]]:
     in_cmd = False
     cmd: Optional[str] = None
     name: Optional[str] = None
-    data: dict[str, list[str | None]] = {}
+    data: dict[str, list[str]] = {}
     for line in [x.strip() for x in stdout.split("\n")]:
 
         if not line:
@@ -102,26 +123,24 @@ def parse_otool_l(stdout: str) -> dict[str, list[str | None]]:
 
         if line.split()[0] == "cmd":
             in_cmd = False
-            if cmd:
-                if cmd not in data:
-                    data[cmd] = []
-                data[cmd].append(name)
+            if cmd is not None and name is not None:
+                data.setdefault(cmd, []).append(name)
                 cmd = None
                 name = None
-            if line.split()[-1] in (LC_ID_DYLIB, LC_LOAD_DYLIB, "LC_RPATH"):
-                cmd = line.split()[-1]
+            command = line.split()[-1]
+            if command in (LC_ID_DYLIB, LC_LOAD_DYLIB, "LC_RPATH"):
+                cmd = command
                 in_cmd = True
 
         if in_cmd:
-            if line.split()[0] == "name":
-                name = line.split()[1]
-            if line.split()[0] == "path":
-                name = line.split()[1]
+            parts = line.split()
+            if parts[0] == "name" and len(parts) > 1:
+                name = parts[1]
+            if parts[0] == "path" and len(parts) > 1:
+                name = parts[1]
 
-    if in_cmd:
-        if cmd not in data:
-            data[cmd] = []
-        data[cmd].append(name)
+    if in_cmd and cmd is not None and name is not None:
+        data.setdefault(cmd, []).append(name)
 
     return data
 
@@ -144,7 +163,7 @@ def parse_readelf_d(stdout: str) -> list[str]:
     return []
 
 
-def parse_macho(path: str | os.PathLike[str]) -> dict[str, list[str | None]] | None:
+def parse_macho(path: str | os.PathLike[str]) -> dict[str, list[str]] | None:
     """
     Run ``otool -l <path>`` and return its parsed output.
 
@@ -183,7 +202,7 @@ def handle_macho(
     path: str | os.PathLike[str],
     root_dir: str | os.PathLike[str],
     rpath_only: bool,
-) -> dict[str, list[str | None]] | None:
+) -> dict[str, list[str]] | None:
     """
     Ensure the given macho file has the correct rpath and is in th correct location.
 
@@ -196,17 +215,20 @@ def handle_macho(
 
     :return: The information from ``parse_macho`` on the macho file.
     """
-    obj = parse_macho(path)
-    log.info("Processing file %s %r", path, obj)
+    path_obj = pathlib.Path(path)
+    obj = parse_macho(path_obj)
+    path_str = str(path_obj)
+    log.info("Processing file %s %r", path_str, obj)
     if not obj:
         return None
     if LC_LOAD_DYLIB in obj:
         for x in obj[LC_LOAD_DYLIB]:
-            if path.startswith("@"):
-                log.info("Skipping dynamic load: %s", path)
+            if x.startswith("@"):
+                log.info("Skipping dynamic load: %s", x)
                 continue
             if os.path.exists(x):
-                y = pathlib.Path(root_dir).resolve() / os.path.basename(x)
+                target_dir = pathlib.Path(root_dir).resolve()
+                y = target_dir / os.path.basename(x)
                 if not os.path.exists(y):
                     if rpath_only:
                         log.warning("In `rpath_only mode` but %s is not in %s", x, y)
@@ -215,13 +237,13 @@ def handle_macho(
                         shutil.copy(x, y)
                         shutil.copymode(x, y)
                         log.info("Copied %s to %s", x, y)
-                log.info("Use %s to %s", y, path)
+                log.info("Use %s to %s", y, path_str)
                 z = pathlib.Path("@loader_path") / os.path.relpath(
-                    y, pathlib.Path(path).resolve().parent
+                    y, path_obj.resolve().parent
                 )
-                cmd = ["install_name_tool", "-change", x, z, path]
+                cmd = ["install_name_tool", "-change", x, str(z), path_str]
                 subprocess.run(cmd)
-                log.info("Changed %s to %s in %s", x, z, path)
+                log.info("Changed %s to %s in %s", x, z, path_str)
     return obj
 
 
@@ -371,24 +393,24 @@ def main(
     :param log_level: The level to log at, defaults to "INFO"
     :type log_level: str, optional
     """
+    level = logging.getLevelName(log_level.upper())
     if log_file_name != "<stdout>":
-        kwargs = {
-            "filename": log_file_name,
-            "filemode": "w",
-        }
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s %(message)s",
+            filename=log_file_name,
+            filemode="w",
+        )
     else:
-        kwargs = {}
-    logging.basicConfig(
-        level=logging.getLevelName(log_level.upper()),
-        format="%(asctime)s %(message)s",
-        **kwargs,
-    )
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s %(message)s",
+        )
     root_dir = str(pathlib.Path(root).resolve())
     if libs_dir is None:
         libs_dir = pathlib.Path(root_dir, "lib")
     libs_dir = str(pathlib.Path(libs_dir).resolve())
-    rpath_only = rpath_only
-    processed: dict[str, dict[str, list[str | None]] | None] = {}
+    processed: dict[str, dict[str, list[str]] | None] = {}
     found = True
     while found:
         found = False

@@ -3,6 +3,7 @@
 import pathlib
 import shutil
 from textwrap import dedent
+from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -23,103 +24,108 @@ pytestmark = [
 
 
 class BaseProject:
-    def __init__(self, root_dir):
+    def __init__(self, root_dir: pathlib.Path) -> None:
         self.root_dir = root_dir
         self.libs_dir = self.root_dir / "lib"
 
-    def make_project(self):
+    def make_project(self) -> None:
         self.root_dir.mkdir(parents=True, exist_ok=True)
         self.libs_dir.mkdir(parents=True, exist_ok=True)
 
-    def destroy_project(self):
+    def destroy_project(self) -> None:
         # Make sure the project is torn down properly
-        if pathlib.Path(self.root_dir).exists():
+        if self.root_dir.exists():
             shutil.rmtree(self.root_dir, ignore_errors=True)
 
-    def add_file(self, name, contents, *relpath, binary=False):
+    def add_file(
+        self,
+        name: str,
+        contents: bytes | str,
+        *relpath: str,
+        binary: bool = False,
+    ) -> pathlib.Path:
         file_path = (self.root_dir / pathlib.Path(*relpath) / name).resolve()
         file_path.parent.mkdir(parents=True, exist_ok=True)
         if binary:
-            file_path.write_bytes(contents)
+            data = contents if isinstance(contents, bytes) else contents.encode()
+            file_path.write_bytes(data)
         else:
-            file_path.write_text(contents)
+            text = contents.decode() if isinstance(contents, bytes) else contents
+            file_path.write_text(text)
         return file_path
 
-    def __enter__(self):
+    def __enter__(self) -> "BaseProject":
         self.make_project()
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
         self.destroy_project()
 
 
 class LinuxProject(BaseProject):
-    def add_simple_elf(self, name, *relpath):
+    def add_simple_elf(self, name: str, *relpath: str) -> pathlib.Path:
         return self.add_file(name, b"\x7f\x45\x4c\x46", *relpath, binary=True)
 
 
-def test_is_macho_true(tmp_path):
+def test_is_macho_true(tmp_path: pathlib.Path) -> None:
     lib_path = tmp_path / "test.dylib"
     lib_path.write_bytes(b"\xcf\xfa\xed\xfe")
     assert is_macho(lib_path) is True
 
 
-def test_is_macho_false(tmp_path):
+def test_is_macho_false(tmp_path: pathlib.Path) -> None:
     lib_path = tmp_path / "test.dylib"
     lib_path.write_bytes(b"\xcf\xfa\xed\xfa")
     assert is_macho(lib_path) is False
 
 
-def test_is_macho_not_a_file(tmp_path):
+def test_is_macho_not_a_file(tmp_path: pathlib.Path) -> None:
     with pytest.raises(IsADirectoryError):
         assert is_macho(tmp_path) is False
 
 
-def test_is_macho_file_does_not_exist(tmp_path):
+def test_is_macho_file_does_not_exist(tmp_path: pathlib.Path) -> None:
     lib_path = tmp_path / "test.dylib"
     with pytest.raises(FileNotFoundError):
         assert is_macho(lib_path) is False
 
 
-def test_is_elf_true(tmp_path):
+def test_is_elf_true(tmp_path: pathlib.Path) -> None:
     lib_path = tmp_path / "test.so"
     lib_path.write_bytes(b"\x7f\x45\x4c\x46")
     assert is_elf(lib_path) is True
 
 
-def test_is_elf_false(tmp_path):
+def test_is_elf_false(tmp_path: pathlib.Path) -> None:
     lib_path = tmp_path / "test.so"
     lib_path.write_bytes(b"\xcf\xfa\xed\xfa")
     assert is_elf(lib_path) is False
 
 
-def test_is_elf_not_a_file(tmp_path):
+def test_is_elf_not_a_file(tmp_path: pathlib.Path) -> None:
     with pytest.raises(IsADirectoryError):
         assert is_elf(tmp_path) is False
 
 
-def test_is_elf_file_does_not_exist(tmp_path):
+def test_is_elf_file_does_not_exist(tmp_path: pathlib.Path) -> None:
     lib_path = tmp_path / "test.so"
     with pytest.raises(FileNotFoundError):
         assert is_elf(lib_path) is False
 
 
-def test_parse_otool_l():
-    # XXX
-    pass
+def test_parse_otool_l() -> None:
+    pytest.skip("Not implemented")
 
 
-def test_parse_macho():
-    # XXX
-    pass
+def test_parse_macho() -> None:
+    pytest.skip("Not implemented")
 
 
-def test_handle_macho():
-    # XXX
-    pass
+def test_handle_macho() -> None:
+    pytest.skip("Not implemented")
 
 
-def test_parse_readelf_d_no_rpath():
+def test_parse_readelf_d_no_rpath() -> None:
     section = dedent(
         """
     Dynamic section at offset 0xbdd40 contains 28 entries:
@@ -134,7 +140,7 @@ def test_parse_readelf_d_no_rpath():
     assert parse_readelf_d(section) == []
 
 
-def test_parse_readelf_d_rpath():
+def test_parse_readelf_d_rpath() -> None:
     section = dedent(
         """
     Dynamic section at offset 0x58000 contains 27 entries:
@@ -149,19 +155,19 @@ def test_parse_readelf_d_rpath():
     assert parse_readelf_d(section) == ["$ORIGIN/../.."]
 
 
-def test_is_in_dir(tmp_path):
+def test_is_in_dir(tmp_path: pathlib.Path) -> None:
     parent = tmp_path / "foo"
     child = tmp_path / "foo" / "bar" / "bang"
     assert is_in_dir(child, parent) is True
 
 
-def test_is_in_dir_false(tmp_path):
+def test_is_in_dir_false(tmp_path: pathlib.Path) -> None:
     parent = tmp_path / "foo"
     child = tmp_path / "bar" / "bang"
     assert is_in_dir(child, parent) is False
 
 
-def test_patch_rpath(tmp_path):
+def test_patch_rpath(tmp_path: pathlib.Path) -> None:
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
@@ -172,7 +178,7 @@ def test_patch_rpath(tmp_path):
             assert patch_rpath(path, new_rpath) == new_rpath
 
 
-def test_patch_rpath_failed(tmp_path):
+def test_patch_rpath_failed(tmp_path: pathlib.Path) -> None:
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=1)):
@@ -183,7 +189,7 @@ def test_patch_rpath_failed(tmp_path):
             assert patch_rpath(path, new_rpath) is False
 
 
-def test_patch_rpath_no_change(tmp_path):
+def test_patch_rpath_no_change(tmp_path: pathlib.Path) -> None:
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
@@ -191,7 +197,7 @@ def test_patch_rpath_no_change(tmp_path):
             assert patch_rpath(path, new_rpath, only_relative=False) == new_rpath
 
 
-def test_patch_rpath_remove_non_relative(tmp_path):
+def test_patch_rpath_remove_non_relative(tmp_path: pathlib.Path) -> None:
     path = str(tmp_path / "test")
     new_rpath = str(pathlib.Path("$ORIGIN", "..", "..", "lib"))
     with patch("subprocess.run", return_value=MagicMock(returncode=0)):
@@ -202,7 +208,7 @@ def test_patch_rpath_remove_non_relative(tmp_path):
             assert patch_rpath(path, new_rpath) == new_rpath
 
 
-def test_main_linux(tmp_path):
+def test_main_linux(tmp_path: pathlib.Path) -> None:
     proj = LinuxProject(tmp_path)
     simple = proj.add_simple_elf("simple.so", "foo", "bar")
     simple2 = proj.add_simple_elf("simple2.so", "foo", "bar", "bop")
@@ -218,7 +224,7 @@ def test_main_linux(tmp_path):
             elf_mock.assert_has_calls(calls, any_order=True)
 
 
-def test_handle_elf(tmp_path):
+def test_handle_elf(tmp_path: pathlib.Path) -> None:
     proj = LinuxProject(tmp_path / "proj")
     pybin = proj.add_simple_elf("python", "foo")
     libcrypt = tmp_path / "libcrypt.so.2"
@@ -245,7 +251,7 @@ def test_handle_elf(tmp_path):
                 patch_rpath_mock.assert_called_with(str(pybin), "$ORIGIN/../lib")
 
 
-def test_handle_elf_rpath_only(tmp_path):
+def test_handle_elf_rpath_only(tmp_path: pathlib.Path) -> None:
     proj = LinuxProject(tmp_path / "proj")
     pybin = proj.add_simple_elf("python", "foo")
     libcrypt = proj.libs_dir / "libcrypt.so.2"

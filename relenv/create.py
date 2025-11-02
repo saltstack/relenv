@@ -10,6 +10,7 @@ import argparse
 import contextlib
 import os
 import pathlib
+import shutil
 import sys
 import tarfile
 from collections.abc import Iterator
@@ -133,6 +134,36 @@ def create(
     with tarfile.open(tar, "r:xz") as fp:
         for f in fp:
             fp.extract(f, writeto)
+    _sync_relenv_package(writeto, version)
+
+
+def _site_packages_dir(root: pathlib.Path, version: str) -> pathlib.Path:
+    """
+    Return the site-packages directory within the created environment.
+    """
+    major_minor = ".".join(version.split(".")[:2])
+    if sys.platform == "win32":
+        return root / "Lib" / "site-packages"
+    return root / "lib" / f"python{major_minor}" / "site-packages"
+
+
+def _sync_relenv_package(root: pathlib.Path, version: str) -> None:
+    """
+    Ensure the relenv package within the created environment matches this CLI.
+    """
+    target_site = _site_packages_dir(root, version)
+    if not target_site.exists():
+        return
+    target = target_site / "relenv"
+    source = pathlib.Path(__file__).resolve().parent
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(
+        source,
+        target,
+        dirs_exist_ok=True,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
+    )
 
 
 def main(args: argparse.Namespace) -> None:

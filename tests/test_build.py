@@ -1,27 +1,30 @@
 # Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
 import hashlib
+import pathlib
 
 import pytest
 
 from relenv.build.common import Builder, verify_checksum
 from relenv.common import DATA_DIR, RelenvException
 
+# mypy: ignore-errors
+
 
 @pytest.fixture
-def fake_download(tmp_path):
+def fake_download(tmp_path: pathlib.Path) -> pathlib.Path:
     download = tmp_path / "fake_download"
     download.write_text("This is some file contents")
     return download
 
 
 @pytest.fixture
-def fake_download_md5(fake_download):
+def fake_download_md5(fake_download: pathlib.Path) -> str:
     return hashlib.sha1(fake_download.read_bytes()).hexdigest()
 
 
 @pytest.mark.skip_unless_on_linux
-def test_builder_defaults_linux():
+def test_builder_defaults_linux() -> None:
     builder = Builder(version="3.10.10")
     assert builder.arch == "x86_64"
     assert builder.arch == "x86_64"
@@ -35,9 +38,9 @@ def test_builder_defaults_linux():
     assert builder.recipies == {}
 
 
-def test_verify_checksum(fake_download, fake_download_md5):
+def test_verify_checksum(fake_download: pathlib.Path, fake_download_md5: str) -> None:
     assert verify_checksum(fake_download, fake_download_md5) is True
 
 
-def test_verify_checksum_failed(fake_download):
+def test_verify_checksum_failed(fake_download: pathlib.Path) -> None:
     pytest.raises(RelenvException, verify_checksum, fake_download, "no")

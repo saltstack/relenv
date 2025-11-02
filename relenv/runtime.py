@@ -13,18 +13,18 @@ This code is run when initializing the python interperter in a Relenv environmen
 from __future__ import annotations
 
 import contextlib
-import ctypes
+import ctypes as _ctypes
 import functools
-import importlib
-import json
+import importlib as _importlib
+import json as _json
 import os
 import pathlib
-import shutil
-import site
-import subprocess
-import sys
+import shutil as _shutil
+import site as _site
+import subprocess as _subprocess
+import sys as _sys
 import textwrap
-import warnings
+import warnings as _warnings
 from importlib.machinery import ModuleSpec
 from types import ModuleType
 from typing import (
@@ -38,6 +38,30 @@ from typing import (
     Union,
     cast,
 )
+
+# The tests monkeypatch these module-level imports (e.g., json.loads) inside
+# relenv.runtime itself; keeping them as Any both preserves test isolation—no
+# need to patch the global stdlib modules—and avoids mypy attr-defined noise
+# while still exercising the real runtime wiring.
+json = cast(Any, _json)
+importlib = cast(Any, _importlib)
+site = cast(Any, _site)
+subprocess = cast(Any, _subprocess)
+sys = cast(Any, _sys)
+ctypes = cast(Any, _ctypes)
+shutil = cast(Any, _shutil)
+warnings = cast(Any, _warnings)
+
+__all__ = [
+    "sys",
+    "shutil",
+    "subprocess",
+    "json",
+    "importlib",
+    "site",
+    "ctypes",
+    "warnings",
+]
 
 PathType = Union[str, os.PathLike[str]]
 ConfigVars = Dict[str, str]
@@ -601,7 +625,8 @@ def wrap_pip_distlib_scripts(name: str) -> ModuleType:
     """
     pip.distlib.scripts wrapper.
     """
-    mod = importlib.import_module(name)
+    module = importlib.import_module(name)
+    mod = cast(Any, module)
     mod.ScriptMaker._build_shebang = _build_shebang(mod.ScriptMaker._build_shebang)
     return mod
 
@@ -710,7 +735,8 @@ def wrap_cmd_install(name: str) -> ModuleType:
     """
     Wrap pip install command to store target argument state.
     """
-    mod = importlib.import_module(name)
+    module = importlib.import_module(name)
+    mod = cast(Any, module)
 
     def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
@@ -741,14 +767,15 @@ def wrap_cmd_install(name: str) -> ModuleType:
         mod.InstallCommand._handle_target_dir = wrap(
             mod.InstallCommand._handle_target_dir
         )
-    return mod
+    return cast(ModuleType, mod)
 
 
 def wrap_locations(name: str) -> ModuleType:
     """
     Wrap pip locations to fix locations when installing with target.
     """
-    mod = importlib.import_module(name)
+    module = importlib.import_module(name)
+    mod = cast(Any, module)
 
     def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
@@ -809,14 +836,15 @@ def wrap_req_command(name: str) -> ModuleType:
     mod.RequirementCommand._build_package_finder = wrap(
         mod.RequirementCommand._build_package_finder
     )
-    return mod
+    return cast(ModuleType, mod)
 
 
 def wrap_req_install(name: str) -> ModuleType:
     """
     Honor ignore installed option from pip cli.
     """
-    mod = importlib.import_module(name)
+    module = importlib.import_module(name)
+    mod = cast(Any, module)
 
     def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         argcount = mod.InstallRequirement.install.__code__.co_argcount
@@ -948,7 +976,7 @@ def wrap_req_install(name: str) -> ModuleType:
         return wrapper
 
     mod.InstallRequirement.install = wrap(mod.InstallRequirement.install)
-    return mod
+    return cast(ModuleType, mod)
 
 
 importer = RelenvImporter(
@@ -991,24 +1019,42 @@ def install_cargo_config() -> None:
         return
 
     # cargo_home = dirs.data / "cargo"
-    if not cargo_home.exists():
-        cargo_home.mkdir()
+    cargo_home.mkdir(parents=True, exist_ok=True)
     cargo_config = cargo_home / "config.toml"
-    if not cargo_config.exists():
-        if triplet == "x86_64-linux-gnu":
-            cargo_triplet = "x86_64-unknown-linux-gnu"
-        else:
-            cargo_triplet = "aarch64-unknown-linux-gnu"
-        gcc = toolchain / "bin" / f"{triplet}-gcc"
-        with open(cargo_config, "w") as fp:
-            fp.write(
-                textwrap.dedent(
-                    """\
-            [target.{}]
-            linker = "{}"
+    if triplet == "x86_64-linux-gnu":
+        cargo_triplet = "x86_64-unknown-linux-gnu"
+    else:
+        cargo_triplet = "aarch64-unknown-linux-gnu"
+    gcc = toolchain / "bin" / f"{triplet}-gcc"
+
+    def existing_linker() -> str | None:
+        if not cargo_config.exists():
+            return None
+        try:
+            contents = cargo_config.read_text()
+        except OSError:
+            return None
+        marker = f"[target.{cargo_triplet}]"
+        if marker not in contents:
+            return None
+        for line in contents.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("linker"):
+                _, _, value = stripped.partition("=")
+                value = value.strip().strip('"')
+                if value:
+                    return value
+        return None
+
+    if existing_linker() != str(gcc):
+        cargo_config.write_text(
+            textwrap.dedent(
+                """\
+            [target.{triplet}]
+            linker = "{linker}"
             """
-                ).format(cargo_triplet, gcc)
-            )
+            ).format(triplet=cargo_triplet, linker=gcc)
+        )
 
 
 def setup_openssl() -> None:

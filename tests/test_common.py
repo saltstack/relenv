@@ -40,6 +40,7 @@ from relenv.common import (
     work_dirs,
     work_root,
 )
+from tests._pytest_typing import mark_skipif, parametrize
 
 
 def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str) -> None:
@@ -48,20 +49,20 @@ def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str) -> None:
     """
     stub_package = ModuleType("ppbt")
     stub_common = ModuleType("ppbt.common")
-    stub_package.common = stub_common  # type: ignore[attr-defined]
+    setattr(stub_package, "common", stub_common)
 
     # pytest will clean these entries up automatically via monkeypatch
     monkeypatch.setitem(sys.modules, "ppbt", stub_package)
     monkeypatch.setitem(sys.modules, "ppbt.common", stub_common)
 
-    stub_common.ARCHIVE = pathlib.Path("dummy-toolchain.tar.xz")
+    setattr(stub_common, "ARCHIVE", pathlib.Path("dummy-toolchain.tar.xz"))
 
     def fake_extract_archive(dest: str, archive: str) -> None:
         dest_path = pathlib.Path(dest)
         dest_path.mkdir(parents=True, exist_ok=True)
         (dest_path / triplet).mkdir(parents=True, exist_ok=True)
 
-    stub_common.extract_archive = fake_extract_archive  # type: ignore[attr-defined]
+    setattr(stub_common, "extract_archive", fake_extract_archive)
 
 
 def test_get_triplet_linux() -> None:
@@ -189,7 +190,7 @@ def test_get_toolchain_no_arch(
     assert ret == data_dir / "toolchain" / triplet
 
 
-@pytest.mark.parametrize(
+@parametrize(
     ("suffix", "mode"),
     (
         (".tgz", "w:gz"),
@@ -250,19 +251,21 @@ def test_download_url_failure_cleans_up(tmp_path: pathlib.Path) -> None:
     assert not created.exists()
 
 
-@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
+@mark_skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
 def test_shebang_tpl_linux() -> None:
     sh = format_shebang("python3", SHEBANG_TPL_LINUX).split("'''")[1].strip("'")
     proc = subprocess.Popen(["shellcheck", "-s", "sh", "-"], stdin=subprocess.PIPE)
+    assert proc.stdin is not None
     proc.stdin.write(sh.encode())
     proc.communicate()
     assert proc.returncode == 0
 
 
-@pytest.mark.skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
+@mark_skipif(shutil.which("shellcheck") is None, reason="Test needs shellcheck")
 def test_shebang_tpl_macos() -> None:
     sh = format_shebang("python3", SHEBANG_TPL_MACOS).split("'''")[1].strip("'")
     proc = subprocess.Popen(["shellcheck", "-s", "sh", "-"], stdin=subprocess.PIPE)
+    assert proc.stdin is not None
     proc.stdin.write(sh.encode())
     proc.communicate()
     assert proc.returncode == 0

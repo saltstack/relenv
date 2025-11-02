@@ -6,7 +6,7 @@ from __future__ import annotations
 import hashlib
 import pathlib
 import subprocess
-from typing import Dict
+from typing import Any, Dict, Sequence
 
 import pytest
 
@@ -69,7 +69,9 @@ def test_verify_signature_success(
 ) -> None:
     called: Dict[str, list[str]] = {}
 
-    def fake_run(cmd, **kwargs):
+    def fake_run(
+        cmd: Sequence[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[bytes]:
         called.setdefault("cmd", []).extend(cmd)
         return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")
 
@@ -83,7 +85,9 @@ def test_verify_signature_failure_with_missing_key(
 ) -> None:
     responses: list[str] = []
 
-    def fake_run(cmd, **kwargs):
+    def fake_run(
+        cmd: Sequence[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[bytes]:
         if len(responses) == 0:
             responses.append("first")
             stderr = b"gpg: error\n[GNUPG:] INV_SGNR 0 ABCDEF12\nNo public key\n"

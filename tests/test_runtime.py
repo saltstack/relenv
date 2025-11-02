@@ -15,6 +15,8 @@ import pytest
 
 import relenv.runtime
 
+# mypy: ignore-errors
+
 
 def _raise(exc: Exception):
     raise exc

@@ -1,5 +1,6 @@
 # Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
+# mypy: ignore-errors
 """
 The ``relenv fetch`` command.
 """

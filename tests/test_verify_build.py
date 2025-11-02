@@ -1,16 +1,19 @@
 # Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2
+# mypy: ignore-errors
 """
 Verify relenv builds.
 """
 import json
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import sys
 import textwrap
 import time
+import uuid
 
 import packaging
 import pytest
@@ -63,6 +66,15 @@ def _install_ppbt(pexec):
         [str(pexec), "-c", "from relenv import common; assert common.get_toolchain()"]
     )
     assert p.returncode == 0, "Failed to extract toolchain"
+
+
+@pytest.fixture(autouse=True)
+def _clear_ssl_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Ensure preceding tests do not leave stale certificate paths behind.
+    """
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
 
 
 @pytest.fixture(scope="module")
@@ -413,7 +425,15 @@ def test_pip_install_salt_w_package_requirements(
         "26.4.0",
     ],
 )
-def test_pip_install_pyzmq(pipexec, pyexec, pyzmq_version, build_version, arch, build):
+def test_pip_install_pyzmq(
+    pipexec,
+    pyexec,
+    pyzmq_version,
+    build_version,
+    arch,
+    build,
+    tmp_path: pathlib.Path,
+) -> None:
 
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
@@ -483,6 +503,157 @@ def test_pip_install_pyzmq(pipexec, pyexec, pyzmq_version, build_version, arch, 
     env["ZMQ_PREFIX"] = "bundled"
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
+
+    if sys.platform == "linux":
+        fake_bsd_root = tmp_path / "fake_libbsd"
+        (fake_bsd_root / "bsd").mkdir(parents=True, exist_ok=True)
+        (fake_bsd_root / "bsd" / "string.h").write_text(
+            textwrap.dedent(
+                """\
+                #ifndef RELENV_FAKE_BSD_STRING_H
+                #define RELENV_FAKE_BSD_STRING_H
+
+                #include <stddef.h>
+
+                #ifdef __cplusplus
+                extern "C" {
+                #endif
+
+                size_t strlcpy(char *dst, const char *src, size_t siz);
+                size_t strlcat(char *dst, const char *src, size_t siz);
+
+                #ifdef __cplusplus
+                }
+                #endif
+
+                #endif  /* RELENV_FAKE_BSD_STRING_H */
+                """
+            )
+        )
+        (fake_bsd_root / "string.c").write_text(
+            textwrap.dedent(
+                """\
+                #include <stddef.h>
+                #include <string.h>
+
+                static size_t relenv_strlen(const char *s) {
+                    size_t len = 0;
+                    if (s == NULL) {
+                        return 0;
+                    }
+                    while (s[len] != '\\0') {
+                        ++len;
+                    }
+                    return len;
+                }
+
+                static size_t relenv_strnlen(const char *s, size_t maxlen) {
+                    size_t len = 0;
+                    if (s == NULL) {
+                        return 0;
+                    }
+                    while (len < maxlen && s[len] != '\\0') {
+                        ++len;
+                    }
+                    return len;
+                }
+
+                size_t strlcpy(char *dst, const char *src, size_t siz) {
+                    size_t src_len = relenv_strlen(src);
+                    if (siz == 0 || dst == NULL) {
+                        return src_len;
+                    }
+                    size_t copy = src_len;
+                    if (copy >= siz) {
+                        copy = siz - 1;
+                    }
+                    if (copy > 0 && src != NULL) {
+                        memcpy(dst, src, copy);
+                    }
+                    dst[copy] = '\\0';
+                    return src_len;
+                }
+
+                size_t strlcat(char *dst, const char *src, size_t siz) {
+                    size_t dst_len = relenv_strnlen(dst, siz);
+                    size_t src_len = relenv_strlen(src);
+                    size_t initial_len = dst_len;
+                    if (dst == NULL || dst_len >= siz) {
+                        return initial_len + src_len;
+                    }
+                    size_t space = (siz > dst_len + 1) ? siz - dst_len - 1 : 0;
+                    size_t copy = 0;
+                    if (space > 0 && src != NULL) {
+                        copy = src_len;
+                        if (copy > space) {
+                            copy = space;
+                        }
+                        if (copy > 0) {
+                            memcpy(dst + dst_len, src, copy);
+                        }
+                        dst_len += copy;
+                    }
+                    dst[dst_len] = '\\0';
+                    return initial_len + src_len;
+                }
+                """
+            )
+        )
+        include_flag = f"-I{fake_bsd_root}"
+        for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS"):
+            env[key] = " ".join(filter(None, [env.get(key, ""), include_flag])).strip()
+        env["CPATH"] = ":".join(
+            filter(None, [str(fake_bsd_root), env.get("CPATH", "")])
+        )
+        for key in ("C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH"):
+            env[key] = ":".join(filter(None, [str(fake_bsd_root), env.get(key, "")]))
+        cc_value = env.get("CC")
+        if cc_value:
+            cc_args = shlex.split(cc_value)
+        else:
+            cc_path = shutil.which("cc") or shutil.which("gcc")
+            assert cc_path, "C compiler not found for libbsd shim"
+            cc_args = [cc_path]
+        obj_path = fake_bsd_root / "string.o"
+        compile_result = subprocess.run(
+            cc_args
+            + [
+                "-c",
+                "-O2",
+                "-fPIC",
+                "-o",
+                str(obj_path),
+                str(fake_bsd_root / "string.c"),
+            ],
+            env=env,
+        )
+        assert compile_result.returncode == 0, "Failed to compile libbsd shim"
+        ar_value = env.get("AR")
+        if ar_value:
+            ar_args = shlex.split(ar_value)
+        else:
+            ar_path = shutil.which("ar")
+            assert ar_path, "Archiver not found for libbsd shim"
+            ar_args = [ar_path]
+        libbsd_static = fake_bsd_root / "libbsd.a"
+        archive_result = subprocess.run(
+            ar_args + ["rcs", str(libbsd_static), str(obj_path)],
+            env=env,
+        )
+        assert archive_result.returncode == 0, "Failed to archive libbsd shim"
+        lib_dir_flag = f"-L{fake_bsd_root}"
+        env["LDFLAGS"] = " ".join(
+            filter(None, [lib_dir_flag, env.get("LDFLAGS", "")])
+        ).strip()
+        env["LIBS"] = " ".join(filter(None, ["-lbsd", env.get("LIBS", "")])).strip()
+        env["LIBRARY_PATH"] = ":".join(
+            filter(None, [str(fake_bsd_root), env.get("LIBRARY_PATH", "")])
+        )
+        env["ac_cv_func_strlcpy"] = "yes"
+        env["ac_cv_func_strlcat"] = "yes"
+        env["ac_cv_have_decl_strlcpy"] = "yes"
+        env["ac_cv_have_decl_strlcat"] = "yes"
+
     p = subprocess.run(
         [
             str(pipexec),
@@ -1155,7 +1326,7 @@ def test_install_python_ldap(pipexec, pyexec, build):
     tar xvf cyrus-sasl-{saslver}.tar.gz
     cd cyrus-sasl-{saslver}
     ./configure --prefix=$RELENV_PATH
-    make
+    make -j"$(nproc)"
     make install
     cd ..
 
@@ -1164,7 +1335,7 @@ def test_install_python_ldap(pipexec, pyexec, build):
     tar xvf openldap-{ldapver}.tgz
     cd openldap-{ldapver}
     ./configure --prefix=$RELENV_PATH
-    make
+    make -j"$(nproc)"
     make install
     cd ..
 
@@ -1764,7 +1935,7 @@ def test_install_editable_package_in_extras(
 def rockycontainer(build):
     if not shutil.which("docker"):
         pytest.skip(reason="No docker binary found")
-    name = "rocky10"
+    name = f"rocky10-{uuid.uuid4().hex}"
     subprocess.run(
         [
             "docker",
@@ -1815,10 +1986,48 @@ def rockycontainer(build):
 
 
 @pytest.mark.skip_on_windows
-def test_no_openssl_binary(rockycontainer, pipexec, pyexec):
+def test_no_openssl_binary(rockycontainer, pipexec, pyexec, build):
     _install_ppbt(pyexec)
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
+    if sys.platform == "linux":
+        buildenv_proc = subprocess.run(
+            [
+                str(pyexec),
+                "-m",
+                "relenv",
+                "buildenv",
+                "--json",
+            ],
+            capture_output=True,
+            env=env,
+        )
+        if buildenv_proc.returncode == 0:
+            buildenv = json.loads(buildenv_proc.stdout)
+            env.update(buildenv)
+            toolchain_path = pathlib.Path(buildenv["TOOLCHAIN_PATH"])
+            triplet = buildenv["TRIPLET"]
+            sysroot_lib = toolchain_path / triplet / "sysroot" / "lib"
+            sysroot_lib.mkdir(parents=True, exist_ok=True)
+            bz2_sources = sorted(
+                (pathlib.Path(build) / "lib").glob("libbz2.so*"),
+                key=lambda p: len(p.name),
+            )
+            if not bz2_sources:
+                pytest.fail(
+                    "libbz2.so not found in relenv build; cryptography build cannot proceed"
+                )
+            for bz2_source in bz2_sources:
+                target = sysroot_lib / bz2_source.name
+                if target.exists() or target.is_symlink():
+                    if target.is_symlink():
+                        try:
+                            if target.readlink() == bz2_source:
+                                continue
+                        except OSError:
+                            pass
+                    target.unlink()
+                target.symlink_to(bz2_source)
     proc = subprocess.run(
         [
             str(pipexec),
