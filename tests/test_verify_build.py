@@ -1386,9 +1386,16 @@ def test_install_with_target_shebang(pipexec, build, minor_version):
         check=True,
         env=env,
     )
-    shebang = pathlib.Path(extras / "bin" / "cowsay").open().readlines()[2].strip()
+    exec_line = ""
+    for line in pathlib.Path(extras / "bin" / "cowsay").read_text().splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith('"exec"'):
+            exec_line = stripped
+            break
     assert (
-        shebang
+        exec_line
         == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python{}" "$0" "$@"'.format(
             minor_version
         )

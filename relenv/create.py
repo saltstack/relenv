@@ -15,7 +15,14 @@ import sys
 import tarfile
 from collections.abc import Iterator
 
-from .common import RelenvException, arches, archived_build, build_arch
+from .common import (
+    RelenvException,
+    arches,
+    archived_build,
+    build_arch,
+    format_shebang,
+    relative_interpreter,
+)
 
 
 @contextlib.contextmanager
@@ -135,6 +142,7 @@ def create(
         for f in fp:
             fp.extract(f, writeto)
     _sync_relenv_package(writeto, version)
+    _repair_script_shebangs(writeto, version)
 
 
 def _site_packages_dir(root: pathlib.Path, version: str) -> pathlib.Path:
@@ -164,6 +172,71 @@ def _sync_relenv_package(root: pathlib.Path, version: str) -> None:
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
     )
+
+
+def _repair_script_shebangs(root: pathlib.Path, version: str) -> None:
+    """
+    Update legacy shell-wrapped entry points to the current shebang format.
+
+    Older archives shipped scripts that started with the ``"true" ''''`` preamble.
+    Those files break when executed directly under Python (the parser sees the
+    unmatched triple-quoted literal). Patch any remaining copies to the new
+    `format_shebang` layout so fresh installs do not inherit stale loaders.
+    """
+    if sys.platform == "win32":
+        return
+
+    scripts_dir = root / "bin"
+    if not scripts_dir.is_dir():
+        return
+
+    major_minor = ".".join(version.split(".")[:2])
+    interpreter_candidates = [
+        scripts_dir / f"python{major_minor}",
+        scripts_dir / f"python{major_minor.split('.')[0]}",
+        scripts_dir / "python3",
+        scripts_dir / "python",
+    ]
+    interpreter_path: pathlib.Path | None = None
+    for candidate in interpreter_candidates:
+        if candidate.exists():
+            interpreter_path = candidate
+            break
+    if interpreter_path is None:
+        return
+
+    try:
+        rel_interpreter = relative_interpreter(root, scripts_dir, interpreter_path)
+    except ValueError:
+        # Paths are not relative to the install root; abandon the rewrite.
+        return
+
+    try:
+        shebang = format_shebang(str(pathlib.PurePosixPath("/") / rel_interpreter))
+    except Exception:
+        return
+
+    legacy_prefix = "#!/bin/sh\n\"true\" ''''\n"
+    marker = "\n'''"
+    for script in scripts_dir.iterdir():
+        if not script.is_file():
+            continue
+        try:
+            text = script.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if not text.startswith(legacy_prefix):
+            continue
+        idx = text.find(marker)
+        if idx == -1:
+            continue
+        idy = idx + len(marker)
+        rest = text[idy:]
+        updated = shebang + rest.lstrip("\n")
+        try:
+            script.write_text(updated, encoding="utf-8")
+        except OSError:
+            continue
 
 
 def main(args: argparse.Namespace) -> None:

@@ -92,37 +92,39 @@ def path_import(name: str, path: PathType) -> ModuleType:
     return module
 
 
+_COMMON: Optional[ModuleType] = None
+_RELOCATE: Optional[ModuleType] = None
+_BUILDENV: Optional[ModuleType] = None
+
+
 def common() -> ModuleType:
-    """
-    Late import relenv common.
-    """
-    if not hasattr(common, "common"):
-        common.common = path_import(
+    """Return the cached ``relenv.common`` module."""
+    global _COMMON
+    if _COMMON is None:
+        _COMMON = path_import(
             "relenv.common", str(pathlib.Path(__file__).parent / "common.py")
         )
-    return cast(ModuleType, common.common)
+    return _COMMON
 
 
 def relocate() -> ModuleType:
-    """
-    Late import relenv relocate.
-    """
-    if not hasattr(relocate, "relocate"):
-        relocate.relocate = path_import(
+    """Return the cached ``relenv.relocate`` module."""
+    global _RELOCATE
+    if _RELOCATE is None:
+        _RELOCATE = path_import(
             "relenv.relocate", str(pathlib.Path(__file__).parent / "relocate.py")
         )
-    return cast(ModuleType, relocate.relocate)
+    return _RELOCATE
 
 
 def buildenv() -> ModuleType:
-    """
-    Late import relenv buildenv.
-    """
-    if not hasattr(buildenv, "builenv"):
-        buildenv.buildenv = path_import(
+    """Return the cached ``relenv.buildenv`` module."""
+    global _BUILDENV
+    if _BUILDENV is None:
+        _BUILDENV = path_import(
             "relenv.buildenv", str(pathlib.Path(__file__).parent / "buildenv.py")
         )
-    return cast(ModuleType, buildenv.buildenv)
+    return _BUILDENV
 
 
 def get_major_version() -> str:
@@ -191,13 +193,16 @@ def _build_shebang(
             )
         except ValueError:
             debug(f"Relenv Value Error - _build_shebang {self.target_dir}")
-            return func(self, *args, **kwargs)
+            original_result: bytes = func(self, *args, **kwargs)
+            return original_result
         debug(f"Relenv - _build_shebang {scripts} {interpreter}")
         if sys.platform == "win32":
             return (
                 str(pathlib.Path("#!<launcher_dir>") / interpreter).encode() + b"\r\n"
             )
-        return common().format_shebang("/" / interpreter).encode()
+        rel_path = str(pathlib.PurePosixPath("/") / interpreter)
+        formatted = cast(str, common().format_shebang(rel_path))
+        return formatted.encode()
 
     return wrapped
 
@@ -250,7 +255,7 @@ def system_sysconfig() -> ConfigVars:
     to avoid the overhead of shelling out.
     """
     global _SYSTEM_CONFIG_VARS
-    if _SYSTEM_CONFIG_VARS:
+    if _SYSTEM_CONFIG_VARS is not None:
         return _SYSTEM_CONFIG_VARS
     pyexec = pathlib.Path("/usr/bin/python3")
     if pyexec.exists():
@@ -301,8 +306,8 @@ def get_config_vars_wrapper(
             "LDSHARED",
         ]:
             config_vars[name] = system_config_vars[name]
-        mod._CONFIG_VARS = config_vars
-        return func(*args)
+        setattr(mod, "_CONFIG_VARS", config_vars)
+        return config_vars
 
     return wrapped
 
@@ -558,7 +563,9 @@ class RelenvImporter:
             if wrapper.matches(module_name) and not wrapper.loading:
                 debug(f"RelenvImporter - match {module_name} {package_path} {target}")
                 wrapper.loading = True
-                return importlib.util.spec_from_loader(module_name, self)
+                spec = importlib.util.spec_from_loader(module_name, self)
+                return cast(Optional[ModuleSpec], spec)
+        return None
 
     def find_module(
         self: "RelenvImporter",
@@ -573,6 +580,7 @@ class RelenvImporter:
                 debug(f"RelenvImporter - match {module_name}")
                 wrapper.loading = True
                 return self
+        return None
 
     def load_module(self: "RelenvImporter", name: str) -> ModuleType:
         """
@@ -607,7 +615,8 @@ def wrap_sysconfig(name: str) -> ModuleType:
     """
     Sysconfig wrapper.
     """
-    mod = importlib.import_module("sysconfig")
+    module: ModuleType = importlib.import_module("sysconfig")
+    mod = cast(Any, module)
     mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
     mod.get_config_vars = get_config_vars_wrapper(mod.get_config_vars, mod)
     mod._PIP_USE_SYSCONFIG = True
@@ -618,46 +627,49 @@ def wrap_sysconfig(name: str) -> ModuleType:
         # Python < 3.10
         scheme = mod._get_default_scheme()
     mod.get_paths = get_paths_wrapper(mod.get_paths, scheme)
-    return mod
+    return module
 
 
 def wrap_pip_distlib_scripts(name: str) -> ModuleType:
     """
     pip.distlib.scripts wrapper.
     """
-    module = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
     mod = cast(Any, module)
     mod.ScriptMaker._build_shebang = _build_shebang(mod.ScriptMaker._build_shebang)
-    return mod
+    return module
 
 
 def wrap_distutils_command(name: str) -> ModuleType:
     """
     distutils.command wrapper.
     """
-    mod = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
+    mod = cast(Any, module)
     mod.build_ext.finalize_options = finalize_options_wrapper(
         mod.build_ext.finalize_options
     )
-    return mod
+    return module
 
 
 def wrap_pip_install_wheel(name: str) -> ModuleType:
     """
     pip._internal.operations.install.wheel wrapper.
     """
-    mod = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
+    mod = cast(Any, module)
     mod.install_wheel = install_wheel_wrapper(mod.install_wheel)
-    return mod
+    return module
 
 
 def wrap_pip_install_legacy(name: str) -> ModuleType:
     """
     pip._internal.operations.install.legacy wrapper.
     """
-    mod = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
+    mod = cast(Any, module)
     mod.install = install_legacy_wrapper(mod.install)
-    return mod
+    return module
 
 
 def set_env_if_not_set(name: str, value: str) -> None:
@@ -681,7 +693,8 @@ def wrap_pip_build_wheel(name: str) -> ModuleType:
     """
     pip._internal.operations.build wrapper.
     """
-    mod = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
+    mod = cast(Any, module)
 
     def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
@@ -708,7 +721,7 @@ def wrap_pip_build_wheel(name: str) -> ModuleType:
         return wrapper
 
     mod.build_wheel_pep517 = wrap(mod.build_wheel_pep517)
-    return mod
+    return module
 
 
 class TARGET:
@@ -735,10 +748,10 @@ def wrap_cmd_install(name: str) -> ModuleType:
     """
     Wrap pip install command to store target argument state.
     """
-    module = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
     mod = cast(Any, module)
 
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    def wrap_run(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(self: Any, options: Any, args: Sequence[str]) -> Any:
             if not options.use_user_site:
@@ -750,9 +763,9 @@ def wrap_cmd_install(name: str) -> ModuleType:
 
         return wrapper
 
-    mod.InstallCommand.run = wrap(mod.InstallCommand.run)
+    mod.InstallCommand.run = wrap_run(mod.InstallCommand.run)
 
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    def wrap_handle_target(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(
             self: Any, target_dir: str, target_temp_dir: str, upgrade: bool
@@ -764,20 +777,20 @@ def wrap_cmd_install(name: str) -> ModuleType:
         return wrapper
 
     if hasattr(mod.InstallCommand, "_handle_target_dir"):
-        mod.InstallCommand._handle_target_dir = wrap(
+        mod.InstallCommand._handle_target_dir = wrap_handle_target(
             mod.InstallCommand._handle_target_dir
         )
-    return cast(ModuleType, mod)
+    return module
 
 
 def wrap_locations(name: str) -> ModuleType:
     """
     Wrap pip locations to fix locations when installing with target.
     """
-    module = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
     mod = cast(Any, module)
 
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    def make_scheme_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(
             dist_name: str,
@@ -805,20 +818,21 @@ def wrap_locations(name: str) -> ModuleType:
 
     # get_scheme is not available on pip-19.2.3
     # try:
-    mod.get_scheme = wrap(mod.get_scheme)
+    mod.get_scheme = make_scheme_wrapper(mod.get_scheme)
     # except AttributeError:
     #    debug(f"Module {mod} does not have attribute get_scheme")
 
-    return mod
+    return module
 
 
 def wrap_req_command(name: str) -> ModuleType:
     """
     Honor ignore installed option from pip cli.
     """
-    mod = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
+    mod = cast(Any, module)
 
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+    def make_package_finder_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(
             self: Any,
@@ -833,120 +847,56 @@ def wrap_req_command(name: str) -> ModuleType:
 
         return wrapper
 
-    mod.RequirementCommand._build_package_finder = wrap(
+    mod.RequirementCommand._build_package_finder = make_package_finder_wrapper(
         mod.RequirementCommand._build_package_finder
     )
-    return cast(ModuleType, mod)
+    return module
 
 
 def wrap_req_install(name: str) -> ModuleType:
     """
     Honor ignore installed option from pip cli.
     """
-    module = importlib.import_module(name)
+    module: ModuleType = importlib.import_module(name)
     mod = cast(Any, module)
 
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
-        argcount = mod.InstallRequirement.install.__code__.co_argcount
+    original = mod.InstallRequirement.install
+    argcount = original.__code__.co_argcount
 
-        if argcount == 7:
+    if argcount == 7:
 
-            @functools.wraps(func)
-            def wrapper(
-                self: Any,
-                root: Optional[PathType] = None,
-                home: Optional[PathType] = None,
-                prefix: Optional[PathType] = None,
-                warn_script_location: bool = True,
-                use_user_site: bool = False,
-                pycompile: bool = True,
-            ) -> Any:
-                try:
-                    if TARGET.TARGET:
-                        TARGET.INSTALL = True
-                        home = _ensure_target_path()
-                    return func(
-                        self,
-                        root,
-                        home,
-                        prefix,
-                        warn_script_location,
-                        use_user_site,
-                        pycompile,
-                    )
-                finally:
-                    TARGET.INSTALL = False
+        @functools.wraps(original)
+        def install_wrapper_pep517(
+            self: Any,
+            root: Optional[PathType] = None,
+            home: Optional[PathType] = None,
+            prefix: Optional[PathType] = None,
+            warn_script_location: bool = True,
+            use_user_site: bool = False,
+            pycompile: bool = True,
+        ) -> Any:
+            try:
+                if TARGET.TARGET:
+                    TARGET.INSTALL = True
+                    home = _ensure_target_path()
+                return original(
+                    self,
+                    root,
+                    home,
+                    prefix,
+                    warn_script_location,
+                    use_user_site,
+                    pycompile,
+                )
+            finally:
+                TARGET.INSTALL = False
 
-            return wrapper
+        mod.InstallRequirement.install = install_wrapper_pep517
 
-        if argcount == 8:
+    elif argcount == 8:
 
-            @functools.wraps(func)
-            def wrapper(
-                self: Any,
-                global_options: Any = None,
-                root: Optional[PathType] = None,
-                home: Optional[PathType] = None,
-                prefix: Optional[PathType] = None,
-                warn_script_location: bool = True,
-                use_user_site: bool = False,
-                pycompile: bool = True,
-            ) -> Any:
-                try:
-                    if TARGET.TARGET:
-                        TARGET.INSTALL = True
-                        home = _ensure_target_path()
-                    return func(
-                        self,
-                        global_options,
-                        root,
-                        home,
-                        prefix,
-                        warn_script_location,
-                        use_user_site,
-                        pycompile,
-                    )
-                finally:
-                    TARGET.INSTALL = False
-
-            return wrapper
-
-        if argcount == 9:
-
-            @functools.wraps(func)
-            def wrapper(
-                self: Any,
-                install_options: Any,
-                global_options: Any = None,
-                root: Optional[PathType] = None,
-                home: Optional[PathType] = None,
-                prefix: Optional[PathType] = None,
-                warn_script_location: bool = True,
-                use_user_site: bool = False,
-                pycompile: bool = True,
-            ) -> Any:
-                try:
-                    if TARGET.TARGET:
-                        TARGET.INSTALL = True
-                        home = _ensure_target_path()
-                    return func(
-                        self,
-                        install_options,
-                        global_options,
-                        root,
-                        home,
-                        prefix,
-                        warn_script_location,
-                        use_user_site,
-                        pycompile,
-                    )
-                finally:
-                    TARGET.INSTALL = False
-
-            return wrapper
-
-        @functools.wraps(func)
-        def wrapper(
+        @functools.wraps(original)
+        def install_wrapper_pep517_opts(
             self: Any,
             global_options: Any = None,
             root: Optional[PathType] = None,
@@ -960,7 +910,7 @@ def wrap_req_install(name: str) -> ModuleType:
                 if TARGET.TARGET:
                     TARGET.INSTALL = True
                     home = _ensure_target_path()
-                return func(
+                return original(
                     self,
                     global_options,
                     root,
@@ -973,10 +923,74 @@ def wrap_req_install(name: str) -> ModuleType:
             finally:
                 TARGET.INSTALL = False
 
-        return wrapper
+        mod.InstallRequirement.install = install_wrapper_pep517_opts
 
-    mod.InstallRequirement.install = wrap(mod.InstallRequirement.install)
-    return cast(ModuleType, mod)
+    elif argcount == 9:
+
+        @functools.wraps(original)
+        def install_wrapper_legacy(
+            self: Any,
+            install_options: Any,
+            global_options: Any = None,
+            root: Optional[PathType] = None,
+            home: Optional[PathType] = None,
+            prefix: Optional[PathType] = None,
+            warn_script_location: bool = True,
+            use_user_site: bool = False,
+            pycompile: bool = True,
+        ) -> Any:
+            try:
+                if TARGET.TARGET:
+                    TARGET.INSTALL = True
+                    home = _ensure_target_path()
+                return original(
+                    self,
+                    install_options,
+                    global_options,
+                    root,
+                    home,
+                    prefix,
+                    warn_script_location,
+                    use_user_site,
+                    pycompile,
+                )
+            finally:
+                TARGET.INSTALL = False
+
+        mod.InstallRequirement.install = install_wrapper_legacy
+
+    else:
+
+        @functools.wraps(original)
+        def install_wrapper_generic(
+            self: Any,
+            global_options: Any = None,
+            root: Optional[PathType] = None,
+            home: Optional[PathType] = None,
+            prefix: Optional[PathType] = None,
+            warn_script_location: bool = True,
+            use_user_site: bool = False,
+            pycompile: bool = True,
+        ) -> Any:
+            try:
+                if TARGET.TARGET:
+                    TARGET.INSTALL = True
+                    home = _ensure_target_path()
+                return original(
+                    self,
+                    global_options,
+                    root,
+                    home,
+                    prefix,
+                    warn_script_location,
+                    use_user_site,
+                    pycompile,
+                )
+            finally:
+                TARGET.INSTALL = False
+
+        mod.InstallRequirement.install = install_wrapper_generic
+    return module
 
 
 importer = RelenvImporter(
@@ -1040,10 +1054,11 @@ def install_cargo_config() -> None:
         for line in contents.splitlines():
             stripped = line.strip()
             if stripped.startswith("linker"):
-                _, _, value = stripped.partition("=")
-                value = value.strip().strip('"')
-                if value:
-                    return value
+                value_part: str
+                _, _, value_part = stripped.partition("=")
+                value_str: str = value_part.strip().strip('"')
+                if value_str:
+                    return value_str
         return None
 
     if existing_linker() != str(gcc):
@@ -1174,7 +1189,8 @@ def load_openssl_provider(name: str) -> int:
     OSSL_PROVIDER_load = libcrypto.OSSL_PROVIDER_load
     OSSL_PROVIDER_load.argtypes = (POSSL_LIB_CTX, ctypes.c_char_p)
     OSSL_PROVIDER_load.restype = ctypes.c_int
-    return OSSL_PROVIDER_load(None, name.encode())
+    result = OSSL_PROVIDER_load(None, name.encode())
+    return int(result)
 
 
 def setup_crossroot() -> None:
@@ -1207,9 +1223,11 @@ def wrapsitecustomize(func: Callable[[], Any]) -> Callable[[], None]:
     def wrapper() -> None:
         func()
 
-        sitecustomize = None
+        sitecustomize_module = None
         try:
-            import sitecustomize
+            import sitecustomize as _sitecustomize
+
+            sitecustomize_module = _sitecustomize
         except ImportError as exc:
             if exc.name != "sitecustomize":
                 raise
@@ -1218,7 +1236,10 @@ def wrapsitecustomize(func: Callable[[], Any]) -> Callable[[], None]:
         # relenv environment. This can't be done when pip is using build_env to
         # install packages. This code seems potentially brittle and there may
         # be reasonable arguments against doing it at all.
-        if sitecustomize is None or "pip-build-env" not in sitecustomize.__file__:
+        if (
+            sitecustomize_module is None
+            or "pip-build-env" not in sitecustomize_module.__file__
+        ):
             _orig = sys.path[:]
             # Replace sys.path
             sys.path[:] = common().sanitize_sys_path(sys.path)

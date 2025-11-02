@@ -6,12 +6,14 @@ Common classes and values used around relenv.
 from __future__ import annotations
 
 import http.client
+import json
 import logging
 import os as _os
 import pathlib
 import platform
 import queue
 import selectors
+import shutil
 import subprocess as _subprocess
 import sys as _sys
 import tarfile
@@ -20,6 +22,8 @@ import threading
 import time
 from typing import IO, Any, BinaryIO, Iterable, Mapping, Optional, Union, cast
 
+from typing_extensions import Literal
+
 # Re-export frequently monkeypatched modules for type checking.
 os = _os
 subprocess = _subprocess
@@ -27,6 +31,8 @@ sys = _sys
 
 # relenv package version
 __version__ = "0.21.2"
+
+log = logging.getLogger(__name__)
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -37,6 +43,83 @@ WIN32 = "win32"
 DARWIN = "darwin"
 
 MACOS_DEVELOPMENT_TARGET = "10.15"
+
+TOOLCHAIN_CACHE_ENV = "RELENV_TOOLCHAIN_CACHE"
+_TOOLCHAIN_MANIFEST = ".toolchain-manifest.json"
+
+
+# 8 GiB archives are not unusual; stick to metadata to fingerprint them.
+def _archive_metadata(path: pathlib.Path) -> dict[str, Union[str, int]]:
+    stat = path.stat()
+    return {
+        "archive": str(path.resolve()),
+        "size": stat.st_size,
+        "mtime": stat.st_mtime_ns,
+    }
+
+
+def _toolchain_cache_root() -> Optional[pathlib.Path]:
+    override = os.environ.get(TOOLCHAIN_CACHE_ENV)
+    if override:
+        if override.strip().lower() == "none":
+            return None
+        return pathlib.Path(override).expanduser()
+    cache_home = os.environ.get("XDG_CACHE_HOME")
+    if cache_home:
+        base = pathlib.Path(cache_home)
+    else:
+        base = pathlib.Path.home() / ".cache"
+    return base / "relenv" / "toolchains"
+
+
+def _toolchain_manifest_path(toolchain_path: pathlib.Path) -> pathlib.Path:
+    return toolchain_path / _TOOLCHAIN_MANIFEST
+
+
+def _load_toolchain_manifest(path: pathlib.Path) -> Optional[Mapping[str, Any]]:
+    if not path.exists():
+        return None
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return data
+
+
+def _manifest_matches(manifest: Mapping[str, Any], metadata: Mapping[str, Any]) -> bool:
+    return (
+        manifest.get("archive") == metadata.get("archive")
+        and manifest.get("size") == metadata.get("size")
+        and manifest.get("mtime") == metadata.get("mtime")
+    )
+
+
+def _write_toolchain_manifest(
+    toolchain_path: pathlib.Path, metadata: Mapping[str, Any]
+) -> None:
+    manifest_path = _toolchain_manifest_path(toolchain_path)
+    try:
+        with manifest_path.open("w", encoding="utf-8") as handle:
+            json.dump(metadata, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+    except OSError as exc:  # pragma: no cover - permissions edge cases
+        log.warning(
+            "Unable to persist toolchain manifest at %s: %s", manifest_path, exc
+        )
+
+
+def toolchain_root_dir() -> pathlib.Path:
+    """Return the root directory used for cached toolchains."""
+    if sys.platform != "linux":
+        return DATA_DIR
+    root = _toolchain_cache_root()
+    if root is None:
+        return DATA_DIR / "toolchain"
+    return root
+
 
 REQUEST_HEADERS = {"User-Agent": f"relenv {__version__}"}
 
@@ -69,8 +152,9 @@ DATA_DIR = pathlib.Path(os.environ.get("RELENV_DATA", DEFAULT_DATA_DIR)).resolve
 SHEBANG_TPL_LINUX = textwrap.dedent(
     """#!/bin/sh
 "true" ''''
+# shellcheck disable=SC2093
 "exec" "$(dirname "$(readlink -f "$0")"){}" "$0" "$@"
-'''
+' '''
 """
 )
 
@@ -90,17 +174,16 @@ do
 done
 PHYS_DIR=$(pwd -P)
 REALPATH=$PHYS_DIR/$TARGET_FILE
+# shellcheck disable=SC2093
 "exec" "$(dirname "$REALPATH")"{} "$REALPATH" "$@"
-'''"""
+' '''
+"""
 )
 
 if sys.platform == "linux":
     SHEBANG_TPL = SHEBANG_TPL_LINUX
 else:
     SHEBANG_TPL = SHEBANG_TPL_MACOS
-
-
-log = logging.getLogger(__name__)
 
 
 class RelenvException(Exception):
@@ -180,7 +263,7 @@ class WorkDirs:
         self.root: pathlib.Path = pathlib.Path(root)
         self.data: pathlib.Path = DATA_DIR
         self.toolchain_config: pathlib.Path = work_dir("toolchain", self.root)
-        self.toolchain: pathlib.Path = work_dir("toolchain", DATA_DIR)
+        self.toolchain: pathlib.Path = toolchain_root_dir()
         self.build: pathlib.Path = work_dir("build", DATA_DIR)
         self.src: pathlib.Path = work_dir("src", DATA_DIR)
         self.logs: pathlib.Path = work_dir("logs", DATA_DIR)
@@ -251,16 +334,17 @@ def get_toolchain(
     del root  # Kept for backward compatibility; location driven by DATA_DIR
     os.makedirs(DATA_DIR, exist_ok=True)
     if sys.platform != "linux":
-        return DATA_DIR
+        return toolchain_root_dir()
 
-    toolchain_root = DATA_DIR / "toolchain"
+    toolchain_root = toolchain_root_dir()
     try:
         triplet = get_triplet(machine=arch)
     except TypeError:
         triplet = get_triplet()
     toolchain_path = toolchain_root / triplet
+    metadata: Optional[Mapping[str, Any]] = None
     if toolchain_path.exists():
-        return toolchain_path
+        metadata = _load_toolchain_manifest(_toolchain_manifest_path(toolchain_path))
 
     try:
         from importlib import import_module
@@ -275,7 +359,24 @@ def get_toolchain(
 
     toolchain_root.mkdir(parents=True, exist_ok=True)
     archive_path = pathlib.Path(archive_attr)
+    archive_meta = _archive_metadata(archive_path)
+
+    if (
+        toolchain_path.exists()
+        and metadata
+        and _manifest_matches(metadata, archive_meta)
+    ):
+        return toolchain_path
+
+    if toolchain_path.exists():
+        shutil.rmtree(toolchain_path)
+
     extract(str(toolchain_root), str(archive_path))
+    if not toolchain_path.exists():
+        raise RelenvException(
+            f"Toolchain archive {archive_path} did not produce {toolchain_path}"
+        )
+    _write_toolchain_manifest(toolchain_path, archive_meta)
     return toolchain_path
 
 
@@ -370,6 +471,8 @@ def extract_archive(
     archive_path = pathlib.Path(archive)
     archive_str = str(archive_path)
     to_path = pathlib.Path(to_dir)
+    TarReadMode = Literal["r:gz", "r:xz", "r:bz2", "r"]
+    read_type: TarReadMode = "r"
     if archive_str.endswith(".tgz"):
         log.debug("Found tgz archive")
         read_type = "r:gz"
@@ -384,9 +487,8 @@ def extract_archive(
         read_type = "r:bz2"
     else:
         log.warning("Found unknown archive type: %s", archive_path)
-        read_type = "r"
-    with tarfile.open(archive_path, read_type) as tar:
-        tar.extractall(to_path)
+    with tarfile.open(str(archive_path), mode=read_type) as tar:
+        tar.extractall(str(to_path))
 
 
 def get_download_location(url: str, dest: Union[str, os.PathLike[str]]) -> str:

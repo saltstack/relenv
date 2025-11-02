@@ -5,7 +5,6 @@ Build process common methods.
 """
 from __future__ import annotations
 
-import glob
 import fnmatch
 import hashlib
 import io
@@ -26,22 +25,25 @@ import tarfile
 from html.parser import HTMLParser
 from types import ModuleType
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
-    cast,
     Dict,
     IO,
-    Iterable,
     List,
     MutableMapping,
     Optional,
     Sequence,
     Tuple,
-    TypedDict,
     Union,
-    Protocol,
+    cast,
 )
+
+try:
+    from typing import TYPE_CHECKING
+except ImportError:  # pragma: no cover
+    TYPE_CHECKING = False
+
+from typing_extensions import Protocol, TypedDict
 
 if TYPE_CHECKING:
     from multiprocessing.synchronize import Event as SyncEvent
@@ -564,11 +566,13 @@ def parse_links(text: str) -> List[str]:
 
 
 class Comparable(Protocol):
+    """Protocol capturing the comparison operations we rely on."""
+
     def __lt__(self, other: Any) -> bool:
-        ...
+        """Return True when self is ordered before *other*."""
 
     def __gt__(self, other: Any) -> bool:
-        ...
+        """Return True when self is ordered after *other*."""
 
 
 def check_files(
@@ -652,7 +656,9 @@ class Download:
         self.url_tpl = url
         self.fallback_url_tpl = fallback_url
         self.signature_tpl = signature
-        self.destination = destination
+        self._destination: pathlib.Path = pathlib.Path()
+        if destination:
+            self._destination = pathlib.Path(destination)
         self.version = version
         self.checksum = checksum
         self.checkfunc = checkfunc
@@ -849,6 +855,8 @@ class Download:
 
 
 class Recipe(TypedDict):
+    """Typed description of a build recipe entry."""
+
     build_func: Callable[[MutableMapping[str, str], "Dirs", IO[str]], None]
     wait_on: List[str]
     download: Optional[Download]
