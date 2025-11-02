@@ -1468,15 +1468,14 @@ def test_common_cached(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_relocate_cached(monkeypatch: pytest.MonkeyPatch) -> None:
     module = ModuleType("relenv.relocate.cached")
-    monkeypatch.setattr(relenv.runtime.relocate, "relocate", module, raising=False)
+    monkeypatch.setattr(relenv.runtime, "_RELOCATE", module, raising=False)
     result = relenv.runtime.relocate()
     assert result is module
 
 
 def test_buildenv_cached(monkeypatch: pytest.MonkeyPatch) -> None:
     module = ModuleType("relenv.buildenv.cached")
-    monkeypatch.setattr(relenv.runtime.buildenv, "builenv", True, raising=False)
-    monkeypatch.setattr(relenv.runtime.buildenv, "buildenv", module, raising=False)
+    monkeypatch.setattr(relenv.runtime, "_BUILDENV", module, raising=False)
     result = relenv.runtime.buildenv()
     assert result is module
 

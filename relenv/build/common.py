@@ -1004,7 +1004,6 @@ class Builder:
         self.build_default = build_default
         self.populate_env = populate_env
         self.version = version
-        self.toolchains = get_toolchain(root=self.dirs.root)
         self.set_arch(self.arch)
 
     def copy(self, version: str, checksum: Optional[str]) -> "Builder":
@@ -1604,8 +1603,13 @@ def install_sysdata(
     :type toolchain: str
     """
     data = {}
-    fbuildroot = lambda _: _.replace(str(buildroot), "{BUILDROOT}")  # noqa: E731
-    ftoolchain = lambda _: _.replace(str(toolchain), "{TOOLCHAIN}")  # noqa: E731
+
+    def fbuildroot(s: str) -> str:
+        return s.replace(str(buildroot), "{BUILDROOT}")
+
+    def ftoolchain(s: str) -> str:
+        return s.replace(str(toolchain), "{TOOLCHAIN}")
+
     # XXX: keymap is not used, remove it?
     # keymap = {
     #    "BINDIR": (fbuildroot,),

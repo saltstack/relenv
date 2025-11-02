@@ -307,7 +307,7 @@ def get_config_vars_wrapper(
         ]:
             config_vars[name] = system_config_vars[name]
         setattr(mod, "_CONFIG_VARS", config_vars)
-        return config_vars
+        return func(*args)
 
     return wrapped
 

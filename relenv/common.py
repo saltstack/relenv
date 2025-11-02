@@ -335,10 +335,7 @@ def get_toolchain(
         return toolchain_root_dir()
 
     toolchain_root = toolchain_root_dir()
-    try:
-        triplet = get_triplet(machine=arch)
-    except TypeError:
-        triplet = get_triplet()
+    triplet = get_triplet(machine=arch)
     toolchain_path = toolchain_root / triplet
     metadata: Optional[Mapping[str, Any]] = None
     if toolchain_path.exists():
