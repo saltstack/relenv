@@ -20,9 +20,7 @@ import tarfile
 import textwrap
 import threading
 import time
-from typing import IO, Any, BinaryIO, Iterable, Mapping, Optional, Union, cast
-
-from typing_extensions import Literal
+from typing import IO, Any, BinaryIO, Iterable, Literal, Mapping, Optional, Union, cast
 
 # Re-export frequently monkeypatched modules for type checking.
 os = _os

@@ -11,11 +11,10 @@ import subprocess
 import sys
 import tarfile
 from types import ModuleType
-from typing import BinaryIO
+from typing import BinaryIO, Literal
 from unittest.mock import patch
 
 import pytest
-from typing_extensions import Literal
 
 import relenv.common
 from relenv.common import (

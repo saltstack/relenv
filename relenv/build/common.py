@@ -38,12 +38,7 @@ from typing import (
     cast,
 )
 
-try:
-    from typing import TYPE_CHECKING
-except ImportError:  # pragma: no cover
-    TYPE_CHECKING = False
-
-from typing_extensions import Protocol, TypedDict
+from typing import TYPE_CHECKING, Protocol, TypedDict
 
 if TYPE_CHECKING:
     from multiprocessing.synchronize import Event as SyncEvent
