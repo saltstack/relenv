@@ -573,7 +573,6 @@ build.add(
 build.add(
     "openssl-fips-module",
     build_func=build_openssl_fips,
-    wait_on=["openssl"],
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "version": "3.1.2",
