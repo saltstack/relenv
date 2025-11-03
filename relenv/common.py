@@ -8,24 +8,19 @@ from __future__ import annotations
 import http.client
 import json
 import logging
-import os as _os
+import os
 import pathlib
 import platform
 import queue
 import selectors
 import shutil
-import subprocess as _subprocess
-import sys as _sys
+import subprocess
+import sys
 import tarfile
 import textwrap
 import threading
 import time
 from typing import IO, Any, BinaryIO, Iterable, Literal, Mapping, Optional, Union, cast
-
-# Re-export frequently monkeypatched modules for type checking.
-os = _os
-subprocess = _subprocess
-sys = _sys
 
 # relenv package version
 __version__ = "0.21.2"

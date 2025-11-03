@@ -160,7 +160,7 @@ def test_get_toolchain(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) 
     data_dir = tmp_path / "data"
     triplet = "aarch64-linux-gnu"
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
-    monkeypatch.setattr(relenv.common.sys, "platform", "linux", raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(
         relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
     )
@@ -178,7 +178,7 @@ def test_get_toolchain_linux_existing(tmp_path: pathlib.Path) -> None:
     toolchain_path = data_dir / "toolchain" / triplet
     toolchain_path.mkdir(parents=True)
     with patch("relenv.common.DATA_DIR", data_dir), patch(
-        "relenv.common.sys.platform", "linux"
+        "sys.platform", "linux"
     ), patch("relenv.common.get_triplet", return_value=triplet), patch.dict(
         os.environ,
         {"RELENV_TOOLCHAIN_CACHE": str(data_dir / "toolchain")},
@@ -193,7 +193,7 @@ def test_get_toolchain_no_arch(
     data_dir = tmp_path / "data"
     triplet = "x86_64-linux-gnu"
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
-    monkeypatch.setattr(relenv.common.sys, "platform", "linux", raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(
         relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
     )
@@ -445,7 +445,7 @@ def test_sanitize_sys_path_with_editable_paths(tmp_path: pathlib.Path) -> None:
 
 
 def test_makepath_oserror() -> None:
-    with patch("relenv.common.os.path.abspath", side_effect=OSError):
+    with patch("os.path.abspath", side_effect=OSError):
         result, case = makepath("foo", "Bar")
     expected = os.path.join("foo", "Bar")
     assert result == expected
