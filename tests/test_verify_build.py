@@ -68,6 +68,39 @@ def _install_ppbt(pexec):
     assert p.returncode == 0, "Failed to extract toolchain"
 
 
+def _setup_buildenv(pyexec, env):
+    """
+    Setup build environment variables for compiling C extensions.
+
+    On Linux, this calls 'relenv buildenv --json' to get the proper compiler
+    flags and paths to use the relenv toolchain and bundled libraries instead
+    of system libraries.
+
+    :param pyexec: Path to the relenv Python executable
+    :param env: Environment dictionary to update with buildenv variables
+    """
+    if sys.platform != "linux":
+        return
+
+    p = subprocess.run(
+        [
+            str(pyexec),
+            "-m",
+            "relenv",
+            "buildenv",
+            "--json",
+        ],
+        capture_output=True,
+    )
+    try:
+        buildenv = json.loads(p.stdout)
+    except json.JSONDecodeError:
+        assert False, f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
+
+    for k in buildenv:
+        env[k] = buildenv[k]
+
+
 @pytest.fixture(autouse=True)
 def _clear_ssl_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """
@@ -332,27 +365,7 @@ def test_pip_install_salt_w_package_requirements(
 
     _install_ppbt(pyexec)
     env = os.environ.copy()
-
-    # if sys.platform == "linux":
-    #    p = subprocess.run(
-    #        [
-    #            pyexec,
-    #            "-m",
-    #            "relenv",
-    #            "buildenv",
-    #            "--json",
-    #        ],
-    #        capture_output=True,
-    #    )
-    #    try:
-    #        buildenv = json.loads(p.stdout)
-    #    except json.JSONDecodeError:
-    #        assert (
-    #            False
-    #        ), f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
-    #    for k in buildenv:
-    #        env[k] = buildenv[k]
-
+    _setup_buildenv(pyexec, env)
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
     p = subprocess.run(
@@ -997,6 +1010,7 @@ def test_shebangs(pipexec, build, minor_version):
 def test_moving_pip_installed_c_extentions(pipexec, pyexec, build, minor_version):
     _install_ppbt(pyexec)
     env = os.environ.copy()
+    _setup_buildenv(pyexec, env)
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
@@ -1028,11 +1042,6 @@ def test_cryptography_rpath(
     pyexec, pipexec, build, minor_version, cryptography_version
 ):
     _install_ppbt(pyexec)
-    # log.warn("Extract ppbt")
-    # p = subprocess.run(
-    #    [pyexec, "-c", "import ppbt; ppbt.extract()"],
-    # )
-    # assert p.returncode == 0
 
     def find_library(path, search):
         for root, dirs, files in os.walk(path):
@@ -1041,6 +1050,7 @@ def test_cryptography_rpath(
                     return fname
 
     env = os.environ.copy()
+    _setup_buildenv(pyexec, env)
     env["RELENV_BUILDENV"] = "yes"
     p = subprocess.run(
         [
@@ -1355,6 +1365,7 @@ def test_install_python_ldap(pipexec, pyexec, build):
 
     subprocess.run(["/usr/bin/bash", "buildscript.sh"], check=True)
     env = os.environ.copy()
+    _setup_buildenv(pyexec, env)
     env["RELENV_DEBUG"] = "yes"
     env["RELENV_BUILDENV"] = "yes"
 
@@ -1996,45 +2007,32 @@ def rockycontainer(build):
 def test_no_openssl_binary(rockycontainer, pipexec, pyexec, build):
     _install_ppbt(pyexec)
     env = os.environ.copy()
+    _setup_buildenv(pyexec, env)
     env["RELENV_BUILDENV"] = "yes"
     if sys.platform == "linux":
-        buildenv_proc = subprocess.run(
-            [
-                str(pyexec),
-                "-m",
-                "relenv",
-                "buildenv",
-                "--json",
-            ],
-            capture_output=True,
-            env=env,
+        toolchain_path = pathlib.Path(env["TOOLCHAIN_PATH"])
+        triplet = env["TRIPLET"]
+        sysroot_lib = toolchain_path / triplet / "sysroot" / "lib"
+        sysroot_lib.mkdir(parents=True, exist_ok=True)
+        bz2_sources = sorted(
+            (pathlib.Path(build) / "lib").glob("libbz2.so*"),
+            key=lambda p: len(p.name),
         )
-        if buildenv_proc.returncode == 0:
-            buildenv = json.loads(buildenv_proc.stdout)
-            env.update(buildenv)
-            toolchain_path = pathlib.Path(buildenv["TOOLCHAIN_PATH"])
-            triplet = buildenv["TRIPLET"]
-            sysroot_lib = toolchain_path / triplet / "sysroot" / "lib"
-            sysroot_lib.mkdir(parents=True, exist_ok=True)
-            bz2_sources = sorted(
-                (pathlib.Path(build) / "lib").glob("libbz2.so*"),
-                key=lambda p: len(p.name),
+        if not bz2_sources:
+            pytest.fail(
+                "libbz2.so not found in relenv build; cryptography build cannot proceed"
             )
-            if not bz2_sources:
-                pytest.fail(
-                    "libbz2.so not found in relenv build; cryptography build cannot proceed"
-                )
-            for bz2_source in bz2_sources:
-                target = sysroot_lib / bz2_source.name
-                if target.exists() or target.is_symlink():
-                    if target.is_symlink():
-                        try:
-                            if target.readlink() == bz2_source:
-                                continue
-                        except OSError:
-                            pass
-                    target.unlink()
-                target.symlink_to(bz2_source)
+        for bz2_source in bz2_sources:
+            target = sysroot_lib / bz2_source.name
+            if target.exists() or target.is_symlink():
+                if target.is_symlink():
+                    try:
+                        if target.readlink() == bz2_source:
+                            continue
+                    except OSError:
+                        pass
+                target.unlink()
+            target.symlink_to(bz2_source)
     proc = subprocess.run(
         [
             str(pipexec),
