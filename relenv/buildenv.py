@@ -69,6 +69,7 @@ def buildenv(
         raise RelenvException("buildenv is only supported on Linux")
 
     triplet = get_triplet()
+    sysroot = f"{toolchain}/{triplet}/sysroot"
     env = {
         "RELENV_BUILDENV": "1",
         "TOOLCHAIN_PATH": f"{toolchain}",
@@ -76,23 +77,34 @@ def buildenv(
         "RELENV_PATH": f"{relenv_path}",
         "CC": f"{toolchain}/bin/{triplet}-gcc",
         "CXX": f"{toolchain}/bin/{triplet}-g++",
-        "CFLAGS": f"-I{relenv_path}/include -I{toolchain}/sysroot/usr/include",
-        "CXXFLAGS": (
+        "CFLAGS": (
+            f"--sysroot={sysroot} "
             f"-I{relenv_path}/include "
-            f"-I{toolchain}/{triplet}/sysroot/usr/include "
-            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+            f"-I{sysroot}/usr/include"
+        ),
+        "CXXFLAGS": (
+            f"--sysroot={sysroot} "
+            f"-I{relenv_path}/include "
+            f"-I{sysroot}/usr/include "
+            f"-L{relenv_path}/lib -L{sysroot}/lib "
             f"-Wl,-rpath,{relenv_path}/lib"
         ),
         "CPPFLAGS": (
-            f"-I{relenv_path}/include " f"-I{toolchain}/{triplet}/sysroot/usr/include"
+            f"--sysroot={sysroot} "
+            f"-I{relenv_path}/include "
+            f"-I{sysroot}/usr/include"
         ),
         "CMAKE_CFLAGS": (
-            f"-I{relenv_path}/include " f"-I{toolchain}/{triplet}/sysroot/usr/include"
+            f"--sysroot={sysroot} "
+            f"-I{relenv_path}/include "
+            f"-I{sysroot}/usr/include"
         ),
         "LDFLAGS": (
-            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+            f"--sysroot={sysroot} "
+            f"-L{relenv_path}/lib -L{sysroot}/lib "
             f"-Wl,-rpath,{relenv_path}/lib"
         ),
+        "CRATE_CC_NO_DEFAULTS": "1",
     }
     if sys.platform == "dawin":
         env["MACOS_DEVELOPMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
