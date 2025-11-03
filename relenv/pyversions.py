@@ -1003,78 +1003,103 @@ def main(args: argparse.Namespace) -> None:
 
     # Handle dependency operations
     if args.check_deps:
-        print("Checking for new dependency versions...")
+        print("Checking for new dependency versions...\n")
 
-        print("\nOpenSSL:")
-        openssl_versions = detect_openssl_versions()
-        if openssl_versions:
-            print(f"  Latest: {openssl_versions[0]}")
+        # Load current versions from JSON
+        with open(packaged) as f:
+            data = json.load(f)
 
-        print("\nSQLite:")
-        sqlite_versions = detect_sqlite_versions()
-        if sqlite_versions:
-            latest_ver, latest_sql = sqlite_versions[0]
-            print(f"  Latest: {latest_ver}")
+        current_deps = data.get("dependencies", {})
+        updates_available = []
+        up_to_date = []
 
-        print("\nXZ:")
-        xz_versions = detect_xz_versions()
-        if xz_versions:
-            print(f"  Latest: {xz_versions[0]}")
+        # Detect terminal capabilities for fancy vs ASCII output
+        use_unicode = True
+        if sys.platform == "win32":
+            # Check if we're in a modern terminal that supports Unicode
+            import os
 
-        print("\nlibffi:")
-        libffi_versions = detect_libffi_versions()
-        if libffi_versions:
-            print(f"  Latest: {libffi_versions[0]}")
+            # Windows Terminal and modern PowerShell support Unicode
+            wt_session = os.environ.get("WT_SESSION")
+            term_program = os.environ.get("TERM_PROGRAM")
+            if not wt_session and not term_program:
+                # Likely cmd.exe or old PowerShell, use ASCII
+                use_unicode = False
 
-        print("\nzlib:")
-        zlib_versions = detect_zlib_versions()
-        if zlib_versions:
-            print(f"  Latest: {zlib_versions[0]}")
+        if use_unicode:
+            ok_symbol = "✓"
+            update_symbol = "⚠"
+            new_symbol = "✗"
+            arrow = "→"
+        else:
+            ok_symbol = "[OK]    "
+            update_symbol = "[UPDATE]"
+            new_symbol = "[NEW]   "
+            arrow = "->"
 
-        print("\nncurses:")
-        ncurses_versions = detect_ncurses_versions()
-        if ncurses_versions:
-            print(f"  Latest: {ncurses_versions[0]}")
+        # Check each dependency
+        checks = [
+            ("openssl", "OpenSSL", detect_openssl_versions),
+            ("sqlite", "SQLite", detect_sqlite_versions),
+            ("xz", "XZ", detect_xz_versions),
+            ("libffi", "libffi", detect_libffi_versions),
+            ("zlib", "zlib", detect_zlib_versions),
+            ("ncurses", "ncurses", detect_ncurses_versions),
+            ("readline", "readline", detect_readline_versions),
+            ("gdbm", "gdbm", detect_gdbm_versions),
+            ("libxcrypt", "libxcrypt", detect_libxcrypt_versions),
+            ("krb5", "krb5", detect_krb5_versions),
+            ("bzip2", "bzip2", detect_bzip2_versions),
+            ("uuid", "uuid", detect_uuid_versions),
+            ("tirpc", "tirpc", detect_tirpc_versions),
+            ("expat", "expat", detect_expat_versions),
+        ]
 
-        print("\nreadline:")
-        readline_versions = detect_readline_versions()
-        if readline_versions:
-            print(f"  Latest: {readline_versions[0]}")
+        for dep_key, dep_name, detect_func in checks:
+            detected = detect_func()
+            if not detected:
+                continue
 
-        print("\ngdbm:")
-        gdbm_versions = detect_gdbm_versions()
-        if gdbm_versions:
-            print(f"  Latest: {gdbm_versions[0]}")
+            # Handle SQLite's tuple return
+            if dep_key == "sqlite":
+                latest_version = detected[0][0]  # type: ignore[index]
+            else:
+                latest_version = detected[0]  # type: ignore[index]
 
-        print("\nlibxcrypt:")
-        libxcrypt_versions = detect_libxcrypt_versions()
-        if libxcrypt_versions:
-            print(f"  Latest: {libxcrypt_versions[0]}")
+            # Get current version from JSON
+            current_version = None
+            if dep_key in current_deps:
+                versions = sorted(current_deps[dep_key].keys(), reverse=True)
+                if versions:
+                    current_version = versions[0]
 
-        print("\nkrb5:")
-        krb5_versions = detect_krb5_versions()
-        if krb5_versions:
-            print(f"  Latest: {krb5_versions[0]}")
+            # Compare versions
+            if current_version == latest_version:
+                print(
+                    f"{ok_symbol} {dep_name:12} {current_version:15} " f"(up-to-date)"
+                )
+                up_to_date.append(dep_name)
+            elif current_version:
+                print(
+                    f"{update_symbol} {dep_name:12} {current_version:15} "
+                    f"{arrow} {latest_version} (update available)"
+                )
+                updates_available.append((dep_name, current_version, latest_version))
+            else:
+                print(
+                    f"{new_symbol} {dep_name:12} {'(not tracked)':15} "
+                    f"{arrow} {latest_version}"
+                )
+                updates_available.append((dep_name, None, latest_version))
 
-        print("\nbzip2:")
-        bzip2_versions = detect_bzip2_versions()
-        if bzip2_versions:
-            print(f"  Latest: {bzip2_versions[0]}")
+        # Summary
+        print(f"\n{'=' * 60}")
+        print(f"Summary: {len(up_to_date)} up-to-date, ", end="")
+        print(f"{len(updates_available)} updates available")
 
-        print("\nuuid:")
-        uuid_versions = detect_uuid_versions()
-        if uuid_versions:
-            print(f"  Latest: {uuid_versions[0]}")
-
-        print("\ntirpc:")
-        tirpc_versions = detect_tirpc_versions()
-        if tirpc_versions:
-            print(f"  Latest: {tirpc_versions[0]}")
-
-        print("\nexpat:")
-        expat_versions = detect_expat_versions()
-        if expat_versions:
-            print(f"  Latest: {expat_versions[0]}")
+        if updates_available:
+            print("\nTo update dependencies, run:")
+            print("  python3 -m relenv versions --update-deps")
 
         sys.exit(0)
 
