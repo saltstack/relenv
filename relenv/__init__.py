@@ -1,5 +1,5 @@
 # Copyright 2025 Broadcom.
-# SPDX-License-Identifier: Apache-2
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import sys

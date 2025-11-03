@@ -1,5 +1,5 @@
-# Copyright 2022-2025 Broadcom.
-# SPDX-License-Identifier: Apache-2
+# Copyright 2025 Broadcom.
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import os
@@ -450,3 +450,41 @@ def test_makepath_oserror() -> None:
     expected = os.path.join("foo", "Bar")
     assert result == expected
     assert case == os.path.normcase(expected)
+
+
+def test_copyright_headers() -> None:
+    """Verify all Python source files have the correct copyright header."""
+    expected_header = (
+        "# Copyright 2025 Broadcom.\n" "# SPDX-License-Identifier: Apache-2.0\n"
+    )
+
+    # Find all Python files in relenv/ and tests/
+    root = MODULE_DIR.parent
+    python_files = []
+    for directory in ("relenv", "tests"):
+        dir_path = root / directory
+        if dir_path.exists():
+            python_files.extend(dir_path.rglob("*.py"))
+
+    # Skip generated and cache files
+    python_files = [
+        f
+        for f in python_files
+        if "__pycache__" not in f.parts
+        and ".nox" not in f.parts
+        and "build" not in f.parts
+    ]
+
+    failures = []
+    for py_file in python_files:
+        with open(py_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        if not content.startswith(expected_header):
+            # Read first two lines for error message
+            lines = content.split("\n", 2)
+            actual = "\n".join(lines[:2]) + "\n" if len(lines) >= 2 else content
+            failures.append(f"{py_file.relative_to(root)}: {actual!r}")
+
+    if failures:
+        pytest.fail("Files with incorrect copyright headers:\n" + "\n".join(failures))

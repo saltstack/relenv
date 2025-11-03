@@ -1,5 +1,5 @@
-# Copyright 2022-2025 Broadcom.
-# SPDX-License-Identifier: Apache-2
+# Copyright 2025 Broadcom.
+# SPDX-License-Identifier: Apache-2.0
 """
 The ``relenv toolchain`` command.
 """
