@@ -1,4 +1,4 @@
-# Copyright 2025 Broadcom.
+# Copyright 2022-2025 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
@@ -455,12 +455,12 @@ def test_makepath_oserror() -> None:
 def test_copyright_headers() -> None:
     """Verify all Python source files have the correct copyright header."""
     expected_header = (
-        "# Copyright 2025 Broadcom.\n" "# SPDX-License-Identifier: Apache-2.0\n"
+        "# Copyright 2022-2025 Broadcom.\n" "# SPDX-License-Identifier: Apache-2.0\n"
     )
 
     # Find all Python files in relenv/ and tests/
     root = MODULE_DIR.parent
-    python_files = []
+    python_files: list[pathlib.Path] = []
     for directory in ("relenv", "tests"):
         dir_path = root / directory
         if dir_path.exists():
