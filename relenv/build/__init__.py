@@ -14,7 +14,7 @@ import sys
 from types import FrameType, ModuleType
 
 from . import darwin, linux, windows
-from .common import CHECK_VERSIONS_SUPPORT, builds
+from .common import builds
 from ..common import DEFAULT_PYTHON, build_arch
 from ..pyversions import Version, python_versions
 
@@ -106,12 +106,6 @@ def setup_parser(
         ),
     )
     build_subparser.add_argument(
-        "--check-versions",
-        default=False,
-        action="store_true",
-        help="Check for new version of python and it's depenencies, then exit.",
-    )
-    build_subparser.add_argument(
         "--no-pretty",
         default=False,
         action="store_true",
@@ -175,18 +169,6 @@ def main(args: argparse.Namespace) -> None:
     build.dirs.version = str(build_version)
     build.recipies["python"]["download"].version = str(build_version)
     build.recipies["python"]["download"].checksum = pyversions[build_version]
-
-    if args.check_versions:
-        if not CHECK_VERSIONS_SUPPORT:
-            print(
-                "Check versions not supported. Please install the "
-                "packaging and looseversion python packages."
-            )
-            sys.exit(2)
-        if not build.check_versions():
-            sys.exit(1)
-        else:
-            sys.exit(0)
 
     build.set_arch(args.arch)
     if build.build_arch != build.arch:

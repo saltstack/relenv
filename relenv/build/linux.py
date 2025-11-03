@@ -21,13 +21,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
-    github_version,
     runcmd,
-    sqlite_version,
-    tarball_version,
-    krb_version,
-    python_version,
-    uuid_version,
 )
 from ..common import LINUX, Version, arches
 
@@ -573,8 +567,6 @@ build.add(
         "url": openssl_url,
         "version": openssl_version,
         "checksum": openssl_checksum,
-        "checkfunc": tarball_version,
-        "checkurl": "https://www.openssl.org/source/",
     },
 )
 
@@ -586,8 +578,6 @@ build.add(
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",
         "version": "3.1.2",
         "checksum": "206036c21264e53f0196f715d81d905742e6245b",
-        "checkfunc": tarball_version,
-        "checkurl": "https://www.openssl.org/source/",
     },
 )
 
@@ -609,8 +599,6 @@ build.add(
         "url": libxcrypt_url,
         "version": libxcrypt_version,
         "checksum": libxcrypt_checksum,
-        "checkfunc": github_version,
-        "checkurl": "https://github.com/besser82/libxcrypt/releases/",
     },
 )
 
@@ -632,7 +620,6 @@ build.add(
         "url": xz_url,
         "version": xz_version,
         "checksum": xz_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -656,8 +643,6 @@ build.add(
         "url": sqlite_url,
         "version": sqlite_version_num,
         "checksum": sqlite_checksum,
-        "checkfunc": sqlite_version,
-        "checkurl": "https://sqlite.org/",
     },
 )
 
@@ -679,7 +664,6 @@ build.add(
         "url": bzip2_url,
         "version": bzip2_version,
         "checksum": bzip2_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -701,7 +685,6 @@ build.add(
         "url": gdbm_url,
         "version": gdbm_version,
         "checksum": gdbm_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -725,7 +708,6 @@ build.add(
         "url": ncurses_url,
         "version": ncurses_version,
         "checksum": ncurses_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -747,8 +729,6 @@ build.add(
         "url": libffi_url,
         "version": libffi_version,
         "checksum": libffi_checksum,
-        "checkfunc": github_version,
-        "checkurl": "https://github.com/libffi/libffi/releases/",
     },
 )
 
@@ -770,7 +750,6 @@ build.add(
         "url": zlib_url,
         "version": zlib_version,
         "checksum": zlib_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -791,7 +770,6 @@ build.add(
         "url": uuid_url,
         "version": uuid_ver,
         "checksum": uuid_checksum,
-        "checkfunc": uuid_version,
     },
 )
 
@@ -814,8 +792,6 @@ build.add(
         "url": krb5_url,
         "version": krb5_version,
         "checksum": krb5_checksum,
-        "checkfunc": krb_version,
-        "checkurl": "https://kerberos.org/dist/krb5/",
     },
 )
 
@@ -840,7 +816,6 @@ build.add(
         "url": readline_url,
         "version": readline_version,
         "checksum": readline_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -867,7 +842,6 @@ build.add(
         # "url": "https://downloads.sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
         "version": tirpc_version,
         "checksum": tirpc_checksum,
-        "checkfunc": tarball_version,
     },
 )
 
@@ -893,8 +867,6 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": build.version,
         "checksum": "d31d548cd2c5ca2ae713bebe346ba15e8406633a",
-        "checkfunc": python_version,
-        "checkurl": "https://www.python.org/ftp/python/",
     },
 )
 
