@@ -113,8 +113,9 @@ def buildenv(
         "OPENSSL_INCLUDE_DIR": f"{relenv_path}/include",
         "OPENSSL_LIB_DIR": f"{relenv_path}/lib",
         "PKG_CONFIG_PATH": f"{relenv_path}/lib/pkgconfig",
+        "RUSTFLAGS": f"-L {relenv_path}/lib -C link-arg=-Wl,-rpath,{relenv_path}/lib",
     }
-    if sys.platform == "dawin":
+    if sys.platform == "darwin":
         env["MACOS_DEVELOPMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
     return env
 
