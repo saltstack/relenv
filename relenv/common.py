@@ -321,12 +321,19 @@ def get_toolchain(
     """
     Get a the toolchain directory, specific to the arch if supplied.
 
+    On Linux, this function will extract the toolchain from ppbt if needed.
+    If the toolchain already exists, it will be returned even if ppbt is
+    not available (e.g., when running tests on non-Linux platforms that
+    patch sys.platform to "linux"). This allows using existing toolchains
+    without requiring ppbt to be installed.
+
     :param arch: The architecture to get the toolchain for
     :type arch: str
     :param root: The root of the relenv working directories to search in
     :type root: str
 
-    :return: The directory holding the toolchain
+    :return: The directory holding the toolchain, or None if on Linux and
+             the toolchain doesn't exist and ppbt is unavailable
     :rtype: ``pathlib.Path``
     """
     del root  # Kept for backward compatibility; location driven by DATA_DIR
@@ -346,7 +353,8 @@ def get_toolchain(
 
         ppbt_common = import_module("ppbt.common")
     except ImportError:
-        return None
+        # If toolchain already exists, use it even without ppbt
+        return toolchain_path if toolchain_path.exists() else None
     archive_attr = getattr(ppbt_common, "ARCHIVE", None)
     extract = getattr(ppbt_common, "extract_archive", None)
     if archive_attr is None or not callable(extract):

@@ -1038,10 +1038,14 @@ class Builder:
         :type arch: str
         """
         self.arch = arch
-        if sys.platform in ["darwin", "win32"]:
-            self.toolchain = None
-        else:
-            self.toolchain = get_toolchain(self.arch, self.dirs.root)
+        self._toolchain: Optional[pathlib.Path] = None
+
+    @property
+    def toolchain(self) -> Optional[pathlib.Path]:
+        """Lazily fetch toolchain only when needed."""
+        if self._toolchain is None and sys.platform == "linux":
+            self._toolchain = get_toolchain(self.arch, self.dirs.root)
+        return self._toolchain
 
     @property
     def triplet(self) -> str:

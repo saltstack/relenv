@@ -161,7 +161,9 @@ def test_get_toolchain(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) 
     triplet = "aarch64-linux-gnu"
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(relenv.common.sys, "platform", "linux", raising=False)
-    monkeypatch.setattr(relenv.common, "get_triplet", lambda: triplet)
+    monkeypatch.setattr(
+        relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
+    )
     monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
     archive_path = tmp_path / "dummy-toolchain.tar.xz"
     archive_path.write_bytes(b"")
@@ -192,7 +194,9 @@ def test_get_toolchain_no_arch(
     triplet = "x86_64-linux-gnu"
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(relenv.common.sys, "platform", "linux", raising=False)
-    monkeypatch.setattr(relenv.common, "get_triplet", lambda: triplet)
+    monkeypatch.setattr(
+        relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
+    )
     monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
     archive_path = tmp_path / "dummy-toolchain.tar.xz"
     archive_path.write_bytes(b"")

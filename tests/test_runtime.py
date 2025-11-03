@@ -1537,7 +1537,8 @@ def test_build_shebang_linux(monkeypatch: pytest.MonkeyPatch) -> None:
     shebang = result.decode().strip()
     assert shebang.startswith("#!")
     path_part = shebang[2:]
-    expected = os.fspath(pathlib.Path("/") / pathlib.Path("bin") / "python")
+    # Use PurePosixPath since we're testing Linux behavior
+    expected = os.fspath(pathlib.PurePosixPath("/") / "bin" / "python")
     assert path_part == expected
 
 
