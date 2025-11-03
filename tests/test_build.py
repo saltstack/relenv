@@ -5,7 +5,7 @@ import pathlib
 
 import pytest
 
-from relenv.build.common import Builder, verify_checksum
+from relenv.build.common import Builder, get_dependency_version, verify_checksum
 from relenv.common import DATA_DIR, RelenvException, toolchain_root_dir
 
 # mypy: ignore-errors
@@ -86,3 +86,65 @@ def test_verify_checksum(fake_download: pathlib.Path, fake_download_md5: str) ->
 
 def test_verify_checksum_failed(fake_download: pathlib.Path) -> None:
     pytest.raises(RelenvException, verify_checksum, fake_download, "no")
+
+
+def test_get_dependency_version_openssl_linux() -> None:
+    """Test getting OpenSSL version for Linux platform."""
+    result = get_dependency_version("openssl", "linux")
+    assert result is not None
+    assert isinstance(result, dict)
+    assert "version" in result
+    assert "url" in result
+    assert "sha256" in result
+    assert isinstance(result["version"], str)
+    assert "openssl" in result["url"].lower()
+    assert "{version}" in result["url"]
+    assert isinstance(result["sha256"], str)
+
+
+def test_get_dependency_version_sqlite_all_platforms() -> None:
+    """Test getting SQLite version for various platforms."""
+    for platform in ["linux", "darwin", "win32"]:
+        result = get_dependency_version("sqlite", platform)
+        assert result is not None, f"SQLite should be available for {platform}"
+        assert isinstance(result, dict)
+        assert "version" in result
+        assert "url" in result
+        assert "sha256" in result
+        assert "sqliteversion" in result, "SQLite should have sqliteversion field"
+        assert isinstance(result["version"], str)
+        assert "sqlite" in result["url"].lower()
+        assert isinstance(result["sha256"], str)
+
+
+def test_get_dependency_version_xz_all_platforms() -> None:
+    """Test getting XZ version for various platforms."""
+    # XZ 5.5.0+ removed MSBuild support, so Windows uses a fallback version
+    # and XZ is not in JSON for win32
+    for platform in ["linux", "darwin"]:
+        result = get_dependency_version("xz", platform)
+        assert result is not None, f"XZ should be available for {platform}"
+        assert isinstance(result, dict)
+        assert "version" in result
+        assert "url" in result
+        assert "sha256" in result
+        assert isinstance(result["version"], str)
+        assert "xz" in result["url"].lower()
+        assert isinstance(result["sha256"], str)
+
+    # Windows should return None (uses hardcoded fallback in windows.py)
+    result = get_dependency_version("xz", "win32")
+    assert result is None, "XZ should not be in JSON for win32 (uses fallback)"
+
+
+def test_get_dependency_version_nonexistent() -> None:
+    """Test that nonexistent dependency returns None."""
+    result = get_dependency_version("nonexistent-dep", "linux")
+    assert result is None
+
+
+def test_get_dependency_version_wrong_platform() -> None:
+    """Test that requesting unsupported platform returns None."""
+    # Try to get OpenSSL for a platform that doesn't exist
+    result = get_dependency_version("openssl", "nonexistent-platform")
+    assert result is None
