@@ -701,10 +701,9 @@ def wrap_pip_build_wheel(name: str) -> ModuleType:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             if sys.platform != "linux":
                 return func(*args, **kwargs)
-            base_dir = common().DATA_DIR / "toolchain"
-            toolchain = base_dir / common().get_triplet()
+            toolchain = common().get_toolchain()
             cargo_home = str(common().DATA_DIR / "cargo")
-            if not toolchain.exists():
+            if toolchain is None or not toolchain.exists():
                 debug("Unable to set CARGO_HOME no toolchain exists")
             else:
                 relenvroot = str(sys.RELENV)
