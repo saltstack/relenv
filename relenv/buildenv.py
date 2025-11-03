@@ -79,11 +79,13 @@ def buildenv(
         "CXX": f"{toolchain}/bin/{triplet}-g++",
         "CFLAGS": (
             f"--sysroot={sysroot} "
+            f"-fPIC "
             f"-I{relenv_path}/include "
             f"-I{sysroot}/usr/include"
         ),
         "CXXFLAGS": (
             f"--sysroot={sysroot} "
+            f"-fPIC "
             f"-I{relenv_path}/include "
             f"-I{sysroot}/usr/include "
             f"-L{relenv_path}/lib -L{sysroot}/lib "
@@ -91,11 +93,13 @@ def buildenv(
         ),
         "CPPFLAGS": (
             f"--sysroot={sysroot} "
+            f"-fPIC "
             f"-I{relenv_path}/include "
             f"-I{sysroot}/usr/include"
         ),
         "CMAKE_CFLAGS": (
             f"--sysroot={sysroot} "
+            f"-fPIC "
             f"-I{relenv_path}/include "
             f"-I{sysroot}/usr/include"
         ),
@@ -105,6 +109,10 @@ def buildenv(
             f"-Wl,-rpath,{relenv_path}/lib"
         ),
         "CRATE_CC_NO_DEFAULTS": "1",
+        "OPENSSL_DIR": f"{relenv_path}",
+        "OPENSSL_INCLUDE_DIR": f"{relenv_path}/include",
+        "OPENSSL_LIB_DIR": f"{relenv_path}/lib",
+        "PKG_CONFIG_PATH": f"{relenv_path}/lib/pkgconfig",
     }
     if sys.platform == "dawin":
         env["MACOS_DEVELOPMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
