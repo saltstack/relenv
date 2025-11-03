@@ -204,11 +204,14 @@ def print_ui(
 
 def verify_checksum(file: PathLike, checksum: Optional[str]) -> bool:
     """
-    Verify the checksum of a files.
+    Verify the checksum of a file.
+
+    Supports both SHA-1 (40 hex chars) and SHA-256 (64 hex chars) checksums.
+    The hash algorithm is auto-detected based on checksum length.
 
     :param file: The path to the file to check.
     :type file: str
-    :param checksum: The checksum to verify against
+    :param checksum: The checksum to verify against (SHA-1 or SHA-256)
     :type checksum: str
 
     :raises RelenvException: If the checksum verification failed
@@ -219,11 +222,26 @@ def verify_checksum(file: PathLike, checksum: Optional[str]) -> bool:
     if checksum is None:
         log.error("Can't verify checksum because none was given")
         return False
+
+    # Auto-detect hash type based on length
+    # SHA-1: 40 hex chars, SHA-256: 64 hex chars
+    if len(checksum) == 64:
+        hash_algo = hashlib.sha256()
+        hash_name = "sha256"
+    elif len(checksum) == 40:
+        hash_algo = hashlib.sha1()
+        hash_name = "sha1"
+    else:
+        raise RelenvException(
+            f"Invalid checksum length {len(checksum)}. Expected 40 (SHA-1) or 64 (SHA-256)"
+        )
+
     with open(file, "rb") as fp:
-        file_checksum = hashlib.sha1(fp.read()).hexdigest()
+        hash_algo.update(fp.read())
+        file_checksum = hash_algo.hexdigest()
         if checksum != file_checksum:
             raise RelenvException(
-                f"sha1 checksum verification failed. expected={checksum} found={file_checksum}"
+                f"{hash_name} checksum verification failed. expected={checksum} found={file_checksum}"
             )
     return True
 
@@ -538,6 +556,52 @@ def python_version(href: str) -> Optional[str]:
 def uuid_version(href: str) -> Optional[str]:
     if "download" in href and "latest" not in href:
         return href[:-16].rsplit("/")[-1].replace("libuuid-", "")
+    return None
+
+
+def get_dependency_version(name: str, platform: str) -> Optional[Dict[str, str]]:
+    """
+    Get dependency version and metadata from python-versions.json.
+
+    Returns dict with keys: version, url, sha256, and any extra fields (e.g., sqliteversion)
+    Returns None if dependency not found.
+
+    :param name: Dependency name (openssl, sqlite, xz)
+    :param platform: Platform name (linux, darwin, win32)
+    :return: Dict with version, url, sha256, and extra fields, or None
+    """
+    versions_file = MODULE_DIR / "python-versions.json"
+    if not versions_file.exists():
+        return None
+
+    import json
+
+    data = json.loads(versions_file.read_text())
+    dependencies = data.get("dependencies", {})
+
+    if name not in dependencies:
+        return None
+
+    # Get the latest version for this dependency that supports the platform
+    dep_versions = dependencies[name]
+    for version, info in sorted(
+        dep_versions.items(),
+        key=lambda x: [int(n) for n in x[0].split(".")],
+        reverse=True,
+    ):
+        if platform in info.get("platforms", []):
+            # Build result dict with version, url, sha256, and any extra fields
+            result = {
+                "version": version,
+                "url": info["url"],
+                "sha256": info.get("sha256", ""),
+            }
+            # Add any extra fields (like sqliteversion for SQLite)
+            for key, value in info.items():
+                if key not in ["url", "sha256", "platforms"]:
+                    result[key] = value
+            return result
+
     return None
 
 

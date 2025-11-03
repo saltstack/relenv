@@ -23,6 +23,7 @@ from .common import (
     create_archive,
     download_url,
     extract_archive,
+    get_dependency_version,
     install_runtime,
     patch_file,
     runcmd,
@@ -101,9 +102,21 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the SQLITE library.
     """
-    version = "3.50.4.0"
-    url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
-    sha256 = "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18"
+    # Try to get version from JSON
+    sqlite_info = get_dependency_version("sqlite", "win32")
+    if sqlite_info:
+        version = sqlite_info["version"]
+        url_template = sqlite_info["url"]
+        sha256 = sqlite_info["sha256"]
+        sqliteversion = sqlite_info.get("sqliteversion", "3500400")
+        # Format the URL with sqliteversion (the 7-digit version number)
+        url = url_template.format(version=sqliteversion)
+    else:
+        # Fallback to hardcoded values
+        version = "3.50.4.0"
+        url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
+        sha256 = "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18"
+        sqliteversion = "3500400"
     ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -111,7 +124,7 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
         update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         # # we need to fix the name of the extracted directory
-        extracted_dir = dirs.source / "externals" / "sqlite-autoconf-3500400"
+        extracted_dir = dirs.source / "externals" / f"sqlite-autoconf-{sqliteversion}"
         shutil.move(str(extracted_dir), str(target_dir))
     # Update externals.spdx.json with the correct version, url, and hash
     # This became a thing in 3.12
@@ -133,9 +146,20 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the XZ library.
     """
-    version = "5.6.2"
-    url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
-    sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
+    # Try to get version from JSON
+    # Note: Windows may use a different XZ version than Linux/Darwin due to MSBuild compatibility
+    xz_info = get_dependency_version("xz", "win32")
+    if xz_info:
+        version = xz_info["version"]
+        url_template = xz_info["url"]
+        sha256 = xz_info["sha256"]
+        url = url_template.format(version=version)
+    else:
+        # Fallback to hardcoded values
+        # Note: Using 5.6.2 for MSBuild compatibility (5.5.0+ removed MSBuild support)
+        version = "5.6.2"
+        url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
+        sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
     ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
     target_dir = dirs.source / "externals" / f"xz-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -171,8 +195,17 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     """
     # Patch <src>/Modules/expat/refresh.sh. When the SBOM is created, refresh.sh
     # is scanned for the expat version, even though it doesn't run on Windows.
-    version = "2.7.3"
-    hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+
+    # Try to get version from JSON
+    expat_info = get_dependency_version("expat", "win32")
+    if expat_info:
+        version = expat_info["version"]
+        hash = expat_info["sha256"]
+    else:
+        # Fallback to hardcoded values
+        version = "2.7.3"
+        hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+
     url = f'https://github.com/libexpat/libexpat/releases/download/R_{version.replace(".", "_")}/expat-{version}.tar.xz'
     bash_refresh = dirs.source / "Modules" / "expat" / "refresh.sh"
     old = r'expected_libexpat_tag="R_\d+_\d+_\d"'

@@ -230,6 +230,625 @@ def _main() -> None:
         vfile.write_text(json.dumps(out, indent=1))
 
 
+def sha256_digest(file: str | os.PathLike[str]) -> str:
+    """
+    SHA-256 digest of file.
+    """
+    hsh = hashlib.sha256()
+    with open(file, "rb") as fp:
+        hsh.update(fp.read())
+    return hsh.hexdigest()
+
+
+def detect_openssl_versions() -> list[str]:
+    """
+    Detect available OpenSSL versions from GitHub releases.
+    """
+    url = "https://github.com/openssl/openssl/tags"
+    content = fetch_url_content(url)
+    # Find tags like openssl-3.5.4
+    pattern = r'openssl-(\d+\.\d+\.\d+)"'
+    matches = re.findall(pattern, content)
+    # Deduplicate and sort
+    versions = sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+    return versions
+
+
+def detect_sqlite_versions() -> list[tuple[str, str]]:
+    """
+    Detect available SQLite versions from sqlite.org.
+
+    Returns list of (version, sqliteversion) tuples.
+    """
+    url = "https://sqlite.org/download.html"
+    content = fetch_url_content(url)
+    # Find sqlite-autoconf-NNNNNNN.tar.gz
+    pattern = r"sqlite-autoconf-(\d{7})\.tar\.gz"
+    matches = re.findall(pattern, content)
+    # Convert to version format
+    versions = []
+    for sqlite_ver in set(matches):
+        # SQLite version format: 3XXYYZZ where XX=minor, YY=patch, ZZ=subpatch
+        if len(sqlite_ver) == 7 and sqlite_ver[0] == "3":
+            major = 3
+            minor = int(sqlite_ver[1:3])
+            patch = int(sqlite_ver[3:5])
+            subpatch = int(sqlite_ver[5:7])
+            version = f"{major}.{minor}.{patch}.{subpatch}"
+            versions.append((version, sqlite_ver))
+    return sorted(
+        versions, key=lambda x: [int(n) for n in x[0].split(".")], reverse=True
+    )
+
+
+def detect_xz_versions() -> list[str]:
+    """
+    Detect available XZ versions from tukaani.org.
+    """
+    url = "https://tukaani.org/xz/"
+    content = fetch_url_content(url)
+    # Find xz-X.Y.Z.tar.gz
+    pattern = r"xz-(\d+\.\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    # Deduplicate and sort
+    versions = sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+    return versions
+
+
+def detect_libffi_versions() -> list[str]:
+    """Detect available libffi versions from GitHub releases."""
+    url = "https://github.com/libffi/libffi/tags"
+    content = fetch_url_content(url)
+    pattern = r'v(\d+\.\d+\.\d+)"'
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_zlib_versions() -> list[str]:
+    """Detect available zlib versions from zlib.net."""
+    url = "https://zlib.net/"
+    content = fetch_url_content(url)
+    pattern = r"zlib-(\d+\.\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_bzip2_versions() -> list[str]:
+    """Detect available bzip2 versions from sourceware.org."""
+    url = "https://sourceware.org/pub/bzip2/"
+    content = fetch_url_content(url)
+    pattern = r"bzip2-(\d+\.\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_ncurses_versions() -> list[str]:
+    """Detect available ncurses versions from GNU mirrors."""
+    url = "https://mirrors.ocf.berkeley.edu/gnu/ncurses/"
+    content = fetch_url_content(url)
+    pattern = r"ncurses-(\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_readline_versions() -> list[str]:
+    """Detect available readline versions from GNU mirrors."""
+    url = "https://mirrors.ocf.berkeley.edu/gnu/readline/"
+    content = fetch_url_content(url)
+    pattern = r"readline-(\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_gdbm_versions() -> list[str]:
+    """Detect available gdbm versions from GNU mirrors."""
+    url = "https://mirrors.ocf.berkeley.edu/gnu/gdbm/"
+    content = fetch_url_content(url)
+    pattern = r"gdbm-(\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_libxcrypt_versions() -> list[str]:
+    """Detect available libxcrypt versions from GitHub releases."""
+    url = "https://github.com/besser82/libxcrypt/tags"
+    content = fetch_url_content(url)
+    pattern = r'v(\d+\.\d+\.\d+)"'
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_krb5_versions() -> list[str]:
+    """Detect available krb5 versions from kerberos.org."""
+    url = "https://kerberos.org/dist/krb5/"
+    content = fetch_url_content(url)
+    # krb5 versions are like 1.22/
+    pattern = r"(\d+\.\d+)/"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_uuid_versions() -> list[str]:
+    """Detect available libuuid versions from SourceForge."""
+    url = "https://sourceforge.net/projects/libuuid/files/"
+    content = fetch_url_content(url)
+    pattern = r"libuuid-(\d+\.\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_tirpc_versions() -> list[str]:
+    """Detect available libtirpc versions from SourceForge."""
+    url = "https://sourceforge.net/projects/libtirpc/files/libtirpc/"
+    content = fetch_url_content(url)
+    pattern = r"(\d+\.\d+\.\d+)/"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_expat_versions() -> list[str]:
+    """Detect available expat versions from GitHub releases."""
+    url = "https://github.com/libexpat/libexpat/tags"
+    content = fetch_url_content(url)
+    # Expat versions are tagged like R_2_7_3
+    pattern = r'R_(\d+)_(\d+)_(\d+)"'
+    matches = re.findall(pattern, content)
+    # Convert R_2_7_3 to 2.7.3
+    versions = [f"{m[0]}.{m[1]}.{m[2]}" for m in matches]
+    return sorted(
+        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def update_dependency_versions(
+    path: pathlib.Path, deps_to_update: list[str] | None = None
+) -> None:
+    """
+    Update dependency versions in python-versions.json.
+
+    Downloads tarballs, computes SHA-256, and updates the JSON file.
+
+    :param path: Path to python-versions.json
+    :param deps_to_update: List of dependencies to update (openssl, sqlite, xz), or None for all
+    """
+    cwd = os.getcwd()
+
+    # Read existing data
+    if path.exists():
+        all_data = json.loads(path.read_text())
+        if "python" in all_data:
+            pydata = all_data["python"]
+            dependencies = all_data.get("dependencies", {})
+        else:
+            # Old format
+            pydata = all_data
+            dependencies = {}
+    else:
+        pydata = {}
+        dependencies = {}
+
+    # Determine which dependencies to update
+    if deps_to_update is None:
+        # By default, update commonly-changed dependencies
+        # Full list: openssl, sqlite, xz, libffi, zlib, bzip2, ncurses,
+        # readline, gdbm, libxcrypt, krb5, uuid, tirpc, expat
+        deps_to_update = [
+            "openssl",
+            "sqlite",
+            "xz",
+            "libffi",
+            "zlib",
+            "ncurses",
+            "readline",
+            "gdbm",
+            "libxcrypt",
+            "krb5",
+            "bzip2",
+            "uuid",
+            "tirpc",
+            "expat",
+        ]
+
+    # Update OpenSSL
+    if "openssl" in deps_to_update:
+        print("Checking OpenSSL versions...")
+        openssl_versions = detect_openssl_versions()
+        if openssl_versions:
+            latest = openssl_versions[0]
+            print(f"Latest OpenSSL: {latest}")
+            if "openssl" not in dependencies:
+                dependencies["openssl"] = {}
+            if latest not in dependencies["openssl"]:
+                url = f"https://github.com/openssl/openssl/releases/download/openssl-{latest}/openssl-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                download_path = download_url(url, cwd)
+                checksum = sha256_digest(download_path)
+                print(f"SHA-256: {checksum}")
+                url_template = (
+                    "https://github.com/openssl/openssl/releases/download/"
+                    "openssl-{version}/openssl-{version}.tar.gz"
+                )
+                dependencies["openssl"][latest] = {
+                    "url": url_template,
+                    "sha256": checksum,
+                    "platforms": ["linux", "darwin"],
+                }
+                # Clean up download
+                os.remove(download_path)
+
+    # Update SQLite
+    if "sqlite" in deps_to_update:
+        print("Checking SQLite versions...")
+        sqlite_versions = detect_sqlite_versions()
+        if sqlite_versions:
+            latest_version, latest_sqliteversion = sqlite_versions[0]
+            print(
+                f"Latest SQLite: {latest_version} (sqlite version {latest_sqliteversion})"
+            )
+            if "sqlite" not in dependencies:
+                dependencies["sqlite"] = {}
+            if latest_version not in dependencies["sqlite"]:
+                # SQLite URLs include year, try current year
+                import datetime
+
+                year = datetime.datetime.now().year
+                url = f"https://sqlite.org/{year}/sqlite-autoconf-{latest_sqliteversion}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    # Store URL with actual year and {version} placeholder (not {sqliteversion})
+                    # The build scripts pass sqliteversion value as "version" parameter
+                    dependencies["sqlite"][latest_version] = {
+                        "url": f"https://sqlite.org/{year}/sqlite-autoconf-{{version}}.tar.gz",
+                        "sha256": checksum,
+                        "sqliteversion": latest_sqliteversion,
+                        "platforms": ["linux", "darwin", "win32"],
+                    }
+                    # Clean up download
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download SQLite: {e}")
+
+    # Update XZ
+    if "xz" in deps_to_update:
+        print("Checking XZ versions...")
+        xz_versions = detect_xz_versions()
+        if xz_versions:
+            latest = xz_versions[0]
+            print(f"Latest XZ: {latest}")
+            if "xz" not in dependencies:
+                dependencies["xz"] = {}
+            if latest not in dependencies["xz"]:
+                url = f"http://tukaani.org/xz/xz-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                download_path = download_url(url, cwd)
+                checksum = sha256_digest(download_path)
+                print(f"SHA-256: {checksum}")
+                dependencies["xz"][latest] = {
+                    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+                    "sha256": checksum,
+                    "platforms": ["linux", "darwin", "win32"],
+                }
+                # Clean up download
+                os.remove(download_path)
+
+    # Update libffi
+    if "libffi" in deps_to_update:
+        print("Checking libffi versions...")
+        libffi_versions = detect_libffi_versions()
+        if libffi_versions:
+            latest = libffi_versions[0]
+            print(f"Latest libffi: {latest}")
+            if "libffi" not in dependencies:
+                dependencies["libffi"] = {}
+            if latest not in dependencies["libffi"]:
+                url = f"https://github.com/libffi/libffi/releases/download/v{latest}/libffi-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["libffi"][latest] = {
+                        "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download libffi: {e}")
+
+    # Update zlib
+    if "zlib" in deps_to_update:
+        print("Checking zlib versions...")
+        zlib_versions = detect_zlib_versions()
+        if zlib_versions:
+            latest = zlib_versions[0]
+            print(f"Latest zlib: {latest}")
+            if "zlib" not in dependencies:
+                dependencies["zlib"] = {}
+            if latest not in dependencies["zlib"]:
+                url = f"https://zlib.net/fossils/zlib-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["zlib"][latest] = {
+                        "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download zlib: {e}")
+
+    # Update ncurses
+    if "ncurses" in deps_to_update:
+        print("Checking ncurses versions...")
+        ncurses_versions = detect_ncurses_versions()
+        if ncurses_versions:
+            latest = ncurses_versions[0]
+            print(f"Latest ncurses: {latest}")
+            if "ncurses" not in dependencies:
+                dependencies["ncurses"] = {}
+            if latest not in dependencies["ncurses"]:
+                url = f"https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["ncurses"][latest] = {
+                        "url": "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download ncurses: {e}")
+
+    # Update readline
+    if "readline" in deps_to_update:
+        print("Checking readline versions...")
+        readline_versions = detect_readline_versions()
+        if readline_versions:
+            latest = readline_versions[0]
+            print(f"Latest readline: {latest}")
+            if "readline" not in dependencies:
+                dependencies["readline"] = {}
+            if latest not in dependencies["readline"]:
+                url = f"https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["readline"][latest] = {
+                        "url": "https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download readline: {e}")
+
+    # Update gdbm
+    if "gdbm" in deps_to_update:
+        print("Checking gdbm versions...")
+        gdbm_versions = detect_gdbm_versions()
+        if gdbm_versions:
+            latest = gdbm_versions[0]
+            print(f"Latest gdbm: {latest}")
+            if "gdbm" not in dependencies:
+                dependencies["gdbm"] = {}
+            if latest not in dependencies["gdbm"]:
+                url = f"https://mirrors.ocf.berkeley.edu/gnu/gdbm/gdbm-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["gdbm"][latest] = {
+                        "url": "https://mirrors.ocf.berkeley.edu/gnu/gdbm/gdbm-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download gdbm: {e}")
+
+    # Update libxcrypt
+    if "libxcrypt" in deps_to_update:
+        print("Checking libxcrypt versions...")
+        libxcrypt_versions = detect_libxcrypt_versions()
+        if libxcrypt_versions:
+            latest = libxcrypt_versions[0]
+            print(f"Latest libxcrypt: {latest}")
+            if "libxcrypt" not in dependencies:
+                dependencies["libxcrypt"] = {}
+            if latest not in dependencies["libxcrypt"]:
+                url = f"https://github.com/besser82/libxcrypt/releases/download/v{latest}/libxcrypt-{latest}.tar.xz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["libxcrypt"][latest] = {
+                        "url": (
+                            "https://github.com/besser82/libxcrypt/releases/"
+                            "download/v{version}/libxcrypt-{version}.tar.xz"
+                        ),
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download libxcrypt: {e}")
+
+    # Update krb5
+    if "krb5" in deps_to_update:
+        print("Checking krb5 versions...")
+        krb5_versions = detect_krb5_versions()
+        if krb5_versions:
+            latest = krb5_versions[0]
+            print(f"Latest krb5: {latest}")
+            if "krb5" not in dependencies:
+                dependencies["krb5"] = {}
+            if latest not in dependencies["krb5"]:
+                url = f"https://kerberos.org/dist/krb5/{latest}/krb5-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["krb5"][latest] = {
+                        "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download krb5: {e}")
+
+    # Update bzip2
+    if "bzip2" in deps_to_update:
+        print("Checking bzip2 versions...")
+        bzip2_versions = detect_bzip2_versions()
+        if bzip2_versions:
+            latest = bzip2_versions[0]
+            print(f"Latest bzip2: {latest}")
+            if "bzip2" not in dependencies:
+                dependencies["bzip2"] = {}
+            if latest not in dependencies["bzip2"]:
+                url = f"https://sourceware.org/pub/bzip2/bzip2-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["bzip2"][latest] = {
+                        "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux", "darwin"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download bzip2: {e}")
+
+    # Update uuid
+    if "uuid" in deps_to_update:
+        print("Checking uuid versions...")
+        uuid_versions = detect_uuid_versions()
+        if uuid_versions:
+            latest = uuid_versions[0]
+            print(f"Latest uuid: {latest}")
+            if "uuid" not in dependencies:
+                dependencies["uuid"] = {}
+            if latest not in dependencies["uuid"]:
+                url = f"https://sourceforge.net/projects/libuuid/files/libuuid-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["uuid"][latest] = {
+                        "url": "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download uuid: {e}")
+
+    # Update tirpc
+    if "tirpc" in deps_to_update:
+        print("Checking tirpc versions...")
+        tirpc_versions = detect_tirpc_versions()
+        if tirpc_versions:
+            latest = tirpc_versions[0]
+            print(f"Latest tirpc: {latest}")
+            if "tirpc" not in dependencies:
+                dependencies["tirpc"] = {}
+            if latest not in dependencies["tirpc"]:
+                url = f"https://sourceforge.net/projects/libtirpc/files/libtirpc-{latest}.tar.bz2"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["tirpc"][latest] = {
+                        "url": "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
+                        "sha256": checksum,
+                        "platforms": ["linux"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download tirpc: {e}")
+
+    # Update expat
+    if "expat" in deps_to_update:
+        print("Checking expat versions...")
+        expat_versions = detect_expat_versions()
+        if expat_versions:
+            latest = expat_versions[0]
+            print(f"Latest expat: {latest}")
+            if "expat" not in dependencies:
+                dependencies["expat"] = {}
+            if latest not in dependencies["expat"]:
+                # Expat uses R_X_Y_Z format for releases
+                version_tag = latest.replace(".", "_")
+                url = f"https://github.com/libexpat/libexpat/releases/download/R_{version_tag}/expat-{latest}.tar.xz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    # Store URL template with placeholder for version
+                    # Build scripts will construct actual URL dynamically from version
+                    dependencies["expat"][latest] = {
+                        "url": (
+                            f"https://github.com/libexpat/libexpat/releases/"
+                            f"download/R_{version_tag}/expat-{{version}}.tar.xz"
+                        ),
+                        "sha256": checksum,
+                        "platforms": ["linux", "darwin", "win32"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download expat: {e}")
+
+    # Write updated data
+    all_data = {"python": pydata, "dependencies": dependencies}
+    path.write_text(json.dumps(all_data, indent=1))
+    print(f"Updated {path}")
+
+
 def create_pyversions(path: pathlib.Path) -> None:
     """
     Create python-versions.json file.
@@ -242,15 +861,24 @@ def create_pyversions(path: pathlib.Path) -> None:
     versions = [_ for _ in parsed_versions if _.major >= 3]
 
     if path.exists():
-        data: dict[str, str] = json.loads(path.read_text())
+        all_data = json.loads(path.read_text())
+        # Handle both old format (flat dict) and new format (nested)
+        if "python" in all_data:
+            pydata = all_data["python"]
+            dependencies = all_data.get("dependencies", {})
+        else:
+            # Old format - convert to new
+            pydata = all_data
+            dependencies = {}
     else:
-        data = {}
+        pydata = {}
+        dependencies = {}
 
     for version in versions:
         if version >= Version("3.14"):
             continue
 
-        if str(version) in data:
+        if str(version) in pydata:
             continue
 
         if version <= Version("3.2") and version.micro == 0:
@@ -266,14 +894,17 @@ def create_pyversions(path: pathlib.Path) -> None:
         verified = verify_signature(download_path, sig_path)
         if verified:
             print(f"Version {version} has digest {digest(download_path)}")
-            data[str(version)] = digest(download_path)
+            pydata[str(version)] = digest(download_path)
         else:
             raise Exception("Signature failed to verify: {url}")
 
-        path.write_text(json.dumps(data, indent=1))
+        # Write in new structured format
+        all_data = {"python": pydata, "dependencies": dependencies}
+        path.write_text(json.dumps(all_data, indent=1))
 
-    # path.write_text(json.dumps({"versions": [str(_) for _ in versions]}))
-    path.write_text(json.dumps(data, indent=1))
+    # Final write in new structured format
+    all_data = {"python": pydata, "dependencies": dependencies}
+    path.write_text(json.dumps(all_data, indent=1))
 
 
 def python_versions(
@@ -302,7 +933,13 @@ def python_versions(
         readfrom = packaged
     else:
         raise RuntimeError("No versions file found")
-    pyversions = json.loads(readfrom.read_text())
+    data = json.loads(readfrom.read_text())
+    # Handle both old format (flat dict) and new format (nested with "python" key)
+    pyversions = (
+        data.get("python", data)
+        if isinstance(data, dict) and "python" in data
+        else data
+    )
     versions = [Version(_) for _ in pyversions]
     if minor:
         mv = Version(minor)
@@ -344,12 +981,107 @@ def setup_parser(
         type=str,
         help="The python version [default: %(default)s]",
     )
+    subparser.add_argument(
+        "--check-deps",
+        default=False,
+        action="store_true",
+        help="Check for new dependency versions",
+    )
+    subparser.add_argument(
+        "--update-deps",
+        default=False,
+        action="store_true",
+        help="Update dependency versions (downloads and computes checksums)",
+    )
 
 
 def main(args: argparse.Namespace) -> None:
     """
     Versions utility main method.
     """
+    packaged = pathlib.Path(__file__).parent / "python-versions.json"
+
+    # Handle dependency operations
+    if args.check_deps:
+        print("Checking for new dependency versions...")
+
+        print("\nOpenSSL:")
+        openssl_versions = detect_openssl_versions()
+        if openssl_versions:
+            print(f"  Latest: {openssl_versions[0]}")
+
+        print("\nSQLite:")
+        sqlite_versions = detect_sqlite_versions()
+        if sqlite_versions:
+            latest_ver, latest_sql = sqlite_versions[0]
+            print(f"  Latest: {latest_ver}")
+
+        print("\nXZ:")
+        xz_versions = detect_xz_versions()
+        if xz_versions:
+            print(f"  Latest: {xz_versions[0]}")
+
+        print("\nlibffi:")
+        libffi_versions = detect_libffi_versions()
+        if libffi_versions:
+            print(f"  Latest: {libffi_versions[0]}")
+
+        print("\nzlib:")
+        zlib_versions = detect_zlib_versions()
+        if zlib_versions:
+            print(f"  Latest: {zlib_versions[0]}")
+
+        print("\nncurses:")
+        ncurses_versions = detect_ncurses_versions()
+        if ncurses_versions:
+            print(f"  Latest: {ncurses_versions[0]}")
+
+        print("\nreadline:")
+        readline_versions = detect_readline_versions()
+        if readline_versions:
+            print(f"  Latest: {readline_versions[0]}")
+
+        print("\ngdbm:")
+        gdbm_versions = detect_gdbm_versions()
+        if gdbm_versions:
+            print(f"  Latest: {gdbm_versions[0]}")
+
+        print("\nlibxcrypt:")
+        libxcrypt_versions = detect_libxcrypt_versions()
+        if libxcrypt_versions:
+            print(f"  Latest: {libxcrypt_versions[0]}")
+
+        print("\nkrb5:")
+        krb5_versions = detect_krb5_versions()
+        if krb5_versions:
+            print(f"  Latest: {krb5_versions[0]}")
+
+        print("\nbzip2:")
+        bzip2_versions = detect_bzip2_versions()
+        if bzip2_versions:
+            print(f"  Latest: {bzip2_versions[0]}")
+
+        print("\nuuid:")
+        uuid_versions = detect_uuid_versions()
+        if uuid_versions:
+            print(f"  Latest: {uuid_versions[0]}")
+
+        print("\ntirpc:")
+        tirpc_versions = detect_tirpc_versions()
+        if tirpc_versions:
+            print(f"  Latest: {tirpc_versions[0]}")
+
+        print("\nexpat:")
+        expat_versions = detect_expat_versions()
+        if expat_versions:
+            print(f"  Latest: {expat_versions[0]}")
+
+        sys.exit(0)
+
+    if args.update_deps:
+        update_dependency_versions(packaged)
+        sys.exit(0)
+
     if args.update:
         python_versions(create=True)
     if args.list:

@@ -97,3 +97,81 @@ def test_verify_signature_failure_with_missing_key(
     monkeypatch.setattr(pyversions.subprocess, "run", fake_run)
     monkeypatch.setattr(pyversions, "_receive_key", lambda keyid, server: True)
     assert pyversions.verify_signature("archive.tgz", "archive.tgz.asc") is True
+
+
+def test_sha256_digest(tmp_path: pathlib.Path) -> None:
+    """Test SHA-256 digest computation."""
+    file = tmp_path / "data.bin"
+    file.write_bytes(b"test data")
+    assert pyversions.sha256_digest(file) == hashlib.sha256(b"test data").hexdigest()
+
+
+def test_detect_openssl_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test OpenSSL version detection from GitHub releases."""
+    mock_html = """
+    <html>
+    <a href="/openssl/openssl/releases/tag/openssl-3.5.4">openssl-3.5.4</a>
+    <a href="/openssl/openssl/releases/tag/openssl-3.5.3">openssl-3.5.3</a>
+    <a href="/openssl/openssl/releases/tag/openssl-3.4.0">openssl-3.4.0</a>
+    </html>
+    """
+
+    def fake_fetch(url: str) -> str:
+        return mock_html
+
+    monkeypatch.setattr(pyversions, "fetch_url_content", fake_fetch)
+    versions = pyversions.detect_openssl_versions()
+    assert isinstance(versions, list)
+    assert "3.5.4" in versions
+    assert "3.5.3" in versions
+    assert "3.4.0" in versions
+    # Verify sorting (latest first)
+    assert versions[0] == "3.5.4"
+
+
+def test_detect_sqlite_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test SQLite version detection from sqlite.org."""
+    mock_html = """
+    <html>
+    <a href="2024/sqlite-autoconf-3500400.tar.gz">sqlite-autoconf-3500400.tar.gz</a>
+    <a href="2024/sqlite-autoconf-3500300.tar.gz">sqlite-autoconf-3500300.tar.gz</a>
+    </html>
+    """
+
+    def fake_fetch(url: str) -> str:
+        return mock_html
+
+    monkeypatch.setattr(pyversions, "fetch_url_content", fake_fetch)
+    versions = pyversions.detect_sqlite_versions()
+    assert isinstance(versions, list)
+    # Should return list of tuples (version, sqliteversion)
+    assert len(versions) > 0
+    assert isinstance(versions[0], tuple)
+    assert len(versions[0]) == 2
+    # Check that conversion worked
+    version, sqlite_ver = versions[0]
+    assert version == "3.50.4.0"
+    assert sqlite_ver == "3500400"
+
+
+def test_detect_xz_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test XZ version detection from tukaani.org."""
+    mock_html = """
+    <html>
+    <a href="xz-5.8.1.tar.gz">xz-5.8.1.tar.gz</a>
+    <a href="xz-5.8.0.tar.gz">xz-5.8.0.tar.gz</a>
+    <a href="xz-5.6.3.tar.gz">xz-5.6.3.tar.gz</a>
+    </html>
+    """
+
+    def fake_fetch(url: str) -> str:
+        return mock_html
+
+    monkeypatch.setattr(pyversions, "fetch_url_content", fake_fetch)
+    versions = pyversions.detect_xz_versions()
+    assert isinstance(versions, list)
+    assert "5.8.1" in versions
+    assert "5.8.0" in versions
+    assert "5.6.3" in versions
+    # Verify sorting (latest first)
+    assert versions[0] == "5.8.1"

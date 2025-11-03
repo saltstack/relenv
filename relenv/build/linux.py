@@ -20,6 +20,7 @@ from .common import (
     build_sqlite,
     builds,
     finalize,
+    get_dependency_version,
     github_version,
     runcmd,
     sqlite_version,
@@ -366,6 +367,55 @@ def build_krb(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def update_expat(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the bundled expat library to the latest version.
+
+    Python ships with an older bundled expat. This function updates it
+    to the latest version for security and bug fixes.
+    """
+    from .common import get_dependency_version
+    import urllib.request
+    import tarfile
+    import glob
+    import pathlib
+    import shutil
+
+    # Get version from JSON
+    expat_info = get_dependency_version("expat", "linux")
+    if not expat_info:
+        # No update needed, use bundled version
+        return
+
+    version = expat_info["version"]
+    version_tag = version.replace(".", "_")
+    url = f"https://github.com/libexpat/libexpat/releases/download/R_{version_tag}/expat-{version}.tar.xz"
+
+    expat_dir = pathlib.Path(dirs.source) / "Modules" / "expat"
+    if not expat_dir.exists():
+        # No expat directory, skip
+        return
+
+    # Download expat tarball
+    tmpbuild = pathlib.Path(dirs.tmpbuild)
+    tarball_path = tmpbuild / f"expat-{version}.tar.xz"
+    urllib.request.urlretrieve(url, str(tarball_path))
+
+    # Extract tarball
+    with tarfile.open(tarball_path) as tar:
+        tar.extractall(path=str(tmpbuild))
+
+    # Copy source files to Modules/expat/
+    expat_source_dir = tmpbuild / f"expat-{version}" / "lib"
+    for source_file in ["*.h", "*.c"]:
+        for file_path in glob.glob(str(expat_source_dir / source_file)):
+            target_file = expat_dir / pathlib.Path(file_path).name
+            # Remove old file if it exists
+            if target_file.exists():
+                target_file.unlink()
+            shutil.copy2(file_path, str(expat_dir))
+
+
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
@@ -377,6 +427,9 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     :param logfp: A handle for the log file
     :type logfp: file
     """
+    # Update bundled expat to latest version
+    update_expat(dirs, env)
+
     ldflagopt = f"-Wl,--rpath={dirs.prefix}/lib"
     if ldflagopt not in env["LDFLAGS"]:
         env["LDFLAGS"] = f"{ldflagopt} {env['LDFLAGS']}"
@@ -501,13 +554,25 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
 build = builds.add("linux", populate_env=populate_env)
 
+# Get dependency versions from JSON (with fallback to hardcoded values)
+openssl_info = get_dependency_version("openssl", "linux")
+if openssl_info:
+    openssl_version = openssl_info["version"]
+    openssl_url = openssl_info["url"]
+    openssl_checksum = openssl_info["sha256"]
+else:
+    # Fallback to hardcoded values
+    openssl_version = "3.5.4"
+    openssl_url = "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz"
+    openssl_checksum = "b75daac8e10f189abe28a076ba5905d363e4801f"
+
 build.add(
     "openssl",
     build_func=build_openssl,
     download={
-        "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
-        "version": "3.5.4",
-        "checksum": "b75daac8e10f189abe28a076ba5905d363e4801f",
+        "url": openssl_url,
+        "version": openssl_version,
+        "checksum": openssl_checksum,
         "checkfunc": tarball_version,
         "checkurl": "https://www.openssl.org/source/",
     },
@@ -527,129 +592,270 @@ build.add(
 )
 
 
+# Get libxcrypt version from JSON
+libxcrypt_info = get_dependency_version("libxcrypt", "linux")
+if libxcrypt_info:
+    libxcrypt_version = libxcrypt_info["version"]
+    libxcrypt_url = libxcrypt_info["url"]
+    libxcrypt_checksum = libxcrypt_info["sha256"]
+else:
+    libxcrypt_version = "4.4.38"
+    libxcrypt_url = "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz"
+    libxcrypt_checksum = "9aa2fa261be6144af492e9b6bfd03bfaa47f7159"
+
 build.add(
     "libxcrypt",
     download={
-        "url": "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
-        "version": "4.4.38",
-        "checksum": "9aa2fa261be6144af492e9b6bfd03bfaa47f7159",
+        "url": libxcrypt_url,
+        "version": libxcrypt_version,
+        "checksum": libxcrypt_checksum,
         "checkfunc": github_version,
         "checkurl": "https://github.com/besser82/libxcrypt/releases/",
     },
 )
 
+# Get XZ version from JSON
+xz_info = get_dependency_version("xz", "linux")
+if xz_info:
+    xz_version = xz_info["version"]
+    xz_url = xz_info["url"]
+    xz_checksum = xz_info["sha256"]
+else:
+    # Fallback to hardcoded values
+    xz_version = "5.8.1"
+    xz_url = "http://tukaani.org/xz/xz-{version}.tar.gz"
+    xz_checksum = "ed4d5589c4cfe84e1697bd02a9954b76af336931"
+
 build.add(
     "XZ",
     download={
-        "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-        "version": "5.8.1",
-        "checksum": "ed4d5589c4cfe84e1697bd02a9954b76af336931",
+        "url": xz_url,
+        "version": xz_version,
+        "checksum": xz_checksum,
         "checkfunc": tarball_version,
     },
 )
+
+# Get SQLite version from JSON
+sqlite_info = get_dependency_version("sqlite", "linux")
+if sqlite_info:
+    sqlite_url = sqlite_info["url"]
+    sqlite_checksum = sqlite_info["sha256"]
+    # SQLite uses a special 7-digit version number
+    sqlite_version_num = sqlite_info.get("sqliteversion", "3500400")
+else:
+    # Fallback to hardcoded values
+    sqlite_version_num = "3500400"
+    sqlite_url = "https://sqlite.org/2025/sqlite-autoconf-{version}.tar.gz"
+    sqlite_checksum = "145048005c777796dd8494aa1cfed304e8c34283"
 
 build.add(
     name="SQLite",
     build_func=build_sqlite,
     download={
-        "url": "https://sqlite.org/2025/sqlite-autoconf-{version}.tar.gz",
-        "version": "3500400",
-        "checksum": "145048005c777796dd8494aa1cfed304e8c34283",
+        "url": sqlite_url,
+        "version": sqlite_version_num,
+        "checksum": sqlite_checksum,
         "checkfunc": sqlite_version,
         "checkurl": "https://sqlite.org/",
     },
 )
 
+# Get bzip2 version from JSON
+bzip2_info = get_dependency_version("bzip2", "linux")
+if bzip2_info:
+    bzip2_version = bzip2_info["version"]
+    bzip2_url = bzip2_info["url"]
+    bzip2_checksum = bzip2_info["sha256"]
+else:
+    bzip2_version = "1.0.8"
+    bzip2_url = "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz"
+    bzip2_checksum = "bf7badf7e248e0ecf465d33c2f5aeec774209227"
+
 build.add(
     name="bzip2",
     build_func=build_bzip2,
     download={
-        "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
-        "version": "1.0.8",
-        "checksum": "bf7badf7e248e0ecf465d33c2f5aeec774209227",
+        "url": bzip2_url,
+        "version": bzip2_version,
+        "checksum": bzip2_checksum,
         "checkfunc": tarball_version,
     },
 )
+
+# Get gdbm version from JSON
+gdbm_info = get_dependency_version("gdbm", "linux")
+if gdbm_info:
+    gdbm_version = gdbm_info["version"]
+    gdbm_url = gdbm_info["url"]
+    gdbm_checksum = gdbm_info["sha256"]
+else:
+    gdbm_version = "1.26"
+    gdbm_url = "https://mirrors.ocf.berkeley.edu/gnu/gdbm/gdbm-{version}.tar.gz"
+    gdbm_checksum = "6cee3657de948e691e8df26509157be950cef4d4"
 
 build.add(
     name="gdbm",
     build_func=build_gdbm,
     download={
-        "url": "https://mirrors.ocf.berkeley.edu/gnu/gdbm/gdbm-{version}.tar.gz",
-        "version": "1.26",
-        "checksum": "6cee3657de948e691e8df26509157be950cef4d4",
+        "url": gdbm_url,
+        "version": gdbm_version,
+        "checksum": gdbm_checksum,
         "checkfunc": tarball_version,
     },
 )
+
+# Get ncurses version from JSON
+ncurses_info = get_dependency_version("ncurses", "linux")
+if ncurses_info:
+    ncurses_version = ncurses_info["version"]
+    ncurses_url = ncurses_info["url"]
+    ncurses_checksum = ncurses_info["sha256"]
+else:
+    ncurses_version = "6.5"
+    ncurses_url = (
+        "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz"
+    )
+    ncurses_checksum = "cde3024ac3f9ef21eaed6f001476ea8fffcaa381"
 
 build.add(
     name="ncurses",
     build_func=build_ncurses,
     download={
-        "url": "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz",
-        "version": "6.5",
-        "checksum": "cde3024ac3f9ef21eaed6f001476ea8fffcaa381",
+        "url": ncurses_url,
+        "version": ncurses_version,
+        "checksum": ncurses_checksum,
         "checkfunc": tarball_version,
     },
 )
+
+# Get libffi version from JSON
+libffi_info = get_dependency_version("libffi", "linux")
+if libffi_info:
+    libffi_version = libffi_info["version"]
+    libffi_url = libffi_info["url"]
+    libffi_checksum = libffi_info["sha256"]
+else:
+    libffi_version = "3.5.2"
+    libffi_url = "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz"
+    libffi_checksum = "2bd35b135b0eeb5c631e02422c9dbe786ddb626a"
 
 build.add(
     "libffi",
     build_libffi,
     download={
-        "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
-        "version": "3.5.2",
-        "checksum": "2bd35b135b0eeb5c631e02422c9dbe786ddb626a",
+        "url": libffi_url,
+        "version": libffi_version,
+        "checksum": libffi_checksum,
         "checkfunc": github_version,
         "checkurl": "https://github.com/libffi/libffi/releases/",
     },
 )
 
+# Get zlib version from JSON
+zlib_info = get_dependency_version("zlib", "linux")
+if zlib_info:
+    zlib_version = zlib_info["version"]
+    zlib_url = zlib_info["url"]
+    zlib_checksum = zlib_info["sha256"]
+else:
+    zlib_version = "1.3.1"
+    zlib_url = "https://zlib.net/fossils/zlib-{version}.tar.gz"
+    zlib_checksum = "f535367b1a11e2f9ac3bec723fb007fbc0d189e5"
+
 build.add(
     "zlib",
     build_zlib,
     download={
-        "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
-        "version": "1.3.1",
-        "checksum": "f535367b1a11e2f9ac3bec723fb007fbc0d189e5",
+        "url": zlib_url,
+        "version": zlib_version,
+        "checksum": zlib_checksum,
         "checkfunc": tarball_version,
     },
 )
 
+# Get uuid version from JSON
+uuid_info = get_dependency_version("uuid", "linux")
+if uuid_info:
+    uuid_ver = uuid_info["version"]
+    uuid_url = uuid_info["url"]
+    uuid_checksum = uuid_info["sha256"]
+else:
+    uuid_ver = "1.0.3"
+    uuid_url = "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz"
+    uuid_checksum = "46eaedb875ae6e63677b51ec583656199241d597"
+
 build.add(
     "uuid",
     download={
-        "url": "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
-        "version": "1.0.3",
-        "checksum": "46eaedb875ae6e63677b51ec583656199241d597",
+        "url": uuid_url,
+        "version": uuid_ver,
+        "checksum": uuid_checksum,
         "checkfunc": uuid_version,
     },
 )
+
+# Get krb5 version from JSON
+krb5_info = get_dependency_version("krb5", "linux")
+if krb5_info:
+    krb5_version = krb5_info["version"]
+    krb5_url = krb5_info["url"]
+    krb5_checksum = krb5_info["sha256"]
+else:
+    krb5_version = "1.22"
+    krb5_url = "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz"
+    krb5_checksum = "3ad930ab036a8dc3678356fbb9de9246567e7984"
 
 build.add(
     "krb5",
     build_func=build_krb,
     wait_on=["openssl"],
     download={
-        "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
-        "version": "1.22",
-        "checksum": "3ad930ab036a8dc3678356fbb9de9246567e7984",
+        "url": krb5_url,
+        "version": krb5_version,
+        "checksum": krb5_checksum,
         "checkfunc": krb_version,
         "checkurl": "https://kerberos.org/dist/krb5/",
     },
 )
+
+# Get readline version from JSON
+readline_info = get_dependency_version("readline", "linux")
+if readline_info:
+    readline_version = readline_info["version"]
+    readline_url = readline_info["url"]
+    readline_checksum = readline_info["sha256"]
+else:
+    readline_version = "8.3"
+    readline_url = (
+        "https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{version}.tar.gz"
+    )
+    readline_checksum = "2c05ae9350b695f69d70b47f17f092611de2081f"
 
 build.add(
     "readline",
     build_func=build_readline,
     wait_on=["ncurses"],
     download={
-        "url": "https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{version}.tar.gz",
-        "version": "8.3",
-        "checksum": "2c05ae9350b695f69d70b47f17f092611de2081f",
+        "url": readline_url,
+        "version": readline_version,
+        "checksum": readline_checksum,
         "checkfunc": tarball_version,
     },
 )
+
+# Get tirpc version from JSON
+tirpc_info = get_dependency_version("tirpc", "linux")
+if tirpc_info:
+    tirpc_version = tirpc_info["version"]
+    tirpc_url = tirpc_info["url"]
+    tirpc_checksum = tirpc_info["sha256"]
+else:
+    tirpc_version = "1.3.4"
+    tirpc_url = (
+        "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2"
+    )
+    tirpc_checksum = "63c800f81f823254d2706637bab551dec176b99b"
 
 build.add(
     "tirpc",
@@ -657,10 +863,10 @@ build.add(
         "krb5",
     ],
     download={
-        "url": "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
+        "url": tirpc_url,
         # "url": "https://downloads.sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
-        "version": "1.3.4",
-        "checksum": "63c800f81f823254d2706637bab551dec176b99b",
+        "version": tirpc_version,
+        "checksum": tirpc_checksum,
         "checkfunc": tarball_version,
     },
 )
