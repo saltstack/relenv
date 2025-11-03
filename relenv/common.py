@@ -20,7 +20,18 @@ import tarfile
 import textwrap
 import threading
 import time
-from typing import IO, Any, BinaryIO, Iterable, Literal, Mapping, Optional, Union, cast
+from typing import (
+    IO,
+    Any,
+    BinaryIO,
+    Callable,
+    Iterable,
+    Literal,
+    Mapping,
+    Optional,
+    Union,
+    cast,
+)
 
 # relenv package version
 __version__ = "0.21.2"
@@ -535,11 +546,20 @@ def check_url(url: str, timestamp: Optional[float] = None, timeout: float = 30) 
     return True
 
 
-def fetch_url(url: str, fp: BinaryIO, backoff: int = 3, timeout: float = 30) -> None:
+def fetch_url(
+    url: str,
+    fp: BinaryIO,
+    backoff: int = 3,
+    timeout: float = 30,
+    progress_callback: Optional[Callable[[int, int], None]] = None,
+) -> None:
     """
     Fetch the contents of a url.
 
     This method will store the contents in the given file like object.
+
+    :param progress_callback: Optional callback(downloaded_bytes, total_bytes)
+    :type progress_callback: Optional[Callable[[int, int], None]]
     """
     # Late import so we do not import hashlib before runtime.bootstrap is called.
     import urllib.error
@@ -564,16 +584,34 @@ def fetch_url(url: str, fp: BinaryIO, backoff: int = 3, timeout: float = 30) -> 
     if response is None:
         raise RelenvException(f"Unable to open url {url}")
     log.info("url opened %s", url)
+
+    # Get content length from headers
+    content_length = 0
     try:
-        total = 0
+        content_length_str = response.headers.get("Content-Length")
+        if content_length_str:
+            content_length = int(content_length_str)
+            log.info("Content-Length: %d bytes", content_length)
+            # Report initial state to callback
+            if progress_callback:
+                progress_callback(0, content_length)
+    except (ValueError, TypeError):
+        log.debug("Could not parse Content-Length header")
+
+    try:
+        downloaded = 0
         size = 1024 * 300
         block = response.read(size)
         while block:
-            total += size
+            block_size = len(block)
+            downloaded += block_size
             if time.time() - last > 10:
-                log.info("%s > %d", url, total)
+                log.info("%s > %d", url, downloaded)
                 last = time.time()
             fp.write(block)
+            # Report progress
+            if progress_callback and content_length > 0:
+                progress_callback(downloaded, content_length)
             block = response.read(10240)
     finally:
         response.close()
@@ -627,6 +665,7 @@ def download_url(
     verbose: bool = True,
     backoff: int = 3,
     timeout: float = 60,
+    progress_callback: Optional[Callable[[int, int], None]] = None,
 ) -> str:
     """
     Download the url to the provided destination.
@@ -639,6 +678,8 @@ def download_url(
     :type dest: str
     :param verbose: Print download url and destination to stdout
     :type verbose: bool
+    :param progress_callback: Optional callback(downloaded_bytes, total_bytes)
+    :type progress_callback: Optional[Callable[[int, int], None]]
 
     :raises urllib.error.HTTPError: If the url was unable to be downloaded
 
@@ -650,7 +691,7 @@ def download_url(
         log.debug(f"Downloading {url} -> {local}")
     try:
         with open(local, "wb") as fout:
-            fetch_url(url, fout, backoff, timeout)
+            fetch_url(url, fout, backoff, timeout, progress_callback)
     except Exception as exc:
         if verbose:
             log.error("Unable to download: %s\n%s", url, exc)

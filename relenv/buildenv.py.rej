@@ -1,0 +1,62 @@
+diff a/relenv/buildenv.py b/relenv/buildenv.py	(rejected hunks)
+@@ -69,7 +69,6 @@ def buildenv(
+         raise RelenvException("buildenv is only supported on Linux")
+ 
+     triplet = get_triplet()
+-    sysroot = f"{toolchain}/{triplet}/sysroot"
+     env = {
+         "RELENV_BUILDENV": "1",
+         "TOOLCHAIN_PATH": f"{toolchain}",
+@@ -77,45 +76,25 @@ def buildenv(
+         "RELENV_PATH": f"{relenv_path}",
+         "CC": f"{toolchain}/bin/{triplet}-gcc",
+         "CXX": f"{toolchain}/bin/{triplet}-g++",
+-        "CFLAGS": (
+-            f"--sysroot={sysroot} "
+-            f"-fPIC "
+-            f"-I{relenv_path}/include "
+-            f"-I{sysroot}/usr/include"
+-        ),
++        "CFLAGS": f"-I{relenv_path}/include -I{toolchain}/sysroot/usr/include",
+         "CXXFLAGS": (
+-            f"--sysroot={sysroot} "
+-            f"-fPIC "
+             f"-I{relenv_path}/include "
+-            f"-I{sysroot}/usr/include "
+-            f"-L{relenv_path}/lib -L{sysroot}/lib "
++            f"-I{toolchain}/{triplet}/sysroot/usr/include "
++            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+             f"-Wl,-rpath,{relenv_path}/lib"
+         ),
+         "CPPFLAGS": (
+-            f"--sysroot={sysroot} "
+-            f"-fPIC "
+-            f"-I{relenv_path}/include "
+-            f"-I{sysroot}/usr/include"
++            f"-I{relenv_path}/include " f"-I{toolchain}/{triplet}/sysroot/usr/include"
+         ),
+         "CMAKE_CFLAGS": (
+-            f"--sysroot={sysroot} "
+-            f"-fPIC "
+-            f"-I{relenv_path}/include "
+-            f"-I{sysroot}/usr/include"
++            f"-I{relenv_path}/include " f"-I{toolchain}/{triplet}/sysroot/usr/include"
+         ),
+         "LDFLAGS": (
+-            f"--sysroot={sysroot} "
+-            f"-L{relenv_path}/lib -L{sysroot}/lib "
++            f"-L{relenv_path}/lib -L{toolchain}/{triplet}/sysroot/lib "
+             f"-Wl,-rpath,{relenv_path}/lib"
+         ),
+-        "CRATE_CC_NO_DEFAULTS": "1",
+-        "OPENSSL_DIR": f"{relenv_path}",
+-        "OPENSSL_INCLUDE_DIR": f"{relenv_path}/include",
+-        "OPENSSL_LIB_DIR": f"{relenv_path}/lib",
+-        "PKG_CONFIG_PATH": f"{relenv_path}/lib/pkgconfig",
+-        "RUSTFLAGS": f"-L {relenv_path}/lib -C link-arg=-Wl,-rpath,{relenv_path}/lib",
+     }
+-    if sys.platform == "darwin":
++    if sys.platform == "dawin":
+         env["MACOS_DEVELOPMENT_TARGET"] = MACOS_DEVELOPMENT_TARGET
+     return env
+ 

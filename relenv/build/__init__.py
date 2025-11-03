@@ -112,6 +112,12 @@ def setup_parser(
         help="Log build output to stdout instead of displaying a simplified status.",
     )
     build_subparser.add_argument(
+        "--compact-pretty",
+        default=False,
+        action="store_true",
+        help="Use compact UI without progress bars (simpler, less detailed).",
+    )
+    build_subparser.add_argument(
         "--log-level",
         default="warning",
         choices=(
@@ -180,8 +186,11 @@ def main(args: argparse.Namespace) -> None:
         steps = [_.strip() for _ in args.steps]
     if args.no_pretty:
         show_ui = False
+        expanded_ui = False
     else:
         show_ui = True
+        # Expanded UI is default, --compact-pretty disables it
+        expanded_ui = not args.compact_pretty
 
     def signal_handler(_signal: int, frame: FrameType | None) -> None:
         sys.exit(1)
@@ -197,4 +206,5 @@ def main(args: argparse.Namespace) -> None:
         download_only=args.download_only,
         show_ui=show_ui,
         log_level=args.log_level.upper(),
+        expanded_ui=expanded_ui,
     )

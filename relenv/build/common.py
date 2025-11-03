@@ -14,7 +14,6 @@ import os
 import os.path
 import pathlib
 import pprint
-import random
 import re
 import shutil
 import subprocess
@@ -78,6 +77,55 @@ MOVEUP = "\033[F"
 
 CICD = "CI" in os.environ
 NODOWLOAD = False
+
+
+# Detect terminal capabilities for Unicode vs ASCII output
+USE_UNICODE = True
+
+# Allow forcing ASCII mode via environment variable (useful for testing/debugging)
+if os.environ.get("RELENV_ASCII"):
+    USE_UNICODE = False
+elif sys.platform == "win32":
+    # Check if we're in a modern terminal that supports Unicode
+    # Windows Terminal and modern PowerShell support Unicode
+    wt_session = os.environ.get("WT_SESSION")
+    term_program = os.environ.get("TERM_PROGRAM")
+    if not wt_session and not term_program:
+        # Likely cmd.exe or old PowerShell, use ASCII
+        USE_UNICODE = False
+
+
+# Spinner frames for in-progress builds
+if USE_UNICODE:
+    # Modern Unicode spinner (looks great in most terminals)
+    SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    SYMBOL_PENDING = "◯"
+    SYMBOL_RUNNING = None  # Will use spinner
+    SYMBOL_SUCCESS = "✓"
+    SYMBOL_FAILED = "✗"
+else:
+    # ASCII fallback for Windows cmd.exe
+    SPINNER_FRAMES = ["|", "/", "-", "\\"]
+    SYMBOL_PENDING = "o"
+    SYMBOL_RUNNING = None  # Will use spinner
+    SYMBOL_SUCCESS = "+"
+    SYMBOL_FAILED = "X"
+
+
+# Global spinner state to track frame index across calls
+_SPINNER_STATE: Dict[str, int] = {}
+
+
+# Build statistics file for tracking log line counts
+BUILD_STATS_FILE = DATA_DIR / "build_stats.json"
+
+
+class BuildStats(TypedDict):
+    """Structure for tracking build step statistics."""
+
+    avg_lines: int
+    samples: int
+    last_lines: int
 
 
 RELENV_PTH = (
@@ -162,33 +210,178 @@ def print_ui(
     :type processes: dict
     :param fails: A list of processes that have failed
     :type fails: list
-    :param flipstat: A dictionary of process statuses, defaults to {}
+    :param flipstat: Deprecated parameter, no longer used
     :type flipstat: dict, optional
     """
-    if flipstat is None:
-        flipstat = {}
+    global _SPINNER_STATE
     if CICD:
         sys.stdout.flush()
         return
     uiline = []
     for name in events:
         if not events[name].is_set():
-            status = " {}.".format(YELLOW)
+            # Pending: event not yet started
+            status = " {}{}".format(YELLOW, SYMBOL_PENDING)
         elif name in processes:
-            now = time.time()
-            if name not in flipstat:
-                flipstat[name] = (0, now)
-            if flipstat[name][1] < now:
-                flipstat[name] = (1 - flipstat[name][0], now + random.random())
-            status = " {}{}".format(GREEN, " " if flipstat[name][0] == 1 else ".")
+            # Running: show animated spinner
+            if name not in _SPINNER_STATE:
+                _SPINNER_STATE[name] = 0
+            # Advance spinner frame deterministically
+            frame_idx = _SPINNER_STATE[name] % len(SPINNER_FRAMES)
+            spinner = SPINNER_FRAMES[frame_idx]
+            _SPINNER_STATE[name] += 1
+            status = " {}{}".format(GREEN, spinner)
         elif name in fails:
-            status = " {}\u2718".format(RED)
+            # Failed: show error symbol
+            status = " {}{}".format(RED, SYMBOL_FAILED)
         else:
-            status = " {}\u2718".format(GREEN)
+            # Success: show success symbol
+            status = " {}{}".format(GREEN, SYMBOL_SUCCESS)
         uiline.append(status)
     uiline.append("  " + END)
     sys.stdout.write("\r")
     sys.stdout.write("".join(uiline))
+    sys.stdout.flush()
+
+
+def print_ui_expanded(
+    events: MutableMapping[str, "multiprocessing.synchronize.Event"],
+    processes: MutableMapping[str, multiprocessing.Process],
+    fails: Sequence[str],
+    line_counts: MutableMapping[str, int],
+    build_stats: Dict[str, BuildStats],
+    phase: str = "build",
+) -> None:
+    """
+    Prints an expanded UI with progress bars during the relenv building process.
+
+    :param events: A dictionary of events that are updated during the build process
+    :type events: dict
+    :param processes: A dictionary of build processes
+    :type processes: dict
+    :param fails: A list of processes that have failed
+    :type fails: list
+    :param line_counts: Current line counts for each step
+    :type line_counts: MutableMapping[str, int]
+    :param build_stats: Historical build statistics
+    :type build_stats: dict
+    :param phase: The current phase ("download" or "build")
+    :type phase: str
+    """
+    global _SPINNER_STATE
+    if CICD:
+        sys.stdout.flush()
+        return
+
+    # Track state per phase to handle download->build transitions
+    if not hasattr(print_ui_expanded, "_phase_state"):
+        print_ui_expanded._phase_state = {}  # type: ignore
+
+    phase_state = print_ui_expanded._phase_state  # type: ignore
+
+    # Number of lines = number of steps + 2 (header + separator)
+    num_lines = len(events) + 2
+
+    # If this phase has been called before, move up to overwrite previous output
+    if phase in phase_state:
+        prev_lines = phase_state[phase]
+        # Move up by previous line count to overwrite
+        sys.stdout.write(MOVEUP * prev_lines)
+    else:
+        # First call for this phase - if we're starting builds after downloads,
+        # add a newline to separate them
+        if phase == "build" and "download" in phase_state:
+            sys.stdout.write("\n")
+
+    # Store line count for this phase
+    phase_state[phase] = num_lines
+
+    # Clear line and print header
+    phase_name = "Downloads" if phase == "download" else "Builds"
+    sys.stdout.write("\r\033[K")  # Clear line
+    sys.stdout.write(f"{phase_name}\n")
+    sys.stdout.write("─" * 70 + "\n")
+
+    # Print each step
+    for name in events:
+        # Determine status
+        if not events[name].is_set():
+            # Pending
+            status_symbol = f"{YELLOW}{SYMBOL_PENDING}{END}"
+            status_text = "Pending"
+            progress_bar = ""
+        elif name in processes:
+            # Running - show spinner and progress
+            if name not in _SPINNER_STATE:
+                _SPINNER_STATE[name] = 0
+            frame_idx = _SPINNER_STATE[name] % len(SPINNER_FRAMES)
+            spinner = SPINNER_FRAMES[frame_idx]
+            _SPINNER_STATE[name] += 1
+            status_symbol = f"{GREEN}{spinner}{END}"
+
+            # Determine if this is download or build phase
+            phase_action = "Downloading" if phase == "download" else "Building"
+
+            # Calculate progress if we have historical data
+            current_lines = line_counts.get(name, 0)
+            if phase == "download":
+                # For downloads, line_counts stores bytes downloaded and total bytes
+                # Format: line_counts[name] = downloaded, line_counts[f"{name}_total"] = total
+                downloaded = current_lines
+                total = line_counts.get(f"{name}_total", 0)
+                if total > 0:
+                    progress = min(100, int((downloaded / total) * 100))
+                    status_text = f"{phase_action} {progress:3d}%"
+                    # Progress bar (20 chars wide)
+                    filled = int(progress / 5)  # 20 segments = 100% / 5
+                    bar = (
+                        "█" * filled + "░" * (20 - filled)
+                        if USE_UNICODE
+                        else ("#" * filled + "-" * (20 - filled))
+                    )
+                    progress_bar = f" [{bar}]"
+                else:
+                    status_text = phase_action
+                    progress_bar = ""
+            else:
+                # For builds, use historical line count data
+                if name in build_stats and build_stats[name]["avg_lines"] > 0:
+                    avg_lines = build_stats[name]["avg_lines"]
+                    progress = min(100, int((current_lines / avg_lines) * 100))
+                    status_text = f"{phase_action} {progress:3d}%"
+
+                    # Progress bar (20 chars wide)
+                    filled = int(progress / 5)  # 20 segments = 100% / 5
+                    bar = (
+                        "█" * filled + "░" * (20 - filled)
+                        if USE_UNICODE
+                        else ("#" * filled + "-" * (20 - filled))
+                    )
+                    progress_bar = f" [{bar}]"
+                else:
+                    status_text = phase_action
+                    progress_bar = ""
+        elif name in fails:
+            # Failed
+            status_symbol = f"{RED}{SYMBOL_FAILED}{END}"
+            status_text = "Failed"
+            progress_bar = ""
+        else:
+            # Success
+            status_symbol = f"{GREEN}{SYMBOL_SUCCESS}{END}"
+            status_text = "Done"
+            progress_bar = ""
+
+        # Format step name (truncate/pad to 20 chars)
+        name_display = f"{name:<20}"[:20]
+        status_display = f"{status_text:<12}"
+
+        # Clear line before writing to prevent leftover text
+        sys.stdout.write("\r\033[K")
+        sys.stdout.write(
+            f"{status_symbol} {name_display} {status_display}{progress_bar}\n"
+        )
+
     sys.stdout.flush()
 
 
@@ -234,6 +427,108 @@ def verify_checksum(file: PathLike, checksum: Optional[str]) -> bool:
                 f"{hash_name} checksum verification failed. expected={checksum} found={file_checksum}"
             )
     return True
+
+
+def load_build_stats() -> Dict[str, BuildStats]:
+    """
+    Load historical build statistics from disk.
+
+    :return: Dictionary mapping step names to their statistics
+    :rtype: dict
+    """
+    if not BUILD_STATS_FILE.exists():
+        return {}
+    try:
+        import json
+
+        with open(BUILD_STATS_FILE, "r") as f:
+            data = json.load(f)
+            return cast(Dict[str, BuildStats], data)
+    except (json.JSONDecodeError, IOError):
+        log.warning("Failed to load build stats, starting fresh")
+        return {}
+
+
+def save_build_stats(stats: Dict[str, BuildStats]) -> None:
+    """
+    Save build statistics to disk.
+
+    :param stats: Dictionary mapping step names to their statistics
+    :type stats: dict
+    """
+    try:
+        import json
+
+        BUILD_STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(BUILD_STATS_FILE, "w") as f:
+            json.dump(stats, f, indent=2)
+    except IOError:
+        log.warning("Failed to save build stats")
+
+
+def update_build_stats(step_name: str, line_count: int) -> None:
+    """
+    Update statistics for a build step with a new sample.
+
+    Uses exponential moving average with weight 0.7 for new samples.
+
+    :param step_name: Name of the build step
+    :type step_name: str
+    :param line_count: Number of log lines for this build
+    :type line_count: int
+    """
+    stats = load_build_stats()
+    if step_name not in stats:
+        stats[step_name] = BuildStats(
+            avg_lines=line_count, samples=1, last_lines=line_count
+        )
+    else:
+        old_avg = stats[step_name]["avg_lines"]
+        # Exponential moving average: 70% new value, 30% old average
+        new_avg = int(0.7 * line_count + 0.3 * old_avg)
+        stats[step_name] = BuildStats(
+            avg_lines=new_avg,
+            samples=stats[step_name]["samples"] + 1,
+            last_lines=line_count,
+        )
+    save_build_stats(stats)
+
+
+class LineCountHandler(logging.Handler):
+    """
+    Custom logging handler that counts log lines for progress tracking.
+
+    This handler increments a counter in a shared multiprocessing dict
+    for each log message emitted, enabling real-time progress estimation.
+    """
+
+    def __init__(self, step_name: str, shared_dict: MutableMapping[str, int]) -> None:
+        """
+        Initialize the line count handler.
+
+        :param step_name: Name of the build step being tracked
+        :type step_name: str
+        :param shared_dict: Multiprocessing-safe dict for sharing counts
+        :type shared_dict: MutableMapping[str, int]
+        """
+        super().__init__()
+        self.step_name = step_name
+        self.shared_dict = shared_dict
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """
+        Count each log record as a line.
+
+        :param record: The log record to process
+        :type record: logging.LogRecord
+        """
+        try:
+            # Increment line count in shared memory
+            current = self.shared_dict.get(self.step_name, 0)
+            self.shared_dict[self.step_name] = current + 1
+        except Exception:
+            # Silently ignore errors in the handler to avoid breaking builds
+            pass
 
 
 def all_dirs(root: PathLike, recurse: bool = True) -> List[str]:
@@ -637,20 +932,40 @@ class Download:
     def formatted_url(self) -> str:
         return self.url_tpl.format(version=self.version)
 
-    def fetch_file(self) -> Tuple[str, bool]:
+    def fetch_file(
+        self, progress_callback: Optional[Callable[[int, int], None]] = None
+    ) -> Tuple[str, bool]:
         """
         Download the file.
 
+        :param progress_callback: Optional callback(downloaded_bytes, total_bytes)
+        :type progress_callback: Optional[Callable[[int, int], None]]
         :return: The path to the downloaded content, and whether it was downloaded.
         :rtype: tuple(str, bool)
         """
         try:
-            return download_url(self.url, self.destination, CICD), True
+            return (
+                download_url(
+                    self.url,
+                    self.destination,
+                    CICD,
+                    progress_callback=progress_callback,
+                ),
+                True,
+            )
         except Exception as exc:
             fallback = self.fallback_url
             if fallback:
                 print(f"Download failed {self.url} ({exc}); trying fallback url")
-                return download_url(fallback, self.destination, CICD), True
+                return (
+                    download_url(
+                        fallback,
+                        self.destination,
+                        CICD,
+                        progress_callback=progress_callback,
+                    ),
+                    True,
+                )
             raise
 
     def fetch_signature(self, version: Optional[str] = None) -> Tuple[str, bool]:
@@ -725,10 +1040,13 @@ class Download:
         force_download: bool = False,
         show_ui: bool = False,
         exit_on_failure: bool = False,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> bool:
         """
         Downloads the url and validates the signature and sha1 sum.
 
+        :param progress_callback: Optional callback(downloaded_bytes, total_bytes)
+        :type progress_callback: Optional[Callable[[int, int], None]]
         :return: Whether or not validation succeeded
         :rtype: bool
         """
@@ -736,7 +1054,7 @@ class Download:
 
         downloaded = False
         if force_download:
-            _, downloaded = self.fetch_file()
+            _, downloaded = self.fetch_file(progress_callback)
         else:
             file_is_valid = False
             dest = get_download_location(self.url, self.destination)
@@ -745,7 +1063,7 @@ class Download:
             if file_is_valid:
                 log.debug("%s already downloaded, skipping.", self.url)
             else:
-                _, downloaded = self.fetch_file()
+                _, downloaded = self.fetch_file(progress_callback)
         valid = True
         if downloaded:
             if self.signature_tpl is not None:
@@ -1025,6 +1343,7 @@ class Builder:
         download: Optional[Download],
         show_ui: bool = False,
         log_level: str = "WARNING",
+        line_counts: Optional[MutableMapping[str, int]] = None,
     ) -> Any:
         """
         Run a build step.
@@ -1037,6 +1356,8 @@ class Builder:
         :type build_func: types.FunctionType
         :param download: The ``Download`` instance for this step
         :type download: ``Download``
+        :param line_counts: Optional shared dict for tracking log line counts
+        :type line_counts: Optional[MutableMapping[str, int]]
 
         :return: The output of the build function
         """
@@ -1068,6 +1389,12 @@ class Builder:
         handler = logging.FileHandler(dirs.logs / f"{name}.log")
         root_log.addHandler(handler)
         root_log.setLevel(logging.NOTSET)
+
+        # Add line count handler if tracking is enabled
+        line_count_handler: Optional[LineCountHandler] = None
+        if line_counts is not None:
+            line_count_handler = LineCountHandler(name, line_counts)
+            root_log.addHandler(line_count_handler)
 
         # DEBUG: Uncomment to debug
         # logfp = sys.stdout
@@ -1111,13 +1438,21 @@ class Builder:
         for k in env:
             log.info("Environment %s %s", k, env[k])
         try:
-            return build_func(env, dirs, logfp)
+            result = build_func(env, dirs, logfp)
+            # Update build stats with final line count on success
+            if line_count_handler is not None and line_counts is not None:
+                if name in line_counts:
+                    final_count = line_counts[name]
+                    update_build_stats(name, final_count)
+            return result
         except Exception:
             log.exception("Build failure")
             sys.exit(1)
         finally:
             os.chdir(cwd)
-            log.removeHandler(handler)
+            if line_count_handler is not None:
+                root_log.removeHandler(line_count_handler)
+            root_log.removeHandler(handler)
             logfp.close()
 
     def cleanup(self) -> None:
@@ -1151,22 +1486,32 @@ class Builder:
         steps: Optional[Sequence[str]] = None,
         force_download: bool = False,
         show_ui: bool = False,
+        expanded_ui: bool = False,
     ) -> None:
         """
         Download all of the needed archives.
 
         :param steps: The steps to download archives for, defaults to None
         :type steps: list, optional
+        :param expanded_ui: Whether to use expanded UI with progress bars
+        :type expanded_ui: bool, optional
         """
         step_names = list(steps) if steps is not None else list(self.recipies)
 
         fails: List[str] = []
         processes: Dict[str, multiprocessing.Process] = {}
         events: Dict[str, SyncEvent] = {}
+
+        # For downloads, we don't track line counts but can still use expanded UI format
+        manager = multiprocessing.Manager()
+        line_counts: MutableMapping[str, int] = manager.dict()
+        build_stats: Dict[str, BuildStats] = {}
+
         if show_ui:
-            sys.stdout.write("Starting downloads \n")
+            if not expanded_ui:
+                sys.stdout.write("Starting downloads \n")
         log.info("Starting downloads")
-        if show_ui:
+        if show_ui and not expanded_ui:
             print_ui(events, processes, fails)
         for name in step_names:
             download = self.recipies[name]["download"]
@@ -1175,14 +1520,31 @@ class Builder:
             event = multiprocessing.Event()
             event.set()
             events[name] = event
+
+            # Create progress callback if using expanded UI
+            def make_progress_callback(
+                step_name: str, shared_dict: MutableMapping[str, int]
+            ) -> Callable[[int, int], None]:
+                def progress_callback(downloaded: int, total: int) -> None:
+                    shared_dict[step_name] = downloaded
+                    shared_dict[f"{step_name}_total"] = total
+
+                return progress_callback
+
+            download_kwargs: Dict[str, Any] = {
+                "force_download": force_download,
+                "show_ui": show_ui,
+                "exit_on_failure": True,
+            }
+            if expanded_ui:
+                download_kwargs["progress_callback"] = make_progress_callback(
+                    name, line_counts
+                )
+
             proc = multiprocessing.Process(
                 name=name,
                 target=download,
-                kwargs={
-                    "force_download": force_download,
-                    "show_ui": show_ui,
-                    "exit_on_failure": True,
-                },
+                kwargs=download_kwargs,
             )
             proc.start()
             processes[name] = proc
@@ -1192,14 +1554,29 @@ class Builder:
                 proc.join(0.3)
                 # DEBUG: Comment to debug
                 if show_ui:
-                    print_ui(events, processes, fails)
+                    if expanded_ui:
+                        print_ui_expanded(
+                            events,
+                            processes,
+                            fails,
+                            line_counts,
+                            build_stats,
+                            "download",
+                        )
+                    else:
+                        print_ui(events, processes, fails)
                 if proc.exitcode is None:
                     continue
                 processes.pop(proc.name)
                 if proc.exitcode != 0:
                     fails.append(proc.name)
         if show_ui:
-            print_ui(events, processes, fails)
+            if expanded_ui:
+                print_ui_expanded(
+                    events, processes, fails, line_counts, build_stats, "download"
+                )
+            else:
+                print_ui(events, processes, fails)
             sys.stdout.write("\n")
         if fails and False:
             if show_ui:
@@ -1216,6 +1593,7 @@ class Builder:
         cleanup: bool = True,
         show_ui: bool = False,
         log_level: str = "WARNING",
+        expanded_ui: bool = False,
     ) -> None:
         """
         Build!
@@ -1224,16 +1602,29 @@ class Builder:
         :type steps: list, optional
         :param cleanup: Whether to clean up or not, defaults to True
         :type cleanup: bool, optional
+        :param expanded_ui: Whether to use expanded UI with progress bars
+        :type expanded_ui: bool, optional
         """  # noqa: D400
         fails: List[str] = []
         events: Dict[str, SyncEvent] = {}
         waits: Dict[str, List[str]] = {}
         processes: Dict[str, multiprocessing.Process] = {}
 
+        # Set up shared line counts and load build stats for expanded UI
+        manager = multiprocessing.Manager()
+        line_counts: MutableMapping[str, int] = manager.dict()
+        build_stats: Dict[str, BuildStats] = {}
+        if expanded_ui:
+            build_stats = load_build_stats()
+
         if show_ui:
-            sys.stdout.write("Starting builds\n")
-            # DEBUG: Comment to debug
-            print_ui(events, processes, fails)
+            if expanded_ui:
+                # Expanded UI will print its own header
+                pass
+            else:
+                sys.stdout.write("Starting builds\n")
+                # DEBUG: Comment to debug
+                print_ui(events, processes, fails)
         log.info("Starting builds")
 
         step_names = list(steps) if steps is not None else list(self.recipies)
@@ -1245,6 +1636,7 @@ class Builder:
             kwargs = dict(recipe)
             kwargs["show_ui"] = show_ui
             kwargs["log_level"] = log_level
+            kwargs["line_counts"] = line_counts
 
             # Determine needed dependency recipies.
             wait_on_seq = cast(List[str], kwargs.pop("wait_on", []))
@@ -1270,7 +1662,12 @@ class Builder:
                 proc.join(0.3)
                 if show_ui:
                     # DEBUG: Comment to debug
-                    print_ui(events, processes, fails)
+                    if expanded_ui:
+                        print_ui_expanded(
+                            events, processes, fails, line_counts, build_stats, "build"
+                        )
+                    else:
+                        print_ui(events, processes, fails)
                 if proc.exitcode is None:
                     continue
                 processes.pop(proc.name)
@@ -1319,7 +1716,12 @@ class Builder:
             sys.exit(1)
         if show_ui:
             time.sleep(0.3)
-            print_ui(events, processes, fails)
+            if expanded_ui:
+                print_ui_expanded(
+                    events, processes, fails, line_counts, build_stats, "build"
+                )
+            else:
+                print_ui(events, processes, fails)
             sys.stdout.write("\n")
             sys.stdout.flush()
         if cleanup:
@@ -1353,6 +1755,7 @@ class Builder:
         download_only: bool = False,
         show_ui: bool = False,
         log_level: str = "WARNING",
+        expanded_ui: bool = False,
     ) -> None:
         """
         Set the architecture, define the steps, clean if needed, download what is needed, and build.
@@ -1367,6 +1770,8 @@ class Builder:
         :type cleanup: bool, optional
         :param force_download: Whether or not to download the content if it already exists, defaults to True
         :type force_download: bool, optional
+        :param expanded_ui: Whether to use expanded UI with progress bars
+        :type expanded_ui: bool, optional
         """
         log = logging.getLogger(None)
         log.setLevel(logging.NOTSET)
@@ -1412,11 +1817,20 @@ class Builder:
         # process if it's dependencies have finished.
         try:
             self.download_files(
-                step_names, force_download=force_download, show_ui=show_ui
+                step_names,
+                force_download=force_download,
+                show_ui=show_ui,
+                expanded_ui=expanded_ui,
             )
             if download_only:
                 return
-            self.build(step_names, cleanup, show_ui=show_ui, log_level=log_level)
+            self.build(
+                step_names,
+                cleanup,
+                show_ui=show_ui,
+                log_level=log_level,
+                expanded_ui=expanded_ui,
+            )
         finally:
             log.removeHandler(file_handler)
             if stream_handler is not None:
