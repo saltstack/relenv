@@ -22,7 +22,6 @@ import sys
 import tempfile
 import time
 import tarfile
-from html.parser import HTMLParser
 from types import ModuleType
 from typing import (
     Any,
@@ -38,7 +37,7 @@ from typing import (
     cast,
 )
 
-from typing import TYPE_CHECKING, Protocol, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 if TYPE_CHECKING:
     from multiprocessing.synchronize import Event as SyncEvent
@@ -59,7 +58,6 @@ from relenv.common import (
     get_triplet,
     runcmd,
     work_dirs,
-    fetch_url,
     Version,
     WorkDirs,
 )
@@ -67,14 +65,6 @@ import relenv.relocate
 
 
 PathLike = Union[str, os.PathLike[str]]
-
-
-CHECK_VERSIONS_SUPPORT = True
-try:
-    from packaging.version import InvalidVersion, parse
-    from looseversion import LooseVersion
-except ImportError:
-    CHECK_VERSIONS_SUPPORT = False
 
 log = logging.getLogger(__name__)
 
@@ -505,8 +495,6 @@ def patch_file(path: PathLike, old: str, new: str) -> None:
     :type path: str
     """
     log.debug("Patching file: %s", path)
-    import re
-
     with open(path, "r") as fp:
         content = fp.read()
     new_content = ""
@@ -515,48 +503,6 @@ def patch_file(path: PathLike, old: str, new: str) -> None:
         new_content += line + "\n"
     with open(path, "w") as fp:
         fp.write(new_content)
-
-
-def tarball_version(href: str) -> Optional[str]:
-    if href.endswith("tar.gz"):
-        try:
-            x = href.split("-", 1)[1][:-7]
-            if x != "latest":
-                return x
-        except IndexError:
-            return None
-    return None
-
-
-def sqlite_version(href: str) -> Optional[str]:
-    if "releaselog" in href:
-        link = href.split("/")[1][:-5]
-        return "{:d}{:02d}{:02d}00".format(*[int(_) for _ in link.split("_")])
-    return None
-
-
-def github_version(href: str) -> Optional[str]:
-    if "tag/" in href:
-        return href.split("/v")[-1]
-    return None
-
-
-def krb_version(href: str) -> Optional[str]:
-    if re.match(r"\d\.\d\d/", href):
-        return href[:-1]
-    return None
-
-
-def python_version(href: str) -> Optional[str]:
-    if re.match(r"(\d+\.)+\d/", href):
-        return href[:-1]
-    return None
-
-
-def uuid_version(href: str) -> Optional[str]:
-    if "download" in href and "latest" not in href:
-        return href[:-16].rsplit("/")[-1].replace("libuuid-", "")
-    return None
 
 
 def get_dependency_version(name: str, platform: str) -> Optional[Dict[str, str]]:
@@ -605,81 +551,6 @@ def get_dependency_version(name: str, platform: str) -> Optional[Dict[str, str]]
     return None
 
 
-def parse_links(text: str) -> List[str]:
-    class HrefParser(HTMLParser):
-        def __init__(self) -> None:
-            super().__init__()
-            self.hrefs: List[str] = []
-
-        def handle_starttag(
-            self, tag: str, attrs: List[Tuple[str, Optional[str]]]
-        ) -> None:
-            if tag == "a":
-                link = dict(attrs).get("href")
-                if link:
-                    self.hrefs.append(link)
-
-    parser = HrefParser()
-    parser.feed(text)
-    return parser.hrefs
-
-
-class Comparable(Protocol):
-    """Protocol capturing the comparison operations we rely on."""
-
-    def __lt__(self, other: Any) -> bool:
-        """Return True when self is ordered before *other*."""
-
-    def __gt__(self, other: Any) -> bool:
-        """Return True when self is ordered after *other*."""
-
-
-def check_files(
-    name: str,
-    location: str,
-    func: Optional[Callable[[str], Optional[str]]],
-    current: str,
-) -> None:
-    fp = io.BytesIO()
-    fetch_url(location, fp)
-    fp.seek(0)
-    text = fp.read().decode()
-    loose = False
-    current_version: Comparable
-    try:
-        current_version = cast(Comparable, parse(current))
-    except InvalidVersion:
-        current_version = LooseVersion(current)
-        loose = True
-
-    versions: List[Comparable] = []
-    if func is None:
-        return
-    for link in parse_links(text):
-        version = func(link)
-        if version:
-            if loose:
-                versions.append(LooseVersion(version))
-            else:
-                try:
-                    versions.append(cast(Comparable, parse(version)))
-                except InvalidVersion:
-                    pass
-    versions.sort()
-    compare_versions(name, current_version, versions)
-
-
-def compare_versions(
-    name: str, current: Comparable, versions: Sequence[Comparable]
-) -> None:
-    for version in versions:
-        try:
-            if version > current:
-                print(f"Found new version of {name} {version} > {current}")
-        except TypeError:
-            print(f"Unable to compare versions {version}")
-
-
 class Download:
     """
     A utility that holds information about content to be downloaded.
@@ -708,8 +579,6 @@ class Download:
         destination: PathLike = "",
         version: str = "",
         checksum: Optional[str] = None,
-        checkfunc: Optional[Callable[[str], Optional[str]]] = None,
-        checkurl: Optional[str] = None,
     ) -> None:
         self.name = name
         self.url_tpl = url
@@ -720,8 +589,6 @@ class Download:
             self._destination = pathlib.Path(destination)
         self.version = version
         self.checksum = checksum
-        self.checkfunc = checkfunc
-        self.checkurl = checkurl
 
     def copy(self) -> "Download":
         return Download(
@@ -732,8 +599,6 @@ class Download:
             self.destination,
             self.version,
             self.checksum,
-            self.checkfunc,
-            self.checkurl,
         )
 
     @property
@@ -901,16 +766,6 @@ class Download:
         if exit_on_failure and not valid:
             sys.exit(1)
         return valid
-
-    def check_version(self) -> bool:
-        if self.checkfunc is None:
-            return True
-        if self.checkurl:
-            url = self.checkurl
-        else:
-            url = self.url.rsplit("/", 1)[0]
-        check_files(self.name, url, self.checkfunc, self.version)
-        return True
 
 
 class Recipe(TypedDict):
@@ -1566,16 +1421,6 @@ class Builder:
             log.removeHandler(file_handler)
             if stream_handler is not None:
                 log.removeHandler(stream_handler)
-
-    def check_versions(self) -> bool:
-        success = True
-        for step in list(self.recipies):
-            download = self.recipies[step]["download"]
-            if not download:
-                continue
-            if not download.check_version():
-                success = False
-        return success
 
 
 class Builds:
