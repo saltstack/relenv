@@ -440,6 +440,7 @@ def test_download_destination_setter() -> None:
     # Set to None
     d.destination = None
     assert d.destination == pathlib.Path()
+<<<<<<< HEAD
 
 
 <<<<<<< HEAD
@@ -652,3 +653,5 @@ def test_sbom_copy_python_310(tmp_path: pathlib.Path) -> None:
     ), "externals.spdx.json should not exist for Python < 3.12"
 86 (wip)
 (wip)
+=======
+>>>>>>> 63cae3d (Initial sbom support)

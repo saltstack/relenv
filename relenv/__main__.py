@@ -10,7 +10,7 @@ import argparse
 from argparse import ArgumentParser
 from typing import TYPE_CHECKING
 
-from . import build, buildenv, check, create, fetch, pyversions, toolchain
+from . import build, buildenv, check, create, fetch, pyversions, sbom, toolchain
 from .common import __version__
 
 if TYPE_CHECKING:
@@ -42,6 +42,7 @@ def setup_cli() -> ArgumentParser:
         check,
         buildenv,
         pyversions,
+        sbom,
     ]
     for mod in modules_to_setup:
         mod.setup_parser(subparsers)
