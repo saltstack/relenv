@@ -14,7 +14,8 @@ from typing import Any, cast
 
 from .common import (
     MACOS_DEVELOPMENT_TARGET,
-    RelenvException,
+    PlatformError,
+    RelenvEnvironmentError,
     get_toolchain,
     get_triplet,
 )
@@ -58,15 +59,15 @@ def buildenv(
     """
     if not relenv_path:
         if not is_relenv():
-            raise RelenvException("Not in a relenv environment")
+            raise RelenvEnvironmentError("Not in a relenv environment")
         relenv_path = cast(str | os.PathLike[str], cast(Any, sys).RELENV)
 
     if sys.platform != "linux":
-        raise RelenvException("buildenv is only supported on Linux")
+        raise PlatformError("buildenv is only supported on Linux")
 
     toolchain = get_toolchain()
     if not toolchain:
-        raise RelenvException("buildenv is only supported on Linux")
+        raise PlatformError("buildenv is only supported on Linux")
 
     triplet = get_triplet()
     sysroot = f"{toolchain}/{triplet}/sysroot"

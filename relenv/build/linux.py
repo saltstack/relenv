@@ -21,9 +21,8 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
-    runcmd,
 )
-from ..common import LINUX, Version, arches
+from ..common import LINUX, Version, arches, runcmd
 
 
 ARCHES = arches[LINUX]
@@ -570,8 +569,11 @@ build.add(
     },
 )
 
+# If openssl-fips-module runs before openssl we get an error installing openssl
+# becuase <prefix>/lib/ossl-modules exists.
 build.add(
     "openssl-fips-module",
+    wait_on=["openssl"],
     build_func=build_openssl_fips,
     download={
         "url": "https://www.openssl.org/source/openssl-{version}.tar.gz",

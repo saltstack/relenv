@@ -7,7 +7,7 @@ import sys
 # mypy: ignore-errors
 from unittest.mock import patch
 
-from relenv.build.common import Download
+from relenv.build.common.download import Download
 from relenv.common import RelenvException
 
 
@@ -69,7 +69,7 @@ def test_download_exists(tmp_path: pathlib.Path) -> None:
 
 def test_validate_md5sum(tmp_path: pathlib.Path) -> None:
     fake_md5 = "fakemd5"
-    with patch("relenv.build.common.verify_checksum") as run_mock:
+    with patch("relenv.build.common.download.verify_checksum") as run_mock:
         assert Download.validate_checksum(str(tmp_path), fake_md5) is True
         run_mock.assert_called_with(str(tmp_path), fake_md5)
 
@@ -77,7 +77,7 @@ def test_validate_md5sum(tmp_path: pathlib.Path) -> None:
 def test_validate_md5sum_failed(tmp_path: pathlib.Path) -> None:
     fake_md5 = "fakemd5"
     with patch(
-        "relenv.build.common.verify_checksum", side_effect=RelenvException
+        "relenv.build.common.download.verify_checksum", side_effect=RelenvException
     ) as run_mock:
         assert Download.validate_checksum(str(tmp_path), fake_md5) is False
         run_mock.assert_called_with(str(tmp_path), fake_md5)
@@ -85,7 +85,7 @@ def test_validate_md5sum_failed(tmp_path: pathlib.Path) -> None:
 
 def test_validate_signature(tmp_path: pathlib.Path) -> None:
     sig = "fakesig"
-    with patch("relenv.build.common.runcmd") as run_mock:
+    with patch("relenv.build.common.download.runcmd") as run_mock:
         assert Download.validate_signature(str(tmp_path), sig) is True
         run_mock.assert_called_with(
             ["gpg", "--verify", sig, str(tmp_path)],
@@ -96,7 +96,9 @@ def test_validate_signature(tmp_path: pathlib.Path) -> None:
 
 def test_validate_signature_failed(tmp_path: pathlib.Path) -> None:
     sig = "fakesig"
-    with patch("relenv.build.common.runcmd", side_effect=RelenvException) as run_mock:
+    with patch(
+        "relenv.build.common.download.runcmd", side_effect=RelenvException
+    ) as run_mock:
         assert Download.validate_signature(str(tmp_path), sig) is False
         run_mock.assert_called_with(
             ["gpg", "--verify", sig, str(tmp_path)],

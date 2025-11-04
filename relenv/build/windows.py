@@ -18,18 +18,22 @@ from typing import IO, MutableMapping, Union
 
 from .common import (
     Dirs,
-    MODULE_DIR,
     builds,
     create_archive,
-    download_url,
-    extract_archive,
     get_dependency_version,
     install_runtime,
     patch_file,
-    runcmd,
     update_ensurepip,
 )
-from ..common import WIN32, Version, arches
+from ..common import (
+    WIN32,
+    Version,
+    arches,
+    MODULE_DIR,
+    download_url,
+    extract_archive,
+    runcmd,
+)
 
 log = logging.getLogger(__name__)
 

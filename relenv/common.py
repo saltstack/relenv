@@ -196,6 +196,124 @@ class RelenvException(Exception):
     """
 
 
+# Validation Errors
+class ValidationError(RelenvException):
+    """Base class for validation-related errors.
+
+    Raised when data validation fails (checksums, signatures, etc.).
+    This follows CPython's convention of having intermediate base classes
+    for related exception types.
+    """
+
+
+class ChecksumValidationError(ValidationError):
+    """Raised when file checksum verification fails.
+
+    This typically indicates file corruption or tampering. The error message
+    should include the expected and actual checksums when available.
+
+    Example:
+        raise ChecksumValidationError(
+            f"Checksum mismatch for {filename}: "
+            f"expected {expected}, got {actual}"
+        )
+    """
+
+
+class SignatureValidationError(ValidationError):
+    """Raised when GPG signature verification fails.
+
+    This indicates that a downloaded file's cryptographic signature
+    does not match the expected signature, suggesting tampering or
+    an incomplete download.
+
+    Example:
+        raise SignatureValidationError(
+            f"GPG signature verification failed for {filename}"
+        )
+    """
+
+
+# Download Errors
+class DownloadError(RelenvException):
+    """Raised when downloading a file from a URL fails.
+
+    This encompasses network errors, HTTP errors, and other issues
+    that prevent successfully retrieving a remote resource.
+
+    Example:
+        raise DownloadError(f"Failed to download {url}: {reason}")
+    """
+
+
+# Configuration Errors
+class ConfigurationError(RelenvException):
+    """Raised when required configuration is missing or invalid.
+
+    This typically occurs during build setup when recipes are incomplete
+    or environment variables are not properly set.
+
+    Example:
+        raise ConfigurationError(
+            "Python recipe is missing download configuration"
+        )
+    """
+
+
+# Platform Errors
+class PlatformError(RelenvException):
+    """Raised when operating on an unsupported platform.
+
+    Relenv supports Linux, macOS, and Windows. This exception is raised
+    when attempting operations that are platform-specific or when running
+    on an unsupported platform.
+
+    Example:
+        raise PlatformError(f"Unsupported platform: {sys.platform}")
+    """
+
+
+# Build Errors
+class BuildCommandError(RelenvException):
+    """Raised when a build command execution fails.
+
+    This indicates that a subprocess (compiler, linker, etc.) returned
+    a non-zero exit code during the build process.
+
+    Example:
+        raise BuildCommandError(
+            f"Build command failed: {' '.join(cmd)}"
+        )
+    """
+
+
+class MissingDependencyError(RelenvException):
+    """Raised when a required build dependency is not found.
+
+    This typically occurs when expected files, directories, or system
+    packages are missing from the build environment.
+
+    Example:
+        raise MissingDependencyError(
+            f"Unable to locate {dependency_name}"
+        )
+    """
+
+
+# Environment Errors
+class RelenvEnvironmentError(RelenvException):
+    """Raised when there are issues with the relenv environment.
+
+    This occurs when operations require being inside a relenv environment
+    but the current environment is not properly configured.
+
+    Example:
+        raise RelenvEnvironmentError(
+            "Not in a relenv environment"
+        )
+    """
+
+
 def format_shebang(python: str, tpl: str = SHEBANG_TPL) -> str:
     """
     Return a formatted shebang.
@@ -416,7 +534,7 @@ def get_triplet(machine: Optional[str] = None, plat: Optional[str] = None) -> st
     elif plat == "linux":
         return f"{machine}-linux-gnu"
     else:
-        raise RelenvException(f"Unknown platform {plat}")
+        raise PlatformError(f"Unknown platform {plat}")
 
 
 def plat_from_triplet(plat: str) -> str:
@@ -429,7 +547,7 @@ def plat_from_triplet(plat: str) -> str:
         return "darwin"
     elif plat == "win":
         return "win32"
-    raise RelenvException(f"Unkown platform {plat}")
+    raise PlatformError(f"Unkown platform {plat}")
 
 
 def list_archived_builds() -> list[tuple[str, str, str]]:
@@ -807,7 +925,7 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
 
     p.wait()
     if p.returncode != 0:
-        raise RelenvException("Build cmd '{}' failed".format(" ".join(args[0])))
+        raise BuildCommandError("Build cmd '{}' failed".format(" ".join(args[0])))
     return p
 
 
