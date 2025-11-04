@@ -29,7 +29,6 @@ from .common import (
 )
 from ..common import (
     WIN32,
-    Version,
     arches,
     MODULE_DIR,
     download_url,
