@@ -2323,3 +2323,197 @@ print("OK")
         f"{proc.stderr.decode()}"
     )
     assert proc.stdout.decode().strip() == "OK"
+
+
+@pytest.mark.skip_on_windows
+def test_sbom_files_exist(build, minor_version):
+    """Test that SBOM file exists for all Python versions.
+
+    We generate a single comprehensive relenv-sbom.spdx.json that documents
+    all build dependencies and runtime packages. Python's native SBOM files
+    (only present in 3.12+) are not copied as they contain inaccurate/incomplete
+    information for our builds.
+    """
+    # All Python versions should have relenv-sbom.spdx.json
+    relenv_sbom = build / "relenv-sbom.spdx.json"
+    assert (
+        relenv_sbom.exists()
+    ), "relenv-sbom.spdx.json should exist for all Python versions"
+
+    # Python's native SBOMs should NOT be present (we don't copy them anymore)
+    python_sbom = build / "sbom.spdx.json"
+    externals_sbom = build / "externals.spdx.json"
+    assert (
+        not python_sbom.exists()
+    ), "sbom.spdx.json should not be copied (relenv-sbom.spdx.json is authoritative)"
+    assert (
+        not externals_sbom.exists()
+    ), "externals.spdx.json should not be copied (relenv-sbom.spdx.json is authoritative)"
+
+
+@pytest.mark.skip_on_windows
+def test_relenv_sbom_structure(build, minor_version):
+    """Test that relenv-sbom.spdx.json has valid SPDX structure."""
+    relenv_sbom = build / "relenv-sbom.spdx.json"
+    assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist"
+
+    with open(relenv_sbom) as f:
+        sbom = json.load(f)
+
+    # Validate SPDX structure
+    assert sbom.get("SPDXID") == "SPDXRef-DOCUMENT"
+    assert sbom.get("spdxVersion") == "SPDX-2.3"
+    assert sbom.get("dataLicense") == "CC0-1.0"
+    assert "name" in sbom
+    assert "creationInfo" in sbom
+    assert "created" in sbom["creationInfo"]
+    assert "creators" in sbom["creationInfo"]
+    assert len(sbom["creationInfo"]["creators"]) > 0
+    assert sbom["creationInfo"]["creators"][0].startswith("Tool: relenv-")
+
+    # Should have packages
+    assert "packages" in sbom
+    assert isinstance(sbom["packages"], list)
+    assert len(sbom["packages"]) > 0
+
+
+@pytest.mark.skip_on_windows
+def test_relenv_sbom_has_pip_packages(build, minor_version):
+    """Test that relenv-sbom.spdx.json includes pip-installed packages."""
+    relenv_sbom = build / "relenv-sbom.spdx.json"
+    assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist"
+
+    with open(relenv_sbom) as f:
+        sbom = json.load(f)
+
+    packages = sbom.get("packages", [])
+    package_names = {pkg.get("name") for pkg in packages}
+
+    # Should include core pip packages
+    expected_packages = {"pip", "setuptools", "wheel", "relenv"}
+    found_packages = expected_packages & package_names
+
+    assert len(found_packages) >= 3, (
+        f"SBOM should contain at least 3 of {expected_packages}, "
+        f"but only found: {found_packages}"
+    )
+
+
+@pytest.mark.skip_on_windows
+def test_relenv_sbom_includes_python(build, minor_version):
+    """Test that relenv-sbom.spdx.json includes Python itself as a package."""
+    relenv_sbom = build / "relenv-sbom.spdx.json"
+    assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist"
+
+    with open(relenv_sbom) as f:
+        sbom = json.load(f)
+
+    packages = sbom.get("packages", [])
+    package_names = {pkg.get("name") for pkg in packages}
+
+    # Python itself should be documented
+    assert (
+        "Python" in package_names
+    ), "SBOM should include Python (CPython interpreter) as a package"
+
+    # Find the Python package and verify its structure
+    python_pkg = next((pkg for pkg in packages if pkg.get("name") == "Python"), None)
+    assert python_pkg is not None, "Python package should exist"
+
+    # Verify Python package has correct fields
+    assert "versionInfo" in python_pkg, "Python package should have version"
+    assert (
+        python_pkg["versionInfo"] == minor_version
+    ), f"Python version should be {minor_version}, got {python_pkg.get('versionInfo')}"
+    assert (
+        "downloadLocation" in python_pkg
+    ), "Python package should have download location"
+    assert (
+        "python.org" in python_pkg["downloadLocation"].lower()
+    ), "Python download location should reference python.org"
+    assert (
+        python_pkg.get("primaryPackagePurpose") == "APPLICATION"
+    ), "Python should be marked as APPLICATION"
+
+
+@pytest.mark.skip_on_windows
+def test_relenv_sbom_validates_with_spdx_tools(build, minor_version):
+    """Test that relenv-sbom.spdx.json passes official SPDX validation."""
+    pytest.importorskip("spdx_tools", reason="spdx-tools not installed")
+
+    relenv_sbom = build / "relenv-sbom.spdx.json"
+    assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist"
+
+    # Use official SPDX tools to validate the SBOM
+    from spdx_tools.spdx.parser.parse_anything import parse_file
+    from spdx_tools.spdx.validation.document_validator import (
+        validate_full_spdx_document,
+    )
+
+    # Parse the SBOM file
+    try:
+        document = parse_file(str(relenv_sbom))
+    except Exception as e:
+        pytest.fail(f"Failed to parse SBOM with spdx-tools: {e}")
+
+    # Validate against SPDX 2.3 specification
+    validation_messages = validate_full_spdx_document(document)
+
+    if validation_messages:
+        error_details = "\n".join(str(msg) for msg in validation_messages)
+        pytest.fail(
+            f"SBOM failed official SPDX validation with {len(validation_messages)} error(s):\n{error_details}"
+        )
+
+
+@pytest.mark.skip_on_windows
+def test_relenv_sbom_includes_bundled_dependencies(build, minor_version):
+    """Test that relenv-sbom.spdx.json includes Python's bundled dependencies."""
+    relenv_sbom = build / "relenv-sbom.spdx.json"
+    assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist"
+
+    with open(relenv_sbom) as f:
+        sbom = json.load(f)
+
+    packages = sbom.get("packages", [])
+    package_names = {pkg.get("name") for pkg in packages}
+
+    # expat is bundled in Python's source tree and updated by relenv
+    # It's a critical security component (XML parser)
+    assert (
+        "expat" in package_names
+    ), "SBOM should include expat (bundled XML parser updated by relenv)"
+
+    # Verify expat package has required fields
+    expat_pkg = next((pkg for pkg in packages if pkg.get("name") == "expat"), None)
+    assert expat_pkg is not None, "expat package should exist"
+    assert "versionInfo" in expat_pkg, "expat package should have version"
+    assert (
+        "downloadLocation" in expat_pkg
+    ), "expat package should have download location"
+    assert (
+        "libexpat" in expat_pkg["downloadLocation"].lower()
+    ), "expat download location should reference libexpat GitHub"
+    assert expat_pkg.get("checksums"), "expat should have SHA-256 checksum"
+
+    # For Python 3.12+, check for additional bundled dependencies
+    # These are extracted from Python's own SBOM
+    major, minor = map(int, minor_version.split("."))
+    if major > 3 or (major == 3 and minor >= 12):
+        expected_bundled = ["mpdecimal", "hacl-star", "libb2"]
+        found_bundled = [name for name in expected_bundled if name in package_names]
+
+        assert len(found_bundled) >= 2, (
+            f"For Python 3.12+, SBOM should include bundled dependencies from Python source. "
+            f"Expected at least {expected_bundled[:2]}, found: {found_bundled}"
+        )
+
+        # Verify at least one bundled dep has proper structure
+        if "mpdecimal" in package_names:
+            mpdec_pkg = next(
+                (pkg for pkg in packages if pkg.get("name") == "mpdecimal"), None
+            )
+            assert mpdec_pkg is not None
+            assert (
+                mpdec_pkg.get("versionInfo") != "NOASSERTION"
+            ), "mpdecimal should have specific version from Python's SBOM"
