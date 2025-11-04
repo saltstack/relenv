@@ -6,11 +6,15 @@ The linux build process.
 """
 from __future__ import annotations
 
+import glob
 import io
 import os
 import pathlib
 import shutil
+import tarfile
 import tempfile
+import time
+import urllib.request
 from typing import IO, MutableMapping
 
 from .common import (
@@ -21,6 +25,8 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    runcmd,
+    update_sbom_checksums,
 )
 from ..common import LINUX, Version, arches, runcmd
 
@@ -367,13 +373,6 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     Python ships with an older bundled expat. This function updates it
     to the latest version for security and bug fixes.
     """
-    from .common import get_dependency_version
-    import urllib.request
-    import tarfile
-    import glob
-    import pathlib
-    import shutil
-
     # Get version from JSON
     expat_info = get_dependency_version("expat", "linux")
     if not expat_info:
@@ -412,15 +411,11 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
 
     # Touch all updated files to ensure make rebuilds them
     # (The tarball may contain files with newer timestamps)
-    import time
-
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
     # Update SBOM with correct checksums for updated expat files
-    from relenv.build.common import update_sbom_checksums
-
     files_to_update = {}
     for target_file in updated_files:
         # SBOM uses relative paths from Python source root
