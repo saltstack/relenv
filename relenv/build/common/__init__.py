@@ -20,6 +20,7 @@ from .builders import (
     build_sqlite,
 )
 from .install import (
+    copy_sbom_files,
     create_archive,
     finalize,
     install_runtime,
@@ -35,12 +36,14 @@ __all__ = [
     # Dependency version management
     "get_dependency_version",
     # Install functions
+    "copy_sbom_files",
     "finalize",
     "install_runtime",
     "create_archive",
     "update_ensurepip",
     "patch_file",
     "update_sbom_checksums",
+    "copy_sbom_files",
     # Builders (specific build functions)
     "build_openssl",
     "build_openssl_fips",

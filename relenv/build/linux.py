@@ -14,6 +14,7 @@ import pathlib
 import shutil
 import tarfile
 import tempfile
+import time
 import urllib.request
 from collections.abc import MutableMapping
 from typing import IO
@@ -27,6 +28,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    update_sbom_checksums,
 )
 
 ARCHES = arches[LINUX]

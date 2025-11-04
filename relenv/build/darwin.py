@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import glob
 import io
+import os
 import pathlib
 import shutil
 import tarfile
+import time
 import urllib.request
 from typing import IO, TYPE_CHECKING
 
@@ -23,6 +25,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    update_sbom_checksums,
 )
 
 if TYPE_CHECKING:
