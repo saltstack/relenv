@@ -6,7 +6,14 @@ The darwin build process.
 """
 from __future__ import annotations
 
+import glob
 import io
+import os
+import pathlib
+import shutil
+import tarfile
+import time
+import urllib.request
 from typing import IO, MutableMapping
 
 from ..common import DARWIN, MACOS_DEVELOPMENT_TARGET, arches, runcmd
@@ -17,6 +24,8 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    runcmd,
+    update_sbom_checksums,
 )
 
 ARCHES = arches[DARWIN]
@@ -52,12 +61,6 @@ def update_expat(dirs: Dirs, env: MutableMapping[str, str]) -> None:
     Python ships with an older bundled expat. This function updates it
     to the latest version for security and bug fixes.
     """
-    import pathlib
-    import shutil
-    import glob
-    import urllib.request
-    import tarfile
-
     # Get version from JSON
     expat_info = get_dependency_version("expat", "darwin")
     if not expat_info:
@@ -96,16 +99,11 @@ def update_expat(dirs: Dirs, env: MutableMapping[str, str]) -> None:
 
     # Touch all updated files to ensure make rebuilds them
     # (The tarball may contain files with newer timestamps)
-    import time
-    import os
-
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
     # Update SBOM with correct checksums for updated expat files
-    from relenv.build.common import update_sbom_checksums
-
     files_to_update = {}
     for target_file in updated_files:
         # SBOM uses relative paths from Python source root

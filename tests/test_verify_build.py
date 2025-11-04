@@ -2249,3 +2249,79 @@ def test_openssl_version(pyexec):
         f"OpenSSL version mismatch on {platform}: expected {expected_version}, "
         f"found {actual_version} (from {actual_version_str})"
     )
+
+
+def test_xz_lzma_functionality(pyexec):
+    """
+    Verify that the lzma module works correctly.
+
+    This is especially important for Windows builds which use a config.h
+    compatibility shim from XZ 5.4.7 to support newer XZ versions that
+    removed MSBuild support.
+
+    If this test fails, it indicates that the config.h in
+    relenv/_resources/xz/config.h is no longer compatible with the
+    current XZ version being used.
+
+    Works on all platforms: Linux, Darwin (macOS), and Windows.
+    """
+    # Test that lzma module loads and basic compression works
+    test_code = """
+import lzma
+import sys
+
+# Test basic compression/decompression
+test_data = b"Hello, World! " * 100
+compressed = lzma.compress(test_data)
+decompressed = lzma.decompress(compressed)
+
+if test_data != decompressed:
+    print("ERROR: Decompressed data does not match original", file=sys.stderr)
+    sys.exit(1)
+
+# Verify compression actually happened
+if len(compressed) >= len(test_data):
+    print("ERROR: Compression did not reduce size", file=sys.stderr)
+    sys.exit(2)
+
+# Test different formats (skip FORMAT_RAW as it requires explicit filters)
+for fmt in [lzma.FORMAT_XZ, lzma.FORMAT_ALONE]:
+    try:
+        data = lzma.compress(test_data, format=fmt)
+        result = lzma.decompress(data)
+        if result != test_data:
+            print(f"ERROR: Format {fmt} failed round-trip", file=sys.stderr)
+            sys.exit(3)
+    except Exception as e:
+        print(f"ERROR: Format {fmt} raised exception: {e}", file=sys.stderr)
+        sys.exit(4)
+
+# Test streaming compression/decompression
+import io
+output = io.BytesIO()
+with lzma.LZMAFile(output, "w") as f:
+    f.write(test_data)
+
+compressed_stream = output.getvalue()
+input_stream = io.BytesIO(compressed_stream)
+with lzma.LZMAFile(input_stream, "r") as f:
+    decompressed_stream = f.read()
+
+if decompressed_stream != test_data:
+    print("ERROR: Streaming compression/decompression failed", file=sys.stderr)
+    sys.exit(5)
+
+print("OK")
+"""
+
+    proc = subprocess.run(
+        [str(pyexec), "-c", test_code],
+        capture_output=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, (
+        f"LZMA functionality test failed (exit code {proc.returncode}): "
+        f"{proc.stderr.decode()}"
+    )
+    assert proc.stdout.decode().strip() == "OK"

@@ -14,6 +14,7 @@ import pathlib
 import shutil
 import sys
 import tarfile
+import time
 from typing import IO, MutableMapping, Union
 
 from .common import (
@@ -24,6 +25,7 @@ from .common import (
     install_runtime,
     patch_file,
     update_ensurepip,
+    update_sbom_checksums,
 )
 from ..common import (
     WIN32,
@@ -149,6 +151,25 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
 def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the XZ library.
+
+    COMPATIBILITY NOTE: We use config.h from XZ 5.4.7 for all XZ versions.
+    Starting with XZ 5.5.0, the project removed Visual Studio .vcxproj files
+    and switched to CMake. Python's build system (PCbuild/liblzma.vcxproj)
+    still expects MSBuild-compatible builds, so we maintain a compatibility
+    shim at relenv/_resources/xz/config.h.
+
+    When updating XZ versions, verify compatibility by checking:
+    1. Build completes without compiler errors
+    2. test_xz_lzma_functionality passes
+    3. No new HAVE_* defines required in src/liblzma source files
+    4. No removed HAVE_* defines that config.h references
+
+    If compatibility breaks, you have two options:
+    - Use CMake to generate new config.h for Windows (see discussion at
+      https://discuss.python.org/t/building-python-from-source-on-windows-using-a-custom-version-of-xz/74717)
+    - Update relenv/_resources/xz/config.h manually from newer XZ source
+
+    See also: relenv/_resources/xz/readme.md
     """
     # Try to get version from JSON
     # Note: Windows may use a different XZ version than Linux/Darwin due to MSBuild compatibility
@@ -241,16 +262,12 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
 
     # Touch all updated files to ensure MSBuild rebuilds them
     # (The original files may have newer timestamps)
-    import time
-
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
     # Update SBOM with correct checksums for updated expat files
     # Map SBOM file names to actual file paths
-    from relenv.build.common import update_sbom_checksums
-
     files_to_update = {}
     for target_file in updated_files:
         # SBOM uses relative paths from Python source root
