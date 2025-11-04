@@ -330,31 +330,6 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             json.dump(data, f, indent=2)
 
 
-def update_expat_check(env: EnvMapping) -> bool:
-    """
-    Check if the given python version should get an updated libexpat.
-
-    Patch libexpat on these versions and below:
-      - 3.9.23
-      - 3.10.18
-      - 3.11.13
-      - 3.12.11
-      - 3.13.7
-    """
-    relenv_version = Version(env["RELENV_PY_VERSION"])
-    if relenv_version.minor == 9 and relenv_version.micro <= 23:
-        return True
-    elif relenv_version.minor == 10 and relenv_version.micro <= 18:
-        return True
-    elif relenv_version.minor == 11 and relenv_version.micro <= 13:
-        return True
-    elif relenv_version.minor == 12 and relenv_version.micro <= 11:
-        return True
-    elif relenv_version.minor == 13 and relenv_version.micro <= 7:
-        return True
-    return False
-
-
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
@@ -376,8 +351,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
     update_xz(dirs=dirs, env=env)
 
-    if update_expat_check(env=env):
-        update_expat(dirs=dirs, env=env)
+    update_expat(dirs=dirs, env=env)
 
     arch_to_plat = {
         "amd64": "x64",
