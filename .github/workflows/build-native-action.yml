@@ -122,7 +122,7 @@ jobs:
 
   build_macos_12_x86_64:
     name: "Python macOS"
-    runs-on: macos-13
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
       matrix:
