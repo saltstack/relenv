@@ -400,6 +400,7 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
 
     # Copy source files to Modules/expat/
     expat_source_dir = tmpbuild / f"expat-{version}" / "lib"
+    updated_files = []
     for source_file in ["*.h", "*.c"]:
         for file_path in glob.glob(str(expat_source_dir / source_file)):
             target_file = expat_dir / pathlib.Path(file_path).name
@@ -407,6 +408,26 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             if target_file.exists():
                 target_file.unlink()
             shutil.copy2(file_path, str(expat_dir))
+            updated_files.append(target_file)
+
+    # Touch all updated files to ensure make rebuilds them
+    # (The tarball may contain files with newer timestamps)
+    import time
+
+    now = time.time()
+    for target_file in updated_files:
+        os.utime(target_file, (now, now))
+
+    # Update SBOM with correct checksums for updated expat files
+    from relenv.build.common import update_sbom_checksums
+
+    files_to_update = {}
+    for target_file in updated_files:
+        # SBOM uses relative paths from Python source root
+        relative_path = f"Modules/expat/{target_file.name}"
+        files_to_update[relative_path] = target_file
+
+    update_sbom_checksums(dirs.source, files_to_update)
 
 
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
