@@ -2098,20 +2098,31 @@ def test_install_setuptools_25_2_to_25_3(pipexec, build, minor_version, pip_vers
     )
 
 
-@pytest.mark.skip_unless_on_windows
-def test_expat_version_windows(pyexec):
+def test_expat_version(pyexec):
     """
-    Verify that the Windows build contains the correct expat version.
+    Verify that the build contains the correct expat version.
 
-    This validates that update_expat() in windows.py successfully updated
-    the bundled expat library to match the version in python-versions.json.
+    This validates that update_expat() successfully updated the bundled
+    expat library to match the version in python-versions.json.
+
+    Works on all platforms: Linux, Darwin (macOS), and Windows.
     """
     from relenv.build.common import get_dependency_version
 
+    # Map sys.platform to relenv platform names
+    platform_map = {
+        "linux": "linux",
+        "darwin": "darwin",
+        "win32": "win32",
+    }
+    platform = platform_map.get(sys.platform)
+    if not platform:
+        pytest.skip(f"Unknown platform: {sys.platform}")
+
     # Get expected version from python-versions.json
-    expat_info = get_dependency_version("expat", "win32")
+    expat_info = get_dependency_version("expat", platform)
     if not expat_info:
-        pytest.skip("No expat version defined in python-versions.json for win32")
+        pytest.skip(f"No expat version defined in python-versions.json for {platform}")
 
     expected_version = expat_info["version"]
 
@@ -2132,6 +2143,109 @@ def test_expat_version_windows(pyexec):
     actual_version = actual_version_str.replace("expat_", "").replace("_", ".")
 
     assert actual_version == expected_version, (
-        f"Expat version mismatch: expected {expected_version}, "
+        f"Expat version mismatch on {platform}: expected {expected_version}, "
+        f"found {actual_version} (from {actual_version_str})"
+    )
+
+
+def test_sqlite_version(pyexec):
+    """
+    Verify that the build contains the correct SQLite version.
+
+    This validates that SQLite was built with the version specified
+    in python-versions.json.
+
+    Works on all platforms: Linux, Darwin (macOS), and Windows.
+    """
+    from relenv.build.common import get_dependency_version
+
+    # Map sys.platform to relenv platform names
+    platform_map = {
+        "linux": "linux",
+        "darwin": "darwin",
+        "win32": "win32",
+    }
+    platform = platform_map.get(sys.platform)
+    if not platform:
+        pytest.skip(f"Unknown platform: {sys.platform}")
+
+    # Get expected version from python-versions.json
+    sqlite_info = get_dependency_version("sqlite", platform)
+    if not sqlite_info:
+        pytest.skip(f"No sqlite version defined in python-versions.json for {platform}")
+
+    expected_version = sqlite_info["version"]
+
+    # Get actual version from the build
+    proc = subprocess.run(
+        [str(pyexec), "-c", "import sqlite3; print(sqlite3.sqlite_version)"],
+        capture_output=True,
+        check=True,
+    )
+
+    actual_version = proc.stdout.decode().strip()
+
+    # SQLite version in JSON is like "3.50.4.0" but runtime shows "3.50.4"
+    # So we need to handle both formats
+    if expected_version.count(".") == 3:
+        # Remove trailing .0 for comparison
+        expected_version = ".".join(expected_version.split(".")[:3])
+
+    assert actual_version == expected_version, (
+        f"SQLite version mismatch on {platform}: expected {expected_version}, "
+        f"found {actual_version}"
+    )
+
+
+def test_openssl_version(pyexec):
+    """
+    Verify that the build contains the correct OpenSSL version.
+
+    This validates that OpenSSL was built with the version specified
+    in python-versions.json.
+
+    Works on all platforms: Linux, Darwin (macOS), and Windows.
+    """
+    import re
+
+    from relenv.build.common import get_dependency_version
+
+    # Map sys.platform to relenv platform names
+    platform_map = {
+        "linux": "linux",
+        "darwin": "darwin",
+        "win32": "win32",
+    }
+    platform = platform_map.get(sys.platform)
+    if not platform:
+        pytest.skip(f"Unknown platform: {sys.platform}")
+
+    # Get expected version from python-versions.json
+    openssl_info = get_dependency_version("openssl", platform)
+    if not openssl_info:
+        pytest.skip(
+            f"No openssl version defined in python-versions.json for {platform}"
+        )
+
+    expected_version = openssl_info["version"]
+
+    # Get actual version from the build
+    proc = subprocess.run(
+        [str(pyexec), "-c", "import ssl; print(ssl.OPENSSL_VERSION)"],
+        capture_output=True,
+        check=True,
+    )
+
+    actual_version_str = proc.stdout.decode().strip()
+    # Format is "OpenSSL 3.5.4 30 Sep 2025"
+    # Extract version number
+    match = re.search(r"OpenSSL (\d+\.\d+\.\d+)", actual_version_str)
+    if not match:
+        pytest.fail(f"Could not parse OpenSSL version from: {actual_version_str}")
+
+    actual_version = match.group(1)
+
+    assert actual_version == expected_version, (
+        f"OpenSSL version mismatch on {platform}: expected {expected_version}, "
         f"found {actual_version} (from {actual_version_str})"
     )

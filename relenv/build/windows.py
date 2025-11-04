@@ -225,109 +225,44 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     # Copy *.h and *.c to expat directory
     expat_lib_dir = dirs.source / "Modules" / "expat" / f"expat-{version}" / "lib"
     expat_dir = dirs.source / "Modules" / "expat"
+    updated_files = []
     for file in glob.glob(str(expat_lib_dir / "*.h")):
-        if expat_dir / os.path.basename(file):
-            (expat_dir / os.path.basename(file)).unlink()
+        target = expat_dir / os.path.basename(file)
+        if target.exists():
+            target.unlink()
         shutil.move(file, str(expat_dir))
+        updated_files.append(target)
     for file in glob.glob(str(expat_lib_dir / "*.c")):
-        if expat_dir / os.path.basename(file):
-            (expat_dir / os.path.basename(file)).unlink()
+        target = expat_dir / os.path.basename(file)
+        if target.exists():
+            target.unlink()
         shutil.move(file, str(expat_dir))
-    # Update sbom.spdx.json with the correct hashes. This became a thing in 3.12
-    # python Tools/build/generate_sbom.py doesn't work because it requires a git
-    # repository, so we have to do it manually.
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
-        checksums = {
-            "Modules/expat/expat.h": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "a4395dd0589a97aab0904f7a5f5dc5781a086aa2",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "610b844bbfa3ec955772cc825db4d4db470827d57adcb214ad372d0eaf00e591",
-                },
-            ],
-            "Modules/expat/expat_external.h": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "8fdf2e79a7ab46a3c76c74ed7e5fe641cbef308d",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "ffb960af48b80935f3856a16e87023524b104f7fc1e58104f01db88ba7bfbcc9",
-                },
-            ],
-            "Modules/expat/internal.h": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "7dce7d98943c5db33ae05e54801dcafb4547b9dd",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "6bfe307d52e7e4c71dbc30d3bd902a4905cdd83bbe4226a7e8dfa8e4c462a157",
-                },
-            ],
-            "Modules/expat/refresh.sh": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "71812ca27328697a8dcae1949cd638717538321a",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "64fd1368de41e4ebc14593c65f5a676558aed44bd7d71c43ae05d06f9086d3b0",
-                },
-            ],
-            "Modules/expat/xmlparse.c": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "4c81a1f04fc653877c63c834145c18f93cd95f3e",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "04a379615f476d55f95ca1853107e20627b48ca4afe8d0fd5981ac77188bf0a6",
-                },
-            ],
-            "Modules/expat/xmlrole.h": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "ac2964cca107f62dd133bfd4736a9a17defbc401",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "92e41f373b67f6e0dcd7735faef3c3f1e2c17fe59e007e6b74beef6a2e70fa88",
-                },
-            ],
-            "Modules/expat/xmltok.c": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "1e2d35d90a1c269217f83d3bdf3c71cc22cb4c3f",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "98d0fc735041956cc2e7bbbe2fb8f03130859410e0aee5e8015f406a37c02a3c",
-                },
-            ],
-            "Modules/expat/xmltok.h": [
-                {
-                    "algorithm": "SHA1",
-                    "checksumValue": "d126831eaa5158cff187a8c93f4bc1c8118f3b17",
-                },
-                {
-                    "algorithm": "SHA256",
-                    "checksumValue": "91bf003a725a675761ea8d92cebc299a76fd28c3a950572f41bc7ce5327ee7b5",
-                },
-            ],
-        }
-        spdx_json = dirs.source / "Misc" / "sbom.spdx.json"
-        with open(str(spdx_json), "r") as f:
-            data = json.load(f)
-            for file in data["files"]:
-                if file["fileName"] in checksums.keys():
-                    print(file["fileName"])
-                    file["checksums"] = checksums[file["fileName"]]
-        with open(str(spdx_json), "w") as f:
-            json.dump(data, f, indent=2)
+        updated_files.append(target)
+
+    # Touch all updated files to ensure MSBuild rebuilds them
+    # (The original files may have newer timestamps)
+    import time
+
+    now = time.time()
+    for target_file in updated_files:
+        os.utime(target_file, (now, now))
+
+    # Update SBOM with correct checksums for updated expat files
+    # Map SBOM file names to actual file paths
+    from relenv.build.common import update_sbom_checksums
+
+    files_to_update = {}
+    for target_file in updated_files:
+        # SBOM uses relative paths from Python source root
+        relative_path = f"Modules/expat/{target_file.name}"
+        files_to_update[relative_path] = target_file
+
+    # Also include refresh.sh which was patched
+    bash_refresh = dirs.source / "Modules" / "expat" / "refresh.sh"
+    if bash_refresh.exists():
+        files_to_update["Modules/expat/refresh.sh"] = bash_refresh
+
+    update_sbom_checksums(dirs.source, files_to_update)
 
 
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
