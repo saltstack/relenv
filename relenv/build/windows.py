@@ -36,6 +36,7 @@ from .common import (
     install_runtime,
     patch_file,
     update_ensurepip,
+    update_sbom_checksums,
 )
 
 log = logging.getLogger(__name__)
@@ -367,6 +368,7 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
 
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
+    # Also include refresh.sh which was patched
     if bash_refresh.exists():
         files_to_update["Modules/expat/refresh.sh"] = bash_refresh
     update_sbom_checksums(dirs.source, files_to_update)
