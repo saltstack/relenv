@@ -24,7 +24,6 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
-    runcmd,
     update_sbom_checksums,
 )
 
