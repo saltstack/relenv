@@ -2096,3 +2096,42 @@ def test_install_setuptools_25_2_to_25_3(pipexec, build, minor_version, pip_vers
         ],
         check=True,
     )
+
+
+@pytest.mark.skip_unless_on_windows
+def test_expat_version_windows(pyexec):
+    """
+    Verify that the Windows build contains the correct expat version.
+
+    This validates that update_expat() in windows.py successfully updated
+    the bundled expat library to match the version in python-versions.json.
+    """
+    from relenv.build.common import get_dependency_version
+
+    # Get expected version from python-versions.json
+    expat_info = get_dependency_version("expat", "win32")
+    if not expat_info:
+        pytest.skip("No expat version defined in python-versions.json for win32")
+
+    expected_version = expat_info["version"]
+
+    # Get actual version from the build
+    proc = subprocess.run(
+        [str(pyexec), "-c", "import pyexpat; print(pyexpat.EXPAT_VERSION)"],
+        capture_output=True,
+        check=True,
+    )
+
+    actual_version_str = proc.stdout.decode().strip()
+    # Format is "expat_X_Y_Z", extract version
+    assert actual_version_str.startswith(
+        "expat_"
+    ), f"Unexpected EXPAT_VERSION format: {actual_version_str}"
+
+    # Convert "expat_2_7_3" -> "2.7.3"
+    actual_version = actual_version_str.replace("expat_", "").replace("_", ".")
+
+    assert actual_version == expected_version, (
+        f"Expat version mismatch: expected {expected_version}, "
+        f"found {actual_version} (from {actual_version_str})"
+    )
