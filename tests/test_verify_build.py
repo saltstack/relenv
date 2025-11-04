@@ -2142,10 +2142,9 @@ def test_expat_version(pyexec):
     # Convert "expat_2_7_3" -> "2.7.3"
     actual_version = actual_version_str.replace("expat_", "").replace("_", ".")
 
-    assert actual_version == expected_version, (
-        f"Expat version mismatch on {platform}: expected {expected_version}, "
-        f"found {actual_version} (from {actual_version_str})"
-    )
+    assert (
+        actual_version == expected_version
+    ), f"Expat version mismatch on {platform}: expected {expected_version}, "
 
 
 def test_sqlite_version(pyexec):
@@ -2245,10 +2244,9 @@ def test_openssl_version(pyexec):
 
     actual_version = match.group(1)
 
-    assert actual_version == expected_version, (
-        f"OpenSSL version mismatch on {platform}: expected {expected_version}, "
-        f"found {actual_version} (from {actual_version_str})"
-    )
+    assert (
+        actual_version == expected_version
+    ), f"found {actual_version} (from {actual_version_str})"
 
 
 def test_xz_lzma_functionality(pyexec):
