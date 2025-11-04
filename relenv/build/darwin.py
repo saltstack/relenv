@@ -9,7 +9,7 @@ from __future__ import annotations
 import io
 from typing import IO, MutableMapping
 
-from ..common import DARWIN, MACOS_DEVELOPMENT_TARGET, arches
+from ..common import DARWIN, MACOS_DEVELOPMENT_TARGET, arches, runcmd
 from .common import (
     Dirs,
     build_openssl,
@@ -17,7 +17,6 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
-    runcmd,
 )
 
 ARCHES = arches[DARWIN]

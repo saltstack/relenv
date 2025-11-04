@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tarfile
 from types import ModuleType
-from typing import BinaryIO, Literal
+from typing import BinaryIO, Callable, Literal, Optional
 from unittest.mock import patch
 
 import pytest
@@ -243,7 +243,13 @@ def test_download_url_writes_file(tmp_path: pathlib.Path) -> None:
     dest.mkdir()
     data = b"payload"
 
-    def fake_fetch(url: str, fp: BinaryIO, backoff: int, timeout: float) -> None:
+    def fake_fetch(
+        url: str,
+        fp: BinaryIO,
+        backoff: int,
+        timeout: float,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> None:
         fp.write(data)
 
     with patch("relenv.common.fetch_url", side_effect=fake_fetch):
@@ -257,7 +263,13 @@ def test_download_url_failure_cleans_up(tmp_path: pathlib.Path) -> None:
     dest.mkdir()
     created = dest / "a.txt"
 
-    def fake_fetch(url: str, fp: BinaryIO, backoff: int, timeout: float) -> None:
+    def fake_fetch(
+        url: str,
+        fp: BinaryIO,
+        backoff: int,
+        timeout: float,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> None:
         raise RelenvException("fail")
 
     with patch("relenv.common.get_download_location", return_value=str(created)), patch(
