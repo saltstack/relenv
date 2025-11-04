@@ -408,15 +408,11 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
 
     # Touch all updated files to ensure make rebuilds them
     # (The tarball may contain files with newer timestamps)
-    import time
-
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
     # Update SBOM with correct checksums for updated expat files
-    from relenv.build.common import update_sbom_checksums
-
     files_to_update = {}
     for target_file in updated_files:
         # SBOM uses relative paths from Python source root

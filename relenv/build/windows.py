@@ -14,6 +14,7 @@ import pathlib
 import shutil
 import sys
 import tarfile
+import time
 from typing import IO, MutableMapping, Union
 
 from .common import (
@@ -24,6 +25,7 @@ from .common import (
     install_runtime,
     patch_file,
     update_ensurepip,
+    update_sbom_checksums,
 )
 from ..common import (
     WIN32,
@@ -259,8 +261,6 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
 
     # Touch all updated files to ensure MSBuild rebuilds them
     # (The original files may have newer timestamps)
-    import time
-
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
@@ -268,8 +268,6 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     # Map SBOM file names to actual file paths
     # Update SBOM with correct checksums for updated expat files
     # Map SBOM file names to actual file paths
-    from relenv.build.common import update_sbom_checksums
-
     files_to_update = {}
     for target_file in updated_files:
         # SBOM uses relative paths from Python source root
