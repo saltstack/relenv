@@ -6,7 +6,9 @@ Installation and finalization functions for the build process.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import io
+import json
 import logging
 import os
 import os.path
@@ -73,6 +75,82 @@ def patch_file(path: PathLike, old: str, new: str) -> None:
         new_content += line + "\n"
     with open(path, "w") as fp:
         fp.write(new_content)
+
+
+def update_sbom_checksums(
+    source_dir: PathLike, files_to_update: MutableMapping[str, PathLike]
+) -> None:
+    """
+    Update checksums in sbom.spdx.json for modified files.
+
+    Python 3.12+ includes an SBOM (Software Bill of Materials) that tracks
+    file checksums. When we update files (e.g., expat sources), we need to
+    recalculate their checksums.
+
+    :param source_dir: Path to the Python source directory
+    :type source_dir: PathLike
+    :param files_to_update: Mapping of SBOM relative paths to actual file paths
+    :type files_to_update: MutableMapping[str, PathLike]
+    """
+    source_path = pathlib.Path(source_dir)
+    spdx_json = source_path / "Misc" / "sbom.spdx.json"
+
+    # SBOM only exists in Python 3.12+
+    if not spdx_json.exists():
+        log.debug("SBOM file not found, skipping checksum updates")
+        return
+
+    # Read the SBOM JSON
+    with open(spdx_json, "r") as f:
+        data = json.load(f)
+
+    # Compute checksums for each file
+    checksums = {}
+    for relative_path, file_path in files_to_update.items():
+        file_path = pathlib.Path(file_path)
+        if not file_path.exists():
+            log.warning("File not found for checksum: %s", file_path)
+            continue
+
+        # Compute SHA1 and SHA256
+        sha1 = hashlib.sha1()
+        sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            content = f.read()
+            sha1.update(content)
+            sha256.update(content)
+
+        checksums[relative_path] = [
+            {
+                "algorithm": "SHA1",
+                "checksumValue": sha1.hexdigest(),
+            },
+            {
+                "algorithm": "SHA256",
+                "checksumValue": sha256.hexdigest(),
+            },
+        ]
+        log.debug(
+            "Computed checksums for %s: SHA1=%s, SHA256=%s",
+            relative_path,
+            sha1.hexdigest(),
+            sha256.hexdigest(),
+        )
+
+    # Update the SBOM with new checksums
+    updated_count = 0
+    for file_entry in data.get("files", []):
+        file_name = file_entry.get("fileName")
+        if file_name in checksums:
+            file_entry["checksums"] = checksums[file_name]
+            updated_count += 1
+            log.info("Updated SBOM checksums for %s", file_name)
+
+    # Write back the updated SBOM
+    with open(spdx_json, "w") as f:
+        json.dump(data, f, indent=2)
+
+    log.info("Updated %d file checksums in SBOM", updated_count)
 
 
 def patch_shebang(path: PathLike, old: str, new: str) -> bool:
