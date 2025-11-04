@@ -409,6 +409,38 @@ def install_runtime(sitepackages: PathLike) -> None:
                 wfp.write(rfp.read())
 
 
+def copy_sbom_files(dirs: Dirs) -> None:
+    """
+    Copy SBOM files from Python source to the prefix directory.
+
+    SBOM files (Software Bill of Materials) document the build dependencies
+    and source file checksums. These files are available in Python 3.12+.
+
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    """
+    # Find the Python source directory in dirs.sources
+    python_source = None
+    if dirs.sources.exists():
+        # Look for Python-{version} directory
+        for entry in dirs.sources.iterdir():
+            if entry.is_dir() and entry.name.startswith("Python-"):
+                python_source = entry
+                break
+
+    if python_source:
+        sbom_files = ["sbom.spdx.json", "externals.spdx.json"]
+        source_misc_dir = python_source / "Misc"
+        for sbom_file in sbom_files:
+            source_sbom = source_misc_dir / sbom_file
+            if source_sbom.exists():
+                dest_sbom = pathlib.Path(dirs.prefix) / sbom_file
+                shutil.copy2(str(source_sbom), str(dest_sbom))
+                log.info("Copied %s to archive", sbom_file)
+            else:
+                log.debug("SBOM file %s not found (Python < 3.12?)", sbom_file)
+
+
 def finalize(
     env: MutableMapping[str, str],
     dirs: Dirs,
@@ -553,6 +585,9 @@ def finalize(
         runpip(MODULE_DIR.parent, upgrade=True)
     else:
         runpip("relenv", upgrade=True)
+
+    copy_sbom_files(dirs)
+
     globs = [
         "/bin/python*",
         "/bin/pip*",
@@ -563,6 +598,7 @@ def finalize(
         "*.so",
         "/lib/*.so.*",
         "*.py",
+        "*.spdx.json",  # Include SBOM files
         # Mac specific, factor this out
         "*.dylib",
     ]

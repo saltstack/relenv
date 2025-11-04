@@ -21,6 +21,7 @@ from .install import (
     create_archive,
     patch_file,
     update_sbom_checksums,
+    copy_sbom_files,
 )
 
 from .builder import (
@@ -43,6 +44,7 @@ __all__ = [
     "update_ensurepip",
     "patch_file",
     "update_sbom_checksums",
+    "copy_sbom_files",
     # Builders (specific build functions)
     "build_openssl",
     "build_openssl_fips",

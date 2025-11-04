@@ -13,6 +13,7 @@ import pathlib
 import shutil
 import tarfile
 import tempfile
+import time
 import urllib.request
 from typing import IO, MutableMapping
 
@@ -24,6 +25,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    update_sbom_checksums,
 )
 from ..common import LINUX, Version, arches, runcmd
 

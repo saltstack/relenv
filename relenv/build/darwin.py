@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import glob
 import io
+import os
 import pathlib
 import shutil
 import tarfile
+import time
 import urllib.request
 from typing import IO, MutableMapping
 
@@ -22,6 +24,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    update_sbom_checksums,
 )
 
 ARCHES = arches[DARWIN]
