@@ -2422,6 +2422,7 @@ def test_relenv_sbom_includes_python(build, minor_version):
 
     # Verify Python package has correct fields
     assert "versionInfo" in python_pkg, "Python package should have version"
+    # The versionInfo should match the full Python version (e.g., "3.11.14")
     assert (
         python_pkg["versionInfo"] == minor_version
     ), f"Python version should be {minor_version}, got {python_pkg.get('versionInfo')}"

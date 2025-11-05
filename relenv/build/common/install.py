@@ -642,6 +642,16 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
     timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
     doc_name = f"relenv-{env.get('RELENV_PY_VERSION', 'unknown')}-{env.get('RELENV_HOST', 'unknown')}"
 
+    # Create relationships - SPDX requires DESCRIBES relationship
+    # The document DESCRIBES the Python package (the primary component)
+    relationships = [
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElement": "SPDXRef-PACKAGE-Python",
+            "relationshipType": "DESCRIBES",
+        }
+    ]
+
     sbom = {
         "SPDXID": "SPDXRef-DOCUMENT",
         "spdxVersion": "SPDX-2.3",
@@ -658,6 +668,7 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
             "vulnerability scanning and compliance.",
         },
         "packages": packages,
+        "relationships": relationships,
     }
 
     # Write the SBOM file
