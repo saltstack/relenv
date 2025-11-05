@@ -1,19 +1,22 @@
-# Copyright 2022-2025 Broadcom.
+# Copyright 2022-2026 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 """
 SBOM (Software Bill of Materials) management for relenv.
 """
+
 from __future__ import annotations
 
-import argparse
 import json
 import pathlib
 import sys
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import argparse
 
 
-def get_python_version(relenv_root: pathlib.Path) -> Optional[Tuple[int, int, int]]:
+def get_python_version(relenv_root: pathlib.Path) -> tuple[int, int, int] | None:
     """
     Get the Python version of a relenv environment.
 
@@ -73,20 +76,17 @@ def find_relenv_root(start_path: pathlib.Path) -> pathlib.Path:
         return path.parent
 
     # Not a relenv environment
-    raise FileNotFoundError(
-        f"Not a relenv environment: {start_path}\n"
-        f"Expected to find bin/python3 or bin/python3.exe"
-    )
+    raise FileNotFoundError(f"Not a relenv environment: {start_path}\nExpected to find bin/python3 or bin/python3.exe")
 
 
-def scan_installed_packages(relenv_root: pathlib.Path) -> List[Dict[str, Any]]:
+def scan_installed_packages(relenv_root: pathlib.Path) -> list[dict[str, Any]]:
     """
     Scan for installed Python packages in a relenv environment.
 
     :param relenv_root: Path to relenv environment root
     :return: List of package dicts with SPDX metadata
     """
-    packages: List[Dict[str, Any]] = []
+    packages: list[dict[str, Any]] = []
 
     # Find the Python site-packages directory
     lib_dir = relenv_root / "lib"
@@ -102,7 +102,7 @@ def scan_installed_packages(relenv_root: pathlib.Path) -> List[Dict[str, Any]]:
             parts = dist_name.rsplit("-", 1)
             if len(parts) == 2:
                 pkg_name, pkg_version = parts
-                package: Dict[str, Any] = {
+                package: dict[str, Any] = {
                     "SPDXID": f"SPDXRef-PACKAGE-python-{pkg_name}",
                     "name": pkg_name,
                     "versionInfo": pkg_version,
@@ -138,15 +138,14 @@ def update_sbom(relenv_root: pathlib.Path) -> None:
     major, minor, micro = py_version
     if major < 3 or (major == 3 and minor < 12):
         raise RuntimeError(
-            f"SBOM generation is only supported for Python 3.12+. "
-            f"This environment is Python {major}.{minor}.{micro}"
+            f"SBOM generation is only supported for Python 3.12+. This environment is Python {major}.{minor}.{micro}"
         )
 
     sbom_path = relenv_root / "relenv-sbom.spdx.json"
 
     # Load existing SBOM if it exists
     if sbom_path.exists():
-        with open(sbom_path, "r") as f:
+        with open(sbom_path) as f:
             sbom = json.load(f)
     else:
         # Create new SBOM if it doesn't exist
@@ -164,9 +163,7 @@ def update_sbom(relenv_root: pathlib.Path) -> None:
 
     # Separate build dependencies from Python packages
     build_deps = [
-        pkg
-        for pkg in sbom.get("packages", [])
-        if not pkg.get("SPDXID", "").startswith("SPDXRef-PACKAGE-python-")
+        pkg for pkg in sbom.get("packages", []) if not pkg.get("SPDXID", "").startswith("SPDXRef-PACKAGE-python-")
     ]
 
     # Scan for currently installed packages

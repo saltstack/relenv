@@ -19,7 +19,7 @@ import shutil
 import sys
 import tarfile
 import time
-from typing import IO, TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import IO, TYPE_CHECKING, Any
 
 import relenv.relocate
 from relenv.common import (
@@ -425,8 +425,9 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
     :param dirs: The working directories
     :type dirs: ``relenv.build.common.Dirs``
     """
-    from .builder import get_dependency_version
     import relenv
+
+    from .builder import get_dependency_version
 
     python_version = dirs.version
 
@@ -438,10 +439,10 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
     platform = platform_map.get(sys.platform, sys.platform)
 
     # Build dependency list - get versions from python-versions.json
-    packages: List[Dict[str, Any]] = []
+    packages: list[dict[str, Any]] = []
 
     # Add Python itself as the primary package
-    python_package: Dict[str, Any] = {
+    python_package: dict[str, Any] = {
         "SPDXID": "SPDXRef-PACKAGE-Python",
         "name": "Python",
         "versionInfo": python_version,
@@ -503,8 +504,7 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
             [
                 (
                     "tirpc",
-                    "https://downloads.sourceforge.net/project/libtirpc/"
-                    "libtirpc/{version}/libtirpc-{version}.tar.bz2",
+                    "https://downloads.sourceforge.net/project/libtirpc/libtirpc/{version}/libtirpc-{version}.tar.bz2",
                 ),
                 (
                     "krb5",
@@ -526,7 +526,7 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
             )
             checksum = dep_info.get("sha256", "")
 
-            package: Dict[str, Any] = {
+            package: dict[str, Any] = {
                 "SPDXID": f"SPDXRef-PACKAGE-{dep_name}",
                 "name": dep_name,
                 "versionInfo": version,
@@ -557,7 +557,7 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
             parts = dist_name.rsplit("-", 1)
             if len(parts) == 2:
                 pkg_name, pkg_version = parts
-                package2: Dict[str, Any] = {
+                package2: dict[str, Any] = {
                     "SPDXID": f"SPDXRef-PACKAGE-python-{pkg_name}",
                     "name": pkg_name,
                     "versionInfo": pkg_version,
@@ -575,11 +575,12 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
     bundled_deps = []
 
     # Try to read Python's SBOM to get accurate versions of bundled components
-    python_sbom_path = pathlib.Path(str(dirs.source)) / "Misc" / "sbom.spdx.json"
-    python_bundled_versions: Dict[str, Dict[str, Any]] = {}
+    python_source_dir = dirs.sources / f"Python-{dirs.version}"
+    python_sbom_path = python_source_dir / "Misc" / "sbom.spdx.json"
+    python_bundled_versions: dict[str, dict[str, Any]] = {}
     if python_sbom_path.exists():
         try:
-            with io.open(python_sbom_path, "r") as fp:
+            with open(python_sbom_path) as fp:
                 python_sbom = json.load(fp)
                 for pkg in python_sbom.get("packages", []):
                     pkg_name = pkg.get("name")
@@ -602,7 +603,7 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
         for comp_name, comp_desc in bundled_components.items():
             if comp_name in python_bundled_versions:
                 src_pkg = python_bundled_versions[comp_name]
-                bundled_pkg: Dict[str, Any] = {
+                bundled_pkg: dict[str, Any] = {
                     "SPDXID": f"SPDXRef-PACKAGE-{comp_name}",
                     "name": comp_name,
                     "versionInfo": src_pkg.get("versionInfo", "NOASSERTION"),
@@ -627,6 +628,16 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
     timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
     doc_name = f"relenv-{env.get('RELENV_PY_VERSION', 'unknown')}-{env.get('RELENV_HOST', 'unknown')}"
 
+    # Create relationships - SPDX requires DESCRIBES relationship
+    # The document DESCRIBES the Python package (the primary component)
+    relationships = [
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElement": "SPDXRef-PACKAGE-Python",
+            "relationshipType": "DESCRIBES",
+        }
+    ]
+
     sbom = {
         "SPDXID": "SPDXRef-DOCUMENT",
         "spdxVersion": "SPDX-2.3",
@@ -643,11 +654,12 @@ def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
             "vulnerability scanning and compliance.",
         },
         "packages": packages,
+        "relationships": relationships,
     }
 
     # Write the SBOM file
     sbom_path = pathlib.Path(dirs.prefix) / "relenv-sbom.spdx.json"
-    with io.open(sbom_path, "w") as fp:
+    with open(sbom_path, "w") as fp:
         json.dump(sbom, fp, indent=2)
     log.info(
         "Generated relenv-sbom.spdx.json with %d packages (Python %s + dependencies + pip packages)",

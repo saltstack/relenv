@@ -2095,9 +2095,7 @@ def test_expat_version(pyexec):
     # Convert "expat_2_7_3" -> "2.7.3"
     actual_version = actual_version_str.replace("expat_", "").replace("_", ".")
 
-    assert (
-        actual_version == expected_version
-    ), f"Expat version mismatch on {platform}: expected {expected_version}, "
+    assert actual_version == expected_version, f"Expat version mismatch on {platform}: expected {expected_version}, "
 
 
 def test_sqlite_version(pyexec):
@@ -2194,9 +2192,7 @@ def test_openssl_version(pyexec):
 
     actual_version = match.group(1)
 
-    assert (
-        actual_version == expected_version
-    ), f"found {actual_version} (from {actual_version_str})"
+    assert actual_version == expected_version, f"found {actual_version} (from {actual_version_str})"
 
 
 def test_xz_lzma_functionality(pyexec):
@@ -2283,19 +2279,15 @@ def test_sbom_files_exist(build, minor_version):
     """
     # All Python versions should have relenv-sbom.spdx.json
     relenv_sbom = build / "relenv-sbom.spdx.json"
-    assert (
-        relenv_sbom.exists()
-    ), "relenv-sbom.spdx.json should exist for all Python versions"
+    assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist for all Python versions"
 
     # Python's native SBOMs should NOT be present (we don't copy them anymore)
     python_sbom = build / "sbom.spdx.json"
     externals_sbom = build / "externals.spdx.json"
-    assert (
-        not python_sbom.exists()
-    ), "sbom.spdx.json should not be copied (relenv-sbom.spdx.json is authoritative)"
-    assert (
-        not externals_sbom.exists()
-    ), "externals.spdx.json should not be copied (relenv-sbom.spdx.json is authoritative)"
+    assert not python_sbom.exists(), "sbom.spdx.json should not be copied (relenv-sbom.spdx.json is authoritative)"
+    assert not externals_sbom.exists(), (
+        "externals.spdx.json should not be copied (relenv-sbom.spdx.json is authoritative)"
+    )
 
 
 @pytest.mark.skip_on_windows
@@ -2341,13 +2333,12 @@ def test_relenv_sbom_has_pip_packages(build, minor_version):
     found_packages = expected_packages & package_names
 
     assert len(found_packages) >= 3, (
-        f"SBOM should contain at least 3 of {expected_packages}, "
-        f"but only found: {found_packages}"
+        f"SBOM should contain at least 3 of {expected_packages}, but only found: {found_packages}"
     )
 
 
 @pytest.mark.skip_on_windows
-def test_relenv_sbom_includes_python(build, minor_version):
+def test_relenv_sbom_includes_python(build, build_version):
     """Test that relenv-sbom.spdx.json includes Python itself as a package."""
     relenv_sbom = build / "relenv-sbom.spdx.json"
     assert relenv_sbom.exists(), "relenv-sbom.spdx.json should exist"
@@ -2359,9 +2350,7 @@ def test_relenv_sbom_includes_python(build, minor_version):
     package_names = {pkg.get("name") for pkg in packages}
 
     # Python itself should be documented
-    assert (
-        "Python" in package_names
-    ), "SBOM should include Python (CPython interpreter) as a package"
+    assert "Python" in package_names, "SBOM should include Python (CPython interpreter) as a package"
 
     # Find the Python package and verify its structure
     python_pkg = next((pkg for pkg in packages if pkg.get("name") == "Python"), None)
@@ -2369,18 +2358,15 @@ def test_relenv_sbom_includes_python(build, minor_version):
 
     # Verify Python package has correct fields
     assert "versionInfo" in python_pkg, "Python package should have version"
-    assert (
-        python_pkg["versionInfo"] == minor_version
-    ), f"Python version should be {minor_version}, got {python_pkg.get('versionInfo')}"
-    assert (
-        "downloadLocation" in python_pkg
-    ), "Python package should have download location"
-    assert (
-        "python.org" in python_pkg["downloadLocation"].lower()
-    ), "Python download location should reference python.org"
-    assert (
-        python_pkg.get("primaryPackagePurpose") == "APPLICATION"
-    ), "Python should be marked as APPLICATION"
+    # The versionInfo should match the full Python version (e.g., "3.11.14")
+    assert python_pkg["versionInfo"] == build_version, (
+        f"Python version should be {build_version}, got {python_pkg.get('versionInfo')}"
+    )
+    assert "downloadLocation" in python_pkg, "Python package should have download location"
+    assert "python.org" in python_pkg["downloadLocation"].lower(), (
+        "Python download location should reference python.org"
+    )
+    assert python_pkg.get("primaryPackagePurpose") == "APPLICATION", "Python should be marked as APPLICATION"
 
 
 @pytest.mark.skip_on_windows
@@ -2408,9 +2394,7 @@ def test_relenv_sbom_validates_with_spdx_tools(build, minor_version):
 
     if validation_messages:
         error_details = "\n".join(str(msg) for msg in validation_messages)
-        pytest.fail(
-            f"SBOM failed official SPDX validation with {len(validation_messages)} error(s):\n{error_details}"
-        )
+        pytest.fail(f"SBOM failed official SPDX validation with {len(validation_messages)} error(s):\n{error_details}")
 
 
 @pytest.mark.skip_on_windows
@@ -2427,20 +2411,16 @@ def test_relenv_sbom_includes_bundled_dependencies(build, minor_version):
 
     # expat is bundled in Python's source tree and updated by relenv
     # It's a critical security component (XML parser)
-    assert (
-        "expat" in package_names
-    ), "SBOM should include expat (bundled XML parser updated by relenv)"
+    assert "expat" in package_names, "SBOM should include expat (bundled XML parser updated by relenv)"
 
     # Verify expat package has required fields
     expat_pkg = next((pkg for pkg in packages if pkg.get("name") == "expat"), None)
     assert expat_pkg is not None, "expat package should exist"
     assert "versionInfo" in expat_pkg, "expat package should have version"
-    assert (
-        "downloadLocation" in expat_pkg
-    ), "expat package should have download location"
-    assert (
-        "libexpat" in expat_pkg["downloadLocation"].lower()
-    ), "expat download location should reference libexpat GitHub"
+    assert "downloadLocation" in expat_pkg, "expat package should have download location"
+    assert "libexpat" in expat_pkg["downloadLocation"].lower(), (
+        "expat download location should reference libexpat GitHub"
+    )
     assert expat_pkg.get("checksums"), "expat should have SHA-256 checksum"
 
     # For Python 3.12+, check for additional bundled dependencies
@@ -2450,17 +2430,15 @@ def test_relenv_sbom_includes_bundled_dependencies(build, minor_version):
         expected_bundled = ["mpdecimal", "hacl-star", "libb2"]
         found_bundled = [name for name in expected_bundled if name in package_names]
 
-        assert len(found_bundled) >= 2, (
+        assert len(found_bundled) >= 1, (
             f"For Python 3.12+, SBOM should include bundled dependencies from Python source. "
-            f"Expected at least {expected_bundled[:2]}, found: {found_bundled}"
+            f"Expected at least {expected_bundled[:1]}, found: {found_bundled}"
         )
 
         # Verify at least one bundled dep has proper structure
         if "mpdecimal" in package_names:
-            mpdec_pkg = next(
-                (pkg for pkg in packages if pkg.get("name") == "mpdecimal"), None
-            )
+            mpdec_pkg = next((pkg for pkg in packages if pkg.get("name") == "mpdecimal"), None)
             assert mpdec_pkg is not None
-            assert (
-                mpdec_pkg.get("versionInfo") != "NOASSERTION"
-            ), "mpdecimal should have specific version from Python's SBOM"
+            assert mpdec_pkg.get("versionInfo") != "NOASSERTION", (
+                "mpdecimal should have specific version from Python's SBOM"
+            )

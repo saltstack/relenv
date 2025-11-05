@@ -1,17 +1,21 @@
-# Copyright 2022-2025 Broadcom.
+# Copyright 2022-2026 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 """
 Tests for SBOM (Software Bill of Materials) functionality.
 """
+
 from __future__ import annotations
 
 import json
-import pathlib
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
 
 from relenv import sbom
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 def test_find_relenv_root_from_root(tmp_path: pathlib.Path) -> None:
@@ -287,9 +291,7 @@ def test_update_sbom_python_version_too_old(tmp_path: pathlib.Path) -> None:
 
     # Mock Python version to be 3.10
     with mock.patch("relenv.sbom.get_python_version", return_value=(3, 10, 18)):
-        with pytest.raises(
-            RuntimeError, match="SBOM generation is only supported for Python 3.12+"
-        ):
+        with pytest.raises(RuntimeError, match="SBOM generation is only supported for Python 3.12+"):
             sbom.update_sbom(tmp_path)
 
 

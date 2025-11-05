@@ -18,7 +18,7 @@ import sys
 import tarfile
 import time
 from collections.abc import MutableMapping
-from typing import IO, Union
+from typing import IO
 
 from ..common import (
     MODULE_DIR,
@@ -36,7 +36,6 @@ from .common import (
     install_runtime,
     patch_file,
     update_ensurepip,
-    update_sbom_checksums,
 )
 
 log = logging.getLogger(__name__)
@@ -1012,6 +1011,10 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     else:
         runpip("relenv")
 
+    from relenv.build.common.install import generate_relenv_sbom
+
+    generate_relenv_sbom(env, dirs)
+
     for root, _, files in os.walk(dirs.prefix):
         for file in files:
             if file.endswith(".pyc"):
@@ -1024,6 +1027,7 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "*.dll",
         "*.lib",
         "*.whl",
+        "*.spdx.json",
         "/Include/*",
         "/Lib/site-packages/*",
     ]
