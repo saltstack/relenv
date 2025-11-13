@@ -1,2 +1,3 @@
 recursive-include relenv/_scripts *
-recursive-include relenv/_toolchain *
+recursive-include relenv/_resources *
+include relenv/python-versions.json
