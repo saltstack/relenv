@@ -23,6 +23,7 @@ from .common import (
     format_shebang,
     relative_interpreter,
 )
+from .pyversions import Version, python_versions
 
 
 @contextlib.contextmanager
@@ -251,8 +252,32 @@ def main(args: argparse.Namespace) -> None:
         print(
             "Warning: Cross compilation support is experimental and is not fully tested or working!"
         )
+
+    # Resolve version (support minor version like "3.12" or full version like "3.12.7")
+    requested = Version(args.python)
+
+    if requested.micro:
+        # Full version specified (e.g., "3.12.7")
+        pyversions = python_versions()
+        if requested not in pyversions:
+            print(f"Unknown version {requested}")
+            strversions = "\n".join([str(_) for _ in pyversions])
+            print(f"Known versions are:\n{strversions}")
+            sys.exit(1)
+        create_version = requested
+    else:
+        # Minor version specified (e.g., "3.12"), resolve to latest
+        pyversions = python_versions(args.python)
+        if not pyversions:
+            print(f"Unknown minor version {requested}")
+            all_versions = python_versions()
+            strversions = "\n".join([str(_) for _ in all_versions])
+            print(f"Known versions are:\n{strversions}")
+            sys.exit(1)
+        create_version = sorted(list(pyversions.keys()))[-1]
+
     try:
-        create(name, arch=args.arch, version=args.python)
+        create(name, arch=args.arch, version=str(create_version))
     except CreateException as exc:
         print(exc)
         sys.exit(1)
