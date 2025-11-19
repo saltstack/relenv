@@ -1,3 +1,14 @@
+0.22.0
+======
+
+* Minor Version Support for relenv create (commit 3582abc)
+* Dependency Version Management (commit 7965c3b)
+* Full mypy --strict Compliance (commits 6f78084, d6f2edb, f95c43c, c3934e4, 592b9de)
+* Build UI Improvements (commit 567ce62)
+* Updated expat for all Python versions (commit 7620fec)
+* Ensure python-versions.json is shipped in whl file
+
+
 0.21.2
 ======
 
