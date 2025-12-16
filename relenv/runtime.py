@@ -1270,3 +1270,8 @@ def bootstrap() -> None:
     setup_crossroot()
     install_cargo_config()
     sys.meta_path = [importer] + sys.meta_path
+
+    # For Python 3.13+, sysconfig became a package so the importer doesn't
+    # intercept it. Manually wrap it here.
+    if sys.version_info >= (3, 13):
+        wrap_sysconfig("sysconfig")
