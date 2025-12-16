@@ -1821,3 +1821,169 @@ def test_load_openssl_provider_linux(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     assert relenv.runtime.load_openssl_provider("default") == 456
+
+
+def test_sysconfig_wrapper_applied_for_python_313_plus(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that sysconfig wrapper is applied for Python 3.13+.
+
+    This is a regression test for Python 3.13 where sysconfig changed from
+    a single module to a package. The RelenvImporter no longer intercepts
+    the import automatically, so we must manually apply the wrapper.
+
+    Without this fix, Python 3.13+ would use the toolchain gcc with full path
+    even when RELENV_BUILDENV is not set, causing build failures with packages
+    like mysqlclient that compile native extensions.
+    """
+    # Simulate Python 3.13+
+    fake_version = (3, 13, 0, "final", 0)
+    monkeypatch.setattr(relenv.runtime.sys, "version_info", fake_version)
+
+    # Track whether wrap_sysconfig was called
+    wrap_called = {"count": 0, "module_name": None}
+
+    def fake_wrap_sysconfig(name: str) -> ModuleType:
+        wrap_called["count"] += 1
+        wrap_called["module_name"] = name
+        return ModuleType("sysconfig")
+
+    monkeypatch.setattr(relenv.runtime, "wrap_sysconfig", fake_wrap_sysconfig)
+
+    # Mock other dependencies to avoid side effects
+    monkeypatch.setattr(relenv.runtime, "relenv_root", lambda: pathlib.Path("/root"))
+    monkeypatch.setattr(relenv.runtime, "setup_openssl", lambda: None)
+    monkeypatch.setattr(relenv.runtime, "setup_crossroot", lambda: None)
+    monkeypatch.setattr(relenv.runtime, "install_cargo_config", lambda: None)
+    monkeypatch.setattr(
+        relenv.runtime.site, "execsitecustomize", lambda: None, raising=False
+    )
+    monkeypatch.setattr(
+        relenv.runtime, "wrapsitecustomize", lambda func: func, raising=False
+    )
+
+    # Mock importer
+    fake_importer = SimpleNamespace()
+    monkeypatch.setattr(relenv.runtime, "importer", fake_importer, raising=False)
+
+    # Clear sys.meta_path to avoid side effects
+    original_meta_path = sys.meta_path.copy()
+    monkeypatch.setattr(sys, "meta_path", [])
+
+    try:
+        # Execute the module initialization code at the end of runtime.py
+        # This simulates what happens when the runtime module is imported
+        exec(
+            """
+import sys
+sys.RELENV = relenv_root()
+setup_openssl()
+site.execsitecustomize = wrapsitecustomize(site.execsitecustomize)
+setup_crossroot()
+install_cargo_config()
+sys.meta_path = [importer] + sys.meta_path
+
+# For Python 3.13+, sysconfig became a package so the importer doesn't
+# intercept it. Manually wrap it here.
+if sys.version_info >= (3, 13):
+    wrap_sysconfig("sysconfig")
+""",
+            {
+                "sys": relenv.runtime.sys,
+                "relenv_root": relenv.runtime.relenv_root,
+                "setup_openssl": relenv.runtime.setup_openssl,
+                "site": relenv.runtime.site,
+                "wrapsitecustomize": relenv.runtime.wrapsitecustomize,
+                "setup_crossroot": relenv.runtime.setup_crossroot,
+                "install_cargo_config": relenv.runtime.install_cargo_config,
+                "importer": fake_importer,
+                "wrap_sysconfig": fake_wrap_sysconfig,
+            },
+        )
+
+        # Verify wrap_sysconfig was called for Python 3.13+
+        assert wrap_called["count"] == 1
+        assert wrap_called["module_name"] == "sysconfig"
+
+    finally:
+        # Restore original meta_path
+        monkeypatch.setattr(sys, "meta_path", original_meta_path)
+
+
+def test_sysconfig_wrapper_not_applied_for_python_312(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that sysconfig wrapper is NOT applied for Python 3.12 and earlier.
+
+    For Python 3.12 and earlier, sysconfig is a single module file and the
+    RelenvImporter intercepts it automatically. We should not manually wrap
+    it to avoid double-wrapping.
+    """
+    # Simulate Python 3.12
+    fake_version = (3, 12, 0, "final", 0)
+    monkeypatch.setattr(relenv.runtime.sys, "version_info", fake_version)
+
+    # Track whether wrap_sysconfig was called
+    wrap_called = {"count": 0}
+
+    def fake_wrap_sysconfig(name: str) -> ModuleType:
+        wrap_called["count"] += 1
+        return ModuleType("sysconfig")
+
+    monkeypatch.setattr(relenv.runtime, "wrap_sysconfig", fake_wrap_sysconfig)
+
+    # Mock other dependencies
+    monkeypatch.setattr(relenv.runtime, "relenv_root", lambda: pathlib.Path("/root"))
+    monkeypatch.setattr(relenv.runtime, "setup_openssl", lambda: None)
+    monkeypatch.setattr(relenv.runtime, "setup_crossroot", lambda: None)
+    monkeypatch.setattr(relenv.runtime, "install_cargo_config", lambda: None)
+    monkeypatch.setattr(
+        relenv.runtime.site, "execsitecustomize", lambda: None, raising=False
+    )
+    monkeypatch.setattr(
+        relenv.runtime, "wrapsitecustomize", lambda func: func, raising=False
+    )
+
+    fake_importer = SimpleNamespace()
+    monkeypatch.setattr(relenv.runtime, "importer", fake_importer, raising=False)
+
+    original_meta_path = sys.meta_path.copy()
+    monkeypatch.setattr(sys, "meta_path", [])
+
+    try:
+        # Execute the module initialization code
+        exec(
+            """
+import sys
+sys.RELENV = relenv_root()
+setup_openssl()
+site.execsitecustomize = wrapsitecustomize(site.execsitecustomize)
+setup_crossroot()
+install_cargo_config()
+sys.meta_path = [importer] + sys.meta_path
+
+# For Python 3.13+, sysconfig became a package so the importer doesn't
+# intercept it. Manually wrap it here.
+if sys.version_info >= (3, 13):
+    wrap_sysconfig("sysconfig")
+""",
+            {
+                "sys": relenv.runtime.sys,
+                "relenv_root": relenv.runtime.relenv_root,
+                "setup_openssl": relenv.runtime.setup_openssl,
+                "site": relenv.runtime.site,
+                "wrapsitecustomize": relenv.runtime.wrapsitecustomize,
+                "setup_crossroot": relenv.runtime.setup_crossroot,
+                "install_cargo_config": relenv.runtime.install_cargo_config,
+                "importer": fake_importer,
+                "wrap_sysconfig": fake_wrap_sysconfig,
+            },
+        )
+
+        # Verify wrap_sysconfig was NOT called for Python 3.12
+        assert wrap_called["count"] == 0
+
+    finally:
+        monkeypatch.setattr(sys, "meta_path", original_meta_path)

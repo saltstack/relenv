@@ -68,6 +68,9 @@ def _toolchain_cache_root() -> Optional[pathlib.Path]:
         if override.strip().lower() == "none":
             return None
         return pathlib.Path(override).expanduser()
+    # If RELENV_DATA is set, return None to use DATA_DIR/toolchain
+    if "RELENV_DATA" in os.environ:
+        return None
     cache_home = os.environ.get("XDG_CACHE_HOME")
     if cache_home:
         base = pathlib.Path(cache_home)
