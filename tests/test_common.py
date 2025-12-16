@@ -486,11 +486,11 @@ def test_toolchain_respects_relenv_data(
         relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
     )
 
-    # Set RELENV_DATA and reload the module to pick up the new DATA_DIR
+    # Set RELENV_DATA environment variable
     monkeypatch.setenv("RELENV_DATA", str(data_dir))
-    import importlib
 
-    importlib.reload(relenv.common)
+    # Patch DATA_DIR to reflect the new RELENV_DATA value
+    monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir)
 
     # Verify toolchain_root_dir returns DATA_DIR/toolchain
     from relenv.common import toolchain_root_dir
@@ -519,11 +519,6 @@ def test_toolchain_uses_cache_without_relenv_data(
 
     # Set XDG_CACHE_HOME to control cache location
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / ".cache"))
-
-    # Reload module to pick up environment changes
-    import importlib
-
-    importlib.reload(relenv.common)
 
     from relenv.common import toolchain_root_dir
 
