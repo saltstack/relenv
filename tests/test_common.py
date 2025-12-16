@@ -464,6 +464,73 @@ def test_makepath_oserror() -> None:
     assert case == os.path.normcase(expected)
 
 
+def test_toolchain_respects_relenv_data(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Test that RELENV_DATA environment variable controls toolchain location.
+
+    This is a regression test for issue #XXX where RELENV_DATA was ignored
+    in version 0.20.2+ after toolchains were moved to a cache directory.
+    When RELENV_DATA is set (as in saltstack CI pipelines), the toolchain
+    should be found in $RELENV_DATA/toolchain, not in the cache directory.
+    """
+    data_dir = tmp_path / "custom_data"
+    triplet = "x86_64-linux-gnu"
+    toolchain_path = data_dir / "toolchain" / triplet
+    toolchain_path.mkdir(parents=True)
+
+    # Patch sys.platform to simulate Linux
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(
+        relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
+    )
+
+    # Set RELENV_DATA and reload the module to pick up the new DATA_DIR
+    monkeypatch.setenv("RELENV_DATA", str(data_dir))
+    import importlib
+
+    importlib.reload(relenv.common)
+
+    # Verify toolchain_root_dir returns DATA_DIR/toolchain
+    from relenv.common import toolchain_root_dir
+
+    result = toolchain_root_dir()
+    assert result == data_dir / "toolchain"
+
+
+def test_toolchain_uses_cache_without_relenv_data(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Test that toolchain uses cache directory when RELENV_DATA is not set.
+
+    When RELENV_DATA is not set, the toolchain should be stored in the
+    cache directory (~/.cache/relenv/toolchains or $XDG_CACHE_HOME/relenv/toolchains)
+    to allow reuse across different relenv environments.
+    """
+    cache_dir = tmp_path / ".cache" / "relenv" / "toolchains"
+
+    # Patch sys.platform to simulate Linux
+    monkeypatch.setattr(sys, "platform", "linux")
+
+    # Remove RELENV_DATA if set
+    monkeypatch.delenv("RELENV_DATA", raising=False)
+
+    # Set XDG_CACHE_HOME to control cache location
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / ".cache"))
+
+    # Reload module to pick up environment changes
+    import importlib
+
+    importlib.reload(relenv.common)
+
+    from relenv.common import toolchain_root_dir
+
+    result = toolchain_root_dir()
+    assert result == cache_dir
+
+
 def test_copyright_headers() -> None:
     """Verify all Python source files have the correct copyright header."""
     expected_header = (
