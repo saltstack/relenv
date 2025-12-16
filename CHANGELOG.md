@@ -1,3 +1,13 @@
+0.22.1
+======
+
+* Fix RELENV_DATA environment variable regression (commit 19c7050)
+* Fix 3.13 sysconfig (commit 209ad7e)
+* Update Python versions: 3.13.11, 3.13.10, 3.13.9, 3.9.25 (commit dc8a37f)
+* Update dependencies: sqlite 3.51.1.0, libxcrypt 4.5.2 (commit dc8a37f)
+* Fix failing unit tests (commit 0e36899)
+
+
 0.22.0
 ======
 
