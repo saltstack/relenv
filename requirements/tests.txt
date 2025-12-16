@@ -5,3 +5,4 @@ pytest
 pytest-skip-markers
 swig
 ppbt; sys_platform == 'linux'
+spdx-tools  # For SBOM validation in tests
