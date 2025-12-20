@@ -15,8 +15,13 @@ from types import FrameType, ModuleType
 
 from . import darwin, linux, windows
 from .common import builds
-from ..common import DEFAULT_PYTHON, build_arch
-from ..pyversions import Version, python_versions
+from ..common import build_arch
+from ..pyversions import (
+    Version,
+    get_default_python_version,
+    python_versions,
+    resolve_python_version,
+)
 
 
 def platform_module() -> ModuleType:
@@ -62,11 +67,12 @@ def setup_parser(
             "logs, src, build, and previous tarball."
         ),
     )
+    default_version = get_default_python_version()
     build_subparser.add_argument(
         "--python",
-        default=DEFAULT_PYTHON,
+        default=default_version,
         type=str,
-        help="The python version [default: %(default)s]",
+        help="The python version (e.g., 3.10, 3.13.7) [default: %(default)s]",
     )
     build_subparser.add_argument(
         "--no-cleanup",
@@ -146,27 +152,17 @@ def main(args: argparse.Namespace) -> None:
         print(f"Unsupported platform: {sys.platform}")
         sys.exit(1)
 
-    requested = Version(args.python)
-
-    if requested.micro:
+    try:
+        build_version_str = resolve_python_version(args.python)
+    except RuntimeError as e:
+        print(f"Error: {e}")
         pyversions = python_versions()
-        if requested not in pyversions:
-            print(f"Unknown version {requested}")
-            strversions = "\n".join([str(_) for _ in pyversions])
-            print(f"Known versions are:\n{strversions}")
-            sys.exit(1)
-        build_version = requested
-    else:
-        pyversions = python_versions(args.python)
-        build_version = sorted(list(pyversions.keys()))[-1]
+        strversions = "\n".join([str(_) for _ in pyversions])
+        print(f"Known versions are:\n{strversions}")
+        sys.exit(1)
 
-    # print(pyversions)
-    # print(pyversions[0].major)
-    # print(pyversions[0].minor)
-    # print(pyversions[0].micro)
-    # print(pyversions[0].pre)
-    # print(pyversions[0].post)
-    # print(pyversions)
+    build_version = Version(build_version_str)
+    pyversions = python_versions()
     print(f"Build Python {build_version}")
 
     # XXX

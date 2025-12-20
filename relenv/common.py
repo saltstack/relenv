@@ -40,8 +40,6 @@ log = logging.getLogger(__name__)
 
 MODULE_DIR = pathlib.Path(__file__).resolve().parent
 
-DEFAULT_PYTHON = "3.10.18"
-
 LINUX = "linux"
 WIN32 = "win32"
 DARWIN = "darwin"
