@@ -16,6 +16,7 @@ from relenv.relocate import (
     main,
     parse_readelf_d,
     patch_rpath,
+    remove_rpath,
 )
 
 pytestmark = [
@@ -276,3 +277,87 @@ def test_handle_elf_rpath_only(tmp_path: pathlib.Path) -> None:
                 assert not (proj.libs_dir / "fake.so.2").exists()
                 assert patch_rpath_mock.call_count == 1
                 patch_rpath_mock.assert_called_with(str(pybin), "$ORIGIN/../lib")
+
+
+def test_remove_rpath_with_existing_rpath(tmp_path: pathlib.Path) -> None:
+    """Test that remove_rpath removes an existing RPATH."""
+    path = str(tmp_path / "test.so")
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        with patch(
+            "relenv.relocate.parse_rpath",
+            return_value=["/some/absolute/path"],
+        ):
+            assert remove_rpath(path) is True
+
+
+def test_remove_rpath_no_existing_rpath(tmp_path: pathlib.Path) -> None:
+    """Test that remove_rpath succeeds when there's no RPATH to remove."""
+    path = str(tmp_path / "test.so")
+    with patch("relenv.relocate.parse_rpath", return_value=[]):
+        assert remove_rpath(path) is True
+
+
+def test_remove_rpath_failed(tmp_path: pathlib.Path) -> None:
+    """Test that remove_rpath returns False when patchelf fails."""
+    path = str(tmp_path / "test.so")
+    with patch("subprocess.run", return_value=MagicMock(returncode=1)):
+        with patch(
+            "relenv.relocate.parse_rpath",
+            return_value=["/some/absolute/path"],
+        ):
+            assert remove_rpath(path) is False
+
+
+def test_handle_elf_removes_rpath_when_no_relenv_libs(tmp_path: pathlib.Path) -> None:
+    """Test that handle_elf removes RPATH for binaries linking only to system libs."""
+    proj = LinuxProject(tmp_path / "proj")
+    module = proj.add_simple_elf("array.so", "lib", "python3.10", "lib-dynload")
+
+    # ldd output showing only system libraries
+    ldd_ret = """
+    linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
+    libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x0123456789)
+    libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0123456789)
+    """.encode()
+
+    with proj:
+        with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
+            with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
+                with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
+                    handle_elf(
+                        str(module), str(proj.libs_dir), True, str(proj.root_dir)
+                    )
+                    # Should remove RPATH, not patch it
+                    assert remove_rpath_mock.call_count == 1
+                    assert patch_rpath_mock.call_count == 0
+                    remove_rpath_mock.assert_called_with(str(module))
+
+
+def test_handle_elf_sets_rpath_when_relenv_libs_present(tmp_path: pathlib.Path) -> None:
+    """Test that handle_elf sets RPATH for binaries linking to relenv libs."""
+    proj = LinuxProject(tmp_path / "proj")
+    module = proj.add_simple_elf("_ssl.so", "lib", "python3.10", "lib-dynload")
+    libssl = proj.libs_dir / "libssl.so.3"
+    libssl.touch()
+
+    # ldd output showing relenv-built library
+    ldd_ret = """
+    linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
+    libssl.so.3 => {libssl} (0x0123456789)
+    libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x0123456789)
+    libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0123456789)
+    """.format(
+        libssl=libssl
+    ).encode()
+
+    with proj:
+        with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
+            with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
+                with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
+                    handle_elf(
+                        str(module), str(proj.libs_dir), True, str(proj.root_dir)
+                    )
+                    # Should patch RPATH, not remove it
+                    assert patch_rpath_mock.call_count == 1
+                    assert remove_rpath_mock.call_count == 0
+                    patch_rpath_mock.assert_called_with(str(module), "$ORIGIN/../..")

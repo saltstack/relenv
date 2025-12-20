@@ -427,7 +427,11 @@ def finalize(
     :type logfp: file
     """
     # Run relok8 to make sure the rpaths are relocatable.
-    relenv.relocate.main(dirs.prefix, log_file_name=str(dirs.logs / "relocate.py.log"))
+    # Modules that don't link to relenv libs will have their RPATH removed
+    relenv.relocate.main(
+        dirs.prefix,
+        log_file_name=str(dirs.logs / "relocate.py.log"),
+    )
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
 
