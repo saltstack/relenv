@@ -23,7 +23,11 @@ from .common import (
     format_shebang,
     relative_interpreter,
 )
-from .pyversions import Version, python_versions
+from .pyversions import (
+    get_default_python_version,
+    python_versions,
+    resolve_python_version,
+)
 
 
 @contextlib.contextmanager
@@ -73,11 +77,12 @@ def setup_parser(
         type=str,
         help="The host architecture [default: %(default)s]",
     )
+    default_version = get_default_python_version()
     subparser.add_argument(
         "--python",
-        default="3.10.17",
+        default=default_version,
         type=str,
-        help="The python version [default: %(default)s]",
+        help="The python version (e.g., 3.10, 3.13.7) [default: %(default)s]",
     )
 
 
@@ -106,8 +111,9 @@ def create(
     else:
         writeto = pathlib.Path(name).resolve()
 
+    # Version should be provided by main(), but handle None just in case
     if version is None:
-        version = "3.10.17"
+        version = get_default_python_version()
 
     if pathlib.Path(writeto).exists():
         raise CreateException("The requested path already exists.")
@@ -253,31 +259,17 @@ def main(args: argparse.Namespace) -> None:
             "Warning: Cross compilation support is experimental and is not fully tested or working!"
         )
 
-    # Resolve version (support minor version like "3.12" or full version like "3.12.7")
-    requested = Version(args.python)
-
-    if requested.micro:
-        # Full version specified (e.g., "3.12.7")
+    try:
+        create_version = resolve_python_version(args.python)
+    except RuntimeError as e:
+        print(f"Error: {e}")
         pyversions = python_versions()
-        if requested not in pyversions:
-            print(f"Unknown version {requested}")
-            strversions = "\n".join([str(_) for _ in pyversions])
-            print(f"Known versions are:\n{strversions}")
-            sys.exit(1)
-        create_version = requested
-    else:
-        # Minor version specified (e.g., "3.12"), resolve to latest
-        pyversions = python_versions(args.python)
-        if not pyversions:
-            print(f"Unknown minor version {requested}")
-            all_versions = python_versions()
-            strversions = "\n".join([str(_) for _ in all_versions])
-            print(f"Known versions are:\n{strversions}")
-            sys.exit(1)
-        create_version = sorted(list(pyversions.keys()))[-1]
+        strversions = "\n".join([str(_) for _ in pyversions])
+        print(f"Known versions are:\n{strversions}")
+        sys.exit(1)
 
     try:
-        create(name, arch=args.arch, version=str(create_version))
+        create(name, arch=args.arch, version=create_version)
     except CreateException as exc:
         print(exc)
         sys.exit(1)

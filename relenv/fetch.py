@@ -16,7 +16,6 @@ from .build import platform_module
 from .common import (
     CHECK_HOSTS,
     DATA_DIR,
-    DEFAULT_PYTHON,
     __version__,
     build_arch,
     check_url,
@@ -24,6 +23,7 @@ from .common import (
     get_triplet,
     work_dir,
 )
+from .pyversions import get_default_python_version, resolve_python_version
 
 
 def setup_parser(
@@ -45,11 +45,12 @@ def setup_parser(
         type=str,
         help="Architecture to download. [default: %(default)s]",
     )
+    default_version = get_default_python_version()
     subparser.add_argument(
         "--python",
-        default=DEFAULT_PYTHON,
+        default=default_version,
         type=str,
-        help="The python version [default: %(default)s]",
+        help="The python version (e.g., 3.10, 3.13.7) [default: %(default)s]",
     )
 
 
@@ -87,7 +88,8 @@ def main(args: argparse.Namespace) -> None:
     """
     version = os.environ.get("RELENV_FETCH_VERSION", __version__)
     triplet = get_triplet(machine=args.arch)
-    python = args.python
+    # args.python will be the default version or user-specified version
+    python = resolve_python_version(args.python)
     check_hosts = CHECK_HOSTS
     if os.environ.get("RELENV_FETCH_HOST", ""):
         check_hosts = [os.environ["RELENV_FETCH_HOST"]]
