@@ -175,3 +175,80 @@ def test_detect_xz_versions(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "5.6.3" in versions
     # Verify sorting (latest first)
     assert versions[0] == "5.8.1"
+
+
+def test_resolve_python_version_none_defaults_to_latest_310() -> None:
+    """Test that None resolves to the latest 3.10 version."""
+    result = pyversions.resolve_python_version(None)
+    assert result.startswith("3.10.")
+    # Verify it's a valid version in the registry
+    versions = pyversions.python_versions("3.10")
+    assert pyversions.Version(result) in versions
+    # Verify it's the latest 3.10 version
+    latest = sorted(list(versions.keys()))[-1]
+    assert result == str(latest)
+
+
+def test_resolve_python_version_partial_minor() -> None:
+    """Test that partial versions (3.10) resolve to latest micro."""
+    result = pyversions.resolve_python_version("3.10")
+    assert result.startswith("3.10.")
+    # Verify it resolves to the latest micro version
+    versions = pyversions.python_versions("3.10")
+    latest = sorted(list(versions.keys()))[-1]
+    assert result == str(latest)
+
+
+def test_resolve_python_version_different_minors() -> None:
+    """Test resolution works for different minor versions."""
+    result_311 = pyversions.resolve_python_version("3.11")
+    assert result_311.startswith("3.11.")
+
+    result_313 = pyversions.resolve_python_version("3.13")
+    assert result_313.startswith("3.13.")
+
+    # Verify they're different
+    assert result_311 != result_313
+
+    # Verify each is the latest for its minor version
+    versions_311 = pyversions.python_versions("3.11")
+    latest_311 = sorted(list(versions_311.keys()))[-1]
+    assert result_311 == str(latest_311)
+
+    versions_313 = pyversions.python_versions("3.13")
+    latest_313 = sorted(list(versions_313.keys()))[-1]
+    assert result_313 == str(latest_313)
+
+
+def test_resolve_python_version_full_version() -> None:
+    """Test that full versions are validated and returned as-is."""
+    # Get any valid version from the registry
+    all_versions = pyversions.python_versions()
+    some_version = str(next(iter(all_versions)))
+
+    result = pyversions.resolve_python_version(some_version)
+    assert result == some_version
+
+
+def test_resolve_python_version_invalid_full_version() -> None:
+    """Test that invalid full versions raise RuntimeError."""
+    with pytest.raises(RuntimeError, match="Unknown version"):
+        pyversions.resolve_python_version("3.10.999")
+
+
+def test_resolve_python_version_invalid_minor_version() -> None:
+    """Test that invalid minor versions raise RuntimeError."""
+    with pytest.raises(RuntimeError, match="Unknown minor version"):
+        pyversions.resolve_python_version("3.99")
+
+
+def test_resolve_python_version_consistency() -> None:
+    """Test that resolve_python_version is idempotent for full versions."""
+    # Get a valid full version from the registry
+    all_versions = pyversions.python_versions()
+    some_version = str(next(iter(all_versions)))
+
+    # Resolving a full version twice should give the same result
+    first = pyversions.resolve_python_version(some_version)
+    second = pyversions.resolve_python_version(first)
+    assert first == second
