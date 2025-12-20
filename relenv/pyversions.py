@@ -947,6 +947,54 @@ def python_versions(
     return {version: pyversions[str(version)] for version in versions}
 
 
+def get_default_python_version() -> str:
+    """
+    Get the default Python version to use when none is specified.
+
+    :return: The default Python version string (e.g., "3.10.19")
+    """
+    # Default to latest 3.10 version
+    pyversions = python_versions("3.10")
+    if not pyversions:
+        raise RuntimeError("No 3.10 versions found")
+    latest = sorted(list(pyversions.keys()))[-1]
+    return str(latest)
+
+
+def resolve_python_version(version_spec: str | None = None) -> str:
+    """
+    Resolve a Python version specification to a full version string.
+
+    If version_spec is None, returns the latest Python 3.10 version.
+    If version_spec is partial (e.g., "3.10"), returns the latest micro version.
+    If version_spec is full (e.g., "3.10.19"), returns it as-is after validation.
+
+    :param version_spec: Version specification (None, "3.10", or "3.10.19")
+    :return: Full version string (e.g., "3.10.19")
+    :raises RuntimeError: If the version is not found
+    """
+    if version_spec is None:
+        # Default to latest 3.10 version
+        return get_default_python_version()
+
+    requested = Version(version_spec)
+
+    if requested.micro is not None:
+        # Full version specified - validate it exists
+        pyversions = python_versions()
+        if requested not in pyversions:
+            raise RuntimeError(f"Unknown version {requested}")
+        return str(requested)
+    else:
+        # Partial version (major.minor) - get latest micro
+        pyversions = python_versions(version_spec)
+        if not pyversions:
+            raise RuntimeError(f"Unknown minor version {requested}")
+        # Return the latest version for this major.minor
+        latest = sorted(list(pyversions.keys()))[-1]
+        return str(latest)
+
+
 def setup_parser(
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser],
 ) -> None:
