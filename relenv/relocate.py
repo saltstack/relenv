@@ -264,6 +264,34 @@ def is_in_dir(
     return os.path.realpath(filepath).startswith(os.path.realpath(directory) + os.sep)
 
 
+def remove_rpath(path: str | os.PathLike[str]) -> bool:
+    """
+    Remove the rpath from a given ELF file.
+
+    :param path: The path to an ELF file
+    :type path: str
+
+    :return: True if successful, False otherwise
+    :rtype: bool
+    """
+    old_rpath = parse_rpath(path)
+    if not old_rpath:
+        # No RPATH to remove
+        return True
+
+    log.info("Remove RPATH from %s (was: %s)", path, old_rpath)
+    proc = subprocess.run(
+        ["patchelf", "--remove-rpath", path],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+    )
+
+    if proc.returncode:
+        log.error("Failed to remove RPATH from %s: %s", path, proc.stderr.decode())
+        return False
+    return True
+
+
 def patch_rpath(
     path: str | os.PathLike[str],
     new_rpath: str,
@@ -325,6 +353,7 @@ def handle_elf(
         root = libs
     proc = subprocess.run(["ldd", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     needs_rpath = False
+
     for line in proc.stdout.decode().splitlines():
         if line.find("=>") == -1:
             log.debug("Skip ldd output line: %s", line)
@@ -371,7 +400,9 @@ def handle_elf(
         log.info("Adjust rpath of %s to %s", path, relpath)
         patch_rpath(path, relpath)
     else:
-        log.info("Do not adjust rpath of %s", path)
+        # No relenv libraries are linked, so RPATH is not needed
+        # Remove any existing RPATH to avoid security/correctness issues
+        remove_rpath(path)
 
 
 def main(
@@ -420,6 +451,7 @@ def main(
                 if path in processed:
                     continue
                 log.debug("Checking %s", path)
+
                 if is_macho(path):
                     log.info("Found Mach-O %s", path)
                     _ = handle_macho(path, libs_dir, rpath_only)
