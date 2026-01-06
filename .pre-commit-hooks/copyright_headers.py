@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2025 Broadcom.
+# Copyright 2025-2026 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 #
 # pylint: disable=invalid-name,missing-module-docstring,missing-function-docstring
