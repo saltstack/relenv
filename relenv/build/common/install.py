@@ -331,14 +331,7 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
     # TODO: replace urllib3 in pip
     # Delete target urllib3
-    urllib3_target_dir = (
-        bundle_dir
-        / pip_whl_extracted
-        / f"pip-{pip_version}"
-        / "pip"
-        / "_vendor"
-        / "urllib3"
-    )
+    urllib3_target_dir = bundle_dir / pip_whl_extracted / "pip" / "_vendor" / "urllib3"
     urllib3_source_dir = urllib3_extracted / "src" / "urllib3"
     try:
         shutil.rmtree(urllib3_target_dir)
@@ -373,15 +366,14 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
         return f"{rel_path},sha256={hash_base64},{size}"
 
-    pip_src_dir = pip_whl_extracted / f"pip-{pip_version}"
     # delete existing RECORD file
-    records_file = pip_src_dir / f"pip-{pip_version}.dist-info" / "RECORD"
+    records_file = pip_whl_extracted / f"pip-{pip_version}.dist-info" / "RECORD"
     records_file.unlink(missing_ok=True)
     # create new RECORD file
-    files_list = [f for f in pip_src_dir.rglob("*") if f.is_file()]
+    files_list = [f for f in pip_whl_extracted.rglob("*") if f.is_file()]
     with open(records_file, "w") as f:
         for file in files_list:
-            f.write(get_record_entry(file, root_dir=pip_src_dir) + "\n")
+            f.write(get_record_entry(file, root_dir=pip_whl_extracted) + "\n")
         # This is the last line. It shouldn't be there because we removed the
         # RECORD file before we listed all files
         f.write(f"pip-{pip_version}.dist-info/RECORD,,")
@@ -390,10 +382,10 @@ def update_ensurepip(directory: pathlib.Path) -> None:
     # TODO: pack the pip whl
     (bundle_dir / pip_whl).unlink(missing_ok=True)
     # We need to do this again so we include the RECORD file
-    files_list = [f for f in pip_src_dir.rglob("*") if f.is_file()]
+    files_list = [f for f in pip_whl_extracted.rglob("*") if f.is_file()]
     with zipfile.ZipFile(bundle_dir / pip_whl, "w", zipfile.ZIP_DEFLATED) as whl_file:
         for file in files_list:
-            arc_name = file.relative_to(pip_src_dir)
+            arc_name = file.relative_to(pip_whl_extracted)
             whl_file.write(file, arc_name)
     assert (bundle_dir / pip_whl).exists()
 
