@@ -326,8 +326,8 @@ def update_ensurepip(directory: pathlib.Path) -> None:
     assert (bundle_dir / urllib3_tarball).exists()
 
     # TODO: Extract the tarball
-    urllib3_extracted = bundle_dir / "urllib3_extracted"
-    extract_archive(to_dir=urllib3_extracted, archive=bundle_dir / urllib3_tarball)
+    urllib3_extracted = bundle_dir / f"urllib3-{urllib3_version}"
+    extract_archive(to_dir=bundle_dir, archive=bundle_dir / urllib3_tarball)
 
     # TODO: replace urllib3 in pip
     # Delete target urllib3
