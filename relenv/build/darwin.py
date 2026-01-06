@@ -1,4 +1,4 @@
-# Copyright 2025 Broadcom.
+# Copyright 2025-2026 Broadcom.
 # SPDX-License-Identifier: Apache-2
 # mypy: ignore-errors
 """

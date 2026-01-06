@@ -1,4 +1,4 @@
-# Copyright 2022-2025 Broadcom.
+# Copyright 2022-2026 Broadcom.
 # SPDX-License-Identifier: Apache-2
 
 # Configuration file for the Sphinx documentation builder.
