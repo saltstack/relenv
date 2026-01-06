@@ -246,8 +246,16 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
     # Detect existing whl. Later versions of python don't include setuptools. We
     # only want to update whl files that python expects to be there
-    pip_version = "25.2"
+    pip_version = "25.3"
+    pip_whl = f"pip-{pip_version}-py3-none-any.whl"
+    pip_whl_path = "44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068"
+
     setuptools_version = "80.9.0"
+    setuptools_whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
+    setuptools_whl_path = (
+        "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
+    )
+
     update_pip = False
     update_setuptools = False
     for file in bundle_dir.glob("*.whl"):
@@ -275,11 +283,9 @@ def update_ensurepip(directory: pathlib.Path) -> None:
     # Download whl files and update __init__.py
     init_file = directory / "ensurepip" / "__init__.py"
     if update_pip:
-        whl = f"pip-{pip_version}-py3-none-any.whl"
-        whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
-        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        url = f"https://files.pythonhosted.org/packages/{pip_whl_path}/{pip_whl}"
         download_url(url=url, dest=bundle_dir)
-        assert (bundle_dir / whl).exists()
+        assert (bundle_dir / pip_whl).exists()
 
         # Update __init__.py
         old = "^_PIP_VERSION.*"
@@ -288,11 +294,9 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
     # setuptools
     if update_setuptools:
-        whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
-        whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
-        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        url = f"https://files.pythonhosted.org/packages/{setuptools_whl_path}/{setuptools_whl}"
         download_url(url=url, dest=bundle_dir)
-        assert (bundle_dir / whl).exists()
+        assert (bundle_dir / setuptools_whl).exists()
 
         # setuptools
         old = "^_SETUPTOOLS_VERSION.*"
