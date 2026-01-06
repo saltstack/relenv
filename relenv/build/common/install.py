@@ -1,10 +1,11 @@
-# Copyright 2022-2025 Broadcom.
+# Copyright 2022-2026 Broadcom.
 # SPDX-License-Identifier: Apache-2.0
 """
 Installation and finalization functions for the build process.
 """
 from __future__ import annotations
 
+import base64
 import fnmatch
 import hashlib
 import io
@@ -18,6 +19,7 @@ import re
 import shutil
 import sys
 import tarfile
+import zipfile
 from types import ModuleType
 from typing import IO, MutableMapping, Optional, Sequence, Union, TYPE_CHECKING
 
@@ -27,6 +29,7 @@ from relenv.common import (
     MissingDependencyError,
     Version,
     download_url,
+    extract_archive,
     format_shebang,
     runcmd,
 )
@@ -246,8 +249,22 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
     # Detect existing whl. Later versions of python don't include setuptools. We
     # only want to update whl files that python expects to be there
-    pip_version = "25.2"
+    pip_version = "25.3"
+    pip_whl = f"pip-{pip_version}-py3-none-any.whl"
+    pip_whl_path = "44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068"
+
     setuptools_version = "80.9.0"
+    setuptools_whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
+    setuptools_whl_path = (
+        "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
+    )
+
+    urllib3_version = "2.6.2"
+    urllib3_tarball = f"urllib3-{urllib3_version}.tar.gz"
+    urllib3_tarball_path = (
+        "1e/24/a2a2ed9addd907787d7aa0355ba36a6cadf1768b934c652ea78acbd59dcd"
+    )
+
     update_pip = False
     update_setuptools = False
     for file in bundle_dir.glob("*.whl"):
@@ -275,11 +292,9 @@ def update_ensurepip(directory: pathlib.Path) -> None:
     # Download whl files and update __init__.py
     init_file = directory / "ensurepip" / "__init__.py"
     if update_pip:
-        whl = f"pip-{pip_version}-py3-none-any.whl"
-        whl_path = "b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa"
-        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        url = f"https://files.pythonhosted.org/packages/{pip_whl_path}/{pip_whl}"
         download_url(url=url, dest=bundle_dir)
-        assert (bundle_dir / whl).exists()
+        assert (bundle_dir / pip_whl).exists()
 
         # Update __init__.py
         old = "^_PIP_VERSION.*"
@@ -288,11 +303,9 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
     # setuptools
     if update_setuptools:
-        whl = f"setuptools-{setuptools_version}-py3-none-any.whl"
-        whl_path = "a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772"
-        url = f"https://files.pythonhosted.org/packages/{whl_path}/{whl}"
+        url = f"https://files.pythonhosted.org/packages/{setuptools_whl_path}/{setuptools_whl}"
         download_url(url=url, dest=bundle_dir)
-        assert (bundle_dir / whl).exists()
+        assert (bundle_dir / setuptools_whl).exists()
 
         # setuptools
         old = "^_SETUPTOOLS_VERSION.*"
@@ -301,6 +314,92 @@ def update_ensurepip(directory: pathlib.Path) -> None:
 
     log.debug("ensurepip __init__.py contents:")
     log.debug(init_file.read_text())
+
+    # TODO: unpack the pip whl using zipfile (wheel isn't installed yet)
+    pip_whl_extracted = bundle_dir / "pip_whl_extracted"
+    with zipfile.ZipFile(bundle_dir / pip_whl) as whl_file:
+        whl_file.extractall(path=pip_whl_extracted)
+
+    # TODO: pull down urllib3 tarball
+    url = f"https://files.pythonhosted.org/packages/{urllib3_tarball_path}/{urllib3_tarball}"
+    download_url(url=url, dest=bundle_dir)
+    assert (bundle_dir / urllib3_tarball).exists()
+
+    # TODO: Extract the tarball
+    urllib3_extracted = bundle_dir / "urllib3_extracted"
+    extract_archive(to_dir=urllib3_extracted, archive=bundle_dir / urllib3_tarball)
+
+    # TODO: replace urllib3 in pip
+    # Delete target urllib3
+    urllib3_target_dir = (
+        bundle_dir
+        / pip_whl_extracted
+        / f"pip-{pip_version}"
+        / "pip"
+        / "_vendor"
+        / "urllib3"
+    )
+    urllib3_source_dir = urllib3_extracted / "src" / "urllib3"
+    try:
+        shutil.rmtree(urllib3_target_dir)
+        log.debug("Removed urllib3 target directory: %s", urllib3_target_dir)
+    except OSError:
+        log.debug("Failed to remove urllib3 target directory: %s", urllib3_target_dir)
+
+    # Move source urllib3 to target
+    urllib3_source_dir.rename(urllib3_target_dir)
+
+    # Cleanup urllib3 source and tarball
+    shutil.rmtree(urllib3_extracted)
+    (bundle_dir / urllib3_tarball).unlink(missing_ok=True)
+
+    # TODO: recompute the hashes and update dist-info\RECORD
+    def get_record_entry(file_path: PathLike, root_dir: PathLike) -> str:
+        # 1. Calculate SHA256 and Size
+        sha256 = hashlib.sha256()
+        size = os.path.getsize(file_path)
+
+        with open(file_path, "rb") as f:
+            while chunk := f.read(8192):
+                sha256.update(chunk)
+
+        # 2. Encode to URL-safe Base64 and remove padding '='
+        hash_base64 = (
+            base64.urlsafe_b64encode(sha256.digest()).decode("latin1").rstrip("=")
+        )
+
+        # 3. Create relative path for RECORD
+        rel_path = os.path.relpath(file_path, root_dir).replace(os.sep, "/")
+
+        return f"{rel_path},sha256={hash_base64},{size}"
+
+    pip_src_dir = pip_whl_extracted / f"pip-{pip_version}"
+    # delete existing RECORD file
+    records_file = pip_src_dir / f"pip-{pip_version}.dist-info" / "RECORD"
+    records_file.unlink(missing_ok=True)
+    # create new RECORD file
+    files_list = [f for f in pip_src_dir.rglob("*") if f.is_file()]
+    with open(records_file, "w") as f:
+        for file in files_list:
+            f.write(get_record_entry(file, root_dir=pip_src_dir) + "\n")
+        # This is the last line. It shouldn't be there because we removed the
+        # RECORD file before we listed all files
+        f.write(f"pip-{pip_version}.dist-info/RECORD,,")
+    assert records_file.exists()
+
+    # TODO: pack the pip whl
+    (bundle_dir / pip_whl).unlink(missing_ok=True)
+    # We need to do this again so we include the RECORD file
+    files_list = [f for f in pip_src_dir.rglob("*") if f.is_file()]
+    with zipfile.ZipFile(bundle_dir / pip_whl, "w", zipfile.ZIP_DEFLATED) as whl_file:
+        for file in files_list:
+            arc_name = file.relative_to(pip_src_dir)
+            whl_file.write(file, arc_name)
+    assert (bundle_dir / pip_whl).exists()
+
+    # TODO: Clean up extracted pip
+    shutil.rmtree(pip_whl_extracted)
+    assert not pip_whl_extracted.exists()
 
 
 def install_sysdata(
