@@ -529,7 +529,7 @@ def test_toolchain_uses_cache_without_relenv_data(
 def test_copyright_headers() -> None:
     """Verify all Python source files have the correct copyright header."""
     expected_header = (
-        "# Copyright 2022-2025 Broadcom.\n" "# SPDX-License-Identifier: Apache-2.0\n"
+        "# Copyright 2022-2026 Broadcom.\n" "# SPDX-License-Identifier: Apache-2.0\n"
     )
 
     # Find all Python files in relenv/ and tests/
