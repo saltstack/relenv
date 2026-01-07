@@ -180,13 +180,15 @@ def test_imports(pyexec):
 
 
 def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
-    if (
-        sys.platform == "win32"
-        and "3.11" in build_version
+    if sys.platform == "win32" and (
+        "3.10" in build_version
+        or "3.11" in build_version
         or "3.12" in build_version
         or "3.13" in build_version
     ):
-        pytest.xfail("Salt does not work with 3.11 or 3.12 on windows yet")
+        pytest.xfail(
+            "Salt git install fails on Windows (setup.py tries to install missing man pages)"
+        )
     if sys.platform == "darwin" and "3.12" in build_version:
         pytest.xfail("Salt does not work with 3.12 on macos yet")
     if sys.platform == "darwin" and "3.13" in build_version:
