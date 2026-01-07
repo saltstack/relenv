@@ -1,3 +1,12 @@
+0.22.2
+======
+
+* Remove RPATH from shared libraries that do not link to any other libraries in
+  our environment.
+* Ensure we always return a proper and consistang default python version for
+  create, fetch, build commands.
+
+
 0.22.1
 ======
 
