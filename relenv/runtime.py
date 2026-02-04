@@ -384,25 +384,30 @@ def install_wheel_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
             direct_url,
             requested,
         )
-        plat = pathlib.Path(scheme.platlib)
-        rootdir = relenv_root()
-        with open(plat / info_dir / "RECORD") as fp:
-            for line in fp.readlines():
-                file = plat / line.split(",", 1)[0]
-                if not file.exists():
-                    debug(f"Relenv - File not found {file}")
-                    continue
-                if relocate().is_elf(file):
-                    debug(f"Relenv - Found elf {file}")
-                    relocate().handle_elf(plat / file, rootdir / "lib", True, rootdir)
-                elif relocate().is_macho(file):
-                    otool_bin = shutil.which("otool")
-                    if otool_bin:
-                        relocate().handle_macho(str(plat / file), str(rootdir), True)
-                    else:
-                        debug(
-                            "The otool command is not available, please run `xcode-select --install`"
+        if "RELENV_BUILDENV" in os.environ:
+            plat = pathlib.Path(scheme.platlib)
+            rootdir = relenv_root()
+            with open(plat / info_dir / "RECORD") as fp:
+                for line in fp.readlines():
+                    file = plat / line.split(",", 1)[0]
+                    if not file.exists():
+                        debug(f"Relenv - File not found {file}")
+                        continue
+                    if relocate().is_elf(file):
+                        debug(f"Relenv - Found elf {file}")
+                        relocate().handle_elf(
+                            plat / file, rootdir / "lib", True, rootdir
                         )
+                    elif relocate().is_macho(file):
+                        otool_bin = shutil.which("otool")
+                        if otool_bin:
+                            relocate().handle_macho(
+                                str(plat / file), str(rootdir), True
+                            )
+                        else:
+                            debug(
+                                "The otool command is not available, please run `xcode-select --install`"
+                            )
 
     return wrapper
 
@@ -1022,7 +1027,11 @@ def install_cargo_config() -> None:
     cargo_home = dirs.data / "cargo"
     triplet = common().get_triplet()
 
-    toolchain = common().get_toolchain()
+    try:
+        toolchain = common().get_toolchain()
+    except PermissionError:
+        pass
+
     if not toolchain:
         debug("Unable to set CARGO_HOME ppbt package not installed")
         return

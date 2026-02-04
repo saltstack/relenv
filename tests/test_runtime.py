@@ -374,6 +374,7 @@ def test_finalize_options_wrapper_appends_include(
 def test_install_wheel_wrapper_processes_record(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
     info_dir.mkdir(parents=True)
@@ -440,6 +441,7 @@ def test_install_wheel_wrapper_processes_record(
 def test_install_wheel_wrapper_missing_file(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
     info_dir.mkdir(parents=True)
@@ -477,6 +479,7 @@ def test_install_wheel_wrapper_missing_file(
 def test_install_wheel_wrapper_macho_with_otool(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
     info_dir.mkdir(parents=True)
@@ -520,6 +523,7 @@ def test_install_wheel_wrapper_macho_with_otool(
 def test_install_wheel_wrapper_macho_without_otool(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
     info_dir.mkdir(parents=True)
@@ -563,6 +567,74 @@ def test_install_wheel_wrapper_macho_without_otool(
         "demo", wheel_path, scheme, "desc", None, None, None, None
     )
     assert any("otool command is not available" in msg for msg in messages)
+
+
+def test_install_wheel_wrapper_skips_without_buildenv(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("RELENV_BUILDENV", raising=False)
+    plat_dir = tmp_path / "plat"
+    info_dir = plat_dir / "demo.dist-info"
+    info_dir.mkdir(parents=True)
+    record = info_dir / "RECORD"
+    record.write_text("libdemo.so,,\n")
+    binary = plat_dir / "libdemo.so"
+    binary.touch()
+
+    # If relocation runs, this mock will raise an error or capture calls
+    handled: list[tuple[pathlib.Path, pathlib.Path]] = []
+    monkeypatch.setattr(
+        relenv.runtime,
+        "relocate",
+        lambda: SimpleNamespace(
+            is_elf=lambda path: path.name.endswith(".so"),
+            is_macho=lambda path: False,
+            handle_elf=lambda file, lib_dir, fix, root: handled.append((file, lib_dir)),
+            handle_macho=lambda *args, **kwargs: None,
+        ),
+    )
+
+    wheel_utils = ModuleType("pip._internal.utils.wheel")
+    wheel_utils.parse_wheel = lambda _zf, _name: ("demo.dist-info", {})
+    monkeypatch.setitem(sys.modules, wheel_utils.__name__, wheel_utils)
+
+    class DummyZip:
+        def __init__(self, path: pathlib.Path) -> None:
+            self.path = path
+
+        def __enter__(self) -> DummyZip:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr("zipfile.ZipFile", DummyZip)
+
+    install_module = ModuleType("pip._internal.operations.install.wheel")
+
+    def original_install(*_args: object, **_kwargs: object) -> str:
+        return "original"
+
+    install_module.install_wheel = original_install  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, install_module.__name__, install_module)
+
+    wrapped_module = relenv.runtime.wrap_pip_install_wheel(install_module.__name__)
+
+    scheme = SimpleNamespace(
+        platlib=str(plat_dir),
+    )
+    wrapped_module.install_wheel(
+        "demo",
+        tmp_path / "wheel.whl",
+        scheme,
+        "desc",
+        None,
+        None,
+        None,
+        None,
+    )
+
+    assert not handled
 
 
 def test_install_legacy_wrapper_prefix(
