@@ -519,6 +519,9 @@ def test_pip_install_pyzmq(
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
 
+    if pyzmq_version == "26.2.0":
+        env["CMAKE_ARGS"] = "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+
     if sys.platform == "linux":
         fake_bsd_root = tmp_path / "fake_libbsd"
         (fake_bsd_root / "bsd").mkdir(parents=True, exist_ok=True)

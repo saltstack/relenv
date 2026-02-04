@@ -11,6 +11,7 @@ import os as _os
 import pathlib
 import shutil as _shutil
 import subprocess as _subprocess
+import sys as _sys
 from typing import Optional
 
 log = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 os = _os
 shutil = _shutil
 subprocess = _subprocess
+sys = _sys
 
 __all__ = [
     "is_macho",
@@ -69,6 +71,83 @@ LIBCLIBS = [
 LC_ID_DYLIB = "LC_ID_DYLIB"
 LC_LOAD_DYLIB = "LC_LOAD_DYLIB"
 LC_RPATH = "LC_RPATH"
+
+# Cache for readelf binary path
+_READELF_BINARY: Optional[str] = None
+
+# Cache for patchelf binary path
+_PATCHELF_BINARY: Optional[str] = None
+
+
+def _get_readelf_binary() -> str:
+    """
+    Get the path to readelf binary, preferring toolchain version.
+
+    Returns the cached value if already computed. On Linux, prefers the
+    toolchain's readelf over the system version. Falls back to "readelf"
+    from PATH if toolchain is unavailable.
+
+    :return: Path to readelf binary
+    :rtype: str
+    """
+    global _READELF_BINARY
+    if _READELF_BINARY is not None:
+        return _READELF_BINARY
+
+    # Only Linux has the toolchain with readelf
+    if sys.platform == "linux":
+        try:
+            from relenv.common import get_toolchain, get_triplet
+
+            toolchain = get_toolchain()
+            if toolchain:
+                triplet = get_triplet()
+                toolchain_readelf = toolchain / "bin" / f"{triplet}-readelf"
+                if toolchain_readelf.exists():
+                    _READELF_BINARY = str(toolchain_readelf)
+                    return _READELF_BINARY
+        except Exception:
+            # Fall through to system readelf
+            pass
+
+    # Fall back to system readelf
+    _READELF_BINARY = "readelf"
+    return _READELF_BINARY
+
+
+def _get_patchelf_binary() -> str:
+    """
+    Get the path to patchelf binary, preferring toolchain version.
+
+    Returns the cached value if already computed. On Linux, prefers the
+    toolchain's patchelf over the system version. Falls back to "patchelf"
+    from PATH if toolchain is unavailable.
+
+    :return: Path to patchelf binary
+    :rtype: str
+    """
+    global _PATCHELF_BINARY
+    if _PATCHELF_BINARY is not None:
+        return _PATCHELF_BINARY
+
+    # Only Linux has the toolchain with patchelf
+    if sys.platform == "linux":
+        try:
+            from relenv.common import get_toolchain
+
+            toolchain = get_toolchain()
+            if toolchain:
+                toolchain_patchelf = toolchain / "bin" / "patchelf"
+                if toolchain_patchelf.exists():
+                    _PATCHELF_BINARY = str(toolchain_patchelf)
+                    return _PATCHELF_BINARY
+        except Exception:
+            # Fall through to system patchelf
+            pass
+
+    # Fall back to system patchelf
+    _PATCHELF_BINARY = "patchelf"
+    return _PATCHELF_BINARY
 
 
 def is_macho(path: str | os.PathLike[str]) -> bool:
@@ -192,8 +271,9 @@ def parse_rpath(path: str | os.PathLike[str]) -> list[str]:
     :return: The RPATH's found.
     :rtype: list
     """
+    readelf = _get_readelf_binary()
     proc = subprocess.run(
-        ["readelf", "-d", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        [readelf, "-d", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     return parse_readelf_d(proc.stdout.decode())
 
@@ -280,8 +360,9 @@ def remove_rpath(path: str | os.PathLike[str]) -> bool:
         return True
 
     log.info("Remove RPATH from %s (was: %s)", path, old_rpath)
+    patchelf = _get_patchelf_binary()
     proc = subprocess.run(
-        ["patchelf", "--remove-rpath", path],
+        [patchelf, "--remove-rpath", path],
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
@@ -319,8 +400,9 @@ def patch_rpath(
     if new_rpath not in old_rpath:
         patched_rpath = ":".join([new_rpath] + old_rpath)
         log.info("Set RPATH=%s %s", patched_rpath, path)
+        patchelf = _get_patchelf_binary()
         proc = subprocess.run(
-            ["patchelf", "--force-rpath", "--set-rpath", patched_rpath, path],
+            [patchelf, "--force-rpath", "--set-rpath", patched_rpath, path],
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
