@@ -154,8 +154,8 @@ def test_get_dependency_version_sqlite_all_platforms() -> None:
 def test_get_dependency_version_xz_all_platforms() -> None:
     """Test getting XZ version for various platforms."""
     # XZ 5.5.0+ removed MSBuild support, so Windows uses a fallback version
-    # and XZ is not in JSON for win32
-    for platform in ["linux", "darwin"]:
+    # BUT we now have XZ 5.8.2 in python-versions.json for win32 too
+    for platform in ["linux", "darwin", "win32"]:
         result = get_dependency_version("xz", platform)
         assert result is not None, f"XZ should be available for {platform}"
         assert isinstance(result, dict)
@@ -165,10 +165,6 @@ def test_get_dependency_version_xz_all_platforms() -> None:
         assert isinstance(result["version"], str)
         assert "xz" in result["url"].lower()
         assert isinstance(result["sha256"], str)
-
-    # Windows should return None (uses hardcoded fallback in windows.py)
-    result = get_dependency_version("xz", "win32")
-    assert result is None, "XZ should not be in JSON for win32 (uses fallback)"
 
 
 def test_get_dependency_version_nonexistent() -> None:
