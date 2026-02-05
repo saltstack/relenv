@@ -203,6 +203,14 @@
      "linux",
      "darwin"
     ]
+   },
+   "3.6.1": {
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
+    "sha256": "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e",
+    "platforms": [
+     "linux",
+     "darwin"
+    ]
    }
   },
   "sqlite": {
@@ -225,6 +233,16 @@
      "darwin",
      "win32"
     ]
+   },
+   "3.51.2.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "fbd89f866b1403bb66a143065440089dd76100f2238314d92274a082d4f2b7bb",
+    "sqliteversion": "3510200",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   },
   "xz": {
@@ -234,6 +252,15 @@
     "platforms": [
      "linux",
      "darwin"
+    ]
+   },
+   "5.8.2": {
+    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+    "sha256": "ce09c50a5962786b83e5da389c90dd2c15ecd0980a258dd01f70f9e7ce58a8f1",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
     ]
    }
   },
@@ -259,6 +286,13 @@
    "6.5": {
     "url": "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz",
     "sha256": "136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6",
+    "platforms": [
+     "linux"
+    ]
+   },
+   "6.6": {
+    "url": "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz",
+    "sha256": "355b4cbbed880b0381a04c46617b7656e362585d52e9cf84a67e2009b749ff11",
     "platforms": [
      "linux"
     ]
@@ -339,6 +373,15 @@
    "2.7.3": {
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_7_3/expat-2.7.3.tar.xz",
     "sha256": "71df8f40706a7bb0a80a5367079ea75d91da4f8c65c58ec59bcdfbf7decdab9f",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "2.7.4": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_7_4/expat-{version}.tar.xz",
+    "sha256": "9e9cabb457c1e09de91db2706d8365645792638eb3be1f94dbb2149301086ac0",
     "platforms": [
      "linux",
      "darwin",
