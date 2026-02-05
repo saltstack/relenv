@@ -197,6 +197,14 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     config_file_source = dirs.root / "_resources" / "xz" / "config.h"
     if not config_file.exists():
         shutil.copy(str(config_file_source), str(config_file))
+
+    # Also copy crc32_table.c and crc64_table.c which are missing in newer XZ tarballs
+    check_dir = target_dir / "src" / "liblzma" / "check"
+    for filename in ["crc32_table.c", "crc64_table.c"]:
+        target_file = check_dir / filename
+        source_file = dirs.root / "_resources" / "xz" / filename
+        if not target_file.exists():
+            shutil.copy(str(source_file), str(target_file))
     # Update externals.spdx.json with the correct version, url, and hash
     # This became a thing in 3.12
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
