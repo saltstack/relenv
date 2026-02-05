@@ -1,3 +1,15 @@
+0.22.3
+======
+
+* Fix regression where we tried to call readelf when no RELENV_BUILDENV environment exists
+* Prefer readelf and patchelf from ppbt if exists
+* Upgrade OpenSSL to 3.6.1
+* Upgrade SQLite to 3.51.2.0
+* Upgrade XZ to 5.8.2
+* Upgrade ncurses to6.6
+* Upgrade expat to2.7.4
+
+
 0.22.2
 ======
 
