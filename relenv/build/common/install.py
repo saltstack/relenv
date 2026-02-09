@@ -18,8 +18,19 @@ import re
 import shutil
 import sys
 import tarfile
+import time
 from types import ModuleType
-from typing import IO, MutableMapping, Optional, Sequence, Union, TYPE_CHECKING
+from typing import (
+    Any,
+    Dict,
+    IO,
+    List,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Union,
+    TYPE_CHECKING,
+)
 
 from relenv.common import (
     LINUX,
@@ -409,6 +420,268 @@ def install_runtime(sitepackages: PathLike) -> None:
                 wfp.write(rfp.read())
 
 
+def generate_relenv_sbom(env: MutableMapping[str, str], dirs: Dirs) -> None:
+    """
+    Generate the authoritative relenv-sbom.spdx.json for this build.
+
+    This is the single, comprehensive SBOM that documents:
+    - Python itself (the CPython interpreter)
+    - All build dependencies we compiled (openssl, sqlite, ncurses, etc.)
+    - All pip-installed runtime packages (relenv, pip, setuptools, wheel, etc.)
+
+    This replaces copying Python's native SBOM files (sbom.spdx.json and
+    externals.spdx.json) which contain incomplete/inaccurate information for
+    relenv builds (e.g., they list OpenSSL 3.0.15 but we build 3.6.0).
+
+    Generates SBOM for all Python versions (3.10+).
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    """
+    from .builder import get_dependency_version
+    import relenv
+
+    python_version = dirs.version
+
+    platform_map = {
+        "linux": "linux",
+        "darwin": "darwin",
+        "win32": "win32",
+    }
+    platform = platform_map.get(sys.platform, sys.platform)
+
+    # Build dependency list - get versions from python-versions.json
+    packages: List[Dict[str, Any]] = []
+
+    # Add Python itself as the primary package
+    python_package: Dict[str, Any] = {
+        "SPDXID": "SPDXRef-PACKAGE-Python",
+        "name": "Python",
+        "versionInfo": python_version,
+        "downloadLocation": f"https://www.python.org/ftp/python/{python_version}/Python-{python_version}.tar.xz",
+        "filesAnalyzed": False,
+        "primaryPackagePurpose": "APPLICATION",
+        "licenseConcluded": "Python-2.0",
+        "comment": "CPython interpreter - the core component of this relenv build",
+    }
+    packages.append(python_package)
+
+    # Define dependencies we build (these are the ones relenv compiles)
+    # Order matters - list them in a logical grouping
+    relenv_deps = [
+        # Compression libraries
+        ("bzip2", "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz"),
+        (
+            "xz",
+            "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz",
+        ),
+        (
+            "zlib",
+            "https://github.com/madler/zlib/releases/download/v{version}/zlib-{version}.tar.gz",
+        ),
+        # Crypto and security
+        (
+            "openssl",
+            "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
+        ),
+        (
+            "libxcrypt",
+            "https://github.com/besser82/libxcrypt/releases/download/v{version}/libxcrypt-{version}.tar.xz",
+        ),
+        # Database
+        ("sqlite", "https://sqlite.org/{year}/sqlite-autoconf-{sqliteversion}.tar.gz"),
+        ("gdbm", "https://ftp.gnu.org/gnu/gdbm/gdbm-{version}.tar.gz"),
+        # Terminal libraries
+        ("ncurses", "https://ftp.gnu.org/gnu/ncurses/ncurses-{version}.tar.gz"),
+        ("readline", "https://ftp.gnu.org/gnu/readline/readline-{version}.tar.gz"),
+        # Other libraries
+        (
+            "libffi",
+            "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+        ),
+        (
+            "uuid",
+            "https://sourceforge.net/projects/libuuid/files/libuuid-{version}.tar.gz",
+        ),
+        # XML parser (bundled in Python source, updated by relenv)
+        (
+            "expat",
+            "https://github.com/libexpat/libexpat/releases/download/R_{version_tag}/expat-{version}.tar.xz",
+        ),
+    ]
+
+    # Linux-specific dependencies
+    if sys.platform == "linux":
+        relenv_deps.extend(
+            [
+                (
+                    "tirpc",
+                    "https://downloads.sourceforge.net/project/libtirpc/"
+                    "libtirpc/{version}/libtirpc-{version}.tar.bz2",
+                ),
+                (
+                    "krb5",
+                    "https://kerberos.org/dist/krb5/{major_minor}/krb5-{version}.tar.gz",
+                ),
+            ]
+        )
+
+    for dep_name, url_template in relenv_deps:
+        dep_info = get_dependency_version(dep_name, platform)
+        if dep_info:
+            version = dep_info["version"]
+            url = dep_info.get("url", url_template).format(
+                version=version,
+                sqliteversion=dep_info.get("sqliteversion", ""),
+                year=dep_info.get("year", "2025"),
+                major_minor=".".join(version.split(".")[:2]),
+                version_tag=version.replace(".", "_"),
+            )
+            checksum = dep_info.get("sha256", "")
+
+            package: Dict[str, Any] = {
+                "SPDXID": f"SPDXRef-PACKAGE-{dep_name}",
+                "name": dep_name,
+                "versionInfo": version,
+                "downloadLocation": url,
+                "filesAnalyzed": False,
+                "primaryPackagePurpose": "SOURCE",
+                "licenseConcluded": "NOASSERTION",
+            }
+
+            if checksum:
+                package["checksums"] = [
+                    {
+                        "algorithm": "SHA256",
+                        "checksumValue": checksum,
+                    }
+                ]
+
+            packages.append(package)
+
+    # Add Python runtime packages installed via pip
+    # These are determined at finalize time after pip install
+    python_lib = pathlib.Path(dirs.prefix) / "lib"
+    for entry in python_lib.glob("python*/site-packages/*.dist-info"):
+        # Parse package name and version from dist-info directory
+        # Format: package-version.dist-info
+        dist_name = entry.name.replace(".dist-info", "")
+        if "-" in dist_name:
+            parts = dist_name.rsplit("-", 1)
+            if len(parts) == 2:
+                pkg_name, pkg_version = parts
+                package2: Dict[str, Any] = {
+                    "SPDXID": f"SPDXRef-PACKAGE-python-{pkg_name}",
+                    "name": pkg_name,
+                    "versionInfo": pkg_version,
+                    "downloadLocation": "NOASSERTION",
+                    "filesAnalyzed": False,
+                    "primaryPackagePurpose": "LIBRARY",
+                    "licenseConcluded": "NOASSERTION",
+                    "comment": "Python package installed via pip",
+                }
+                packages.append(package2)
+
+    # Add Python's bundled dependencies that we don't build separately
+    # These are embedded in Python's source tree and compiled into Python
+    # For Python 3.12+, we can extract versions from Python's own SBOM
+    bundled_deps = []
+
+    # Try to read Python's SBOM to get accurate versions of bundled components
+    python_sbom_path = pathlib.Path(str(dirs.source)) / "Misc" / "sbom.spdx.json"
+    python_bundled_versions: Dict[str, Dict[str, Any]] = {}
+    if python_sbom_path.exists():
+        try:
+            with io.open(python_sbom_path, "r") as fp:
+                python_sbom = json.load(fp)
+                for pkg in python_sbom.get("packages", []):
+                    pkg_name = pkg.get("name")
+                    if pkg_name:
+                        python_bundled_versions[pkg_name] = pkg
+        except Exception:
+            # If we can't read Python's SBOM, skip bundled deps
+            pass
+
+    # Document bundled dependencies if we have version information
+    if python_bundled_versions:
+        # Define bundled components we want to include (excluding expat since we handle it separately)
+        bundled_components = {
+            "mpdecimal": "Bundled in Python source (Modules/_decimal/libmpdec) - decimal arithmetic",
+            "hacl-star": "Bundled in Python source (Modules/_hacl) - cryptographic primitives",
+            "libb2": "Bundled in Python source (Modules/_blake2) - BLAKE2 cryptographic hash",
+            "macholib": "Bundled in Python source (Lib/ctypes/macholib) - Mach-O binary parsing",
+        }
+
+        for comp_name, comp_desc in bundled_components.items():
+            if comp_name in python_bundled_versions:
+                src_pkg = python_bundled_versions[comp_name]
+                bundled_pkg: Dict[str, Any] = {
+                    "SPDXID": f"SPDXRef-PACKAGE-{comp_name}",
+                    "name": comp_name,
+                    "versionInfo": src_pkg.get("versionInfo", "NOASSERTION"),
+                    "downloadLocation": src_pkg.get("downloadLocation", "NOASSERTION"),
+                    "filesAnalyzed": False,
+                    "primaryPackagePurpose": "SOURCE",
+                    "licenseConcluded": src_pkg.get("licenseConcluded", "NOASSERTION"),
+                    "comment": comp_desc,
+                }
+                # Copy checksums if present
+                if "checksums" in src_pkg:
+                    bundled_pkg["checksums"] = src_pkg["checksums"]
+                # Copy externalRefs (CPE identifiers) if present
+                if "externalRefs" in src_pkg:
+                    bundled_pkg["externalRefs"] = src_pkg["externalRefs"]
+                bundled_deps.append(bundled_pkg)
+
+    packages.extend(bundled_deps)
+
+    # Create the SBOM document
+    # Generate unique document namespace (required by SPDX 2.3)
+    timestamp = time.strftime("%Y%m%d%H%M%S", time.gmtime())
+    doc_name = f"relenv-{env.get('RELENV_PY_VERSION', 'unknown')}-{env.get('RELENV_HOST', 'unknown')}"
+
+    # Create relationships - SPDX requires DESCRIBES relationship
+    # The document DESCRIBES the Python package (the primary component)
+    relationships = [
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElement": "SPDXRef-PACKAGE-Python",
+            "relationshipType": "DESCRIBES",
+        }
+    ]
+
+    sbom = {
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "spdxVersion": "SPDX-2.3",
+        "name": doc_name,
+        "documentNamespace": f"https://github.com/saltstack/relenv/spdx/{doc_name}-{timestamp}",
+        "dataLicense": "CC0-1.0",
+        "creationInfo": {
+            "created": f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}",
+            "creators": [
+                f"Tool: relenv-{relenv.__version__}",
+            ],
+            "comment": "Authoritative SBOM for this relenv build. Documents all compiled build "
+            "dependencies and installed runtime packages. This is the single source of truth for "
+            "vulnerability scanning and compliance.",
+        },
+        "packages": packages,
+        "relationships": relationships,
+    }
+
+    # Write the SBOM file
+    sbom_path = pathlib.Path(dirs.prefix) / "relenv-sbom.spdx.json"
+    with io.open(sbom_path, "w") as fp:
+        json.dump(sbom, fp, indent=2)
+    log.info(
+        "Generated relenv-sbom.spdx.json with %d packages (Python %s + dependencies + pip packages)",
+        len(packages),
+        python_version,
+    )
+
+
 def finalize(
     env: MutableMapping[str, str],
     dirs: Dirs,
@@ -557,6 +830,10 @@ def finalize(
         runpip(MODULE_DIR.parent, upgrade=True)
     else:
         runpip("relenv", upgrade=True)
+
+    # Generate single comprehensive SBOM (replaces copying Python's multiple SBOMs)
+    generate_relenv_sbom(env, dirs)
+
     globs = [
         "/bin/python*",
         "/bin/pip*",
@@ -567,6 +844,7 @@ def finalize(
         "*.so",
         "/lib/*.so.*",
         "*.py",
+        "*.spdx.json",  # Include SBOM files
         # Mac specific, factor this out
         "*.dylib",
     ]

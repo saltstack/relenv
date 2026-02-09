@@ -273,6 +273,7 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
+    # Map SBOM file names to actual file paths
     # Update SBOM with correct checksums for updated expat files
     # Map SBOM file names to actual file paths
     files_to_update = {}
