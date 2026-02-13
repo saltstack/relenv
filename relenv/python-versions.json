@@ -209,7 +209,8 @@
     "sha256": "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e",
     "platforms": [
      "linux",
-     "darwin"
+     "darwin",
+     "win32"
     ]
    }
   },
@@ -269,7 +270,8 @@
     "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
     "sha256": "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc",
     "platforms": [
-     "linux"
+     "linux",
+     "win32"
     ]
    }
   },
@@ -278,7 +280,8 @@
     "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
     "sha256": "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
     "platforms": [
-     "linux"
+     "linux",
+     "win32"
     ]
    }
   },
@@ -347,7 +350,8 @@
     "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
     "platforms": [
      "linux",
-     "darwin"
+     "darwin",
+     "win32"
     ]
    }
   },

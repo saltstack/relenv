@@ -126,25 +126,26 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"sqlite-\d+.\d+.\d+.\d+", f"sqlite-{version}")
+        update_props(dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+\\?", f"sqlite-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         # # we need to fix the name of the extracted directory
         extracted_dir = dirs.source / "externals" / f"sqlite-autoconf-{sqliteversion}"
         shutil.move(str(extracted_dir), str(target_dir))
     # Update externals.spdx.json with the correct version, url, and hash
     # This became a thing in 3.12
-    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12"]:
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
-        with open(str(spdx_json), "r") as f:
-            data = json.load(f)
-            for pkg in data["packages"]:
-                if pkg["name"] == "sqlite":
-                    pkg["versionInfo"] = version
-                    pkg["downloadLocation"] = url
-                    pkg["checksums"][0]["checksumValue"] = sha256
-                    pkg["externalRefs"][0]["referenceLocator"] = ref_loc
-        with open(str(spdx_json), "w") as f:
-            json.dump(data, f, indent=2)
+        if spdx_json.exists():
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "sqlite":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
 
 
 def update_xz(dirs: Dirs, env: EnvMapping) -> None:
@@ -188,7 +189,7 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     target_dir = dirs.source / "externals" / f"xz-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"xz-\d+.\d+.\d+", f"xz-{version}")
+        update_props(dirs.source, r"xz-\d+\.\d+\.\d+\\?", f"xz-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
     # Starting with version v5.5.0, XZ-Utils removed the ability to compile
     # with MSBuild. We are bringing the config.h from the last version that
@@ -289,6 +290,158 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     update_sbom_checksums(dirs.source, files_to_update)
 
 
+def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the OPENSSL library.
+    """
+    # Try to get version from JSON
+    openssl_info = get_dependency_version("openssl", "win32")
+    if openssl_info:
+        version = openssl_info["version"]
+        url = openssl_info["url"].format(version=version)
+        sha256 = openssl_info["sha256"]
+    else:
+        # Fallback to hardcoded values
+        version = "3.6.1"
+        url = f"https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz"
+        sha256 = "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e"
+    ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"
+    target_dir = dirs.source / "externals" / f"openssl-{version}"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        update_props(
+            dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}"
+        )
+        update_props(
+            dirs.source, r"openssl-bin-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-bin-{version}"
+        )
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+
+    # Update externals.spdx.json with the correct version, url, and hash
+    # This became a thing in 3.12
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        if spdx_json.exists():
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "openssl":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
+
+
+def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the BZIP2 library.
+    """
+    bzip2_info = get_dependency_version("bzip2", "win32")
+    if bzip2_info:
+        version = bzip2_info["version"]
+        url = bzip2_info["url"].format(version=version)
+        sha256 = bzip2_info["sha256"]
+    else:
+        version = "1.0.8"
+        url = f"https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz"
+        sha256 = "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+    ref_loc = f"cpe:2.3:a:bzip:bzip2:{version}:*:*:*:*:*:*:*"
+    target_dir = dirs.source / "externals" / f"bzip2-{version}"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+\\?", f"bzip2-{version}")
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+
+    # Update externals.spdx.json
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        if spdx_json.exists():
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "bzip2":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
+
+
+def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the LIBFFI library.
+    """
+    libffi_info = get_dependency_version("libffi", "win32")
+    if libffi_info:
+        version = libffi_info["version"]
+        url = libffi_info["url"].format(version=version)
+        sha256 = libffi_info["sha256"]
+    else:
+        version = "3.5.2"
+        url = f"https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz"
+        sha256 = "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc"
+    ref_loc = f"cpe:2.3:a:libffi_project:libffi:{version}:*:*:*:*:*:*:*"
+    target_dir = dirs.source / "externals" / f"libffi-{version}"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+\\?", f"libffi-{version}")
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+
+    # Update externals.spdx.json
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        if spdx_json.exists():
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "libffi":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
+
+
+def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the ZLIB library.
+    """
+    zlib_info = get_dependency_version("zlib", "win32")
+    if zlib_info:
+        version = zlib_info["version"]
+        url = zlib_info["url"].format(version=version)
+        sha256 = zlib_info["sha256"]
+    else:
+        version = "1.3.1"
+        url = f"https://zlib.net/fossils/zlib-{version}.tar.gz"
+        sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+    ref_loc = f"cpe:2.3:a:gnu:zlib:{version}:*:*:*:*:*:*:*"
+    target_dir = dirs.source / "externals" / f"zlib-{version}"
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    if not target_dir.exists():
+        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+\\?", f"zlib-{version}")
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+
+    # Update externals.spdx.json
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        if spdx_json.exists():
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "zlib":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
+
+
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
@@ -311,6 +464,14 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     update_xz(dirs=dirs, env=env)
 
     update_expat(dirs=dirs, env=env)
+
+    update_openssl(dirs=dirs, env=env)
+
+    update_bzip2(dirs=dirs, env=env)
+
+    update_libffi(dirs=dirs, env=env)
+
+    update_zlib(dirs=dirs, env=env)
 
     arch_to_plat = {
         "amd64": "x64",
