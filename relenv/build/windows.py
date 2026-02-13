@@ -72,8 +72,29 @@ def update_props(source: pathlib.Path, old: str, new: str) -> None:
     :param new: Replacement text
     :type new: str
     """
-    patch_file(source / "PCbuild" / "python.props", old, new)
-    patch_file(source / "PCbuild" / "get_externals.bat", old, new)
+    log.info("Patching props in %s: %s -> %s", source, old, new)
+    # Use double-backslashes for the replacement string because it goes into re.sub
+    new_for_re = new.replace("\\", "\\\\")
+    patch_file(source / "PCbuild" / "python.props", old, new_for_re)
+    patch_file(source / "PCbuild" / "get_externals.bat", old, new_for_re)
+
+
+def flatten_externals(dirs: Dirs, name: str, version: str) -> None:
+    """
+    Handle nested folders in extracted tarballs.
+    """
+    extracted_dir = dirs.source / "externals" / f"{name}-{version}"
+    if not extracted_dir.exists():
+        return
+    subdirs = [x for x in extracted_dir.iterdir() if x.is_dir() and x.name != "zips"]
+    if len(subdirs) == 1:
+        log.info("Flattening %s-%s from %s", name, version, subdirs[0].name)
+        temp_dir = dirs.source / "externals" / f"{name}-{version}-tmp"
+        if temp_dir.exists():
+            shutil.rmtree(str(temp_dir))
+        shutil.move(str(subdirs[0]), str(temp_dir))
+        shutil.rmtree(str(extracted_dir))
+        shutil.move(str(temp_dir), str(extracted_dir))
 
 
 def get_externals_source(externals_dir: pathlib.Path, url: str) -> None:
@@ -93,46 +114,34 @@ def get_externals_source(externals_dir: pathlib.Path, url: str) -> None:
         log.exception("Failed to remove temporary file")
 
 
-def get_externals_bin(source_root: pathlib.Path, url: str) -> None:
-    """
-    Download external binary dependency.
-
-    Download binaries to the "externals" directory in the root of the python
-    source.
-    """
-    pass
-
-
 def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the SQLITE library.
     """
-    # Try to get version from JSON
     sqlite_info = get_dependency_version("sqlite", "win32")
-    if sqlite_info:
-        version = sqlite_info["version"]
-        url_template = sqlite_info["url"]
-        sha256 = sqlite_info["sha256"]
-        sqliteversion = sqlite_info.get("sqliteversion", "3500400")
-        # Format the URL with sqliteversion (the 7-digit version number)
-        url = url_template.format(version=sqliteversion)
-    else:
-        # Fallback to hardcoded values
-        version = "3.50.4.0"
-        url = "https://sqlite.org/2025/sqlite-autoconf-3500400.tar.gz"
-        sha256 = "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18"
-        sqliteversion = "3500400"
+    if not sqlite_info:
+        log.error("sqlite dependency not found for win32")
+        return
+
+    version = sqlite_info["version"]
+    sqliteversion = sqlite_info.get("sqliteversion", "3500400")
+    url = sqlite_info["url"].format(version=sqliteversion)
+    sha256 = sqlite_info["sha256"]
     ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
+
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+\\?", f"sqlite-{version}")
+        update_props(
+            dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+\\?", f"sqlite-{version}\\"
+        )
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
-        # # we need to fix the name of the extracted directory
+        # Fix the extracted directory name
         extracted_dir = dirs.source / "externals" / f"sqlite-autoconf-{sqliteversion}"
-        shutil.move(str(extracted_dir), str(target_dir))
-    # Update externals.spdx.json with the correct version, url, and hash
-    # This became a thing in 3.12
+        if extracted_dir.exists():
+            shutil.move(str(extracted_dir), str(target_dir))
+
+    # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
@@ -151,142 +160,107 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
 def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the XZ library.
-
-    COMPATIBILITY NOTE: We use config.h from XZ 5.4.7 for all XZ versions.
-    Starting with XZ 5.5.0, the project removed Visual Studio .vcxproj files
-    and switched to CMake. Python's build system (PCbuild/liblzma.vcxproj)
-    still expects MSBuild-compatible builds, so we maintain a compatibility
-    shim at relenv/_resources/xz/config.h.
-
-    When updating XZ versions, verify compatibility by checking:
-    1. Build completes without compiler errors
-    2. test_xz_lzma_functionality passes
-    3. No new HAVE_* defines required in src/liblzma source files
-    4. No removed HAVE_* defines that config.h references
-
-    If compatibility breaks, you have two options:
-    - Use CMake to generate new config.h for Windows (see discussion at
-      https://discuss.python.org/t/building-python-from-source-on-windows-using-a-custom-version-of-xz/74717)
-    - Update relenv/_resources/xz/config.h manually from newer XZ source
-
-    See also: relenv/_resources/xz/readme.md
     """
-    # Try to get version from JSON
-    # Note: Windows may use a different XZ version than Linux/Darwin due to MSBuild compatibility
     xz_info = get_dependency_version("xz", "win32")
-    if xz_info:
-        version = xz_info["version"]
-        url_template = xz_info["url"]
-        sha256 = xz_info["sha256"]
-        url = url_template.format(version=version)
-    else:
-        # Fallback to hardcoded values
-        # Note: Using 5.6.2 for MSBuild compatibility (5.5.0+ removed MSBuild support)
-        version = "5.6.2"
-        url = f"https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.xz"
-        sha256 = "8bfd20c0e1d86f0402f2497cfa71c6ab62d4cd35fd704276e3140bfb71414519"
+    if not xz_info:
+        log.error("xz dependency not found for win32")
+        return
+
+    version = xz_info["version"]
+    url = xz_info["url"].format(version=version)
+    sha256 = xz_info["sha256"]
     ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
+
     target_dir = dirs.source / "externals" / f"xz-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"xz-\d+\.\d+\.\d+\\?", f"xz-{version}")
+        update_props(dirs.source, r"xz-\d+\.\d+\.\d+\\?", f"xz-{version}\\")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
-    # Starting with version v5.5.0, XZ-Utils removed the ability to compile
-    # with MSBuild. We are bringing the config.h from the last version that
-    # had it, 5.4.7
+        flatten_externals(dirs, "xz", version)
+
+    # Bring config.h for MSBuild compatibility
     config_file = target_dir / "src" / "common" / "config.h"
     config_file_source = dirs.root / "_resources" / "xz" / "config.h"
     if not config_file.exists():
+        config_file.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(str(config_file_source), str(config_file))
 
-    # Also copy crc32_table.c and crc64_table.c which are missing in newer XZ tarballs
+    # Copy missing crc source files
     check_dir = target_dir / "src" / "liblzma" / "check"
     for filename in ["crc32_table.c", "crc64_table.c"]:
         target_file = check_dir / filename
         source_file = dirs.root / "_resources" / "xz" / filename
         if not target_file.exists():
+            target_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(str(source_file), str(target_file))
-    # Update externals.spdx.json with the correct version, url, and hash
-    # This became a thing in 3.12
+
+    # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
-        with open(str(spdx_json), "r") as f:
-            data = json.load(f)
-            for pkg in data["packages"]:
-                if pkg["name"] == "xz":
-                    pkg["versionInfo"] = version
-                    pkg["downloadLocation"] = url
-                    pkg["checksums"][0]["checksumValue"] = sha256
-                    pkg["externalRefs"][0]["referenceLocator"] = ref_loc
-        with open(str(spdx_json), "w") as f:
-            json.dump(data, f, indent=2)
+        if spdx_json.exists():
+            with open(str(spdx_json), "r") as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "xz":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
 
 
 def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the EXPAT library.
     """
-    # Patch <src>/Modules/expat/refresh.sh. When the SBOM is created, refresh.sh
-    # is scanned for the expat version, even though it doesn't run on Windows.
-
-    # Try to get version from JSON
     expat_info = get_dependency_version("expat", "win32")
-    if expat_info:
-        version = expat_info["version"]
-        hash = expat_info["sha256"]
-    else:
-        # Fallback to hardcoded values
-        version = "2.7.3"
-        hash = "821ac9710d2c073eaf13e1b1895a9c9aa66c1157a99635c639fbff65cdbdd732"
+    if not expat_info:
+        log.error("expat dependency not found for win32")
+        return
 
-    url = f'https://github.com/libexpat/libexpat/releases/download/R_{version.replace(".", "_")}/expat-{version}.tar.xz'
+    version = expat_info["version"]
+    url = expat_info["url"].format(version=version)
+    sha256 = expat_info["sha256"]
+
     bash_refresh = dirs.source / "Modules" / "expat" / "refresh.sh"
-    old = r'expected_libexpat_tag="R_\d+_\d+_\d"'
-    new = f'expected_libexpat_tag="R_{version.replace(".", "_")}"'
-    patch_file(bash_refresh, old=old, new=new)
-    old = r'expected_libexpat_version="\d+.\d+.\d"'
-    new = f'expected_libexpat_version="{version}"'
-    patch_file(bash_refresh, old=old, new=new)
-    old = 'expected_libexpat_sha256=".*"'
-    new = f'expected_libexpat_sha256="{hash}"'
-    patch_file(bash_refresh, old=old, new=new)
+    if bash_refresh.exists():
+        patch_file(
+            bash_refresh,
+            old=r'expected_libexpat_tag="R_\d+_\d+_\d"',
+            new=f'expected_libexpat_tag="R_{version.replace(".", "_")}"',
+        )
+        patch_file(
+            bash_refresh,
+            old=r'expected_libexpat_version="\d+.\d+.\d"',
+            new=f'expected_libexpat_version="{version}"',
+        )
+        patch_file(
+            bash_refresh,
+            old='expected_libexpat_sha256=".*"',
+            new=f'expected_libexpat_sha256="{sha256}"',
+        )
+
     get_externals_source(externals_dir=dirs.source / "Modules" / "expat", url=url)
-    # Copy *.h and *.c to expat directory
     expat_lib_dir = dirs.source / "Modules" / "expat" / f"expat-{version}" / "lib"
     expat_dir = dirs.source / "Modules" / "expat"
     updated_files = []
-    for file in glob.glob(str(expat_lib_dir / "*.h")):
-        target = expat_dir / os.path.basename(file)
-        if target.exists():
-            target.unlink()
-        shutil.move(file, str(expat_dir))
-        updated_files.append(target)
-    for file in glob.glob(str(expat_lib_dir / "*.c")):
-        target = expat_dir / os.path.basename(file)
-        if target.exists():
-            target.unlink()
-        shutil.move(file, str(expat_dir))
-        updated_files.append(target)
+    for ext in ["*.h", "*.c"]:
+        for file in glob.glob(str(expat_lib_dir / ext)):
+            target = expat_dir / os.path.basename(file)
+            if target.exists():
+                target.unlink()
+            shutil.move(file, str(expat_dir))
+            updated_files.append(target)
 
-    # Touch all updated files to ensure MSBuild rebuilds them
-    # (The original files may have newer timestamps)
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
     # Update SBOM with correct checksums for updated expat files
-    # Map SBOM file names to actual file paths
-    files_to_update = {}
-    for target_file in updated_files:
-        # SBOM uses relative paths from Python source root
-        relative_path = f"Modules/expat/{target_file.name}"
-        files_to_update[relative_path] = target_file
-
-    # Also include refresh.sh which was patched
-    bash_refresh = dirs.source / "Modules" / "expat" / "refresh.sh"
+    files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
     if bash_refresh.exists():
         files_to_update["Modules/expat/refresh.sh"] = bash_refresh
-
     update_sbom_checksums(dirs.source, files_to_update)
 
 
@@ -294,31 +268,67 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the OPENSSL library.
     """
-    # Try to get version from JSON
     openssl_info = get_dependency_version("openssl", "win32")
-    if openssl_info:
-        version = openssl_info["version"]
-        url = openssl_info["url"].format(version=version)
-        sha256 = openssl_info["sha256"]
-    else:
-        # Fallback to hardcoded values
-        version = "3.6.1"
-        url = f"https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz"
-        sha256 = "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e"
+    if not openssl_info:
+        log.error("openssl dependency not found for win32")
+        return
+
+    version = openssl_info["version"]
+    url = openssl_info["url"].format(version=version)
+    sha256 = openssl_info["sha256"]
     ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"
+
     target_dir = dirs.source / "externals" / f"openssl-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
         update_props(
-            dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}"
+            dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}\\"
         )
         update_props(
-            dirs.source, r"openssl-bin-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-bin-{version}"
+            dirs.source,
+            r"openssl-bin-\d+\.\d+\.\d+[a-z]*\\?",
+            f"openssl-bin-{version}\\",
         )
-        get_externals_source(externals_dir=dirs.source / "externals", url=url)
 
-    # Update externals.spdx.json with the correct version, url, and hash
-    # This became a thing in 3.12
+        # Patch python.props to point include dir to the source instead of a non-existent bin dir
+        inc_dir = (
+            "<opensslIncludeDir Condition=\"$(opensslIncludeDir) == ''\">"
+            "$(opensslDir)include</opensslIncludeDir>"
+        )
+        patch_file(
+            dirs.source / "PCbuild" / "python.props",
+            r"<opensslIncludeDir.*>.*</opensslIncludeDir>",
+            inc_dir.replace("\\", "\\\\"),
+        )
+        out_dir = (
+            "<opensslOutDir Condition=\"$(opensslOutDir) == ''\">"
+            "$(opensslDir)</opensslOutDir>"
+        )
+        patch_file(
+            dirs.source / "PCbuild" / "python.props",
+            r"<opensslOutDir.*>.*</opensslOutDir>",
+            out_dir.replace("\\", "\\\\"),
+        )
+
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "openssl", version)
+
+        # Ensure include directory exists where MSBuild expects it
+        if not (target_dir / "include").exists() and (target_dir / "inc32").exists():
+            shutil.copytree(str(target_dir / "inc32"), str(target_dir / "include"))
+
+        # OpenSSL 3.x source build requires configuration.h (usually generated)
+        conf_h = target_dir / "include" / "openssl" / "configuration.h"
+        if not conf_h.exists():
+            conf_h.parent.mkdir(parents=True, exist_ok=True)
+            with open(str(conf_h), "w") as f:
+                f.write("/* Stubs for OpenSSL 3.x */\n")
+                f.write("#ifndef OPENSSL_CONFIGURATION_H\n")
+                f.write("#define OPENSSL_CONFIGURATION_H\n")
+                f.write("#include <openssl/opensslconf.h>\n")
+                f.write("#endif\n")
+
+    # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
@@ -339,20 +349,21 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
     Update the BZIP2 library.
     """
     bzip2_info = get_dependency_version("bzip2", "win32")
-    if bzip2_info:
-        version = bzip2_info["version"]
-        url = bzip2_info["url"].format(version=version)
-        sha256 = bzip2_info["sha256"]
-    else:
-        version = "1.0.8"
-        url = f"https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz"
-        sha256 = "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+    if not bzip2_info:
+        log.error("bzip2 dependency not found for win32")
+        return
+
+    version = bzip2_info["version"]
+    url = bzip2_info["url"].format(version=version)
+    sha256 = bzip2_info["sha256"]
     ref_loc = f"cpe:2.3:a:bzip:bzip2:{version}:*:*:*:*:*:*:*"
+
     target_dir = dirs.source / "externals" / f"bzip2-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+\\?", f"bzip2-{version}")
+        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+\\?", f"bzip2-{version}\\")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "bzip2", version)
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -375,20 +386,60 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
     Update the LIBFFI library.
     """
     libffi_info = get_dependency_version("libffi", "win32")
-    if libffi_info:
-        version = libffi_info["version"]
-        url = libffi_info["url"].format(version=version)
-        sha256 = libffi_info["sha256"]
-    else:
-        version = "3.5.2"
-        url = f"https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz"
-        sha256 = "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc"
+    if not libffi_info:
+        log.error("libffi dependency not found for win32")
+        return
+
+    version = libffi_info["version"]
+    url = libffi_info["url"].format(version=version)
+    sha256 = libffi_info["sha256"]
     ref_loc = f"cpe:2.3:a:libffi_project:libffi:{version}:*:*:*:*:*:*:*"
+
     target_dir = dirs.source / "externals" / f"libffi-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+\\?", f"libffi-{version}")
+        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+\\?", f"libffi-{version}\\")
+
+        # Patch libffi library name (3.5.2 uses libffi-8.lib)
+        patch_file(
+            dirs.source / "PCbuild" / "libffi.props", r"libffi-7.lib", r"libffi-8.lib"
+        )
+        patch_file(
+            dirs.source / "PCbuild" / "libffi.props", r"libffi-7.dll", r"libffi-8.dll"
+        )
+
+        # Patch libffi.props to look for headers in 'include'
+        inc_dir = (
+            "<libffiIncludeDir Condition=\"$(libffiIncludeDir) == ''\">"
+            "$(libffiDir)include</libffiIncludeDir>"
+        )
+        patch_file(
+            dirs.source / "PCbuild" / "python.props",
+            r"<libffiIncludeDir.*>.*</libffiIncludeDir>",
+            inc_dir.replace("\\", "\\\\"),
+        )
+        out_dir = (
+            "<libffiOutDir Condition=\"$(libffiOutDir) == ''\">"
+            "$(libffiDir)</libffiOutDir>"
+        )
+        patch_file(
+            dirs.source / "PCbuild" / "python.props",
+            r"<libffiOutDir.*>.*</libffiOutDir>",
+            out_dir.replace("\\", "\\\\"),
+        )
+
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "libffi", version)
+
+        # Migrate headers to 'include' for Python
+        include_dir = target_dir / "include"
+        include_dir.mkdir(exist_ok=True)
+        for header in target_dir.glob("**/ffi.h"):
+            if header.parent != include_dir:
+                shutil.copy(str(header), str(include_dir / "ffi.h"))
+        for header in target_dir.glob("**/ffitarget.h"):
+            if header.parent != include_dir:
+                shutil.copy(str(header), str(include_dir / "ffitarget.h"))
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -411,20 +462,21 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
     Update the ZLIB library.
     """
     zlib_info = get_dependency_version("zlib", "win32")
-    if zlib_info:
-        version = zlib_info["version"]
-        url = zlib_info["url"].format(version=version)
-        sha256 = zlib_info["sha256"]
-    else:
-        version = "1.3.1"
-        url = f"https://zlib.net/fossils/zlib-{version}.tar.gz"
-        sha256 = "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+    if not zlib_info:
+        log.error("zlib dependency not found for win32")
+        return
+
+    version = zlib_info["version"]
+    url = zlib_info["url"].format(version=version)
+    sha256 = zlib_info["sha256"]
     ref_loc = f"cpe:2.3:a:gnu:zlib:{version}:*:*:*:*:*:*:*"
+
     target_dir = dirs.source / "externals" / f"zlib-{version}"
     target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+\\?", f"zlib-{version}")
+        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+\\?", f"zlib-{version}\\")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "zlib", version)
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -445,43 +497,26 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
-
-    :param env: The environment dictionary
-    :type env: dict
-    :param dirs: The working directories
-    :type dirs: ``relenv.build.common.Dirs``
-    :param logfp: A handle for the log file
-    :type logfp: file
     """
-    # Override default versions
-
-    # Create externals directory
     externals_dir = dirs.source / "externals"
     externals_dir.mkdir(parents=True, exist_ok=True)
 
     update_sqlite(dirs=dirs, env=env)
-
     update_xz(dirs=dirs, env=env)
-
     update_expat(dirs=dirs, env=env)
-
     update_openssl(dirs=dirs, env=env)
-
     update_bzip2(dirs=dirs, env=env)
-
     update_libffi(dirs=dirs, env=env)
-
     update_zlib(dirs=dirs, env=env)
 
-    arch_to_plat = {
-        "amd64": "x64",
-        "x86": "win32",
-        "arm64": "arm64",
-    }
+    arch_to_plat = {"amd64": "x64", "x86": "win32", "arm64": "arm64"}
     arch = env["RELENV_HOST_ARCH"]
     plat = arch_to_plat[arch]
+
+    # -e skips fetching externals if they already exist.
     cmd = [
         str(dirs.source / "PCbuild" / "build.bat"),
+        "-e",
         "-p",
         plat,
         "--no-tkinter",
@@ -491,8 +526,6 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
 
-    # This is where build.bat puts everything
-    # TODO: For now we'll only support 64bit
     if arch == "amd64":
         build_dir = dirs.source / "PCbuild" / arch
     else:
@@ -500,7 +533,6 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     bin_dir = dirs.prefix / "Scripts"
     bin_dir.mkdir(parents=True, exist_ok=True)
 
-    # Move python binaries
     binaries = [
         "py.exe",
         "pyw.exe",
@@ -515,15 +547,12 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     for binary in binaries:
         shutil.move(src=str(build_dir / binary), dst=str(bin_dir / binary))
 
-    # Create DLLs directory
     (dirs.prefix / "DLLs").mkdir(parents=True, exist_ok=True)
-    # Move all library files to DLLs directory (*.pyd, *.dll)
     for file in glob.glob(str(build_dir / "*.pyd")):
         shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
     for file in glob.glob(str(build_dir / "*.dll")):
         shutil.move(src=file, dst=str(dirs.prefix / "DLLs"))
 
-    # Copy include directory
     shutil.copytree(
         src=str(dirs.source / "Include"),
         dst=str(dirs.prefix / "Include"),
@@ -531,30 +560,21 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     )
     if "3.13" not in env["RELENV_PY_MAJOR_VERSION"]:
         shutil.copy(
-            src=str(dirs.source / "PC" / "pyconfig.h"),
-            dst=str(dirs.prefix / "Include"),
+            src=str(dirs.source / "PC" / "pyconfig.h"), dst=str(dirs.prefix / "Include")
         )
 
-    # Copy library files
     shutil.copytree(
-        src=str(dirs.source / "Lib"),
-        dst=str(dirs.prefix / "Lib"),
-        dirs_exist_ok=True,
+        src=str(dirs.source / "Lib"), dst=str(dirs.prefix / "Lib"), dirs_exist_ok=True
     )
     os.makedirs(str(dirs.prefix / "Lib" / "site-packages"), exist_ok=True)
 
-    # Create libs directory
     (dirs.prefix / "libs").mkdir(parents=True, exist_ok=True)
-    # Copy lib files
     shutil.copy(
         src=str(build_dir / "python3.lib"),
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
     pylib = f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"
-    shutil.copy(
-        src=str(build_dir / pylib),
-        dst=str(dirs.prefix / "libs" / pylib),
-    )
+    shutil.copy(src=str(build_dir / pylib), dst=str(dirs.prefix / "libs" / pylib))
 
 
 build = builds.add("win32", populate_env=populate_env)
@@ -573,43 +593,20 @@ build.add(
 def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Finalize sitecustomize, relenv runtime, and pip for Windows.
-
-    :param env: The environment dictionary
-    :type env: dict
-    :param dirs: The working directories
-    :type dirs: ``relenv.build.common.Dirs``
-    :param logfp: A handle for the log file
-    :type logfp: file
     """
-    # Lay down site customize
     sitepackages = dirs.prefix / "Lib" / "site-packages"
     install_runtime(sitepackages)
-
-    # update ensurepip
     update_ensurepip(dirs.prefix / "Lib")
 
-    # Install pip
     python = dirs.prefix / "Scripts" / "python.exe"
     runcmd([str(python), "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
 
     def runpip(pkg: Union[str, os.PathLike[str]]) -> None:
-        # XXX Support cross pip installs on windows
         env = os.environ.copy()
-        target = None
-        cmd = [
-            str(python),
-            "-m",
-            "pip",
-            "install",
-            str(pkg),
-        ]
-        if target:
-            cmd.append("--target={}".format(target))
+        cmd = [str(python), "-m", "pip", "install", str(pkg)]
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
     runpip("wheel")
-    # This needs to handle running from the root of the git repo and also from
-    # an installed Relenv
     if (MODULE_DIR.parent / ".git").exists():
         runpip(MODULE_DIR.parent)
     else:
@@ -635,8 +632,4 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         create_archive(fp, dirs.prefix, globs, logfp)
 
 
-build.add(
-    "relenv-finalize",
-    build_func=finalize,
-    wait_on=["python"],
-)
+build.add("relenv-finalize", build_func=finalize, wait_on=["python"])

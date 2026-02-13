@@ -495,7 +495,7 @@ def update_dependency_versions(
                 dependencies["openssl"][latest] = {
                     "url": url_template,
                     "sha256": checksum,
-                    "platforms": ["linux", "darwin"],
+                    "platforms": ["linux", "darwin", "win32"],
                 }
                 # Clean up download
                 os.remove(download_path)
@@ -577,7 +577,7 @@ def update_dependency_versions(
                     dependencies["libffi"][latest] = {
                         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
                         "sha256": checksum,
-                        "platforms": ["linux"],
+                        "platforms": ["linux", "win32"],
                     }
                     os.remove(download_path)
                 except Exception as e:
@@ -602,7 +602,7 @@ def update_dependency_versions(
                     dependencies["zlib"][latest] = {
                         "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
                         "sha256": checksum,
-                        "platforms": ["linux"],
+                        "platforms": ["linux", "win32"],
                     }
                     os.remove(download_path)
                 except Exception as e:
@@ -755,7 +755,7 @@ def update_dependency_versions(
                     dependencies["bzip2"][latest] = {
                         "url": "https://sourceware.org/pub/bzip2/bzip2-{version}.tar.gz",
                         "sha256": checksum,
-                        "platforms": ["linux", "darwin"],
+                        "platforms": ["linux", "darwin", "win32"],
                     }
                     os.remove(download_path)
                 except Exception as e:

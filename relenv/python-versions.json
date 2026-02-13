@@ -184,26 +184,11 @@
   "3.13.11": "1c658e3f04f9ebc0eadd4450cb78ce50ab526597",
   "3.13.10": "15a47abaf928dbbe73f932ef3ba78070cdfe699d",
   "3.13.9": "53a9cd799370adad6fe471a2ee45874bbf6ccfc1",
-  "3.9.25": "36c7257ec30dca042679626d0dff79715acd4efb"
+  "3.9.25": "36c7257ec30dca042679626d0dff79715acd4efb",
+  "3.13.12": "7c5b0241cb7d33d4eab78c9fd44967b08220dfe7"
  },
  "dependencies": {
   "openssl": {
-   "3.5.4": {
-    "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
-    "sha256": "",
-    "platforms": [
-     "linux",
-     "darwin"
-    ]
-   },
-   "3.6.0": {
-    "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
-    "sha256": "b6a5f44b7eb69e3fa35dbf15524405b44837a481d43d81daddde3ff21fcbb8e9",
-    "platforms": [
-     "linux",
-     "darwin"
-    ]
-   },
    "3.6.1": {
     "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
     "sha256": "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e",
@@ -247,14 +232,6 @@
    }
   },
   "xz": {
-   "5.8.1": {
-    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-    "sha256": "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543",
-    "platforms": [
-     "linux",
-     "darwin"
-    ]
-   },
    "5.8.2": {
     "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
     "sha256": "ce09c50a5962786b83e5da389c90dd2c15ecd0980a258dd01f70f9e7ce58a8f1",
