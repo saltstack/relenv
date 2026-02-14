@@ -69,21 +69,14 @@ def update_props(source: pathlib.Path, old: str, new: str) -> None:
     :type source: str
     :param old: Regular expression to search for
     :type old: str
-    :param new: Replacement text (without trailing backslash)
+    :param new: Replacement text
     :type new: str
     """
     log.info("Patching props in %s: %s -> %s", source, old, new)
-    # patch_file uses re.sub, so we need to ensure backslashes are preserved if any.
-    # We escape backslashes for the replacement string.
+    # patch_file uses re.sub, so we need to ensure backslashes are preserved.
     new_escaped = new.replace("\\", "\\\\")
-
-    # get_externals.bat expects the folder name (usually without trailing backslash)
+    patch_file(source / "PCbuild" / "python.props", old, new_escaped)
     patch_file(source / "PCbuild" / "get_externals.bat", old, new_escaped)
-
-    # python.props usually expects a trailing backslash for directory properties.
-    # We patch it with the backslash if the regex matched a directory property.
-    # Most regexes in this file match the folder name with an optional trailing backslash.
-    patch_file(source / "PCbuild" / "python.props", old, new_escaped + "\\\\")
 
 
 def flatten_externals(dirs: Dirs, name: str, version: str) -> None:
@@ -155,7 +148,7 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
 
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
     if not target_dir.exists():
-        update_props(dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+\\?", f"sqlite-{version}")
+        update_props(dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+", f"sqlite-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         # Fix the extracted directory name (sqlite-autoconf-...)
         for d in (dirs.source / "externals").iterdir():
@@ -193,7 +186,7 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
 
     target_dir = dirs.source / "externals" / f"xz-{version}"
     if not target_dir.exists():
-        update_props(dirs.source, r"xz-\d+\.\d+\.\d+\\?", f"xz-{version}")
+        update_props(dirs.source, r"xz-\d+\.\d+\.\d+", f"xz-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "xz", version)
 
@@ -297,18 +290,24 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
 
     target_dir = dirs.source / "externals" / f"openssl-{version}"
     if not target_dir.exists():
-        update_props(
-            dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}"
-        )
+        update_props(dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*", f"openssl-{version}")
 
         # Binary deps tarball from cpython-bin-deps includes both source and binaries
         # We need to ensure openssl-bin-<version> is also pointed to the same place if needed
         update_props(
-            dirs.source, r"openssl-bin-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}"
+            dirs.source, r"openssl-bin-\d+\.\d+\.\d+[a-z]*", f"openssl-{version}"
         )
 
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "openssl", version)
+
+        # Patch openssl.props to use correct DLL suffix for OpenSSL 3.x
+        if version.startswith("3."):
+            patch_file(
+                dirs.source / "PCbuild" / "openssl.props",
+                r"<_DLLSuffix>-1_1</_DLLSuffix>",
+                "<_DLLSuffix>-3</_DLLSuffix>",
+            )
 
         # Ensure include/openssl exists
         inc_dir = target_dir / "include" / "openssl"
@@ -351,7 +350,7 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
 
     target_dir = dirs.source / "externals" / f"bzip2-{version}"
     if not target_dir.exists():
-        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+\\?", f"bzip2-{version}")
+        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+", f"bzip2-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "bzip2", version)
 
@@ -386,7 +385,7 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
 
     target_dir = dirs.source / "externals" / f"libffi-{version}"
     if not target_dir.exists():
-        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+\\?", f"libffi-{version}")
+        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+", f"libffi-{version}")
 
         # Patch libffi library name if needed.
         # Newer libffi (3.4.4+) uses libffi-8.lib, older uses libffi-7.lib.
@@ -441,7 +440,7 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
 
     target_dir = dirs.source / "externals" / f"zlib-{version}"
     if not target_dir.exists():
-        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+\\?", f"zlib-{version}")
+        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+", f"zlib-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "zlib", version)
 
