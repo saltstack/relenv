@@ -495,7 +495,7 @@ def update_dependency_versions(
                 dependencies["openssl"][latest] = {
                     "url": url_template,
                     "sha256": checksum,
-                    "platforms": ["linux", "darwin", "win32"],
+                    "platforms": ["linux", "darwin"],
                 }
                 # Clean up download
                 os.remove(download_path)
@@ -577,7 +577,7 @@ def update_dependency_versions(
                     dependencies["libffi"][latest] = {
                         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
                         "sha256": checksum,
-                        "platforms": ["linux", "win32"],
+                        "platforms": ["linux"],
                     }
                     os.remove(download_path)
                 except Exception as e:

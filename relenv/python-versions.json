@@ -194,7 +194,13 @@
     "sha256": "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e",
     "platforms": [
      "linux",
-     "darwin",
+     "darwin"
+    ]
+   },
+   "3.0.15": {
+    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
+    "sha256": "1b661784fdd28f4174e707058f2cbd63d266f772b21743d923a6fea6c7e346c5",
+    "platforms": [
      "win32"
     ]
    }
@@ -247,7 +253,13 @@
     "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
     "sha256": "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc",
     "platforms": [
-     "linux",
+     "linux"
+    ]
+   },
+   "3.4.4": {
+    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/libffi-{version}.tar.gz",
+    "sha256": "eb51312acdeed06451c53ec29a40f9e9141e01e1e777bd91c154ca14ddd5e055",
+    "platforms": [
      "win32"
     ]
    }

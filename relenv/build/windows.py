@@ -69,40 +69,65 @@ def update_props(source: pathlib.Path, old: str, new: str) -> None:
     :type source: str
     :param old: Regular expression to search for
     :type old: str
-    :param new: Replacement text
+    :param new: Replacement text (without trailing backslash)
     :type new: str
     """
     log.info("Patching props in %s: %s -> %s", source, old, new)
-    # Use double-backslashes for the replacement string because it goes into re.sub
-    new_for_re = new.replace("\\", "\\\\")
-    patch_file(source / "PCbuild" / "python.props", old, new_for_re)
-    patch_file(source / "PCbuild" / "get_externals.bat", old, new_for_re)
+    # patch_file uses re.sub, so we need to ensure backslashes are preserved if any.
+    # We escape backslashes for the replacement string.
+    new_escaped = new.replace("\\", "\\\\")
+
+    # get_externals.bat expects the folder name (usually without trailing backslash)
+    patch_file(source / "PCbuild" / "get_externals.bat", old, new_escaped)
+
+    # python.props usually expects a trailing backslash for directory properties.
+    # We patch it with the backslash if the regex matched a directory property.
+    # Most regexes in this file match the folder name with an optional trailing backslash.
+    patch_file(source / "PCbuild" / "python.props", old, new_escaped + "\\\\")
 
 
 def flatten_externals(dirs: Dirs, name: str, version: str) -> None:
     """
     Handle nested folders in extracted tarballs.
     """
-    extracted_dir = dirs.source / "externals" / f"{name}-{version}"
-    if not extracted_dir.exists():
-        return
-    subdirs = [x for x in extracted_dir.iterdir() if x.is_dir() and x.name != "zips"]
-    if len(subdirs) == 1:
-        log.info("Flattening %s-%s from %s", name, version, subdirs[0].name)
-        temp_dir = dirs.source / "externals" / f"{name}-{version}-tmp"
-        if temp_dir.exists():
-            shutil.rmtree(str(temp_dir))
-        shutil.move(str(subdirs[0]), str(temp_dir))
-        shutil.rmtree(str(extracted_dir))
-        shutil.move(str(temp_dir), str(extracted_dir))
+    # Look for the extracted directory
+    # For cpython-bin-deps, it often extracts to <repo>-<tag>/...
+    # We want it to be in externals/<name>-<version>/
+    externals_dir = dirs.source / "externals"
+
+    # Identify what was actually extracted
+    # extract_archive usually extracts into externals_dir
+    # We search for any directory that isn't 'zips'
+    extracted_dirs = [
+        x for x in externals_dir.iterdir() if x.is_dir() and x.name != "zips"
+    ]
+
+    target_dir = externals_dir / f"{name}-{version}"
+
+    for d in extracted_dirs:
+        if d == target_dir:
+            # Check if it's nested (e.g. openssl-3.0.15/openssl-3.0.15/...)
+            subdirs = [x for x in d.iterdir() if x.is_dir()]
+            if len(subdirs) == 1 and subdirs[0].name.startswith(name):
+                log.info("Flattening nested %s", d.name)
+                temp_dir = externals_dir / f"{name}-{version}-tmp"
+                shutil.move(str(subdirs[0]), str(temp_dir))
+                shutil.rmtree(str(d))
+                shutil.move(str(temp_dir), str(d))
+            continue
+
+        if d.name.startswith(name) or "cpython-bin-deps" in d.name:
+            log.info("Moving %s to %s", d.name, target_dir.name)
+            if target_dir.exists():
+                shutil.rmtree(str(target_dir))
+            shutil.move(str(d), str(target_dir))
+            # Recurse once to handle nested folder inside the renamed folder
+            flatten_externals(dirs, name, version)
 
 
 def get_externals_source(externals_dir: pathlib.Path, url: str) -> None:
     """
     Download external source code dependency.
-
-    Download source code and extract to the "externals" directory in the root of
-    the python source. Only works with a tarball
     """
     zips_dir = externals_dir / "zips"
     zips_dir.mkdir(parents=True, exist_ok=True)
@@ -120,7 +145,6 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     """
     sqlite_info = get_dependency_version("sqlite", "win32")
     if not sqlite_info:
-        log.error("sqlite dependency not found for win32")
         return
 
     version = sqlite_info["version"]
@@ -130,16 +154,13 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(
-            dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+\\?", f"sqlite-{version}\\"
-        )
+        update_props(dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+\\?", f"sqlite-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
-        # Fix the extracted directory name
-        extracted_dir = dirs.source / "externals" / f"sqlite-autoconf-{sqliteversion}"
-        if extracted_dir.exists():
-            shutil.move(str(extracted_dir), str(target_dir))
+        # Fix the extracted directory name (sqlite-autoconf-...)
+        for d in (dirs.source / "externals").iterdir():
+            if d.is_dir() and d.name.startswith("sqlite-autoconf"):
+                shutil.move(str(d), str(target_dir))
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -163,7 +184,6 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     """
     xz_info = get_dependency_version("xz", "win32")
     if not xz_info:
-        log.error("xz dependency not found for win32")
         return
 
     version = xz_info["version"]
@@ -172,9 +192,8 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"xz-{version}"
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"xz-\d+\.\d+\.\d+\\?", f"xz-{version}\\")
+        update_props(dirs.source, r"xz-\d+\.\d+\.\d+\\?", f"xz-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "xz", version)
 
@@ -216,7 +235,6 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     """
     expat_info = get_dependency_version("expat", "win32")
     if not expat_info:
-        log.error("expat dependency not found for win32")
         return
 
     version = expat_info["version"]
@@ -270,7 +288,6 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     """
     openssl_info = get_dependency_version("openssl", "win32")
     if not openssl_info:
-        log.error("openssl dependency not found for win32")
         return
 
     version = openssl_info["version"]
@@ -279,54 +296,29 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"openssl-{version}"
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
         update_props(
-            dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}\\"
-        )
-        update_props(
-            dirs.source,
-            r"openssl-bin-\d+\.\d+\.\d+[a-z]*\\?",
-            f"openssl-bin-{version}\\",
+            dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}"
         )
 
-        # Patch python.props to point include dir to the source instead of a non-existent bin dir
-        inc_dir = (
-            "<opensslIncludeDir Condition=\"$(opensslIncludeDir) == ''\">"
-            "$(opensslDir)include</opensslIncludeDir>"
-        )
-        patch_file(
-            dirs.source / "PCbuild" / "python.props",
-            r"<opensslIncludeDir.*>.*</opensslIncludeDir>",
-            inc_dir.replace("\\", "\\\\"),
-        )
-        out_dir = (
-            "<opensslOutDir Condition=\"$(opensslOutDir) == ''\">"
-            "$(opensslDir)</opensslOutDir>"
-        )
-        patch_file(
-            dirs.source / "PCbuild" / "python.props",
-            r"<opensslOutDir.*>.*</opensslOutDir>",
-            out_dir.replace("\\", "\\\\"),
+        # Binary deps tarball from cpython-bin-deps includes both source and binaries
+        # We need to ensure openssl-bin-<version> is also pointed to the same place if needed
+        update_props(
+            dirs.source, r"openssl-bin-\d+\.\d+\.\d+[a-z]*\\?", f"openssl-{version}"
         )
 
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "openssl", version)
 
-        # Ensure include directory exists where MSBuild expects it
-        if not (target_dir / "include").exists() and (target_dir / "inc32").exists():
-            shutil.copytree(str(target_dir / "inc32"), str(target_dir / "include"))
-
-        # OpenSSL 3.x source build requires configuration.h (usually generated)
-        conf_h = target_dir / "include" / "openssl" / "configuration.h"
-        if not conf_h.exists():
-            conf_h.parent.mkdir(parents=True, exist_ok=True)
-            with open(str(conf_h), "w") as f:
-                f.write("/* Stubs for OpenSSL 3.x */\n")
-                f.write("#ifndef OPENSSL_CONFIGURATION_H\n")
-                f.write("#define OPENSSL_CONFIGURATION_H\n")
-                f.write("#include <openssl/opensslconf.h>\n")
-                f.write("#endif\n")
+        # Ensure include/openssl exists
+        inc_dir = target_dir / "include" / "openssl"
+        if not inc_dir.exists():
+            # Try to find headers and move them
+            for h in target_dir.glob("**/opensslv.h"):
+                if h.parent.name == "openssl":
+                    # Found it, move its parent to include/
+                    shutil.copytree(str(h.parent), str(inc_dir), dirs_exist_ok=True)
+                    break
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -350,7 +342,6 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
     """
     bzip2_info = get_dependency_version("bzip2", "win32")
     if not bzip2_info:
-        log.error("bzip2 dependency not found for win32")
         return
 
     version = bzip2_info["version"]
@@ -359,9 +350,8 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:bzip:bzip2:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"bzip2-{version}"
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+\\?", f"bzip2-{version}\\")
+        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+\\?", f"bzip2-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "bzip2", version)
 
@@ -387,7 +377,6 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
     """
     libffi_info = get_dependency_version("libffi", "win32")
     if not libffi_info:
-        log.error("libffi dependency not found for win32")
         return
 
     version = libffi_info["version"]
@@ -396,50 +385,30 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:libffi_project:libffi:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"libffi-{version}"
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+\\?", f"libffi-{version}\\")
+        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+\\?", f"libffi-{version}")
 
-        # Patch libffi library name (3.5.2 uses libffi-8.lib)
-        patch_file(
-            dirs.source / "PCbuild" / "libffi.props", r"libffi-7.lib", r"libffi-8.lib"
-        )
-        patch_file(
-            dirs.source / "PCbuild" / "libffi.props", r"libffi-7.dll", r"libffi-8.dll"
-        )
-
-        # Patch libffi.props to look for headers in 'include'
-        inc_dir = (
-            "<libffiIncludeDir Condition=\"$(libffiIncludeDir) == ''\">"
-            "$(libffiDir)include</libffiIncludeDir>"
-        )
-        patch_file(
-            dirs.source / "PCbuild" / "python.props",
-            r"<libffiIncludeDir.*>.*</libffiIncludeDir>",
-            inc_dir.replace("\\", "\\\\"),
-        )
-        out_dir = (
-            "<libffiOutDir Condition=\"$(libffiOutDir) == ''\">"
-            "$(libffiDir)</libffiOutDir>"
-        )
-        patch_file(
-            dirs.source / "PCbuild" / "python.props",
-            r"<libffiOutDir.*>.*</libffiOutDir>",
-            out_dir.replace("\\", "\\\\"),
-        )
+        # Patch libffi library name if needed.
+        # Newer libffi (3.4.4+) uses libffi-8.lib, older uses libffi-7.lib.
+        # We'll search for the lib file after extraction.
 
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "libffi", version)
 
-        # Migrate headers to 'include' for Python
-        include_dir = target_dir / "include"
-        include_dir.mkdir(exist_ok=True)
-        for header in target_dir.glob("**/ffi.h"):
-            if header.parent != include_dir:
-                shutil.copy(str(header), str(include_dir / "ffi.h"))
-        for header in target_dir.glob("**/ffitarget.h"):
-            if header.parent != include_dir:
-                shutil.copy(str(header), str(include_dir / "ffitarget.h"))
+        # Find the .lib file to determine the name
+        lib_files = list(target_dir.glob("**/*.lib"))
+        if lib_files:
+            lib_name = lib_files[0].name
+            if lib_name != "libffi-7.lib":
+                log.info("Patching libffi library name to %s", lib_name)
+                patch_file(
+                    dirs.source / "PCbuild" / "libffi.props", r"libffi-7\.lib", lib_name
+                )
+                patch_file(
+                    dirs.source / "PCbuild" / "libffi.props",
+                    r"libffi-7\.dll",
+                    lib_name.replace(".lib", ".dll"),
+                )
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -463,7 +432,6 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
     """
     zlib_info = get_dependency_version("zlib", "win32")
     if not zlib_info:
-        log.error("zlib dependency not found for win32")
         return
 
     version = zlib_info["version"]
@@ -472,9 +440,8 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:gnu:zlib:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"zlib-{version}"
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
-        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+\\?", f"zlib-{version}\\")
+        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+\\?", f"zlib-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "zlib", version)
 
