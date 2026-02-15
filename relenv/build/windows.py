@@ -12,6 +12,7 @@ import logging
 import os
 import pathlib
 import shutil
+import subprocess
 import sys
 import tarfile
 import time
@@ -59,6 +60,87 @@ def populate_env(env: EnvMapping, dirs: Dirs) -> None:
     :type dirs: ``relenv.build.common.Dirs``
     """
     env["MSBUILDDISABLENODEREUSE"] = "1"
+
+
+def find_vcvarsall(env: EnvMapping) -> pathlib.Path | None:
+    """
+    Locate vcvarsall.bat using multiple strategies.
+    """
+    # 1. Check MSBUILD env var and search upwards
+    msbuild_path = env.get("MSBUILD")
+    if msbuild_path:
+        msbuild_path = pathlib.Path(msbuild_path)
+        if msbuild_path.exists():
+            for parent in msbuild_path.parents:
+                candidate = parent / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat"
+                if candidate.exists():
+                    return candidate
+
+    # 2. Use vswhere.exe if available
+    vswhere = shutil.which("vswhere.exe")
+    if not vswhere:
+        # Check common location
+        vswhere_path = (
+            pathlib.Path(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"))
+            / "Microsoft Visual Studio"
+            / "Installer"
+            / "vswhere.exe"
+        )
+        if vswhere_path.exists():
+            vswhere = str(vswhere_path)
+
+    if vswhere:
+        try:
+            # -latest: Use newest version
+            # -products *: Search all products (Enterprise, Professional, Community, BuildTools)
+            # -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64: Ensure C++ tools are present
+            # -property installationPath: Return the path
+            cmd = [
+                vswhere,
+                "-latest",
+                "-products",
+                "*",
+                "-requires",
+                "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                "-property",
+                "installationPath",
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            vs_path = result.stdout.strip()
+            if vs_path:
+                candidate = (
+                    pathlib.Path(vs_path) / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat"
+                )
+                if candidate.exists():
+                    return candidate
+        except subprocess.CalledProcessError:
+            pass
+
+    # 3. Check common installation paths as a last resort
+    program_files = [
+        os.environ.get("ProgramFiles", "C:\\Program Files"),
+        os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"),
+    ]
+    editions = ["Enterprise", "Professional", "Community", "BuildTools"]
+    years = ["2022", "2019", "2017"]
+
+    for pf in program_files:
+        for year in years:
+            for edition in editions:
+                candidate = (
+                    pathlib.Path(pf)
+                    / "Microsoft Visual Studio"
+                    / year
+                    / edition
+                    / "VC"
+                    / "Auxiliary"
+                    / "Build"
+                    / "vcvarsall.bat"
+                )
+                if candidate.exists():
+                    return candidate
+
+    return None
 
 
 def update_props(source: pathlib.Path, old: str, new: str) -> None:
@@ -147,8 +229,8 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
+    update_props(dirs.source, r"sqlite-\d+(\.\d+)*", f"sqlite-{version}")
     if not target_dir.exists():
-        update_props(dirs.source, r"sqlite-\d+\.\d+\.\d+\.\d+", f"sqlite-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         # Fix the extracted directory name (sqlite-autoconf-...)
         for d in (dirs.source / "externals").iterdir():
@@ -185,8 +267,8 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"xz-{version}"
+    update_props(dirs.source, r"xz-\d+(\.\d+)*", f"xz-{version}")
     if not target_dir.exists():
-        update_props(dirs.source, r"xz-\d+\.\d+\.\d+", f"xz-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "xz", version)
 
@@ -238,12 +320,12 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     if bash_refresh.exists():
         patch_file(
             bash_refresh,
-            old=r'expected_libexpat_tag="R_\d+_\d+_\d"',
+            old=r'expected_libexpat_tag="R_\d+(_\d+)*"',
             new=f'expected_libexpat_tag="R_{version.replace(".", "_")}"',
         )
         patch_file(
             bash_refresh,
-            old=r'expected_libexpat_version="\d+.\d+.\d"',
+            old=r'expected_libexpat_version="\d+(\.\d+)*"',
             new=f'expected_libexpat_version="{version}"',
         )
         patch_file(
@@ -288,36 +370,149 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     sha256 = openssl_info["sha256"]
     ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"
 
+    is_binary = "cpython-bin-deps" in url
     target_dir = dirs.source / "externals" / f"openssl-{version}"
+
+    update_props(dirs.source, r"openssl-\d+(\.\d+)*[a-z]*", f"openssl-{version}")
+    # Binary deps tarball from cpython-bin-deps includes both source and binaries
+    # We need to ensure openssl-bin-<version> is also pointed to the same place if needed
+    update_props(
+        dirs.source, r"openssl-bin-\d+(\.\d+)*[a-z]*", f"openssl-{version}"
+    )
+
     if not target_dir.exists():
-        update_props(dirs.source, r"openssl-\d+\.\d+\.\d+[a-z]*", f"openssl-{version}")
-
-        # Binary deps tarball from cpython-bin-deps includes both source and binaries
-        # We need to ensure openssl-bin-<version> is also pointed to the same place if needed
-        update_props(
-            dirs.source, r"openssl-bin-\d+\.\d+\.\d+[a-z]*", f"openssl-{version}"
-        )
-
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "openssl", version)
 
-        # Patch openssl.props to use correct DLL suffix for OpenSSL 3.x
-        if version.startswith("3."):
-            patch_file(
-                dirs.source / "PCbuild" / "openssl.props",
-                r"<_DLLSuffix>-1_1</_DLLSuffix>",
-                "<_DLLSuffix>-3</_DLLSuffix>",
-            )
+        if not is_binary:
+            # Build from source
+            log.info("Building OpenSSL %s from source", version)
+            perl_dir = update_perl(dirs, env)
+            perl_bin = perl_dir / "perl" / "bin" / "perl.exe"
+            
+            nasm_info = get_dependency_version("nasm", "win32")
+            nasm_version = nasm_info["version"]
+            nasm_dir = dirs.source / "externals" / f"nasm-{nasm_version}"
+            
+            # Find nasm.exe
+            nasm_exe = list(nasm_dir.glob("**/nasm.exe"))
+            if not nasm_exe:
+                log.error("Could not find nasm.exe in %s", nasm_dir)
+                return
+            
+            arch_map = {
+                "amd64": "VC-WIN64A",
+                "x86": "VC-WIN32",
+                "arm64": "VC-WIN64-ARM",
+            }
+            target = arch_map.get(env["RELENV_HOST_ARCH"], "VC-WIN64A")
+            
+            vcvars = find_vcvarsall(env)
+            if not vcvars:
+                log.warning("Could not find vcvarsall.bat, build may fail")
+                vcvars_cmd = "echo"
+            else:
+                vcvars_arch = "x64" if env["RELENV_HOST_ARCH"] == "amd64" else env["RELENV_HOST_ARCH"]
+                vcvars_cmd = f'call "{vcvars}" {vcvars_arch}'
 
-        # Ensure include/openssl exists
-        inc_dir = target_dir / "include" / "openssl"
-        if not inc_dir.exists():
-            # Try to find headers and move them
-            for h in target_dir.glob("**/opensslv.h"):
-                if h.parent.name == "openssl":
-                    # Found it, move its parent to include/
-                    shutil.copytree(str(h.parent), str(inc_dir), dirs_exist_ok=True)
+            env_path = os.environ.get("PATH", "")
+            build_env = env.copy()
+            build_env["PATH"] = f"{perl_bin.parent};{nasm_exe[0].parent};{env_path}"
+            
+            prefix = target_dir / "build"
+            openssldir = prefix / "ssl"
+            
+            # Create a temporary batch file to run the build
+            # This is more robust than passing a long string to cmd /c
+            build_bat = target_dir / "relenv_build_openssl.bat"
+            with open(str(build_bat), "w") as f:
+                f.write("@echo off\n")
+                f.write(f'{vcvars_cmd}\n')
+                f.write(f'if %errorlevel% neq 0 exit /b %errorlevel%\n')
+                f.write(f'cd /d "{target_dir}"\n')
+                f.write(f'"{perl_bin}" Configure {target} --prefix="{prefix}" --openssldir="{openssldir}" no-unit-test no-tests\n')
+                f.write(f'if %errorlevel% neq 0 exit /b %errorlevel%\n')
+                f.write(f'nmake\n')
+                f.write(f'if %errorlevel% neq 0 exit /b %errorlevel%\n')
+                f.write(f'nmake install_sw\n')
+                f.write(f'if %errorlevel% neq 0 exit /b %errorlevel%\n')
+
+            log.info("Running OpenSSL build batch file")
+            runcmd([str(build_bat)], env=build_env)
+            
+        # CPython expects binaries in a specific structure
+        # opensslOutDir = $(ExternalsDir)openssl-bin-<version)\$(ArchName)\
+        # We'll move them to match.
+        out_dir = target_dir / env["RELENV_HOST_ARCH"]
+        out_dir.mkdir(parents=True, exist_ok=True)
+        
+        prefix = target_dir / "build"
+        bin_dir = prefix / "bin"
+        lib_dir = prefix / "lib"
+        inc_dir = prefix / "include"
+        
+        if prefix.exists():
+            for f in bin_dir.glob("*.dll"):
+                shutil.copy(str(f), str(out_dir))
+            for f in bin_dir.glob("*.pdb"):
+                shutil.copy(str(f), str(out_dir))
+            for f in lib_dir.glob("*.lib"):
+                shutil.copy(str(f), str(out_dir))
+            
+            # CPython expects headers in $(opensslOutDir)include
+            (out_dir / "include").mkdir(parents=True, exist_ok=True)
+            shutil.copytree(str(inc_dir), str(out_dir / "include"), dirs_exist_ok=True)
+            
+            # CPython specifically looks for applink.c in the include directory
+            if (target_dir / "ms" / "applink.c").exists():
+                shutil.copy(
+                    target_dir / "ms" / "applink.c",
+                    out_dir / "include" / "applink.c",
+                )
+            
+            # Copy LICENSE file to out_dir to satisfy CPython build
+            for license_file in ["LICENSE", "LICENSE.txt", "COPYING"]:
+                if (target_dir / license_file).exists():
+                    shutil.copy(str(target_dir / license_file), str(out_dir / "LICENSE"))
                     break
+
+        else:
+            # Ensure include/openssl exists
+            inc_dir = target_dir / "include" / "openssl"
+            if not inc_dir.exists():
+                # Try to find headers and move them
+                for h in target_dir.glob("**/opensslv.h"):
+                    if h.parent.name == "openssl":
+                        # Found it, move its parent to include/
+                        shutil.copytree(str(h.parent), str(inc_dir), dirs_exist_ok=True)
+                        break
+
+            # Ensure applink.c is in include/
+            if not (target_dir / "include" / "applink.c").exists():
+                for a in target_dir.glob("**/applink.c"):
+                    shutil.copy(str(a), str(target_dir / "include" / "applink.c"))
+                    break
+
+    if not is_binary:
+        # Update props to point to our custom build
+        update_props(dirs.source, r"openssl-bin-\d+(\.\d+)*[a-z]*", f"openssl-{version}\\\\{env['RELENV_HOST_ARCH']}")
+        # And opensslOutDir needs to be just the folder containing include
+        patch_file(dirs.source / "PCbuild" / "python.props", 
+                   rf"<opensslOutDir Condition=\"\$\(opensslOutDir\) == ''\">\$\(ExternalsDir\)openssl-{version}\\\\{env['RELENV_HOST_ARCH']}\\\$\(ArchName\)\\\</opensslOutDir>",
+                   f"<opensslOutDir Condition=\"$(opensslOutDir) == ''\">$(ExternalsDir)openssl-{version}\\\\{env['RELENV_HOST_ARCH']}\\\\</opensslOutDir>")
+
+    # Patch openssl.props to use correct DLL suffix for OpenSSL 3.x
+    if version.startswith("3."):
+        suffix = "-3"
+        if not is_binary and env["RELENV_HOST_ARCH"] == "amd64":
+            suffix = "-3-x64"
+        
+        log.info("Patching openssl.props DLL suffix to %s", suffix)
+        patch_file(
+            dirs.source / "PCbuild" / "openssl.props",
+            r"<_DLLSuffix>.*</_DLLSuffix>",
+            f"<_DLLSuffix>{suffix}</_DLLSuffix>",
+        )
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -349,8 +544,8 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:bzip:bzip2:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"bzip2-{version}"
+    update_props(dirs.source, r"bzip2-\d+(\.\d+)*", f"bzip2-{version}")
     if not target_dir.exists():
-        update_props(dirs.source, r"bzip2-\d+\.\d+\.\d+", f"bzip2-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "bzip2", version)
 
@@ -384,30 +579,28 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:libffi_project:libffi:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"libffi-{version}"
+    update_props(dirs.source, r"libffi-\d+(\.\d+)*", f"libffi-{version}")
     if not target_dir.exists():
-        update_props(dirs.source, r"libffi-\d+\.\d+\.\d+", f"libffi-{version}")
-
-        # Patch libffi library name if needed.
-        # Newer libffi (3.4.4+) uses libffi-8.lib, older uses libffi-7.lib.
-        # We'll search for the lib file after extraction.
-
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "libffi", version)
 
-        # Find the .lib file to determine the name
-        lib_files = list(target_dir.glob("**/*.lib"))
-        if lib_files:
-            lib_name = lib_files[0].name
-            if lib_name != "libffi-7.lib":
-                log.info("Patching libffi library name to %s", lib_name)
-                patch_file(
-                    dirs.source / "PCbuild" / "libffi.props", r"libffi-7\.lib", lib_name
-                )
-                patch_file(
-                    dirs.source / "PCbuild" / "libffi.props",
-                    r"libffi-7\.dll",
-                    lib_name.replace(".lib", ".dll"),
-                )
+    # Patch libffi library name if needed.
+    # Newer libffi (3.4.4+) uses libffi-8.lib, older uses libffi-7.lib.
+    # We'll search for the lib file after extraction.
+    # Find the .lib file to determine the name
+    lib_files = list(target_dir.glob("**/*.lib"))
+    if lib_files:
+        lib_name = lib_files[0].name
+        if lib_name != "libffi-7.lib":
+            log.info("Patching libffi library name to %s", lib_name)
+            patch_file(
+                dirs.source / "PCbuild" / "libffi.props", r"libffi-7\.lib", lib_name
+            )
+            patch_file(
+                dirs.source / "PCbuild" / "libffi.props",
+                r"libffi-7\.dll",
+                lib_name.replace(".lib", ".dll"),
+            )
 
     # Update externals.spdx.json
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
@@ -439,8 +632,8 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:gnu:zlib:{version}:*:*:*:*:*:*:*"
 
     target_dir = dirs.source / "externals" / f"zlib-{version}"
+    update_props(dirs.source, r"zlib-\d+(\.\d+)*", f"zlib-{version}")
     if not target_dir.exists():
-        update_props(dirs.source, r"zlib-\d+\.\d+\.\d+", f"zlib-{version}")
         get_externals_source(externals_dir=dirs.source / "externals", url=url)
         flatten_externals(dirs, "zlib", version)
 
@@ -460,6 +653,63 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
                 json.dump(data, f, indent=2)
 
 
+def update_mpdecimal(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the MPDECIMAL library.
+    """
+    mpdecimal_info = get_dependency_version("mpdecimal", "win32")
+    if not mpdecimal_info:
+        return
+
+    version = mpdecimal_info["version"]
+    url = mpdecimal_info["url"].format(version=version)
+    sha256 = mpdecimal_info["sha256"]
+
+    target_dir = dirs.source / "externals" / f"mpdecimal-{version}"
+    update_props(dirs.source, r"mpdecimal-\d+(\.\d+)*", f"mpdecimal-{version}")
+    if not target_dir.exists():
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "mpdecimal", version)
+
+
+def update_nasm(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the NASM library.
+    """
+    nasm_info = get_dependency_version("nasm", "win32")
+    if not nasm_info:
+        return
+
+    version = nasm_info["version"]
+    url = nasm_info["url"].format(version=version)
+    sha256 = nasm_info["sha256"]
+
+    target_dir = dirs.source / "externals" / f"nasm-{version}"
+    update_props(dirs.source, r"nasm-\d+(\.\d+)*", f"nasm-{version}")
+    if not target_dir.exists():
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "nasm", version)
+
+
+def update_perl(dirs: Dirs, env: EnvMapping) -> pathlib.Path:
+    """
+    Update the Perl library.
+    """
+    perl_info = get_dependency_version("perl", "win32")
+    if not perl_info:
+        return None
+
+    version = perl_info["version"]
+    url = perl_info["url"].format(version=version)
+    sha256 = perl_info["sha256"]
+
+    target_dir = dirs.source / "externals" / f"perl-{version}"
+    if not target_dir.exists():
+        target_dir.mkdir(parents=True, exist_ok=True)
+        get_externals_source(externals_dir=target_dir, url=url)
+    return target_dir
+
+
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
@@ -470,10 +720,13 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     update_sqlite(dirs=dirs, env=env)
     update_xz(dirs=dirs, env=env)
     update_expat(dirs=dirs, env=env)
-    update_openssl(dirs=dirs, env=env)
     update_bzip2(dirs=dirs, env=env)
     update_libffi(dirs=dirs, env=env)
     update_zlib(dirs=dirs, env=env)
+    update_mpdecimal(dirs=dirs, env=env)
+    update_nasm(dirs=dirs, env=env)
+    update_perl(dirs=dirs, env=env)
+    update_openssl(dirs=dirs, env=env)
 
     # Disable SBOM validation in Python 3.12+
     regen_targets = dirs.source / "PCbuild" / "regen.targets"

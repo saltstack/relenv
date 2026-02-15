@@ -599,6 +599,14 @@ def extract_archive(
     archive_path = pathlib.Path(archive)
     archive_str = str(archive_path)
     to_path = pathlib.Path(to_dir)
+    if archive_str.endswith(".zip"):
+        import zipfile
+
+        log.debug("Found zip archive")
+        with zipfile.ZipFile(archive_str, "r") as zip_ref:
+            zip_ref.extractall(str(to_path))
+        return
+
     TarReadMode = Literal["r:gz", "r:xz", "r:bz2", "r"]
     read_type: TarReadMode = "r"
     if archive_str.endswith(".tgz"):

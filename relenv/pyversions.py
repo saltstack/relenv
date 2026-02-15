@@ -383,8 +383,21 @@ def detect_krb5_versions() -> list[str]:
     # krb5 versions are like 1.22/
     pattern = r"(\d+\.\d+)/"
     matches = re.findall(pattern, content)
-    return sorted(
+    majors = sorted(
         set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+    if not majors:
+        return []
+
+    # Check the latest major for micro versions
+    latest_major = majors[0]
+    url = f"https://kerberos.org/dist/krb5/{latest_major}/"
+    content = fetch_url_content(url)
+    pattern = r"krb5-(\d+\.\d+(\.\d+)?)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    versions = [m[0] for m in matches]
+    return sorted(
+        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
     )
 
 
@@ -424,6 +437,63 @@ def detect_expat_versions() -> list[str]:
     )
 
 
+def detect_cpython_bin_deps_versions(name: str) -> list[str]:
+    """Detect available binary dependency versions from python/cpython-bin-deps."""
+    url = "https://github.com/python/cpython-bin-deps/tags"
+    content = fetch_url_content(url)
+    # Tags are like openssl-bin-3.0.15 or libffi-3.4.4
+    pattern = rf"{name}-(\d+\.\d+(\.\d+)*)\""
+    matches = re.findall(pattern, content)
+    versions = [m[0] for m in matches]
+    return sorted(
+        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_perl_versions() -> list[str]:
+    """Detect available Strawberry Perl versions from GitHub releases."""
+    url = "https://github.com/StrawberryPerl/Perl-Dist-Strawberry/tags"
+    content = fetch_url_content(url)
+    # Find tags like SP_53822_64bit
+    pattern = r'SP_(\d+)_64bit"'
+    matches = re.findall(pattern, content)
+    # Convert 53822 to 5.38.2.2
+    versions = []
+    for m in matches:
+        if len(m) >= 5:
+            major = m[0]
+            minor = int(m[1:3])
+            patch = int(m[3:4])
+            subpatch = int(m[4:])
+            versions.append(f"{major}.{minor}.{patch}.{subpatch}")
+    return sorted(
+        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_mpdecimal_versions() -> list[str]:
+    """Detect available mpdecimal versions from bytereef.org."""
+    url = "https://www.bytereef.org/mpdecimal/download.html"
+    content = fetch_url_content(url)
+    pattern = r"mpdecimal-(\d+\.\d+\.\d+)\.tar\.gz"
+    matches = re.findall(pattern, content)
+    return sorted(
+        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
+def detect_nasm_versions() -> list[str]:
+    """Detect available nasm versions from nasm.us."""
+    url = "https://www.nasm.us/pub/nasm/releasebuilds/"
+    content = fetch_url_content(url)
+    pattern = r'href="(\d+\.\d+(\.\d+)?)/"'
+    matches = re.findall(pattern, content)
+    versions = [m[0] for m in matches]
+    return sorted(
+        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
+    )
+
+
 def update_dependency_versions(
     path: pathlib.Path, deps_to_update: list[str] | None = None
 ) -> None:
@@ -455,7 +525,7 @@ def update_dependency_versions(
     if deps_to_update is None:
         # By default, update commonly-changed dependencies
         # Full list: openssl, sqlite, xz, libffi, zlib, bzip2, ncurses,
-        # readline, gdbm, libxcrypt, krb5, uuid, tirpc, expat
+        # readline, gdbm, libxcrypt, krb5, uuid, tirpc, expat, mpdecimal, nasm
         deps_to_update = [
             "openssl",
             "sqlite",
@@ -471,7 +541,36 @@ def update_dependency_versions(
             "uuid",
             "tirpc",
             "expat",
+            "mpdecimal",
+            "nasm",
+            "perl",
         ]
+
+    # Update perl
+    if "perl" in deps_to_update:
+        print("Checking perl versions...")
+        perl_versions = detect_perl_versions()
+        if perl_versions:
+            latest = perl_versions[0]
+            print(f"Latest perl: {latest}")
+            if "perl" not in dependencies:
+                dependencies["perl"] = {}
+            if latest not in dependencies["perl"]:
+                ver_tag = latest.replace(".", "")
+                url = f"https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/SP_{ver_tag}_64bit/strawberry-perl-{latest}-64bit-portable.zip"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["perl"][latest] = {
+                        "url": f"https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/SP_{ver_tag}_64bit/strawberry-perl-{{version}}-64bit-portable.zip",
+                        "sha256": checksum,
+                        "platforms": ["win32"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download perl: {e}")
 
     # Update OpenSSL
     if "openssl" in deps_to_update:
@@ -482,6 +581,8 @@ def update_dependency_versions(
             print(f"Latest OpenSSL: {latest}")
             if "openssl" not in dependencies:
                 dependencies["openssl"] = {}
+
+            platforms = ["linux", "darwin", "win32"]
             if latest not in dependencies["openssl"]:
                 url = f"https://github.com/openssl/openssl/releases/download/openssl-{latest}/openssl-{latest}.tar.gz"
                 print(f"Downloading {url}...")
@@ -495,9 +596,29 @@ def update_dependency_versions(
                 dependencies["openssl"][latest] = {
                     "url": url_template,
                     "sha256": checksum,
-                    "platforms": ["linux", "darwin", "win32"],
+                    "platforms": platforms,
                 }
                 # Clean up download
+                os.remove(download_path)
+            else:
+                dependencies["openssl"][latest]["platforms"] = platforms
+
+        # Check for Windows-specific OpenSSL from cpython-bin-deps
+        win_openssl_versions = detect_cpython_bin_deps_versions("openssl-bin")
+        if win_openssl_versions:
+            latest = win_openssl_versions[0]
+            print(f"Latest Windows OpenSSL: {latest}")
+            if latest not in dependencies["openssl"]:
+                url = f"https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                download_path = download_url(url, cwd)
+                checksum = sha256_digest(download_path)
+                print(f"SHA-256: {checksum}")
+                dependencies["openssl"][latest] = {
+                    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
+                    "sha256": checksum,
+                    "platforms": ["win32"],
+                }
                 os.remove(download_path)
 
     # Update SQLite
@@ -582,6 +703,27 @@ def update_dependency_versions(
                     os.remove(download_path)
                 except Exception as e:
                     print(f"Failed to download libffi: {e}")
+
+        # Check for Windows-specific libffi from cpython-bin-deps
+        win_libffi_versions = detect_cpython_bin_deps_versions("libffi")
+        if win_libffi_versions:
+            latest = win_libffi_versions[0]
+            print(f"Latest Windows libffi: {latest}")
+            if latest not in dependencies["libffi"]:
+                url = f"https://github.com/python/cpython-bin-deps/archive/refs/tags/libffi-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["libffi"][latest] = {
+                        "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/libffi-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["win32"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download libffi (win32): {e}")
 
     # Update zlib
     if "zlib" in deps_to_update:
@@ -843,6 +985,56 @@ def update_dependency_versions(
                 except Exception as e:
                     print(f"Failed to download expat: {e}")
 
+    # Update mpdecimal
+    if "mpdecimal" in deps_to_update:
+        print("Checking mpdecimal versions...")
+        mpdecimal_versions = detect_mpdecimal_versions()
+        if mpdecimal_versions:
+            latest = mpdecimal_versions[0]
+            print(f"Latest mpdecimal: {latest}")
+            if "mpdecimal" not in dependencies:
+                dependencies["mpdecimal"] = {}
+            if latest not in dependencies["mpdecimal"]:
+                url = f"https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-{latest}.tar.gz"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["mpdecimal"][latest] = {
+                        "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-{version}.tar.gz",
+                        "sha256": checksum,
+                        "platforms": ["win32"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download mpdecimal: {e}")
+
+    # Update nasm
+    if "nasm" in deps_to_update:
+        print("Checking nasm versions...")
+        nasm_versions = detect_nasm_versions()
+        if nasm_versions:
+            latest = nasm_versions[0]
+            print(f"Latest nasm: {latest}")
+            if "nasm" not in dependencies:
+                dependencies["nasm"] = {}
+            if latest not in dependencies["nasm"]:
+                url = f"https://www.nasm.us/pub/nasm/releasebuilds/{latest}/win64/nasm-{latest}-win64.zip"
+                print(f"Downloading {url}...")
+                try:
+                    download_path = download_url(url, cwd)
+                    checksum = sha256_digest(download_path)
+                    print(f"SHA-256: {checksum}")
+                    dependencies["nasm"][latest] = {
+                        "url": "https://www.nasm.us/pub/nasm/releasebuilds/{version}/win64/nasm-{version}-win64.zip",
+                        "sha256": checksum,
+                        "platforms": ["win32"],
+                    }
+                    os.remove(download_path)
+                except Exception as e:
+                    print(f"Failed to download nasm: {e}")
+
     # Write updated data
     all_data = {"python": pydata, "dependencies": dependencies}
     path.write_text(json.dumps(all_data, indent=1))
@@ -1101,6 +1293,9 @@ def main(args: argparse.Namespace) -> None:
             ("uuid", "uuid", detect_uuid_versions),
             ("tirpc", "tirpc", detect_tirpc_versions),
             ("expat", "expat", detect_expat_versions),
+            ("mpdecimal", "MPDecimal", detect_mpdecimal_versions),
+            ("nasm", "NASM", detect_nasm_versions),
+            ("perl", "Perl", detect_perl_versions),
         ]
 
         for dep_key, dep_name, detect_func in checks:
