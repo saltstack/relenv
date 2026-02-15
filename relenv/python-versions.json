@@ -184,32 +184,48 @@
   "3.13.11": "1c658e3f04f9ebc0eadd4450cb78ce50ab526597",
   "3.13.10": "15a47abaf928dbbe73f932ef3ba78070cdfe699d",
   "3.13.9": "53a9cd799370adad6fe471a2ee45874bbf6ccfc1",
-  "3.9.25": "36c7257ec30dca042679626d0dff79715acd4efb"
+  "3.9.25": "36c7257ec30dca042679626d0dff79715acd4efb",
+  "3.13.12": "7c5b0241cb7d33d4eab78c9fd44967b08220dfe7"
  },
  "dependencies": {
+  "perl": {
+   "5.38.2.2": {
+    "url": "https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/SP_53822_64bit/strawberry-perl-{version}-64bit-portable.zip",
+    "sha256": "ea451686065d6338d7e4d4a04c9af49f17951d15aa4c2e19ab8cb56fa2373440",
+    "platforms": [
+     "win32"
+    ]
+   },
+   "5.42.0.1": {
+    "url": "https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/SP_54201_64bit/strawberry-perl-{version}-64bit-portable.zip",
+    "sha256": "a1cde185656cf307b51670eed69f648b9eff15b5c518cb136e027c628e650b71",
+    "platforms": [
+     "win32"
+    ]
+   }
+  },
   "openssl": {
-   "3.5.4": {
-    "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
-    "sha256": "",
-    "platforms": [
-     "linux",
-     "darwin"
-    ]
-   },
-   "3.6.0": {
-    "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
-    "sha256": "b6a5f44b7eb69e3fa35dbf15524405b44837a481d43d81daddde3ff21fcbb8e9",
-    "platforms": [
-     "linux",
-     "darwin"
-    ]
-   },
    "3.6.1": {
     "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
     "sha256": "b1bfedcd5b289ff22aee87c9d600f515767ebf45f77168cb6d64f231f518a82e",
     "platforms": [
      "linux",
-     "darwin"
+     "darwin",
+     "win32"
+    ]
+   },
+   "3.0.19": {
+    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
+    "sha256": "ac4e19205c0c5155274f4d7a4d59c1baff1e3c7114f475849c8bb0e70796fce4",
+    "platforms": [
+     "win32"
+    ]
+   },
+   "3.5.5": {
+    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
+    "sha256": "b7ce0b6f82d20187cee93fad393d1cb19582272143a50b600d5c25ec486950d9",
+    "platforms": [
+     "win32"
     ]
    }
   },
@@ -246,14 +262,6 @@
    }
   },
   "xz": {
-   "5.8.1": {
-    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
-    "sha256": "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543",
-    "platforms": [
-     "linux",
-     "darwin"
-    ]
-   },
    "5.8.2": {
     "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
     "sha256": "ce09c50a5962786b83e5da389c90dd2c15ecd0980a258dd01f70f9e7ce58a8f1",
@@ -271,6 +279,13 @@
     "platforms": [
      "linux"
     ]
+   },
+   "3.4.4": {
+    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/libffi-{version}.tar.gz",
+    "sha256": "eb51312acdeed06451c53ec29a40f9e9141e01e1e777bd91c154ca14ddd5e055",
+    "platforms": [
+     "win32"
+    ]
    }
   },
   "zlib": {
@@ -278,7 +293,8 @@
     "url": "https://zlib.net/fossils/zlib-{version}.tar.gz",
     "sha256": "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23",
     "platforms": [
-     "linux"
+     "linux",
+     "win32"
     ]
    }
   },
@@ -333,9 +349,9 @@
    }
   },
   "krb5": {
-   "1.22": {
+   "1.22.2": {
     "url": "https://kerberos.org/dist/krb5/{version}/krb5-{version}.tar.gz",
-    "sha256": "652be617b4647f3c5dcac21547d47c7097101aad4e306f1778fb48e17b220ba3",
+    "sha256": "3243ffbc8ea4d4ac22ddc7dd2a1dc54c57874c40648b60ff97009763554eaf13",
     "platforms": [
      "linux"
     ]
@@ -347,7 +363,8 @@
     "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
     "platforms": [
      "linux",
-     "darwin"
+     "darwin",
+     "win32"
     ]
    }
   },
@@ -366,6 +383,24 @@
     "sha256": "b47d3ac19d3549e54a05d0019a6c400674da716123858cfdb6d3bdd70a66c702",
     "platforms": [
      "linux"
+    ]
+   }
+  },
+  "mpdecimal": {
+   "4.0.1": {
+    "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-{version}.tar.gz",
+    "sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8",
+    "platforms": [
+     "win32"
+    ]
+   }
+  },
+  "nasm": {
+   "3.01": {
+    "url": "https://www.nasm.us/pub/nasm/releasebuilds/{version}/win64/nasm-{version}-win64.zip",
+    "sha256": "e0ba5157007abc7b1a65118a96657a961ddf55f7e3f632ee035366dfce039ca4",
+    "platforms": [
+     "win32"
     ]
    }
   },

@@ -57,24 +57,24 @@ log = logging.getLogger(__name__)
 
 def patch_file(path: PathLike, old: str, new: str) -> None:
     """
-    Search a file line by line for a string to replace.
+    Search a file for a string to replace.
 
     :param path: Location of the file to search
     :type path: str
-    :param old: The value that will be replaced
-    :type path: str
+    :param old: The value that will be replaced (regex)
+    :type old: str
     :param new: The value that will replace the 'old' value.
     :type path: str
     """
     log.debug("Patching file: %s", path)
-    with open(path, "r") as fp:
-        content = fp.read()
-    new_content = ""
-    for line in content.splitlines():
-        line = re.sub(old, new, line)
-        new_content += line + "\n"
-    with open(path, "w") as fp:
-        fp.write(new_content)
+    path = pathlib.Path(path)
+    if not path.exists():
+        log.warning("File not found for patching: %s", path)
+        return
+
+    content = path.read_text(encoding="utf-8")
+    new_content = re.sub(old, new, content, flags=re.IGNORECASE | re.MULTILINE)
+    path.write_text(new_content, encoding="utf-8")
 
 
 def update_sbom_checksums(
