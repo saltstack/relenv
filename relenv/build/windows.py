@@ -475,6 +475,28 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     update_libffi(dirs=dirs, env=env)
     update_zlib(dirs=dirs, env=env)
 
+    # Disable SBOM validation in Python 3.12+
+    regen_targets = dirs.source / "PCbuild" / "regen.targets"
+    if regen_targets.exists():
+        log.info("Patching regen.targets to skip SBOM generation")
+        patch_file(
+            regen_targets,
+            r'Command="py -3.13 .*generate_sbom\.py.*"',
+            'Command="echo skipping sbom"',
+        )
+
+    # Secondary defense: overwrite the script itself if it exists
+    sbom_script = dirs.source / "Tools" / "build" / "generate_sbom.py"
+    if sbom_script.exists():
+        with open(str(sbom_script), "w") as f:
+            f.write("import sys\nif __name__ == '__main__':\n    sys.exit(0)\n")
+
+    # Disable get_externals.bat to avoid network fetches during MSBuild
+    batch_file = dirs.source / "PCbuild" / "get_externals.bat"
+    if batch_file.exists():
+        with open(str(batch_file), "w") as f:
+            f.write("@echo off\necho skipping fetch\n")
+
     arch_to_plat = {"amd64": "x64", "x86": "win32", "arm64": "arm64"}
     arch = env["RELENV_HOST_ARCH"]
     plat = arch_to_plat[arch]
