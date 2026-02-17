@@ -1,3 +1,18 @@
+0.22.4
+======
+
+* Added support for CPython 3.13.12.
+* Implemented OpenSSL 3.6.1 source builds via MSVC (nmake) to replace unreliable pre-built binary dependencies.
+* Added architecture isolation for Windows externals (mapping x86 to win32) to satisfy CPython's MSBuild expectations and prevent include path collisions.
+* Automated discovery and management of Strawberry Perl (v5.42.0.1) and NASM (v3.01) for Windows builds.
+* Added version detection for MPDecimal (v4.0.1).
+* Migrated zlib source to GitHub releases and updated to v1.3.2.
+* Forced UTF-8 encoding in pre-commit hooks to prevent crashes on Windows systems.
+* Updated openssl.props patching to ensure correct DLL suffixes (-3 vs -3-x64) based on the target architecture.
+* Security: Addressed CVE-2026-22184 and 7ASecurity audit findings in zlib (v1.3.2).
+* Resolved Windows link failures by ensuring applink.c is correctly placed in the include directory.
+
+
 0.22.3
 ======
 
