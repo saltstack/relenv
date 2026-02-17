@@ -213,20 +213,6 @@
      "darwin",
      "win32"
     ]
-   },
-   "3.0.19": {
-    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
-    "sha256": "ac4e19205c0c5155274f4d7a4d59c1baff1e3c7114f475849c8bb0e70796fce4",
-    "platforms": [
-     "win32"
-    ]
-   },
-   "3.5.5": {
-    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
-    "sha256": "b7ce0b6f82d20187cee93fad393d1cb19582272143a50b600d5c25ec486950d9",
-    "platforms": [
-     "win32"
-    ]
    }
   },
   "sqlite": {

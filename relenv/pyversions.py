@@ -609,24 +609,6 @@ def update_dependency_versions(
             else:
                 dependencies["openssl"][latest]["platforms"] = platforms
 
-        # Check for Windows-specific OpenSSL from cpython-bin-deps
-        win_openssl_versions = detect_cpython_bin_deps_versions("openssl-bin")
-        if win_openssl_versions:
-            latest = win_openssl_versions[0]
-            print(f"Latest Windows OpenSSL: {latest}")
-            if latest not in dependencies["openssl"]:
-                url = f"https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{latest}.tar.gz"
-                print(f"Downloading {url}...")
-                download_path = download_url(url, cwd)
-                checksum = sha256_digest(download_path)
-                print(f"SHA-256: {checksum}")
-                dependencies["openssl"][latest] = {
-                    "url": "https://github.com/python/cpython-bin-deps/archive/refs/tags/openssl-bin-{version}.tar.gz",
-                    "sha256": checksum,
-                    "platforms": ["win32"],
-                }
-                os.remove(download_path)
-
     # Update SQLite
     if "sqlite" in deps_to_update:
         print("Checking SQLite versions...")
