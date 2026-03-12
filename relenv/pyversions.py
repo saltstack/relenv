@@ -123,6 +123,10 @@ CHECK = True
 VERSION = None  # '3.13.2'
 UPDATE = False
 
+PINNED_VERSIONS = {
+    "openssl": "3.5",
+}
+
 
 def digest(file: str | os.PathLike[str]) -> str:
     """
@@ -249,6 +253,11 @@ def detect_openssl_versions() -> list[str]:
     # Find tags like openssl-3.5.4
     pattern = r'openssl-(\d+\.\d+\.\d+)"'
     matches = re.findall(pattern, content)
+
+    pin = PINNED_VERSIONS.get("openssl")
+    if pin:
+        matches = [v for v in matches if v == pin or v.startswith(f"{pin}.")]
+
     # Deduplicate and sort
     versions = sorted(
         set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True

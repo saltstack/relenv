@@ -110,6 +110,7 @@ def test_detect_openssl_versions(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test OpenSSL version detection from GitHub releases."""
     mock_html = """
     <html>
+    <a href="/openssl/openssl/releases/tag/openssl-3.6.1">openssl-3.6.1</a>
     <a href="/openssl/openssl/releases/tag/openssl-3.5.4">openssl-3.5.4</a>
     <a href="/openssl/openssl/releases/tag/openssl-3.5.3">openssl-3.5.3</a>
     <a href="/openssl/openssl/releases/tag/openssl-3.4.0">openssl-3.4.0</a>
@@ -120,13 +121,30 @@ def test_detect_openssl_versions(monkeypatch: pytest.MonkeyPatch) -> None:
         return mock_html
 
     monkeypatch.setattr(pyversions, "fetch_url_content", fake_fetch)
+
+    # Test with pin "3.5" (current setting)
+    monkeypatch.setitem(pyversions.PINNED_VERSIONS, "openssl", "3.5")
     versions = pyversions.detect_openssl_versions()
-    assert isinstance(versions, list)
     assert "3.5.4" in versions
     assert "3.5.3" in versions
-    assert "3.4.0" in versions
-    # Verify sorting (latest first)
+    assert "3.6.1" not in versions
+    assert "3.4.0" not in versions
     assert versions[0] == "3.5.4"
+
+    # Test with different pin
+    monkeypatch.setitem(pyversions.PINNED_VERSIONS, "openssl", "3.4")
+    versions = pyversions.detect_openssl_versions()
+    assert "3.4.0" in versions
+    assert "3.5.4" not in versions
+    assert "3.6.1" not in versions
+
+    # Test with no pin
+    monkeypatch.delitem(pyversions.PINNED_VERSIONS, "openssl")
+    versions = pyversions.detect_openssl_versions()
+    assert "3.6.1" in versions
+    assert "3.5.4" in versions
+    assert "3.4.0" in versions
+    assert versions[0] == "3.6.1"
 
 
 def test_detect_sqlite_versions(monkeypatch: pytest.MonkeyPatch) -> None:
