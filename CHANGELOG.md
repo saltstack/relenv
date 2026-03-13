@@ -1,3 +1,9 @@
+0.22.5
+======
+
+* Pin openssl to lts release 3.5.x
+
+
 0.22.4
 ======
 
