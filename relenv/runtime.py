@@ -1026,6 +1026,7 @@ def install_cargo_config() -> None:
     dirs = common().work_dirs()
     cargo_home = dirs.data / "cargo"
     triplet = common().get_triplet()
+    toolchain = None
 
     try:
         toolchain = common().get_toolchain()
