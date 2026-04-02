@@ -245,12 +245,31 @@
      "darwin",
      "win32"
     ]
+   },
+   "3.51.3.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "81f5be397049b0cae1b167f2225af7646fc0f82e4a9b3c48c9ea3a533e21d77a",
+    "sqliteversion": "3510300",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   },
   "xz": {
    "5.8.2": {
     "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
     "sha256": "ce09c50a5962786b83e5da389c90dd2c15ecd0980a258dd01f70f9e7ce58a8f1",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "5.8.3": {
+    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+    "sha256": "3d3a1b973af218114f4f889bbaa2f4c037deaae0c8e815eec381c3d546b974a0",
     "platforms": [
      "linux",
      "darwin",
@@ -411,6 +430,15 @@
    "2.7.4": {
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_7_4/expat-{version}.tar.xz",
     "sha256": "9e9cabb457c1e09de91db2706d8365645792638eb3be1f94dbb2149301086ac0",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "2.7.5": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_7_5/expat-{version}.tar.xz",
+    "sha256": "1032dfef4ff17f70464827daa28369b20f6584d108bc36f17ab1676e1edd2f91",
     "platforms": [
      "linux",
      "darwin",
