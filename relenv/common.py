@@ -34,7 +34,7 @@ from typing import (
 )
 
 # relenv package version
-__version__ = "0.22.6"
+__version__ = "0.22.7"
 
 log = logging.getLogger(__name__)
 

@@ -1,3 +1,11 @@
+0.22.7
+======
+
+* Upgread Python Versions 3.12.13, 3.11.15, 3.10.20
+  - CVE-2024-6923: Header injection in email module
+  - CVE-2026-24515, CVE-2026-25210, CVE-2025-59375: XML memory amplification and libexpat vulnerabilities
+
+
 0.22.6
 ======
 
