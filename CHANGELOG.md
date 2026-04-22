@@ -1,3 +1,25 @@
+0.22.8
+======
+
+* Python 3.13.13
+  - CVE-2026-3479: Improper resource argument validation in pkgutil.get_data()
+  - CVE-2026-2297: Incorrectly handled hook in FileLoader
+  - CVE-2025-13462: Incorrect parsing of TarInfo with GNU long name
+  - CVE-2025-27607: RCE in python-json-logger dependency
+* Perl 5.42.2.1
+  - CVE-2026-4176: Memory corruption in Compress::Raw::Zlib core module
+  - CVE-2026-3381 / CVE-2026-27171: zlib vulnerabilities within compression capabilities
+* OpenSSL 3.5.6
+  - CVE-2026-31790: Leakage from uninitialized memory in RSA KEM RSASVE
+  - CVE-2026-2673: Loss of key agreement group tuple structure
+  - CVE-2026-28387: Potential use-after-free in DANE client code
+  - CVE-2026-28388: DoS via NULL pointer dereference in delta CRL processing
+  - CVE-2026-31789: Heap buffer overflow in hexadecimal conversion
+  - CVE-2026-28389 / CVE-2026-28390: NULL pointer dereferences in CMS processing
+* SQLite 3.53.0.0
+  - CVE-2025-6965: High-severity memory corruption flaw in aggregate terms
+
+
 0.22.7
 ======
 
