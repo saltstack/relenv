@@ -354,6 +354,7 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
+    # Map SBOM file names to actual file paths
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
     if bash_refresh.exists():
