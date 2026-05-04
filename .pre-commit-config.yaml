@@ -5,7 +5,7 @@ repos:
   hooks:
   - id: check-changelog-entries
     name: Check Changelog Entries
-    entry: python .pre-commit-hooks/check_changelog_entries.py
+    entry: python3 .pre-commit-hooks/check_changelog_entries.py
     language: system
 - repo: local
   hooks:
@@ -13,7 +13,7 @@ repos:
     name: Check python modules for appropriate copyright headers
     files: ^.*\.py$
     exclude: setup\.py
-    entry: python .pre-commit-hooks/copyright_headers.py
+    entry: python3 .pre-commit-hooks/copyright_headers.py
     language: system
 - repo: https://github.com/timothycrosley/isort
   rev: 5.12.0

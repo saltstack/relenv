@@ -1,3 +1,8 @@
+0.22.9
+
+* Fix pyconfig.h include for python >= 3.13 for Windows builds.
+
+
 0.22.8
 ======
 
