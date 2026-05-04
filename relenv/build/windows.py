@@ -230,7 +230,7 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     sqliteversion = sqlite_info.get("sqliteversion", "3500400")
     url = sqlite_info["url"].format(version=sqliteversion)
     sha256 = sqlite_info["sha256"]
-    ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"
+    ref_loc = f"cpe:2.3:a:sqlite:sqlite:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     target_dir = dirs.source / "externals" / f"sqlite-{version}"
     update_props(dirs.source, r"sqlite-\d+(\.\d+)*", f"sqlite-{version}")
@@ -268,7 +268,7 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     version = xz_info["version"]
     url = xz_info["url"].format(version=version)
     sha256 = xz_info["sha256"]
-    ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"
+    ref_loc = f"cpe:2.3:a:tukaani:xz:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     target_dir = dirs.source / "externals" / f"xz-{version}"
     update_props(dirs.source, r"xz-\d+(\.\d+)*", f"xz-{version}")
@@ -372,7 +372,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     version = openssl_info["version"]
     url = openssl_info["url"].format(version=version)
     sha256 = openssl_info["sha256"]
-    ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"
+    ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     is_binary = "cpython-bin-deps" in url
     target_dir = (
@@ -456,7 +456,9 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
 
             env_path = os.environ.get("PATH", "")
             build_env = env.copy()
-            build_env["PATH"] = f"{perl_bin.parent};{nasm_exe[0].parent};{env_path}"
+            build_env[
+                "PATH"
+            ] = f"{perl_bin.parent};{nasm_exe[0].parent};{env_path}"  # noqa: E231,E702
 
             prefix = target_dir / "build"
             openssldir = prefix / "ssl"
@@ -607,7 +609,7 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
     version = bzip2_info["version"]
     url = bzip2_info["url"].format(version=version)
     sha256 = bzip2_info["sha256"]
-    ref_loc = f"cpe:2.3:a:bzip:bzip2:{version}:*:*:*:*:*:*:*"
+    ref_loc = f"cpe:2.3:a:bzip:bzip2:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     target_dir = dirs.source / "externals" / f"bzip2-{version}"
     update_props(dirs.source, r"bzip2-\d+(\.\d+)*", f"bzip2-{version}")
@@ -642,7 +644,7 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
     version = libffi_info["version"]
     url = libffi_info["url"].format(version=version)
     sha256 = libffi_info["sha256"]
-    ref_loc = f"cpe:2.3:a:libffi_project:libffi:{version}:*:*:*:*:*:*:*"
+    ref_loc = f"cpe:2.3:a:libffi_project:libffi:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     target_dir = dirs.source / "externals" / f"libffi-{version}"
     update_props(dirs.source, r"libffi-\d+(\.\d+)*", f"libffi-{version}")
@@ -695,7 +697,7 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
     version = zlib_info["version"]
     url = zlib_info["url"].format(version=version)
     sha256 = zlib_info["sha256"]
-    ref_loc = f"cpe:2.3:a:gnu:zlib:{version}:*:*:*:*:*:*:*"
+    ref_loc = f"cpe:2.3:a:gnu:zlib:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     target_dir = dirs.source / "externals" / f"zlib-{version}"
     update_props(dirs.source, r"zlib-\d+(\.\d+)*", f"zlib-{version}")
@@ -773,6 +775,37 @@ def update_perl(dirs: Dirs, env: EnvMapping) -> pathlib.Path:
     return target_dir
 
 
+def copy_pyconfig_h(
+    source: pathlib.Path, build_dir: pathlib.Path, dest_dir: pathlib.Path
+) -> pathlib.Path:
+    """
+    Copy ``pyconfig.h`` into the onedir's ``Include`` directory.
+
+    Python <= 3.12 ships a checked-in ``PC/pyconfig.h``. Python 3.13+ replaced
+    that with ``PC/pyconfig.h.in`` and MSBuild generates the real header into
+    the build output directory. This mirrors the logic in CPython's
+    ``PC/layout/main.py`` so the onedir's ``Include/`` always ends up with a
+    ``pyconfig.h`` next to ``Python.h`` -- without it C extensions cannot
+    locate the configuration macros and fail with
+    ``fatal error C1083: Cannot open include file: 'pyconfig.h'``.
+    """
+    pc_dir = source / "PC"
+    if (pc_dir / "pyconfig.h.in").is_file():
+        pyconfig_src = build_dir / "pyconfig.h"
+    else:
+        pyconfig_src = pc_dir / "pyconfig.h"
+
+    if not pyconfig_src.is_file():
+        raise RuntimeError(
+            f"Expected pyconfig.h at {pyconfig_src} but CPython build did "
+            "not produce it. Check that the MSBuild step ran successfully."
+        )
+
+    dest = dest_dir / "pyconfig.h"
+    shutil.copy(src=str(pyconfig_src), dst=str(dest))
+    return dest
+
+
 def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Run the commands to build Python.
@@ -843,7 +876,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "python.exe",
         "pythonw.exe",
         "python3.dll",
-        f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.dll",
+        f"python{env['RELENV_PY_MAJOR_VERSION'].replace('.', '')}.dll",
         "vcruntime140.dll",
         "venvlauncher.exe",
         "venvwlauncher.exe",
@@ -862,10 +895,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         dst=str(dirs.prefix / "Include"),
         dirs_exist_ok=True,
     )
-    if "3.13" not in env["RELENV_PY_MAJOR_VERSION"]:
-        shutil.copy(
-            src=str(dirs.source / "PC" / "pyconfig.h"), dst=str(dirs.prefix / "Include")
-        )
+    copy_pyconfig_h(dirs.source, build_dir, dirs.prefix / "Include")
 
     shutil.copytree(
         src=str(dirs.source / "Lib"), dst=str(dirs.prefix / "Lib"), dirs_exist_ok=True
@@ -877,7 +907,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         src=str(build_dir / "python3.lib"),
         dst=str(dirs.prefix / "libs" / "python3.lib"),
     )
-    pylib = f"python{ env['RELENV_PY_MAJOR_VERSION'].replace('.', '') }.lib"
+    pylib = f"python{env['RELENV_PY_MAJOR_VERSION'].replace('.', '')}.lib"
     shutil.copy(src=str(build_dir / pylib), dst=str(dirs.prefix / "libs" / pylib))
 
 

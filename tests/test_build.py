@@ -454,3 +454,99 @@ def test_download_destination_setter() -> None:
     # Set to None
     d.destination = None
     assert d.destination == pathlib.Path()
+
+
+# copy_pyconfig_h tests
+#
+# Regression coverage for the bug where Windows onedirs for Python 3.13+ were
+# shipped without Include/pyconfig.h, breaking every C extension build.
+# Python <= 3.12 has a checked-in PC/pyconfig.h; Python 3.13+ replaced it
+# with PC/pyconfig.h.in and MSBuild generates the real header into the
+# PCbuild output directory. copy_pyconfig_h must pick the right one.
+
+
+def _make_layout(
+    tmp_path: pathlib.Path,
+    *,
+    has_in: bool,
+    pc_content: str = "",
+    build_content: str = "",
+) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path]:
+    """Create source/, build_dir/, dest_dir/ trees mimicking a CPython tree."""
+    source = tmp_path / "cpython"
+    build_dir = tmp_path / "PCbuild" / "amd64"
+    dest_dir = tmp_path / "prefix" / "Include"
+    (source / "PC").mkdir(parents=True)
+    build_dir.mkdir(parents=True)
+    dest_dir.mkdir(parents=True)
+    if has_in:
+        (source / "PC" / "pyconfig.h.in").write_text("/* template */\n")
+        if build_content:
+            (build_dir / "pyconfig.h").write_text(build_content)
+    else:
+        if pc_content:
+            (source / "PC" / "pyconfig.h").write_text(pc_content)
+    return source, build_dir, dest_dir
+
+
+def test_copy_pyconfig_h_legacy(tmp_path: pathlib.Path) -> None:
+    """Python <= 3.12: copies PC/pyconfig.h (no pyconfig.h.in template)."""
+    from relenv.build.windows import copy_pyconfig_h
+
+    source, build_dir, dest_dir = _make_layout(
+        tmp_path, has_in=False, pc_content="/* checked in 3.12 */\n"
+    )
+    # Ensure the build_dir variant would NOT be picked up if it happened to
+    # exist as well -- the legacy path takes precedence when there's no .in.
+    (build_dir / "pyconfig.h").write_text("/* should be ignored */\n")
+
+    result = copy_pyconfig_h(source, build_dir, dest_dir)
+
+    assert result == dest_dir / "pyconfig.h"
+    assert result.is_file()
+    assert result.read_text() == "/* checked in 3.12 */\n"
+
+
+def test_copy_pyconfig_h_generated(tmp_path: pathlib.Path) -> None:
+    """Python 3.13+: copies the generated pyconfig.h from build_dir."""
+    from relenv.build.windows import copy_pyconfig_h
+
+    source, build_dir, dest_dir = _make_layout(
+        tmp_path, has_in=True, build_content="/* generated 3.13 */\n"
+    )
+    # A stale PC/pyconfig.h must NOT win when pyconfig.h.in is present.
+    (source / "PC" / "pyconfig.h").write_text("/* stale legacy */\n")
+
+    result = copy_pyconfig_h(source, build_dir, dest_dir)
+
+    assert result == dest_dir / "pyconfig.h"
+    assert result.is_file()
+    assert result.read_text() == "/* generated 3.13 */\n"
+
+
+def test_copy_pyconfig_h_missing_generated_raises(tmp_path: pathlib.Path) -> None:
+    """3.13+ layout but MSBuild didn't produce pyconfig.h -- must raise.
+
+    This is the failure mode that previously slipped through silently and
+    produced unusable tarballs.
+    """
+    from relenv.build.windows import copy_pyconfig_h
+
+    source, build_dir, dest_dir = _make_layout(tmp_path, has_in=True)
+    # No pyconfig.h written into build_dir.
+
+    with pytest.raises(RuntimeError, match="Expected pyconfig.h at"):
+        copy_pyconfig_h(source, build_dir, dest_dir)
+    assert not (dest_dir / "pyconfig.h").exists()
+
+
+def test_copy_pyconfig_h_missing_legacy_raises(tmp_path: pathlib.Path) -> None:
+    """Legacy layout but PC/pyconfig.h is absent -- must raise rather than silently no-op."""
+    from relenv.build.windows import copy_pyconfig_h
+
+    source, build_dir, dest_dir = _make_layout(tmp_path, has_in=False)
+    # No pyconfig.h written into PC/ either.
+
+    with pytest.raises(RuntimeError, match="Expected pyconfig.h at"):
+        copy_pyconfig_h(source, build_dir, dest_dir)
+    assert not (dest_dir / "pyconfig.h").exists()
