@@ -3,6 +3,7 @@
 """
 Download utility class for fetching build dependencies.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -11,19 +12,22 @@ import os
 import pathlib
 import subprocess
 import sys
-from typing import Callable, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 from relenv.common import (
-    RelenvException,
-    ConfigurationError,
     ChecksumValidationError,
+    ConfigurationError,
+    RelenvException,
     download_url,
     get_download_location,
     runcmd,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 # Type alias for path-like objects
-PathLike = Union[str, os.PathLike[str]]
+PathLike = str | os.PathLike[str]
 
 # Environment flag for CI/CD detection
 CICD = "CI" in os.environ
@@ -31,7 +35,7 @@ CICD = "CI" in os.environ
 log = logging.getLogger(__name__)
 
 
-def verify_checksum(file: PathLike, checksum: Optional[str]) -> bool:
+def verify_checksum(file: PathLike, checksum: str | None) -> bool:
     """
     Verify the checksum of a file.
 
@@ -61,9 +65,7 @@ def verify_checksum(file: PathLike, checksum: Optional[str]) -> bool:
         hash_algo = hashlib.sha1()
         hash_name = "sha1"
     else:
-        raise ChecksumValidationError(
-            f"Invalid checksum length {len(checksum)}. Expected 40 (SHA-1) or 64 (SHA-256)"
-        )
+        raise ChecksumValidationError(f"Invalid checksum length {len(checksum)}. Expected 40 (SHA-1) or 64 (SHA-256)")
 
     with open(file, "rb") as fp:
         hash_algo.update(fp.read())
@@ -98,11 +100,11 @@ class Download:
         self,
         name: str,
         url: str,
-        fallback_url: Optional[str] = None,
-        signature: Optional[str] = None,
+        fallback_url: str | None = None,
+        signature: str | None = None,
         destination: PathLike = "",
         version: str = "",
-        checksum: Optional[str] = None,
+        checksum: str | None = None,
     ) -> None:
         self.name = name
         self.url_tpl = url
@@ -114,7 +116,7 @@ class Download:
         self.version = version
         self.checksum = checksum
 
-    def copy(self) -> "Download":
+    def copy(self) -> Download:
         """Create a copy of this Download instance."""
         return Download(
             self.name,
@@ -132,7 +134,7 @@ class Download:
         return self._destination
 
     @destination.setter
-    def destination(self, value: Optional[PathLike]) -> None:
+    def destination(self, value: PathLike | None) -> None:
         """Set the destination directory path."""
         if value:
             self._destination = pathlib.Path(value)
@@ -145,7 +147,7 @@ class Download:
         return self.url_tpl.format(version=self.version)
 
     @property
-    def fallback_url(self) -> Optional[str]:
+    def fallback_url(self) -> str | None:
         """Get the formatted fallback URL if configured."""
         if self.fallback_url_tpl:
             return self.fallback_url_tpl.format(version=self.version)
@@ -169,9 +171,7 @@ class Download:
         """Get the formatted URL (alias for url property)."""
         return self.url_tpl.format(version=self.version)
 
-    def fetch_file(
-        self, progress_callback: Optional[Callable[[int, int], None]] = None
-    ) -> Tuple[str, bool]:
+    def fetch_file(self, progress_callback: Callable[[int, int], None] | None = None) -> tuple[str, bool]:
         """
         Download the file.
 
@@ -205,7 +205,7 @@ class Download:
                 )
             raise
 
-    def fetch_signature(self, version: Optional[str] = None) -> Tuple[str, bool]:
+    def fetch_signature(self, version: str | None = None) -> tuple[str, bool]:
         """
         Download the file signature.
 
@@ -228,7 +228,7 @@ class Download:
         pass
 
     @staticmethod
-    def validate_signature(archive: PathLike, signature: Optional[PathLike]) -> bool:
+    def validate_signature(archive: PathLike, signature: PathLike | None) -> bool:
         """
         True when the archive's signature is valid.
 
@@ -255,7 +255,7 @@ class Download:
             return False
 
     @staticmethod
-    def validate_checksum(archive: PathLike, checksum: Optional[str]) -> bool:
+    def validate_checksum(archive: PathLike, checksum: str | None) -> bool:
         """
         True when when the archive matches the sha1 hash.
 
@@ -278,7 +278,7 @@ class Download:
         force_download: bool = False,
         show_ui: bool = False,
         exit_on_failure: bool = False,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> bool:
         """
         Downloads the url and validates the signature and sha1 sum.
@@ -315,9 +315,7 @@ class Download:
             if not valid:
                 log.warning("Checksum did not match %s: %s", self.name, self.checksum)
                 if show_ui:
-                    sys.stderr.write(
-                        f"\nChecksum did not match {self.name}: {self.checksum}\n"
-                    )
+                    sys.stderr.write(f"\nChecksum did not match {self.name}: {self.checksum}\n")
                     sys.stderr.flush()
         if exit_on_failure and not valid:
             sys.exit(1)

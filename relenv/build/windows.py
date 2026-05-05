@@ -4,6 +4,7 @@
 """
 The windows build process.
 """
+
 from __future__ import annotations
 
 import glob
@@ -16,8 +17,17 @@ import subprocess
 import sys
 import tarfile
 import time
-from typing import IO, MutableMapping, Union
+from collections.abc import MutableMapping
+from typing import IO
 
+from ..common import (
+    MODULE_DIR,
+    WIN32,
+    arches,
+    download_url,
+    extract_archive,
+    runcmd,
+)
 from .common import (
     Dirs,
     builds,
@@ -27,14 +37,6 @@ from .common import (
     patch_file,
     update_ensurepip,
     update_sbom_checksums,
-)
-from ..common import (
-    WIN32,
-    arches,
-    MODULE_DIR,
-    download_url,
-    extract_archive,
-    runcmd,
 )
 
 log = logging.getLogger(__name__)
@@ -108,13 +110,7 @@ def find_vcvarsall(env: EnvMapping) -> pathlib.Path | None:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             vs_path = result.stdout.strip()
             if vs_path:
-                candidate = (
-                    pathlib.Path(vs_path)
-                    / "VC"
-                    / "Auxiliary"
-                    / "Build"
-                    / "vcvarsall.bat"
-                )
+                candidate = pathlib.Path(vs_path) / "VC" / "Auxiliary" / "Build" / "vcvarsall.bat"
                 if candidate.exists():
                     return candidate
         except subprocess.CalledProcessError:
@@ -177,9 +173,7 @@ def flatten_externals(dirs: Dirs, name: str, version: str) -> None:
     # Identify what was actually extracted
     # extract_archive usually extracts into externals_dir
     # We search for any directory that isn't 'zips'
-    extracted_dirs = [
-        x for x in externals_dir.iterdir() if x.is_dir() and x.name != "zips"
-    ]
+    extracted_dirs = [x for x in externals_dir.iterdir() if x.is_dir() and x.name != "zips"]
 
     target_dir = externals_dir / f"{name}-{version}"
 
@@ -245,7 +239,7 @@ def update_sqlite(dirs: Dirs, env: EnvMapping) -> None:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
-            with open(str(spdx_json), "r") as f:
+            with open(str(spdx_json)) as f:
                 data = json.load(f)
                 for pkg in data["packages"]:
                     if pkg["name"] == "sqlite":
@@ -296,7 +290,7 @@ def update_xz(dirs: Dirs, env: EnvMapping) -> None:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
-            with open(str(spdx_json), "r") as f:
+            with open(str(spdx_json)) as f:
                 data = json.load(f)
                 for pkg in data["packages"]:
                     if pkg["name"] == "xz":
@@ -375,9 +369,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     ref_loc = f"cpe:2.3:a:openssl:openssl:{version}:*:*:*:*:*:*:*"  # noqa: E231
 
     is_binary = "cpython-bin-deps" in url
-    target_dir = (
-        dirs.source / "externals" / f"openssl-{version}-{env['RELENV_HOST_ARCH']}"
-    )
+    target_dir = dirs.source / "externals" / f"openssl-{version}-{env['RELENV_HOST_ARCH']}"
 
     update_props(
         dirs.source,
@@ -398,10 +390,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
         # but we want openssl-<version>-<arch>.
         # We'll find it and move it ourselves.
         for d in (dirs.source / "externals").iterdir():
-            if d.is_dir() and (
-                d.name == f"openssl-{version}"
-                or d.name.startswith(f"openssl-{version}")
-            ):
+            if d.is_dir() and (d.name == f"openssl-{version}" or d.name.startswith(f"openssl-{version}")):
                 if d != target_dir:
                     if target_dir.exists():
                         shutil.rmtree(str(target_dir))
@@ -419,9 +408,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
 
         if not is_binary:
             # Build from source
-            log.info(
-                "Building OpenSSL %s (%s) from source", version, env["RELENV_HOST_ARCH"]
-            )
+            log.info("Building OpenSSL %s (%s) from source", version, env["RELENV_HOST_ARCH"])
             perl_dir = update_perl(dirs, env)
             perl_bin = perl_dir / "perl" / "bin" / "perl.exe"
 
@@ -447,18 +434,12 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
                 log.warning("Could not find vcvarsall.bat, build may fail")
                 vcvars_cmd = "echo"
             else:
-                vcvars_arch = (
-                    "x64"
-                    if env["RELENV_HOST_ARCH"] == "amd64"
-                    else env["RELENV_HOST_ARCH"]
-                )
+                vcvars_arch = "x64" if env["RELENV_HOST_ARCH"] == "amd64" else env["RELENV_HOST_ARCH"]
                 vcvars_cmd = f'call "{vcvars}" {vcvars_arch}'
 
             env_path = os.environ.get("PATH", "")
             build_env = env.copy()
-            build_env[
-                "PATH"
-            ] = f"{perl_bin.parent};{nasm_exe[0].parent};{env_path}"  # noqa: E231,E702
+            build_env["PATH"] = f"{perl_bin.parent};{nasm_exe[0].parent};{env_path}"  # noqa: E231,E702
 
             prefix = target_dir / "build"
             openssldir = prefix / "ssl"
@@ -535,9 +516,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
             for h in target_dir.glob("**/opensslv.h"):
                 if h.parent.name == "openssl":
                     # Found it, move its parent to include/
-                    shutil.copytree(
-                        str(h.parent), str(inc_openssl_dir), dirs_exist_ok=True
-                    )
+                    shutil.copytree(str(h.parent), str(inc_openssl_dir), dirs_exist_ok=True)
                     break
 
         # Ensure applink.c is in include/
@@ -562,11 +541,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
         update_props(
             dirs.source,
             r"<opensslOutDir.*>.*</opensslOutDir>",
-            (
-                f"<opensslOutDir Condition=\"$(opensslOutDir) == ''\">"
-                f"$(opensslDir){arch_name}\\"
-                f"</opensslOutDir>"
-            ),
+            (f"<opensslOutDir Condition=\"$(opensslOutDir) == ''\">$(opensslDir){arch_name}\\</opensslOutDir>"),
         )
 
     # Patch openssl.props to use correct DLL suffix for OpenSSL 3.x
@@ -586,7 +561,7 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
-            with open(str(spdx_json), "r") as f:
+            with open(str(spdx_json)) as f:
                 data = json.load(f)
                 for pkg in data["packages"]:
                     if pkg["name"] == "openssl":
@@ -621,7 +596,7 @@ def update_bzip2(dirs: Dirs, env: EnvMapping) -> None:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
-            with open(str(spdx_json), "r") as f:
+            with open(str(spdx_json)) as f:
                 data = json.load(f)
                 for pkg in data["packages"]:
                     if pkg["name"] == "bzip2":
@@ -661,9 +636,7 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
         lib_name = lib_files[0].name
         if lib_name != "libffi-7.lib":
             log.info("Patching libffi library name to %s", lib_name)
-            patch_file(
-                dirs.source / "PCbuild" / "libffi.props", r"libffi-7\.lib", lib_name
-            )
+            patch_file(dirs.source / "PCbuild" / "libffi.props", r"libffi-7\.lib", lib_name)
             patch_file(
                 dirs.source / "PCbuild" / "libffi.props",
                 r"libffi-7\.dll",
@@ -674,7 +647,7 @@ def update_libffi(dirs: Dirs, env: EnvMapping) -> None:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
-            with open(str(spdx_json), "r") as f:
+            with open(str(spdx_json)) as f:
                 data = json.load(f)
                 for pkg in data["packages"]:
                     if pkg["name"] == "libffi":
@@ -709,7 +682,7 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
     if env["RELENV_PY_MAJOR_VERSION"] in ["3.12", "3.13", "3.14"]:
         spdx_json = dirs.source / "Misc" / "externals.spdx.json"
         if spdx_json.exists():
-            with open(str(spdx_json), "r") as f:
+            with open(str(spdx_json)) as f:
                 data = json.load(f)
                 for pkg in data["packages"]:
                     if pkg["name"] == "zlib":
@@ -775,9 +748,7 @@ def update_perl(dirs: Dirs, env: EnvMapping) -> pathlib.Path:
     return target_dir
 
 
-def copy_pyconfig_h(
-    source: pathlib.Path, build_dir: pathlib.Path, dest_dir: pathlib.Path
-) -> pathlib.Path:
+def copy_pyconfig_h(source: pathlib.Path, build_dir: pathlib.Path, dest_dir: pathlib.Path) -> pathlib.Path:
     """
     Copy ``pyconfig.h`` into the onedir's ``Include`` directory.
 
@@ -830,7 +801,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         log.info("Patching regen.targets to skip SBOM generation")
         patch_file(
             regen_targets,
-            r'Command="py -3.13 .*generate_sbom\.py.*"',
+            r'Command="py -3\.\d+ .*generate_sbom\.py.*"',
             'Command="echo skipping sbom"',
         )
 
@@ -897,9 +868,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     )
     copy_pyconfig_h(dirs.source, build_dir, dirs.prefix / "Include")
 
-    shutil.copytree(
-        src=str(dirs.source / "Lib"), dst=str(dirs.prefix / "Lib"), dirs_exist_ok=True
-    )
+    shutil.copytree(src=str(dirs.source / "Lib"), dst=str(dirs.prefix / "Lib"), dirs_exist_ok=True)
     os.makedirs(str(dirs.prefix / "Lib" / "site-packages"), exist_ok=True)
 
     (dirs.prefix / "libs").mkdir(parents=True, exist_ok=True)
@@ -935,7 +904,7 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     python = dirs.prefix / "Scripts" / "python.exe"
     runcmd([str(python), "-m", "ensurepip"], env=env, stderr=logfp, stdout=logfp)
 
-    def runpip(pkg: Union[str, os.PathLike[str]]) -> None:
+    def runpip(pkg: str | os.PathLike[str]) -> None:
         env = os.environ.copy()
         cmd = [str(python), "-m", "pip", "install", str(pkg)]
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)

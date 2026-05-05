@@ -7,11 +7,12 @@ import os
 import pathlib
 import shutil
 import subprocess
-from typing import Dict, List, Tuple
-
-import pytest
+from typing import TYPE_CHECKING
 
 from relenv import relocate
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def test_is_elf_on_text_file(tmp_path: pathlib.Path) -> None:
@@ -51,9 +52,7 @@ Load command 1
     assert parsed[relocate.LC_RPATH] == ["@loader_path/../lib"]
 
 
-def test_patch_rpath_adds_new_entry(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_patch_rpath_adds_new_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     binary = tmp_path / "prog"
     binary.write_text("dummy")
 
@@ -63,11 +62,9 @@ def test_patch_rpath_adds_new_entry(
         lambda path: ["$ORIGIN/lib", "/abs/lib"],
     )
 
-    recorded: Dict[str, List[str]] = {}
+    recorded: dict[str, list[str]] = {}
 
-    def fake_run(
-        cmd: List[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
         recorded.setdefault("cmd", []).extend(cmd)
         return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")
 
@@ -78,9 +75,7 @@ def test_patch_rpath_adds_new_entry(
     assert pathlib.Path(recorded["cmd"][-1]) == binary
 
 
-def test_patch_rpath_skips_when_present(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_patch_rpath_skips_when_present(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     binary = tmp_path / "prog"
     binary.write_text("dummy")
 
@@ -95,9 +90,7 @@ def test_patch_rpath_skips_when_present(
     assert result == "$ORIGIN/lib"
 
 
-def test_handle_elf_sets_rpath(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_handle_elf_sets_rpath(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     bin_dir = tmp_path / "bin"
     lib_dir = tmp_path / "lib"
     bin_dir.mkdir()
@@ -108,19 +101,15 @@ def test_handle_elf_sets_rpath(
     resident = lib_dir / "libfoo.so"
     resident.write_text("library")
 
-    def fake_run(
-        cmd: List[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
         if cmd[0] == "ldd":
             stdout = f"libfoo.so => {resident} (0x00007)\nlibc.so.6 => /lib/libc.so.6 (0x00007)\n"
-            return subprocess.CompletedProcess(
-                cmd, 0, stdout=stdout.encode(), stderr=b""
-            )
+            return subprocess.CompletedProcess(cmd, 0, stdout=stdout.encode(), stderr=b"")
         raise AssertionError(f"Unexpected command {cmd}")
 
     monkeypatch.setattr(relocate.subprocess, "run", fake_run)
 
-    captured: Dict[str, str] = {}
+    captured: dict[str, str] = {}
 
     def fake_patch_rpath(path: str, relpath: str) -> str:
         captured["path"] = path
@@ -140,17 +129,13 @@ def test_handle_elf_sets_rpath(
     assert captured["relpath"] == expected_rpath
 
 
-def test_patch_rpath_failure(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_patch_rpath_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     binary = tmp_path / "prog"
     binary.write_text("dummy")
 
     monkeypatch.setattr(relocate, "parse_rpath", lambda path: [])
 
-    def fake_run(
-        cmd: List[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
         return subprocess.CompletedProcess(cmd, 1, stdout=b"", stderr=b"err")
 
     monkeypatch.setattr(relocate.subprocess, "run", fake_run)
@@ -158,23 +143,17 @@ def test_patch_rpath_failure(
     assert relocate.patch_rpath(binary, "$ORIGIN/lib") is False
 
 
-def test_parse_macho_non_object(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_parse_macho_non_object(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     output = "foo: is not an object file\n"
     monkeypatch.setattr(
         relocate.subprocess,
         "run",
-        lambda cmd, **kwargs: subprocess.CompletedProcess(
-            cmd, 0, stdout=output.encode(), stderr=b""
-        ),
+        lambda cmd, **kwargs: subprocess.CompletedProcess(cmd, 0, stdout=output.encode(), stderr=b""),
     )
     assert relocate.parse_macho(tmp_path / "lib.dylib") is None
 
 
-def test_handle_macho_copies_when_needed(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_handle_macho_copies_when_needed(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     binary = tmp_path / "bin" / "prog"
     binary.parent.mkdir()
     binary.write_text("exe")
@@ -192,20 +171,14 @@ def test_handle_macho_copies_when_needed(
 
     monkeypatch.setattr(os.path, "exists", lambda path: path == str(source_lib))
 
-    copied: Dict[str, Tuple[str, str]] = {}
+    copied: dict[str, tuple[str, str]] = {}
 
-    monkeypatch.setattr(
-        shutil, "copy", lambda src, dst: copied.setdefault("copy", (src, dst))
-    )
-    monkeypatch.setattr(
-        shutil, "copymode", lambda src, dst: copied.setdefault("copymode", (src, dst))
-    )
+    monkeypatch.setattr(shutil, "copy", lambda src, dst: copied.setdefault("copy", (src, dst)))
+    monkeypatch.setattr(shutil, "copymode", lambda src, dst: copied.setdefault("copymode", (src, dst)))
 
-    recorded: Dict[str, List[str]] = {}
+    recorded: dict[str, list[str]] = {}
 
-    def fake_run(
-        cmd: List[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
         recorded.setdefault("cmd", []).extend(cmd)
         return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")
 
@@ -218,9 +191,7 @@ def test_handle_macho_copies_when_needed(
     assert recorded["cmd"][0] == "install_name_tool"
 
 
-def test_handle_macho_rpath_only(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_handle_macho_rpath_only(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     binary = tmp_path / "bin" / "prog"
     binary.parent.mkdir()
     binary.write_text("exe")
@@ -245,9 +216,7 @@ def test_handle_macho_rpath_only(
     monkeypatch.setattr(shutil, "copy", lambda *_args, **_kw: (_args, _kw))
     monkeypatch.setattr(shutil, "copymode", lambda *_args, **_kw: (_args, _kw))
 
-    def fake_run(
-        cmd: List[str], **kwargs: object
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
         if cmd[0] == "install_name_tool":
             raise AssertionError("install_name_tool should not run in rpath_only mode")
         return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")

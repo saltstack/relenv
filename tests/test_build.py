@@ -74,9 +74,7 @@ def test_builder_toolchain_lazy_loading(monkeypatch: pytest.MonkeyPatch) -> None
 
     # Access toolchain property - should call get_toolchain once
     toolchain = builder.toolchain
-    assert (
-        call_count["count"] == 1
-    ), "get_toolchain should be called when property is accessed"
+    assert call_count["count"] == 1, "get_toolchain should be called when property is accessed"
     assert toolchain == pathlib.Path("/fake/toolchain/aarch64")
 
     # Access again - should use cached value, not call again
@@ -90,9 +88,7 @@ def test_builder_toolchain_lazy_loading(monkeypatch: pytest.MonkeyPatch) -> None
 
     # Access after arch change - should call get_toolchain again
     toolchain3 = builder.toolchain
-    assert (
-        call_count["count"] == 2
-    ), "get_toolchain should be called again after arch change"
+    assert call_count["count"] == 2, "get_toolchain should be called again after arch change"
     assert toolchain3 == pathlib.Path("/fake/toolchain/x86_64")
 
 
@@ -100,9 +96,7 @@ def test_verify_checksum(fake_download: pathlib.Path, fake_download_md5: str) ->
     assert verify_checksum(fake_download, fake_download_md5) is True
 
 
-def test_verify_checksum_sha256(
-    fake_download: pathlib.Path, fake_download_sha256: str
-) -> None:
+def test_verify_checksum_sha256(fake_download: pathlib.Path, fake_download_sha256: str) -> None:
     """Test SHA-256 checksum validation."""
     assert verify_checksum(fake_download, fake_download_sha256) is True
 
@@ -183,9 +177,7 @@ def test_get_dependency_version_wrong_platform() -> None:
 # Build stats tests
 
 
-def test_build_stats_save_load(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_build_stats_save_load(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test saving and loading build statistics."""
     monkeypatch.setattr("relenv.build.common.ui.DATA_DIR", tmp_path)
 
@@ -205,18 +197,14 @@ def test_build_stats_save_load(
     assert loaded["openssl"]["samples"] == 2
 
 
-def test_build_stats_load_nonexistent(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_build_stats_load_nonexistent(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test loading stats when file doesn't exist returns empty dict."""
     monkeypatch.setattr("relenv.build.common.ui.DATA_DIR", tmp_path)
     loaded = load_build_stats()
     assert loaded == {}
 
 
-def test_build_stats_update_new_step(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_build_stats_update_new_step(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test updating stats for a new build step."""
     monkeypatch.setattr("relenv.build.common.ui.DATA_DIR", tmp_path)
 
@@ -230,9 +218,7 @@ def test_build_stats_update_new_step(
     assert stats["python"]["last_lines"] == 100
 
 
-def test_build_stats_update_existing_step(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_build_stats_update_existing_step(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test updating stats for an existing step uses exponential moving average."""
     monkeypatch.setattr("relenv.build.common.ui.DATA_DIR", tmp_path)
 
@@ -493,9 +479,7 @@ def test_copy_pyconfig_h_legacy(tmp_path: pathlib.Path) -> None:
     """Python <= 3.12: copies PC/pyconfig.h (no pyconfig.h.in template)."""
     from relenv.build.windows import copy_pyconfig_h
 
-    source, build_dir, dest_dir = _make_layout(
-        tmp_path, has_in=False, pc_content="/* checked in 3.12 */\n"
-    )
+    source, build_dir, dest_dir = _make_layout(tmp_path, has_in=False, pc_content="/* checked in 3.12 */\n")
     # Ensure the build_dir variant would NOT be picked up if it happened to
     # exist as well -- the legacy path takes precedence when there's no .in.
     (build_dir / "pyconfig.h").write_text("/* should be ignored */\n")
@@ -511,9 +495,7 @@ def test_copy_pyconfig_h_generated(tmp_path: pathlib.Path) -> None:
     """Python 3.13+: copies the generated pyconfig.h from build_dir."""
     from relenv.build.windows import copy_pyconfig_h
 
-    source, build_dir, dest_dir = _make_layout(
-        tmp_path, has_in=True, build_content="/* generated 3.13 */\n"
-    )
+    source, build_dir, dest_dir = _make_layout(tmp_path, has_in=True, build_content="/* generated 3.13 */\n")
     # A stale PC/pyconfig.h must NOT win when pyconfig.h.in is present.
     (source / "PC" / "pyconfig.h").write_text("/* stale legacy */\n")
 

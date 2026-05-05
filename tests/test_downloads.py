@@ -12,16 +12,12 @@ from relenv.common import RelenvException
 
 
 def test_download_url() -> None:
-    download = Download(
-        "test", "https://test.com/{version}/test-{version}.tar.xz", version="1.0.0"
-    )
+    download = Download("test", "https://test.com/{version}/test-{version}.tar.xz", version="1.0.0")
     assert download.url == "https://test.com/1.0.0/test-1.0.0.tar.xz"
 
 
 def test_download_url_change_version() -> None:
-    download = Download(
-        "test", "https://test.com/{version}/test-{version}.tar.xz", version="1.0.0"
-    )
+    download = Download("test", "https://test.com/{version}/test-{version}.tar.xz", version="1.0.0")
     download.version = "1.2.2"
     assert download.url == "https://test.com/1.2.2/test-1.2.2.tar.xz"
 
@@ -76,9 +72,7 @@ def test_validate_md5sum(tmp_path: pathlib.Path) -> None:
 
 def test_validate_md5sum_failed(tmp_path: pathlib.Path) -> None:
     fake_md5 = "fakemd5"
-    with patch(
-        "relenv.build.common.download.verify_checksum", side_effect=RelenvException
-    ) as run_mock:
+    with patch("relenv.build.common.download.verify_checksum", side_effect=RelenvException) as run_mock:
         assert Download.validate_checksum(str(tmp_path), fake_md5) is False
         run_mock.assert_called_with(str(tmp_path), fake_md5)
 
@@ -96,9 +90,7 @@ def test_validate_signature(tmp_path: pathlib.Path) -> None:
 
 def test_validate_signature_failed(tmp_path: pathlib.Path) -> None:
     sig = "fakesig"
-    with patch(
-        "relenv.build.common.download.runcmd", side_effect=RelenvException
-    ) as run_mock:
+    with patch("relenv.build.common.download.runcmd", side_effect=RelenvException) as run_mock:
         assert Download.validate_signature(str(tmp_path), sig) is False
         run_mock.assert_called_with(
             ["gpg", "--verify", sig, str(tmp_path)],

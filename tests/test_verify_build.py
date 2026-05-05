@@ -4,6 +4,7 @@
 """
 Verify relenv builds.
 """
+
 import json
 import os
 import pathlib
@@ -62,9 +63,7 @@ def _install_ppbt(pexec):
         ]
     )
     assert p.returncode == 0, "Failed to install ppbt"
-    p = subprocess.run(
-        [str(pexec), "-c", "from relenv import common; assert common.get_toolchain()"]
-    )
+    p = subprocess.run([str(pexec), "-c", "from relenv import common; assert common.get_toolchain()"])
     assert p.returncode == 0, "Failed to extract toolchain"
 
 
@@ -185,14 +184,15 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
         or "3.11" in build_version
         or "3.12" in build_version
         or "3.13" in build_version
+        or "3.14" in build_version
     ):
-        pytest.xfail(
-            "Salt git install fails on Windows (setup.py tries to install missing man pages)"
-        )
+        pytest.xfail("Salt git install fails on Windows (setup.py tries to install missing man pages)")
     if sys.platform == "darwin" and "3.12" in build_version:
         pytest.xfail("Salt does not work with 3.12 on macos yet")
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
+    if sys.platform == "darwin" and "3.14" in build_version:
+        pytest.xfail("Salt does not work with 3.14 on macos yet")
 
     _install_ppbt(pyexec)
 
@@ -229,13 +229,10 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
 @pytest.mark.skip_on_darwin
 @pytest.mark.skip_on_windows
 @pytest.mark.skipif(
-    get_build_version()
-    and packaging.version.parse(get_build_version())
-    >= packaging.version.parse("3.11.7"),
+    get_build_version() and packaging.version.parse(get_build_version()) >= packaging.version.parse("3.11.7"),
     reason="3.11.7 and greater will not work with 3005.x",
 )
 def test_pip_install_salt(pipexec, build, tmp_path, pyexec):
-
     _install_ppbt(pyexec)
 
     packages = [
@@ -282,22 +279,18 @@ def test_symlinked_scripts(pipexec, pyexec, tmp_path, build):
 
     # Make sure symlinks work with our custom shebang in the scripts
     p = subprocess.run([str(script), "--version"])
-    assert (
-        p.returncode == 0
-    ), f"Could not run script for {name}, likely not pinning to the correct python"
+    assert p.returncode == 0, f"Could not run script for {name}, likely not pinning to the correct python"
 
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "3007.x", "master"])
-def test_pip_install_salt_w_static_requirements(
-    pipexec, pyexec, build, tmp_path, salt_branch, build_version
-):
+def test_pip_install_salt_w_static_requirements(pipexec, pyexec, build, tmp_path, salt_branch, build_version):
     if salt_branch in ["3007.x", "master"]:
         pytest.xfail("Known failure")
 
     if sys.platform == "darwin" and salt_branch in ["3006.x"]:
         pytest.xfail("Known failure")
 
-    for py_version in ("3.11", "3.12", "3.13"):
+    for py_version in ("3.11", "3.12", "3.13", "3.14"):
         if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
 
@@ -348,11 +341,8 @@ def test_pip_install_salt_w_static_requirements(
 
 
 @pytest.mark.parametrize("salt_branch", ["3006.x", "master"])
-def test_pip_install_salt_w_package_requirements(
-    pipexec, pyexec, tmp_path, salt_branch, build_version
-):
-
-    for py_version in ("3.11", "3.12", "3.13"):
+def test_pip_install_salt_w_package_requirements(pipexec, pyexec, tmp_path, salt_branch, build_version):
+    for py_version in ("3.11", "3.12", "3.13", "3.14"):
         if build_version.startswith(py_version):
             pytest.xfail(f"{py_version} builds fail.")
 
@@ -449,12 +439,14 @@ def test_pip_install_pyzmq(
     build,
     tmp_path: pathlib.Path,
 ) -> None:
-
     if pyzmq_version == "23.2.0" and "3.12" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.12")
 
     if pyzmq_version == "23.2.0" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
+
+    if pyzmq_version == "23.2.0" and "3.14" in build_version:
+        pytest.xfail(f"{pyzmq_version} does not install on 3.14")
 
     if pyzmq_version == "23.2.0" and sys.platform == "darwin":
         pytest.xfail("pyzmq 23.2.0 fails on macos arm64")
@@ -464,6 +456,9 @@ def test_pip_install_pyzmq(
 
     if pyzmq_version == "25.1.2" and "3.13" in build_version:
         pytest.xfail(f"{pyzmq_version} does not install on 3.13")
+
+    if pyzmq_version == "25.1.2" and "3.14" in build_version:
+        pytest.xfail(f"{pyzmq_version} does not install on 3.14")
 
     if pyzmq_version == "25.1.2" and sys.platform == "win32":
         pytest.xfail("pyzmq 25.1.2 fails on windows")
@@ -491,9 +486,7 @@ def test_pip_install_pyzmq(
     if pyzmq_version == "26.2.0" and sys.platform == "darwin":
         pytest.xfail(f"{pyzmq_version} does not install on m1 mac")
     if pyzmq_version == "26.2.0" and sys.platform == "darwin":
-        env[
-            "CFLAGS"
-        ] = f"{env.get('CFLAGS', '')} -DCMAKE_OSX_ARCHITECTURES='arm64' -DZMQ_HAVE_CURVE=0"
+        env["CFLAGS"] = f"{env.get('CFLAGS', '')} -DCMAKE_OSX_ARCHITECTURES='arm64' -DZMQ_HAVE_CURVE=0"
     env = os.environ.copy()
     if sys.platform == "linux":
         p = subprocess.run(
@@ -509,9 +502,7 @@ def test_pip_install_pyzmq(
         try:
             buildenv = json.loads(p.stdout)
         except json.JSONDecodeError:
-            assert (
-                False
-            ), f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
+            assert False, f"Failed to decode json: {p.stdout.decode()} {p.stderr.decode()}"
         for k in buildenv:
             env[k] = buildenv[k]
 
@@ -620,9 +611,7 @@ def test_pip_install_pyzmq(
         include_flag = f"-I{fake_bsd_root}"
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS"):
             env[key] = " ".join(filter(None, [env.get(key, ""), include_flag])).strip()
-        env["CPATH"] = ":".join(
-            filter(None, [str(fake_bsd_root), env.get("CPATH", "")])
-        )
+        env["CPATH"] = ":".join(filter(None, [str(fake_bsd_root), env.get("CPATH", "")]))
         for key in ("C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH"):
             env[key] = ":".join(filter(None, [str(fake_bsd_root), env.get(key, "")]))
         cc_value = env.get("CC")
@@ -660,13 +649,9 @@ def test_pip_install_pyzmq(
         )
         assert archive_result.returncode == 0, "Failed to archive libbsd shim"
         lib_dir_flag = f"-L{fake_bsd_root}"
-        env["LDFLAGS"] = " ".join(
-            filter(None, [lib_dir_flag, env.get("LDFLAGS", "")])
-        ).strip()
+        env["LDFLAGS"] = " ".join(filter(None, [lib_dir_flag, env.get("LDFLAGS", "")])).strip()
         env["LIBS"] = " ".join(filter(None, ["-lbsd", env.get("LIBS", "")])).strip()
-        env["LIBRARY_PATH"] = ":".join(
-            filter(None, [str(fake_bsd_root), env.get("LIBRARY_PATH", "")])
-        )
+        env["LIBRARY_PATH"] = ":".join(filter(None, [str(fake_bsd_root), env.get("LIBRARY_PATH", "")]))
         env["ac_cv_func_strlcpy"] = "yes"
         env["ac_cv_func_strlcat"] = "yes"
         env["ac_cv_have_decl_strlcpy"] = "yes"
@@ -740,12 +725,10 @@ def test_pip_install_and_import_libcloud(pipexec, pyexec):
 
 
 def test_pip_install_salt_pip_dir(pipexec, pyexec, build, build_version, arch):
-
-    if "3.12" in build_version:
-        pytest.xfail("Don't try to install on 3.12 yet")
+    if "3.12" in build_version or "3.13" in build_version or "3.14" in build_version:
+        pytest.xfail("Don't try to install on 3.12+ yet")
 
     if build_version.startswith("3.11") and sys.platform == "darwin":
-
         pytest.xfail("Known failure on py 3.11 macos")
 
     if sys.platform == "win32" and arch == "amd64":
@@ -753,6 +736,9 @@ def test_pip_install_salt_pip_dir(pipexec, pyexec, build, build_version, arch):
 
     if sys.platform == "darwin" and "3.13" in build_version:
         pytest.xfail("Salt does not work with 3.13 on macos yet")
+
+    if sys.platform == "darwin" and "3.14" in build_version:
+        pytest.xfail("Salt does not work with 3.14 on macos yet")
 
     _install_ppbt(pyexec)
     env = os.environ.copy()
@@ -790,15 +776,13 @@ def test_nox_virtualenvs(pipexec, pyexec, build, tmp_path):
 
     session = "fake_session"
     nox_contents = textwrap.dedent(
-        """
+        f"""
     import nox
 
     @nox.session()
-    def {}(session):
+    def {session}(session):
         session.install("nox")
-    """.format(
-            session
-        )
+    """
     )
     noxfile = tmp_path / "tmp_noxfile.py"
     noxfile.write_text(nox_contents)
@@ -917,7 +901,7 @@ def ssl_version(pyexec, tmp_path):
 def test_pip_install_m2crypto_relenv_ssl(
     m2crypto_version, pipexec, pyexec, build, build_version, minor_version, ssl_version
 ):
-    if m2crypto_version == "0.38.0" and minor_version in ["3.12", "3.13"]:
+    if m2crypto_version == "0.38.0" and minor_version in ["3.12", "3.13", "3.14"]:
         pytest.xfail("Fails due to no distutils")
 
     if ssl_version >= (3, 5) and m2crypto_version in ["0.38.0", "0.44.0"]:
@@ -978,8 +962,7 @@ def test_pip_install_m2crypto_relenv_ssl(
     p = subprocess.run(
         [str(pyexec), "-c", "import M2Crypto"],
         env=env,
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
+        capture_output=True,
         check=False,
     )
     assert p.returncode == 0, (p.stdout, p.stderr)
@@ -988,24 +971,18 @@ def test_pip_install_m2crypto_relenv_ssl(
 @pytest.mark.skip_on_windows
 def test_shebangs(pipexec, build, minor_version):
     def validate_shebang(path):
-        with open(path, "r") as fp:
+        with open(path) as fp:
             return fp.read(9) == "#!/bin/sh"
 
     path = build / "bin" / "pip3"
     assert path.exists()
     assert validate_shebang(path)
-    if "3.13" not in minor_version:
+    if minor_version not in ["3.13", "3.14"]:
         path = build / "lib" / f"python{minor_version}" / "cgi.py"
         assert path.exists()
         assert validate_shebang(path)
     if sys.platform == "linux":
-        path = (
-            build
-            / "lib"
-            / f"python{minor_version}"
-            / f"config-{minor_version}-{get_triplet()}"
-            / "python-config.py"
-        )
+        path = build / "lib" / f"python{minor_version}" / f"config-{minor_version}-{get_triplet()}" / "python-config.py"
         assert path.exists()
         assert validate_shebang(path)
 
@@ -1025,9 +1002,7 @@ def test_moving_pip_installed_c_extentions(pipexec, pyexec, build, minor_version
     assert p.returncode == 0, "Failed to pip install cffi"
     b2 = build.parent / "test2"
     build.rename(b2)
-    libname = (
-        f"_cffi_backend.cpython-{minor_version.replace('.', '')}-x86_64-linux-gnu.so"
-    )
+    libname = f"_cffi_backend.cpython-{minor_version.replace('.', '')}-x86_64-linux-gnu.so"
     p = subprocess.run(
         ["ldd", b2 / "lib" / f"python{minor_version}" / "site-packages" / libname],
         stdout=subprocess.PIPE,
@@ -1043,9 +1018,7 @@ def test_moving_pip_installed_c_extentions(pipexec, pyexec, build, minor_version
 
 @pytest.mark.skip_unless_on_linux
 @pytest.mark.parametrize("cryptography_version", ["40.0.1", "39.0.2"])
-def test_cryptography_rpath(
-    pyexec, pipexec, build, minor_version, cryptography_version
-):
+def test_cryptography_rpath(pyexec, pipexec, build, minor_version, cryptography_version):
     _install_ppbt(pyexec)
 
     def find_library(path, search):
@@ -1069,22 +1042,12 @@ def test_cryptography_rpath(
         env=env,
     )
     assert p.returncode != 1, "Failed to pip install cryptography"
-    bindings = (
-        build
-        / "lib"
-        / f"python{minor_version}"
-        / "site-packages"
-        / "cryptography"
-        / "hazmat"
-        / "bindings"
-    )
+    bindings = build / "lib" / f"python{minor_version}" / "site-packages" / "cryptography" / "hazmat" / "bindings"
     if cryptography_version == "39.0.2":
         osslinked = find_library(bindings, "_openssl")
     else:
         osslinked = "_rust.abi3.so"
-    p = subprocess.run(
-        ["ldd", bindings / osslinked], stdout=subprocess.PIPE, check=True
-    )
+    p = subprocess.run(["ldd", bindings / osslinked], stdout=subprocess.PIPE, check=True)
     found = 0
     for line in p.stdout.splitlines():
         line = line.decode()
@@ -1195,9 +1158,7 @@ def test_install_pycurl(pipexec, pyexec, build):
     env["RELENV_BUILDENV"] = "yes"
 
     # Install pycurl
-    subprocess.run(
-        [str(pipexec), "install", "pycurl", "--no-cache-dir"], env=env, check=True
-    )
+    subprocess.run([str(pipexec), "install", "pycurl", "--no-cache-dir"], env=env, check=True)
 
     # Move the relenv environment, if something goes wrong this will break the linker.
     b2 = build.parent / "test2"
@@ -1300,11 +1261,7 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
     print(versions)
 
     with open("buildscript.sh", "w") as fp:
-        fp.write(
-            buildscript.format(
-                libssh2=versions["libssh2"], libgit2=versions["libgit2"], build=build
-            )
-        )
+        fp.write(buildscript.format(libssh2=versions["libssh2"], libgit2=versions["libgit2"], build=build))
 
     subprocess.run(["/usr/bin/bash", "buildscript.sh"], check=True)
 
@@ -1410,12 +1367,7 @@ def test_install_with_target_shebang(pipexec, build, minor_version):
         if stripped.startswith('"exec"'):
             exec_line = stripped
             break
-    assert (
-        exec_line
-        == '"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python{}" "$0" "$@"'.format(
-            minor_version
-        )
-    )
+    assert exec_line == f'"exec" "$(dirname "$(readlink -f "$0")")/../../bin/python{minor_version}" "$0" "$@"'
 
 
 @pytest.mark.skip_unless_on_linux
@@ -1478,7 +1430,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
-    if "3.13" not in build_version:
+    if build_version[:4] not in ["3.13", "3.14"]:
         subprocess.run(
             [str(pipexec), "install", "cffi==1.14.6"],
             check=True,
@@ -1505,7 +1457,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
 
 
 def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.13"):
+    if build_version.startswith("3.13") or build_version.startswith("3.14"):
         cffi = "cffi==1.17.1"
         pygit2 = "pygit2==1.16.0"
     elif build_version.startswith("3.12"):
@@ -1538,7 +1490,7 @@ def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_v
 
 
 def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.13"):
+    if build_version.startswith("3.13") or build_version.startswith("3.14"):
         cffi = "cffi==1.17.1"
         pygit2 = "pygit2==1.16.0"
     elif build_version.startswith("3.12"):
@@ -1652,7 +1604,7 @@ def test_legacy_hashlib(pipexec, pyexec, build):
         stdout=subprocess.PIPE,
         env=env,
     )
-    with open(env["OPENSSL_CONF"], "r") as fp:
+    with open(env["OPENSSL_CONF"]) as fp:
         print(fp.read())
     assert b"md4" in proc.stdout
 
@@ -1783,8 +1735,8 @@ def test_install_with_target_namespaces(pipexec, build, minor_version, build_ver
 
 @pytest.mark.skip_unless_on_linux
 def test_debugpy(pipexec, build, arch, minor_version):
-    if "3.13" in minor_version:
-        pytest.xfail("Failes on python 3.13.0")
+    if minor_version in ["3.13", "3.14"]:
+        pytest.xfail("Failes on python 3.13+")
     if arch == "arm64":
         pytest.xfail("Failes on arm64")
 
@@ -1922,9 +1874,7 @@ def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_pat
 
 
 @pytest.mark.skip_unless_on_linux
-def test_install_editable_package_in_extras(
-    pipexec, pyexec, build, minor_version, tmp_path
-):
+def test_install_editable_package_in_extras(pipexec, pyexec, build, minor_version, tmp_path):
     _install_ppbt(pyexec)
     sitepkgs = pathlib.Path(build) / "lib" / f"python{minor_version}" / "site-packages"
 
@@ -1946,9 +1896,7 @@ def test_install_editable_package_in_extras(
         env=env,
     )
     assert p.returncode == 0
-    p = subprocess.run(
-        [str(pipexec), "install", f"--target={extras}", "-e", "saltext-zabbix"], env=env
-    )
+    p = subprocess.run([str(pipexec), "install", f"--target={extras}", "-e", "saltext-zabbix"], env=env)
     assert p.returncode == 0
     p = subprocess.run([str(pyexec), "-c", "import saltext.zabbix"], env=env)
     assert p.returncode == 0
@@ -2024,9 +1972,7 @@ def test_no_openssl_binary(rockycontainer, pipexec, pyexec, build):
             key=lambda p: len(p.name),
         )
         if not bz2_sources:
-            pytest.fail(
-                "libbz2.so not found in relenv build; cryptography build cannot proceed"
-            )
+            pytest.fail("libbz2.so not found in relenv build; cryptography build cannot proceed")
         for bz2_source in bz2_sources:
             target = sysroot_lib / bz2_source.name
             if target.exists() or target.is_symlink():
@@ -2072,9 +2018,7 @@ def test_darwin_python_linking(pipexec, pyexec, build, minor_version):
 
 
 def test_import_ssl_module(pyexec):
-    proc = subprocess.run(
-        [pyexec, "-c", "import ssl"], capture_output=True, check=False
-    )
+    proc = subprocess.run([pyexec, "-c", "import ssl"], capture_output=True, check=False)
     assert proc.returncode == 0
     assert proc.stdout.decode() == ""
     assert proc.stderr.decode() == ""
@@ -2140,9 +2084,7 @@ def test_expat_version(pyexec):
 
     actual_version_str = proc.stdout.decode().strip()
     # Format is "expat_X_Y_Z", extract version
-    assert actual_version_str.startswith(
-        "expat_"
-    ), f"Unexpected EXPAT_VERSION format: {actual_version_str}"
+    assert actual_version_str.startswith("expat_"), f"Unexpected EXPAT_VERSION format: {actual_version_str}"
 
     # Convert "expat_2_7_3" -> "2.7.3"
     actual_version = actual_version_str.replace("expat_", "").replace("_", ".")
@@ -2197,8 +2139,7 @@ def test_sqlite_version(pyexec):
         expected_version = ".".join(expected_version.split(".")[:3])
 
     assert actual_version == expected_version, (
-        f"SQLite version mismatch on {platform}: expected {expected_version}, "
-        f"found {actual_version}"
+        f"SQLite version mismatch on {platform}: expected {expected_version}, found {actual_version}"
     )
 
 
@@ -2228,9 +2169,7 @@ def test_openssl_version(pyexec):
     # Get expected version from python-versions.json
     openssl_info = get_dependency_version("openssl", platform)
     if not openssl_info:
-        pytest.skip(
-            f"No openssl version defined in python-versions.json for {platform}"
-        )
+        pytest.skip(f"No openssl version defined in python-versions.json for {platform}")
 
     expected_version = openssl_info["version"]
 
@@ -2325,8 +2264,5 @@ print("OK")
         check=False,
     )
 
-    assert proc.returncode == 0, (
-        f"LZMA functionality test failed (exit code {proc.returncode}): "
-        f"{proc.stderr.decode()}"
-    )
+    assert proc.returncode == 0, f"LZMA functionality test failed (exit code {proc.returncode}): {proc.stderr.decode()}"
     assert proc.stdout.decode().strip() == "OK"

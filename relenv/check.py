@@ -3,14 +3,18 @@
 """
 Check the integrety of a relenv environment.
 """
+
 from __future__ import annotations
 
-import argparse
 import logging
 import pathlib
 import sys
+from typing import TYPE_CHECKING
 
 from relenv import relocate
+
+if TYPE_CHECKING:
+    import argparse
 
 log: logging.Logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@
 """
 Relenv manifest.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -16,11 +17,7 @@ def manifest(root: str | os.PathLike[str] | None = None) -> None:
     """
     List all the file in a relenv and their hashes.
     """
-    base = (
-        pathlib.Path(root)
-        if root is not None
-        else pathlib.Path(getattr(sys, "RELENV", os.getcwd()))
-    )
+    base = pathlib.Path(root) if root is not None else pathlib.Path(getattr(sys, "RELENV", os.getcwd()))
     for dirpath, _dirs, files in os.walk(base):
         directory = pathlib.Path(dirpath)
         for file in files:

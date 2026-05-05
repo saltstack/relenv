@@ -4,6 +4,7 @@
 """
 The linux build process.
 """
+
 from __future__ import annotations
 
 import glob
@@ -15,8 +16,10 @@ import tarfile
 import tempfile
 import time
 import urllib.request
-from typing import IO, MutableMapping
+from collections.abc import MutableMapping
+from typing import IO
 
+from ..common import LINUX, Version, arches, runcmd
 from .common import (
     Dirs,
     build_openssl,
@@ -27,8 +30,6 @@ from .common import (
     get_dependency_version,
     update_sbom_checksums,
 )
-from ..common import LINUX, Version, arches, runcmd
-
 
 ARCHES = arches[LINUX]
 
@@ -298,9 +299,7 @@ def build_libffi(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         stdout=logfp,
     )
     # libffi doens't want to honor libdir, force install to lib instead of lib64
-    runcmd(
-        ["sed", "-i", "s/lib64/lib/g", "Makefile"], env=env, stderr=logfp, stdout=logfp
-    )
+    runcmd(["sed", "-i", "s/lib64/lib/g", "Makefile"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
@@ -486,9 +485,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
             "Modules/Setup",
         ]
     )
-    if Version.parse_string(env["RELENV_PY_MAJOR_VERSION"]) <= Version.parse_string(
-        "3.10"
-    ):
+    if Version.parse_string(env["RELENV_PY_MAJOR_VERSION"]) <= Version.parse_string("3.10"):
         runcmd(
             [
                 "sed",
@@ -544,9 +541,9 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
-    with io.open("Modules/Setup", "a+") as fp:
+    with open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
-        fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "nis\n")
+        fp.write("*disabled*\n_tkinter\nnsl\nnis\n")
     for _ in ["LDFLAGS", "CFLAGS", "CPPFLAGS", "CXX", "CC"]:
         env.pop(_)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
@@ -712,9 +709,7 @@ if ncurses_info:
     ncurses_checksum = ncurses_info["sha256"]
 else:
     ncurses_version = "6.5"
-    ncurses_url = (
-        "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz"
-    )
+    ncurses_url = "https://mirrors.ocf.berkeley.edu/gnu/ncurses/ncurses-{version}.tar.gz"
     ncurses_checksum = "cde3024ac3f9ef21eaed6f001476ea8fffcaa381"
 
 build.add(
@@ -819,9 +814,7 @@ if readline_info:
     readline_checksum = readline_info["sha256"]
 else:
     readline_version = "8.3"
-    readline_url = (
-        "https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{version}.tar.gz"
-    )
+    readline_url = "https://mirrors.ocf.berkeley.edu/gnu/readline/readline-{version}.tar.gz"
     readline_checksum = "2c05ae9350b695f69d70b47f17f092611de2081f"
 
 build.add(
@@ -843,9 +836,7 @@ if tirpc_info:
     tirpc_checksum = tirpc_info["sha256"]
 else:
     tirpc_version = "1.3.4"
-    tirpc_url = (
-        "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2"
-    )
+    tirpc_url = "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2"
     tirpc_checksum = "63c800f81f823254d2706637bab551dec176b99b"
 
 build.add(

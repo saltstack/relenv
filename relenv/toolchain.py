@@ -6,8 +6,11 @@ The ``relenv toolchain`` command.
 
 from __future__ import annotations
 
-import argparse
 import sys
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import argparse
 
 
 def setup_parser(
@@ -27,9 +30,7 @@ def main(*args: object, **kwargs: object) -> None:
     """
     Notify users of toolchain command deprecation.
     """
-    sys.stderr.write(
-        "The relenv toolchain command has been deprecated. Please pip install relenv[toolchain].\n"
-    )
+    sys.stderr.write("The relenv toolchain command has been deprecated. Please pip install relenv[toolchain].\n")
     sys.stderr.flush()
     sys.exit(1)
 

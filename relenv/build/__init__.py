@@ -4,17 +4,15 @@
 """
 Entry points for the ``relenv build`` CLI command.
 """
+
 from __future__ import annotations
 
-import argparse
 import codecs
 import random
 import signal
 import sys
-from types import FrameType, ModuleType
+from typing import TYPE_CHECKING
 
-from . import darwin, linux, windows
-from .common import builds
 from ..common import build_arch
 from ..pyversions import (
     Version,
@@ -22,6 +20,12 @@ from ..pyversions import (
     python_versions,
     resolve_python_version,
 )
+from . import darwin, linux, windows
+from .common import builds
+
+if TYPE_CHECKING:
+    import argparse
+    from types import FrameType, ModuleType
 
 
 def platform_module() -> ModuleType:
@@ -47,9 +51,7 @@ def setup_parser(
     :type subparsers: argparse._SubParsersAction
     """
     mod = platform_module()
-    build_subparser = subparsers.add_parser(
-        "build", description="Build Relenv Python Environments from source"
-    )
+    build_subparser = subparsers.add_parser("build", description="Build Relenv Python Environments from source")
     build_subparser.set_defaults(func=main)
     build_subparser.add_argument(
         "--arch",
@@ -62,17 +64,14 @@ def setup_parser(
         "--clean",
         default=False,
         action="store_true",
-        help=(
-            "Clean up before running the build. This option will remove the "
-            "logs, src, build, and previous tarball."
-        ),
+        help=("Clean up before running the build. This option will remove the logs, src, build, and previous tarball."),
     )
     default_version = get_default_python_version()
     build_subparser.add_argument(
         "--python",
         default=default_version,
         type=str,
-        help="The python version (e.g., 3.10, 3.13.7) [default: %(default)s]",
+        help="The python version (e.g., 3.10, 3.14.4) [default: %(default)s]",
     )
     build_subparser.add_argument(
         "--no-cleanup",
@@ -174,9 +173,7 @@ def main(args: argparse.Namespace) -> None:
 
     build.set_arch(args.arch)
     if build.build_arch != build.arch:
-        print(
-            "Warning: Cross compilation support is experimental and is not fully tested or working!"
-        )
+        print("Warning: Cross compilation support is experimental and is not fully tested or working!")
     steps = None
     if args.steps:
         steps = [_.strip() for _ in args.steps]

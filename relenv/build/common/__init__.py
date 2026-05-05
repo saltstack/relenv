@@ -6,29 +6,27 @@ Build process common methods.
 This module has been split into focused submodules for better organization.
 All public APIs are re-exported here for backward compatibility.
 """
+
 from __future__ import annotations
-
-from .builders import (
-    build_openssl,
-    build_openssl_fips,
-    build_sqlite,
-)
-
-from .install import (
-    update_ensurepip,
-    install_runtime,
-    finalize,
-    create_archive,
-    patch_file,
-    update_sbom_checksums,
-)
 
 from .builder import (
     Dirs,
     builds,
     get_dependency_version,
 )
-
+from .builders import (
+    build_openssl,
+    build_openssl_fips,
+    build_sqlite,
+)
+from .install import (
+    create_archive,
+    finalize,
+    install_runtime,
+    patch_file,
+    update_ensurepip,
+    update_sbom_checksums,
+)
 
 __all__ = [
     # Builder classes and instances

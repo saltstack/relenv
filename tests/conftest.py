@@ -6,8 +6,8 @@ import os
 import platform
 import shutil
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, Optional
 
 import pytest
 from _pytest.config import Config
@@ -22,7 +22,7 @@ from tests._pytest_typing import fixture
 log = logging.getLogger(__name__)
 
 
-def get_build_version() -> Optional[str]:
+def get_build_version() -> str | None:
     if "RELENV_PY_VERSION" in os.environ:
         return os.environ["RELENV_PY_VERSION"]
     builds = list(list_archived_builds())
@@ -33,9 +33,7 @@ def get_build_version() -> Optional[str]:
             versions.append(version)
     if versions:
         version = versions[0]
-        log.warning(
-            "Environment RELENV_PY_VERSION not set, detected version %s", version
-        )
+        log.warning("Environment RELENV_PY_VERSION not set, detected version %s", version)
         return version
     return None
 

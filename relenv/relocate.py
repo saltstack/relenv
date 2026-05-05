@@ -12,7 +12,6 @@ import pathlib
 import shutil as _shutil
 import subprocess as _subprocess
 import sys as _sys
-from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -73,10 +72,10 @@ LC_LOAD_DYLIB = "LC_LOAD_DYLIB"
 LC_RPATH = "LC_RPATH"
 
 # Cache for readelf binary path
-_READELF_BINARY: Optional[str] = None
+_READELF_BINARY: str | None = None
 
 # Cache for patchelf binary path
-_PATCHELF_BINARY: Optional[str] = None
+_PATCHELF_BINARY: str | None = None
 
 
 def _get_readelf_binary() -> str:
@@ -192,11 +191,10 @@ def parse_otool_l(stdout: str) -> dict[str, list[str]]:
     :rtype: dict
     """
     in_cmd = False
-    cmd: Optional[str] = None
-    name: Optional[str] = None
+    cmd: str | None = None
+    name: str | None = None
     data: dict[str, list[str]] = {}
     for line in [x.strip() for x in stdout.split("\n")]:
-
         if not line:
             continue
 
@@ -252,9 +250,7 @@ def parse_macho(path: str | os.PathLike[str]) -> dict[str, list[str]] | None:
     :return: The parsed relevant RPATH content, or None if it isn't an object file
     :rtype: dict or None
     """
-    proc = subprocess.run(
-        ["otool", "-l", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE
-    )
+    proc = subprocess.run(["otool", "-l", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     stdout = proc.stdout.decode()
     if stdout.find("is not an object file") != -1:
         return None
@@ -272,9 +268,7 @@ def parse_rpath(path: str | os.PathLike[str]) -> list[str]:
     :rtype: list
     """
     readelf = _get_readelf_binary()
-    proc = subprocess.run(
-        [readelf, "-d", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    proc = subprocess.run([readelf, "-d", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return parse_readelf_d(proc.stdout.decode())
 
 
@@ -318,18 +312,14 @@ def handle_macho(
                         shutil.copymode(x, y)
                         log.info("Copied %s to %s", x, y)
                 log.info("Use %s to %s", y, path_str)
-                z = pathlib.Path("@loader_path") / os.path.relpath(
-                    y, path_obj.resolve().parent
-                )
+                z = pathlib.Path("@loader_path") / os.path.relpath(y, path_obj.resolve().parent)
                 cmd = ["install_name_tool", "-change", x, str(z), path_str]
                 subprocess.run(cmd)
                 log.info("Changed %s to %s in %s", x, z, path_str)
     return obj
 
 
-def is_in_dir(
-    filepath: str | os.PathLike[str], directory: str | os.PathLike[str]
-) -> bool:
+def is_in_dir(filepath: str | os.PathLike[str], directory: str | os.PathLike[str]) -> bool:
     """
     Determines whether a file is contained within a directory.
 

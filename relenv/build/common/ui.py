@@ -3,20 +3,19 @@
 """
 UI and build statistics utilities.
 """
+
 from __future__ import annotations
 
 import logging
 import os
-import pathlib
 import sys
 import threading
-from typing import Dict, MutableMapping, Optional, Sequence, cast
-
-import multiprocessing
-
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, cast
 
 if TYPE_CHECKING:
+    import multiprocessing
+    import pathlib
+    from collections.abc import MutableMapping, Sequence
     from multiprocessing.synchronize import Event as SyncEvent
 else:
     SyncEvent = None
@@ -24,7 +23,6 @@ else:
 from relenv.common import DATA_DIR
 
 from .download import CICD
-
 
 log = logging.getLogger(__name__)
 
@@ -96,7 +94,7 @@ class SpinnerState:
 
     def __init__(self) -> None:
         """Initialize empty spinner state with thread safety."""
-        self._state: Dict[str, int] = {}
+        self._state: dict[str, int] = {}
         self._lock = threading.Lock()
 
     def get(self, name: str) -> int:
@@ -120,7 +118,7 @@ class SpinnerState:
         with self._lock:
             self._state[name] = self._state.get(name, 0) + 1
 
-    def reset(self, name: Optional[str] = None) -> None:
+    def reset(self, name: str | None = None) -> None:
         """Reset spinner state.
 
         Args:
@@ -146,10 +144,10 @@ class BuildStats(TypedDict):
 
 
 def print_ui(
-    events: MutableMapping[str, "multiprocessing.synchronize.Event"],
+    events: MutableMapping[str, multiprocessing.synchronize.Event],
     processes: MutableMapping[str, multiprocessing.Process],
     fails: Sequence[str],
-    flipstat: Optional[Dict[str, tuple[int, float]]] = None,
+    flipstat: dict[str, tuple[int, float]] | None = None,
 ) -> None:
     """
     Prints the UI during the relenv building process.
@@ -170,19 +168,19 @@ def print_ui(
     for name in events:
         if not events[name].is_set():
             # Pending: event not yet started
-            status = " {}{}".format(YELLOW, SYMBOL_PENDING)
+            status = f" {YELLOW}{SYMBOL_PENDING}"
         elif name in processes:
             # Running: show animated spinner
             frame_idx = _spinner_state.get(name) % len(SPINNER_FRAMES)
             spinner = SPINNER_FRAMES[frame_idx]
             _spinner_state.increment(name)
-            status = " {}{}".format(GREEN, spinner)
+            status = f" {GREEN}{spinner}"
         elif name in fails:
             # Failed: show error symbol
-            status = " {}{}".format(RED, SYMBOL_FAILED)
+            status = f" {RED}{SYMBOL_FAILED}"
         else:
             # Success: show success symbol
-            status = " {}{}".format(GREEN, SYMBOL_SUCCESS)
+            status = f" {GREEN}{SYMBOL_SUCCESS}"
         uiline.append(status)
     uiline.append("  " + END)
     sys.stdout.write("\r")
@@ -191,11 +189,11 @@ def print_ui(
 
 
 def print_ui_expanded(
-    events: MutableMapping[str, "multiprocessing.synchronize.Event"],
+    events: MutableMapping[str, multiprocessing.synchronize.Event],
     processes: MutableMapping[str, multiprocessing.Process],
     fails: Sequence[str],
     line_counts: MutableMapping[str, int],
-    build_stats: Dict[str, BuildStats],
+    build_stats: dict[str, BuildStats],
     phase: str = "build",
 ) -> None:
     """
@@ -277,11 +275,7 @@ def print_ui_expanded(
                     status_text = f"{phase_action} {progress:3d}%"
                     # Progress bar (20 chars wide)
                     filled = int(progress / 5)  # 20 segments = 100% / 5
-                    bar = (
-                        "█" * filled + "░" * (20 - filled)
-                        if USE_UNICODE
-                        else ("#" * filled + "-" * (20 - filled))
-                    )
+                    bar = "█" * filled + "░" * (20 - filled) if USE_UNICODE else ("#" * filled + "-" * (20 - filled))
                     progress_bar = f" [{bar}]"
                 else:
                     status_text = phase_action
@@ -295,11 +289,7 @@ def print_ui_expanded(
 
                     # Progress bar (20 chars wide)
                     filled = int(progress / 5)  # 20 segments = 100% / 5
-                    bar = (
-                        "█" * filled + "░" * (20 - filled)
-                        if USE_UNICODE
-                        else ("#" * filled + "-" * (20 - filled))
-                    )
+                    bar = "█" * filled + "░" * (20 - filled) if USE_UNICODE else ("#" * filled + "-" * (20 - filled))
                     progress_bar = f" [{bar}]"
                 else:
                     status_text = phase_action
@@ -321,14 +311,12 @@ def print_ui_expanded(
 
         # Clear line before writing to prevent leftover text
         sys.stdout.write("\r\033[K")
-        sys.stdout.write(
-            f"{status_symbol} {name_display} {status_display}{progress_bar}\n"
-        )
+        sys.stdout.write(f"{status_symbol} {name_display} {status_display}{progress_bar}\n")
 
     sys.stdout.flush()
 
 
-def load_build_stats() -> Dict[str, BuildStats]:
+def load_build_stats() -> dict[str, BuildStats]:
     """
     Load historical build statistics from disk.
 
@@ -341,15 +329,15 @@ def load_build_stats() -> Dict[str, BuildStats]:
     try:
         import json
 
-        with open(stats_file, "r") as f:
+        with open(stats_file) as f:
             data = json.load(f)
-            return cast(Dict[str, BuildStats], data)
-    except (json.JSONDecodeError, IOError):
+            return cast("dict[str, BuildStats]", data)
+    except (OSError, json.JSONDecodeError):
         log.warning("Failed to load build stats, starting fresh")
         return {}
 
 
-def save_build_stats(stats: Dict[str, BuildStats]) -> None:
+def save_build_stats(stats: dict[str, BuildStats]) -> None:
     """
     Save build statistics to disk.
 
@@ -363,7 +351,7 @@ def save_build_stats(stats: Dict[str, BuildStats]) -> None:
         stats_file.parent.mkdir(parents=True, exist_ok=True)
         with open(stats_file, "w") as f:
             json.dump(stats, f, indent=2)
-    except IOError:
+    except OSError:
         log.warning("Failed to save build stats")
 
 
@@ -380,9 +368,7 @@ def update_build_stats(step_name: str, line_count: int) -> None:
     """
     stats = load_build_stats()
     if step_name not in stats:
-        stats[step_name] = BuildStats(
-            avg_lines=line_count, samples=1, last_lines=line_count
-        )
+        stats[step_name] = BuildStats(avg_lines=line_count, samples=1, last_lines=line_count)
     else:
         old_avg = stats[step_name]["avg_lines"]
         # Exponential moving average: 70% new value, 30% old average

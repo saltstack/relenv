@@ -11,7 +11,7 @@ import subprocess
 import sys
 import tarfile
 from types import ModuleType
-from typing import BinaryIO, Callable, Literal, Optional
+from typing import TYPE_CHECKING, BinaryIO, Literal
 from unittest.mock import patch
 
 import pytest
@@ -42,10 +42,11 @@ from relenv.common import (
 )
 from tests._pytest_typing import mark_skipif, parametrize
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-def _mock_ppbt_module(
-    monkeypatch: pytest.MonkeyPatch, triplet: str, archive_path: pathlib.Path
-) -> None:
+
+def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str, archive_path: pathlib.Path) -> None:
     """
     Provide a lightweight ppbt.common stub so get_toolchain() skips the real extraction.
     """
@@ -161,9 +162,7 @@ def test_get_toolchain(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) 
     triplet = "aarch64-linux-gnu"
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(
-        relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
-    )
+    monkeypatch.setattr(relenv.common, "get_triplet", lambda machine=None, plat=None: triplet)
     monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
     archive_path = tmp_path / "dummy-toolchain.tar.xz"
     archive_path.write_bytes(b"")
@@ -177,26 +176,25 @@ def test_get_toolchain_linux_existing(tmp_path: pathlib.Path) -> None:
     triplet = "x86_64-linux-gnu"
     toolchain_path = data_dir / "toolchain" / triplet
     toolchain_path.mkdir(parents=True)
-    with patch("relenv.common.DATA_DIR", data_dir), patch(
-        "sys.platform", "linux"
-    ), patch("relenv.common.get_triplet", return_value=triplet), patch.dict(
-        os.environ,
-        {"RELENV_TOOLCHAIN_CACHE": str(data_dir / "toolchain")},
+    with (
+        patch("relenv.common.DATA_DIR", data_dir),
+        patch("sys.platform", "linux"),
+        patch("relenv.common.get_triplet", return_value=triplet),
+        patch.dict(
+            os.environ,
+            {"RELENV_TOOLCHAIN_CACHE": str(data_dir / "toolchain")},
+        ),
     ):
         ret = get_toolchain()
     assert ret == toolchain_path
 
 
-def test_get_toolchain_no_arch(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_get_toolchain_no_arch(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     data_dir = tmp_path / "data"
     triplet = "x86_64-linux-gnu"
     monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(
-        relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
-    )
+    monkeypatch.setattr(relenv.common, "get_triplet", lambda machine=None, plat=None: triplet)
     monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
     archive_path = tmp_path / "dummy-toolchain.tar.xz"
     archive_path.write_bytes(b"")
@@ -248,7 +246,7 @@ def test_download_url_writes_file(tmp_path: pathlib.Path) -> None:
         fp: BinaryIO,
         backoff: int,
         timeout: float,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> None:
         fp.write(data)
 
@@ -268,13 +266,15 @@ def test_download_url_failure_cleans_up(tmp_path: pathlib.Path) -> None:
         fp: BinaryIO,
         backoff: int,
         timeout: float,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> None:
         raise RelenvException("fail")
 
-    with patch("relenv.common.get_download_location", return_value=str(created)), patch(
-        "relenv.common.fetch_url", side_effect=fake_fetch
-    ), patch("relenv.common.log") as log_mock:
+    with (
+        patch("relenv.common.get_download_location", return_value=str(created)),
+        patch("relenv.common.fetch_url", side_effect=fake_fetch),
+        patch("relenv.common.log") as log_mock,
+    ):
         with pytest.raises(RelenvException):
             download_url("https://example.com/a.txt", dest)
         log_mock.error.assert_called()
@@ -317,21 +317,21 @@ def test_format_shebang_newline() -> None:
 
 
 def test_relative_interpreter_default_location() -> None:
-    assert relative_interpreter(
-        "/tmp/relenv", "/tmp/relenv/bin", "/tmp/relenv/bin/python3"
-    ) == pathlib.Path("..", "bin", "python3")
+    assert relative_interpreter("/tmp/relenv", "/tmp/relenv/bin", "/tmp/relenv/bin/python3") == pathlib.Path(
+        "..", "bin", "python3"
+    )
 
 
 def test_relative_interpreter_pip_dir_location() -> None:
-    assert relative_interpreter(
-        "/tmp/relenv", "/tmp/relenv", "/tmp/relenv/bin/python3"
-    ) == pathlib.Path("bin", "python3")
+    assert relative_interpreter("/tmp/relenv", "/tmp/relenv", "/tmp/relenv/bin/python3") == pathlib.Path(
+        "bin", "python3"
+    )
 
 
 def test_relative_interpreter_alternate_location() -> None:
-    assert relative_interpreter(
-        "/tmp/relenv", "/tmp/relenv/bar/bin", "/tmp/relenv/bin/python3"
-    ) == pathlib.Path("..", "..", "bin", "python3")
+    assert relative_interpreter("/tmp/relenv", "/tmp/relenv/bar/bin", "/tmp/relenv/bin/python3") == pathlib.Path(
+        "..", "..", "bin", "python3"
+    )
 
 
 def test_relative_interpreter_interpreter_not_relative_to_root() -> None:
@@ -364,9 +364,11 @@ def test_sanitize_sys_path() -> None:
         f"{path_prefix}bar{separator}2",
         f"{path_prefix}lib{separator}3",
     ]
-    with patch.object(sys, "prefix", f"{path_prefix}foo"), patch.object(
-        sys, "base_prefix", f"{path_prefix}bar"
-    ), patch.dict(os.environ, PYTHONPATH=os.pathsep.join(python_path_entries)):
+    with (
+        patch.object(sys, "prefix", f"{path_prefix}foo"),
+        patch.object(sys, "base_prefix", f"{path_prefix}bar"),
+        patch.dict(os.environ, PYTHONPATH=os.pathsep.join(python_path_entries)),
+    ):
         new_sys_path = sanitize_sys_path(sys_path)
         assert new_sys_path != sys_path
         assert new_sys_path == expected
@@ -393,6 +395,7 @@ def test_version_comparisons() -> None:
     assert Version("3.10.1") > Version("3.10.0")
     assert Version("3.11") >= Version("3.11.0")
     assert Version("3.12.2") <= Version("3.12.2")
+    assert Version("3.14") >= Version("3.14.0")
 
 
 def test_version_parse_string_too_many_parts() -> None:
@@ -447,10 +450,11 @@ def test_sanitize_sys_path_with_editable_paths(tmp_path: pathlib.Path) -> None:
     editable_file = known_path / "__editable__.demo.pth"
     editable_file.touch()
     extra_path = str(known_path / "extra")
-    with patch.object(sys, "prefix", str(base)), patch.object(
-        sys, "base_prefix", str(base)
-    ), patch.dict(os.environ, {}, clear=True), patch(
-        "relenv.common.addpackage", return_value=[extra_path]
+    with (
+        patch.object(sys, "prefix", str(base)),
+        patch.object(sys, "base_prefix", str(base)),
+        patch.dict(os.environ, {}, clear=True),
+        patch("relenv.common.addpackage", return_value=[extra_path]),
     ):
         sanitized = sanitize_sys_path([str(known_path)])
     assert extra_path in sanitized
@@ -464,9 +468,7 @@ def test_makepath_oserror() -> None:
     assert case == os.path.normcase(expected)
 
 
-def test_toolchain_respects_relenv_data(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_toolchain_respects_relenv_data(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test that RELENV_DATA environment variable controls toolchain location.
 
@@ -482,9 +484,7 @@ def test_toolchain_respects_relenv_data(
 
     # Patch sys.platform to simulate Linux
     monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setattr(
-        relenv.common, "get_triplet", lambda machine=None, plat=None: triplet
-    )
+    monkeypatch.setattr(relenv.common, "get_triplet", lambda machine=None, plat=None: triplet)
 
     # Set RELENV_DATA environment variable
     monkeypatch.setenv("RELENV_DATA", str(data_dir))
@@ -499,9 +499,7 @@ def test_toolchain_respects_relenv_data(
     assert result == data_dir / "toolchain"
 
 
-def test_toolchain_uses_cache_without_relenv_data(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_toolchain_uses_cache_without_relenv_data(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test that toolchain uses cache directory when RELENV_DATA is not set.
 
@@ -528,9 +526,7 @@ def test_toolchain_uses_cache_without_relenv_data(
 
 def test_copyright_headers() -> None:
     """Verify all Python source files have the correct copyright header."""
-    expected_header = (
-        "# Copyright 2022-2026 Broadcom.\n" "# SPDX-License-Identifier: Apache-2.0\n"
-    )
+    expected_header = "# Copyright 2022-2026 Broadcom.\n# SPDX-License-Identifier: Apache-2.0\n"
 
     # Find all Python files in relenv/ and tests/
     root = MODULE_DIR.parent
@@ -542,16 +538,12 @@ def test_copyright_headers() -> None:
 
     # Skip generated and cache files
     python_files = [
-        f
-        for f in python_files
-        if "__pycache__" not in f.parts
-        and ".nox" not in f.parts
-        and "build" not in f.parts
+        f for f in python_files if "__pycache__" not in f.parts and ".nox" not in f.parts and "build" not in f.parts
     ]
 
     failures = []
     for py_file in python_files:
-        with open(py_file, "r", encoding="utf-8") as f:
+        with open(py_file, encoding="utf-8") as f:
             content = f.read()
 
         if not content.startswith(expected_header):

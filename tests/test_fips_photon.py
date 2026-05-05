@@ -25,9 +25,7 @@ def check_test_environment() -> bool:
 
 pytestmark = [
     pytest.mark.skipif(not get_build_version(), reason="Build archive does not exist"),
-    pytest.mark.skipif(
-        not check_test_environment(), reason="Not running on photon 4 with fips enabled"
-    ),
+    pytest.mark.skipif(not check_test_environment(), reason="Not running on photon 4 with fips enabled"),
 ]
 
 

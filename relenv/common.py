@@ -3,6 +3,7 @@
 """
 Common classes and values used around relenv.
 """
+
 from __future__ import annotations
 
 import http.client
@@ -20,18 +21,10 @@ import tarfile
 import textwrap
 import threading
 import time
-from typing import (
-    IO,
-    Any,
-    BinaryIO,
-    Callable,
-    Iterable,
-    Literal,
-    Mapping,
-    Optional,
-    Union,
-    cast,
-)
+from typing import IO, TYPE_CHECKING, Any, BinaryIO, Literal, cast
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable, Mapping
 
 # relenv package version
 __version__ = "0.22.9"
@@ -51,7 +44,7 @@ _TOOLCHAIN_MANIFEST = ".toolchain-manifest.json"
 
 
 # 8 GiB archives are not unusual; stick to metadata to fingerprint them.
-def _archive_metadata(path: pathlib.Path) -> dict[str, Union[str, int]]:
+def _archive_metadata(path: pathlib.Path) -> dict[str, str | int]:
     stat = path.stat()
     return {
         "archive": str(path.resolve()),
@@ -60,7 +53,7 @@ def _archive_metadata(path: pathlib.Path) -> dict[str, Union[str, int]]:
     }
 
 
-def _toolchain_cache_root() -> Optional[pathlib.Path]:
+def _toolchain_cache_root() -> pathlib.Path | None:
     override = os.environ.get(TOOLCHAIN_CACHE_ENV)
     if override:
         if override.strip().lower() == "none":
@@ -81,7 +74,7 @@ def _toolchain_manifest_path(toolchain_path: pathlib.Path) -> pathlib.Path:
     return toolchain_path / _TOOLCHAIN_MANIFEST
 
 
-def _load_toolchain_manifest(path: pathlib.Path) -> Optional[Mapping[str, Any]]:
+def _load_toolchain_manifest(path: pathlib.Path) -> Mapping[str, Any] | None:
     if not path.exists():
         return None
     try:
@@ -102,18 +95,14 @@ def _manifest_matches(manifest: Mapping[str, Any], metadata: Mapping[str, Any]) 
     )
 
 
-def _write_toolchain_manifest(
-    toolchain_path: pathlib.Path, metadata: Mapping[str, Any]
-) -> None:
+def _write_toolchain_manifest(toolchain_path: pathlib.Path, metadata: Mapping[str, Any]) -> None:
     manifest_path = _toolchain_manifest_path(toolchain_path)
     try:
         with manifest_path.open("w", encoding="utf-8") as handle:
             json.dump(metadata, handle, indent=2, sort_keys=True)
             handle.write("\n")
     except OSError as exc:  # pragma: no cover - permissions edge cases
-        log.warning(
-            "Unable to persist toolchain manifest at %s: %s", manifest_path, exc
-        )
+        log.warning("Unable to persist toolchain manifest at %s: %s", manifest_path, exc)
 
 
 def toolchain_root_dir() -> pathlib.Path:
@@ -334,7 +323,7 @@ def build_arch() -> str:
 
 
 def work_root(
-    root: Optional[Union[str, os.PathLike[str]]] = None,
+    root: str | os.PathLike[str] | None = None,
 ) -> pathlib.Path:
     """
     Get the root directory that all other relenv working directories should be based on.
@@ -352,9 +341,7 @@ def work_root(
     return base
 
 
-def work_dir(
-    name: str, root: Optional[Union[str, os.PathLike[str]]] = None
-) -> pathlib.Path:
+def work_dir(name: str, root: str | os.PathLike[str] | None = None) -> pathlib.Path:
     """
     Get the absolute path to the relenv working directory of the given name.
 
@@ -368,7 +355,7 @@ def work_dir(
     """
     root = work_root(root)
     if root == MODULE_DIR:
-        base = root / "_{}".format(name)
+        base = root / f"_{name}"
     else:
         base = root / name
     return base
@@ -382,7 +369,7 @@ class WorkDirs:
     :type root: str
     """
 
-    def __init__(self: "WorkDirs", root: Union[str, os.PathLike[str]]) -> None:
+    def __init__(self: WorkDirs, root: str | os.PathLike[str]) -> None:
         self.root: pathlib.Path = pathlib.Path(root)
         self.data: pathlib.Path = DATA_DIR
         self.toolchain_config: pathlib.Path = work_dir("toolchain", self.root)
@@ -392,7 +379,7 @@ class WorkDirs:
         self.logs: pathlib.Path = work_dir("logs", DATA_DIR)
         self.download: pathlib.Path = work_dir("download", DATA_DIR)
 
-    def __getstate__(self: "WorkDirs") -> dict[str, pathlib.Path]:
+    def __getstate__(self: WorkDirs) -> dict[str, pathlib.Path]:
         """
         Return an object used for pickling.
 
@@ -408,7 +395,7 @@ class WorkDirs:
             "download": self.download,
         }
 
-    def __setstate__(self: "WorkDirs", state: Mapping[str, pathlib.Path]) -> None:
+    def __setstate__(self: WorkDirs, state: Mapping[str, pathlib.Path]) -> None:
         """
         Unwrap the object returned from unpickling.
 
@@ -425,7 +412,7 @@ class WorkDirs:
 
 
 def work_dirs(
-    root: Optional[Union[str, os.PathLike[str]]] = None,
+    root: str | os.PathLike[str] | None = None,
 ) -> WorkDirs:
     """
     Returns a WorkDirs instance based on the given root.
@@ -440,9 +427,9 @@ def work_dirs(
 
 
 def get_toolchain(
-    arch: Optional[str] = None,
-    root: Optional[Union[str, os.PathLike[str]]] = None,
-) -> Optional[pathlib.Path]:
+    arch: str | None = None,
+    root: str | os.PathLike[str] | None = None,
+) -> pathlib.Path | None:
     """
     Get a the toolchain directory, specific to the arch if supplied.
 
@@ -469,7 +456,7 @@ def get_toolchain(
     toolchain_root = toolchain_root_dir()
     triplet = get_triplet(machine=arch)
     toolchain_path = toolchain_root / triplet
-    metadata: Optional[Mapping[str, Any]] = None
+    metadata: Mapping[str, Any] | None = None
     if toolchain_path.exists():
         metadata = _load_toolchain_manifest(_toolchain_manifest_path(toolchain_path))
 
@@ -489,11 +476,7 @@ def get_toolchain(
     archive_path = pathlib.Path(archive_attr)
     archive_meta = _archive_metadata(archive_path)
 
-    if (
-        toolchain_path.exists()
-        and metadata
-        and _manifest_matches(metadata, archive_meta)
-    ):
+    if toolchain_path.exists() and metadata and _manifest_matches(metadata, archive_meta):
         return toolchain_path
 
     if toolchain_path.exists():
@@ -501,14 +484,12 @@ def get_toolchain(
 
     extract(str(toolchain_root), str(archive_path))
     if not toolchain_path.exists():
-        raise RelenvException(
-            f"Toolchain archive {archive_path} did not produce {toolchain_path}"
-        )
+        raise RelenvException(f"Toolchain archive {archive_path} did not produce {toolchain_path}")
     _write_toolchain_manifest(toolchain_path, archive_meta)
     return toolchain_path
 
 
-def get_triplet(machine: Optional[str] = None, plat: Optional[str] = None) -> str:
+def get_triplet(machine: str | None = None, plat: str | None = None) -> str:
     """
     Get the target triplet for the specified machine and platform.
 
@@ -568,7 +549,7 @@ def list_archived_builds() -> list[tuple[str, str, str]]:
     return builds
 
 
-def archived_build(triplet: Optional[str] = None) -> pathlib.Path:
+def archived_build(triplet: str | None = None) -> pathlib.Path:
     """
     Finds a the location of an archived build.
 
@@ -585,9 +566,7 @@ def archived_build(triplet: Optional[str] = None) -> pathlib.Path:
     return dirs.build / archive
 
 
-def extract_archive(
-    to_dir: Union[str, os.PathLike[str]], archive: Union[str, os.PathLike[str]]
-) -> None:
+def extract_archive(to_dir: str | os.PathLike[str], archive: str | os.PathLike[str]) -> None:
     """
     Extract an archive to a specific location.
 
@@ -627,7 +606,7 @@ def extract_archive(
         tar.extractall(str(to_path))
 
 
-def get_download_location(url: str, dest: Union[str, os.PathLike[str]]) -> str:
+def get_download_location(url: str, dest: str | os.PathLike[str]) -> str:
     """
     Get the full path to where the url will be downloaded to.
 
@@ -642,7 +621,7 @@ def get_download_location(url: str, dest: Union[str, os.PathLike[str]]) -> str:
     return os.path.join(os.fspath(dest), os.path.basename(url))
 
 
-def check_url(url: str, timestamp: Optional[float] = None, timeout: float = 30) -> bool:
+def check_url(url: str, timestamp: float | None = None, timeout: float = 30) -> bool:
     """
     Check that the url returns a 200.
     """
@@ -654,9 +633,7 @@ def check_url(url: str, timestamp: Optional[float] = None, timeout: float = 30) 
     req = urllib.request.Request(url)
 
     if timestamp:
-        headers["If-Modified-Since"] = time.strftime(
-            "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp)
-        )
+        headers["If-Modified-Since"] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp))
 
     for k, v in headers.items():
         req.add_header(k, v)
@@ -678,7 +655,7 @@ def fetch_url(
     fp: BinaryIO,
     backoff: int = 3,
     timeout: float = 30,
-    progress_callback: Optional[Callable[[int, int], None]] = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> None:
     """
     Fetch the contents of a url.
@@ -788,11 +765,11 @@ def fetch_url_content(url: str, backoff: int = 3, timeout: float = 30) -> str:
 
 def download_url(
     url: str,
-    dest: Union[str, os.PathLike[str]],
+    dest: str | os.PathLike[str],
     verbose: bool = True,
     backoff: int = 3,
     timeout: float = 60,
-    progress_callback: Optional[Callable[[int, int], None]] = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> str:
     """
     Download the url to the provided destination.
@@ -854,7 +831,6 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
     if "universal_newlines" not in kwargs:
         kwargs["universal_newlines"] = True
     if sys.platform != "win32":
-
         p = subprocess.Popen(*args, **kwargs)
         stdout_stream = p.stdout
         stderr_stream = p.stderr
@@ -869,7 +845,7 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
         while ok:
             for key, val1 in sel.select():
                 del val1  # unused
-                stream = cast(IO[str], key.fileobj)
+                stream = cast("IO[str]", key.fileobj)
                 line = stream.readline()
                 if not line:
                     ok = False
@@ -885,7 +861,7 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
 
         def enqueue_stream(
             stream: IO[str],
-            item_queue: "queue.Queue[tuple[int | str, str]]",
+            item_queue: queue.Queue[tuple[int | str, str]],
             kind: int,
         ) -> None:
             last_line = ""
@@ -899,7 +875,7 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
 
         def enqueue_process(
             process: subprocess.Popen[str],
-            item_queue: "queue.Queue[tuple[int | str, str]]",
+            item_queue: queue.Queue[tuple[int | str, str]],
         ) -> None:
             process.wait()
             item_queue.put(("x", ""))
@@ -910,7 +886,7 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
         if stdout_stream is None or stderr_stream is None:
             p.wait()
             raise RelenvException("Process pipes are unavailable")
-        q: "queue.Queue[tuple[int | str, str]]" = queue.Queue()
+        q: queue.Queue[tuple[int | str, str]] = queue.Queue()
         to = threading.Thread(target=enqueue_stream, args=(stdout_stream, q, 1))
         te = threading.Thread(target=enqueue_stream, args=(stderr_stream, q, 2))
         tp = threading.Thread(target=enqueue_process, args=(p, q))
@@ -939,9 +915,9 @@ def runcmd(*args: Any, **kwargs: Any) -> subprocess.Popen[str]:
 
 
 def relative_interpreter(
-    root_dir: Union[str, os.PathLike[str]],
-    scripts_dir: Union[str, os.PathLike[str]],
-    interpreter: Union[str, os.PathLike[str]],
+    root_dir: str | os.PathLike[str],
+    scripts_dir: str | os.PathLike[str],
+    interpreter: str | os.PathLike[str],
 ) -> pathlib.Path:
     """
     Return a relativized path to the given scripts_dir and interpreter.
@@ -960,7 +936,7 @@ def relative_interpreter(
     return relscripts / relinterp
 
 
-def makepath(*paths: Union[str, os.PathLike[str]]) -> tuple[str, str]:
+def makepath(*paths: str | os.PathLike[str]) -> tuple[str, str]:
     """
     Make a normalized path name from paths.
     """
@@ -972,7 +948,7 @@ def makepath(*paths: Union[str, os.PathLike[str]]) -> tuple[str, str]:
     return dir, os.path.normcase(dir)
 
 
-def addpackage(sitedir: str, name: Union[str, os.PathLike[str]]) -> list[str] | None:
+def addpackage(sitedir: str, name: str | os.PathLike[str]) -> list[str] | None:
     """
     Add editable package to path.
     """
@@ -987,9 +963,7 @@ def addpackage(sitedir: str, name: Union[str, os.PathLike[str]]) -> list[str] | 
         return None
     file_attr_hidden = getattr(stat, "FILE_ATTRIBUTE_HIDDEN", 0)
     uf_hidden = getattr(stat, "UF_HIDDEN", 0)
-    if (getattr(st, "st_flags", 0) & uf_hidden) or (
-        getattr(st, "st_file_attributes", 0) & file_attr_hidden
-    ):
+    if (getattr(st, "st_flags", 0) & uf_hidden) or (getattr(st, "st_file_attributes", 0) & file_attr_hidden):
         # print(f"Skipping hidden .pth file: {fullname!r}")
         return None
     # print(f"Processing .pth file: {fullname!r}")
@@ -1015,7 +989,7 @@ def addpackage(sitedir: str, name: Union[str, os.PathLike[str]]) -> list[str] | 
                     paths.append(dir)
             except Exception:
                 print(
-                    "Error processing line {:d} of {}:\n".format(n + 1, fullname),
+                    f"Error processing line {n + 1:d} of {fullname}:\n",
                     file=sys.stderr,
                 )
                 import traceback
@@ -1069,11 +1043,11 @@ class Version:
     def __init__(self, data: str) -> None:
         major, minor, micro = self.parse_string(data)
         self.major: int = major
-        self.minor: Optional[int] = minor
-        self.micro: Optional[int] = micro
+        self.minor: int | None = minor
+        self.micro: int | None = micro
         self._data: str = data
 
-    def __str__(self: "Version") -> str:
+    def __str__(self: Version) -> str:
         """
         Version as string.
         """
@@ -1085,7 +1059,7 @@ class Version:
         # XXX What if minor was None but micro was an int.
         return result
 
-    def __hash__(self: "Version") -> int:
+    def __hash__(self: Version) -> int:
         """
         Hash of the version.
 
@@ -1094,7 +1068,7 @@ class Version:
         return hash((self.major, self.minor, self.micro))
 
     @staticmethod
-    def parse_string(data: str) -> tuple[int, Optional[int], Optional[int]]:
+    def parse_string(data: str) -> tuple[int, int | None, int | None]:
         """
         Parse a version string into major, minor, and micro integers.
         """
@@ -1108,7 +1082,7 @@ class Version:
         else:
             raise RuntimeError("Too many parts to  parse")
 
-    def __eq__(self: "Version", other: object) -> bool:
+    def __eq__(self: Version, other: object) -> bool:
         """
         Equality comparisons.
         """
@@ -1122,7 +1096,7 @@ class Version:
         micro = 0 if other.micro is None else other.micro
         return mymajor == major and myminor == minor and mymicro == micro
 
-    def __lt__(self: "Version", other: object) -> bool:
+    def __lt__(self: Version, other: object) -> bool:
         """
         Less than comparrison.
         """
@@ -1143,7 +1117,7 @@ class Version:
                 return True
         return False
 
-    def __le__(self: "Version", other: object) -> bool:
+    def __le__(self: Version, other: object) -> bool:
         """
         Less than or equal to comparrison.
         """
@@ -1161,7 +1135,7 @@ class Version:
                     return True
         return False
 
-    def __gt__(self: "Version", other: object) -> bool:
+    def __gt__(self: Version, other: object) -> bool:
         """
         Greater than comparrison.
         """
@@ -1169,7 +1143,7 @@ class Version:
             return NotImplemented
         return not self.__le__(other)
 
-    def __ge__(self: "Version", other: object) -> bool:
+    def __ge__(self: Version, other: object) -> bool:
         """
         Greater than or equal to comparrison.
         """
