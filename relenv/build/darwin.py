@@ -4,6 +4,7 @@
 """
 The darwin build process.
 """
+
 from __future__ import annotations
 
 import glob
@@ -14,7 +15,7 @@ import shutil
 import tarfile
 import time
 import urllib.request
-from typing import IO, MutableMapping
+from typing import IO, TYPE_CHECKING
 
 from ..common import DARWIN, MACOS_DEVELOPMENT_TARGET, arches, runcmd
 from .common import (
@@ -26,6 +27,9 @@ from .common import (
     get_dependency_version,
     update_sbom_checksums,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
 
 ARCHES = arches[DARWIN]
 
@@ -126,15 +130,13 @@ def build_python(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> N
     # Update bundled expat to latest version
     update_expat(dirs, env)
 
-    env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(
-        prefix=dirs.prefix, ldflags=env["LDFLAGS"]
-    )
+    env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(prefix=dirs.prefix, ldflags=env["LDFLAGS"])
     runcmd(
         [
             "./configure",
             "-v",
-            "--prefix={}".format(dirs.prefix),
-            "--with-openssl={}".format(dirs.prefix),
+            f"--prefix={dirs.prefix}",
+            f"--with-openssl={dirs.prefix}",
             "--enable-optimizations",
             "--disable-test-modules",
         ],
@@ -142,12 +144,10 @@ def build_python(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> N
         stderr=logfp,
         stdout=logfp,
     )
-    with io.open("Modules/Setup", "a+") as fp:
+    with open("Modules/Setup", "a+") as fp:
         fp.seek(0, io.SEEK_END)
-        fp.write("*disabled*\n" "_tkinter\n" "nsl\n" "ncurses\n" "nis\n")
-    runcmd(
-        ["sed", "s/#zlib/zlib/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp
-    )
+        fp.write("*disabled*\n_tkinter\nnsl\nncurses\nnis\n")
+    runcmd(["sed", "s/#zlib/zlib/g", "Modules/Setup"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "-j8"], env=env, stderr=logfp, stdout=logfp)
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 

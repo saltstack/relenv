@@ -231,14 +231,12 @@ def test_handle_elf(tmp_path: pathlib.Path) -> None:
     libcrypt = tmp_path / "libcrypt.so.2"
     libcrypt.touch()
 
-    ldd_ret = """
+    ldd_ret = f"""
     linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
     libcrypt.so.2 => {libcrypt} (0x0123456789)
     libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
     libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
-    """.format(
-        libcrypt=libcrypt
-    ).encode()
+    """.encode()
 
     with proj:
         with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
@@ -259,15 +257,13 @@ def test_handle_elf_rpath_only(tmp_path: pathlib.Path) -> None:
     fake = tmp_path / "fake.so.2"
     fake.touch()
 
-    ldd_ret = """
+    ldd_ret = f"""
     linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
     libcrypt.so.2 => {libcrypt} (0x0123456789)
     fake.so.2 => {fake} (0x0123456789)
     libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
     libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
-    """.format(
-        libcrypt=libcrypt, fake=fake
-    ).encode()
+    """.encode()
 
     with proj:
         libcrypt.touch()
@@ -314,19 +310,17 @@ def test_handle_elf_removes_rpath_when_no_relenv_libs(tmp_path: pathlib.Path) ->
     module = proj.add_simple_elf("array.so", "lib", "python3.10", "lib-dynload")
 
     # ldd output showing only system libraries
-    ldd_ret = """
+    ldd_ret = b"""
     linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
     libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x0123456789)
     libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0123456789)
-    """.encode()
+    """
 
     with proj:
         with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
             with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
                 with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
-                    handle_elf(
-                        str(module), str(proj.libs_dir), True, str(proj.root_dir)
-                    )
+                    handle_elf(str(module), str(proj.libs_dir), True, str(proj.root_dir))
                     # Should remove RPATH, not patch it
                     assert remove_rpath_mock.call_count == 1
                     assert patch_rpath_mock.call_count == 0
@@ -341,22 +335,18 @@ def test_handle_elf_sets_rpath_when_relenv_libs_present(tmp_path: pathlib.Path) 
     libssl.touch()
 
     # ldd output showing relenv-built library
-    ldd_ret = """
+    ldd_ret = f"""
     linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
     libssl.so.3 => {libssl} (0x0123456789)
     libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x0123456789)
     libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0123456789)
-    """.format(
-        libssl=libssl
-    ).encode()
+    """.encode()
 
     with proj:
         with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
             with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
                 with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
-                    handle_elf(
-                        str(module), str(proj.libs_dir), True, str(proj.root_dir)
-                    )
+                    handle_elf(str(module), str(proj.libs_dir), True, str(proj.root_dir))
                     # Should patch RPATH, not remove it
                     assert patch_rpath_mock.call_count == 1
                     assert remove_rpath_mock.call_count == 0

@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import argparse
 from argparse import ArgumentParser
-from types import ModuleType
+from typing import TYPE_CHECKING
 
 from . import build, buildenv, check, create, fetch, pyversions, toolchain
 from .common import __version__
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 
 def setup_cli() -> ArgumentParser:
@@ -29,9 +32,7 @@ def setup_cli() -> ArgumentParser:
         description="Relenv",
     )
     argparser.add_argument("--version", action="version", version=__version__)
-    subparsers: argparse._SubParsersAction[
-        argparse.ArgumentParser
-    ] = argparser.add_subparsers()
+    subparsers: argparse._SubParsersAction[argparse.ArgumentParser] = argparser.add_subparsers()
 
     modules_to_setup: list[ModuleType] = [
         build,

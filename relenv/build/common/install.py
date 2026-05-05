@@ -3,11 +3,11 @@
 """
 Installation and finalization functions for the build process.
 """
+
 from __future__ import annotations
 
 import fnmatch
 import hashlib
-import io
 import json
 import logging
 import os
@@ -18,9 +18,9 @@ import re
 import shutil
 import sys
 import tarfile
-from types import ModuleType
-from typing import IO, MutableMapping, Optional, Sequence, Union, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING
 
+import relenv.relocate
 from relenv.common import (
     LINUX,
     MODULE_DIR,
@@ -30,13 +30,15 @@ from relenv.common import (
     format_shebang,
     runcmd,
 )
-import relenv.relocate
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping, Sequence
+    from types import ModuleType
+
     from .builder import Dirs
 
 # Type alias for path-like objects
-PathLike = Union[str, os.PathLike[str]]
+PathLike = str | os.PathLike[str]
 
 # Relenv PTH file content for bootstrapping
 RELENV_PTH = (
@@ -77,9 +79,7 @@ def patch_file(path: PathLike, old: str, new: str) -> None:
     path.write_text(new_content, encoding="utf-8")
 
 
-def update_sbom_checksums(
-    source_dir: PathLike, files_to_update: MutableMapping[str, PathLike]
-) -> None:
+def update_sbom_checksums(source_dir: PathLike, files_to_update: MutableMapping[str, PathLike]) -> None:
     """
     Update checksums in sbom.spdx.json for modified files.
 
@@ -101,7 +101,7 @@ def update_sbom_checksums(
         return
 
     # Read the SBOM JSON
-    with open(spdx_json, "r") as f:
+    with open(spdx_json) as f:
         data = json.load(f)
 
     # Compute checksums for each file
@@ -179,7 +179,7 @@ def patch_shebang(path: PathLike, old: str, new: str) -> bool:
     with open(path, "w") as fp:
         fp.write(new)
         fp.write(data)
-    with open(path, "r") as fp:
+    with open(path) as fp:
         data = fp.read()
     log.info("Patched shebang of %s => %r", path, data)
     return True
@@ -251,7 +251,6 @@ def update_ensurepip(directory: pathlib.Path) -> None:
     update_pip = False
     update_setuptools = False
     for file in bundle_dir.glob("*.whl"):
-
         log.debug("Checking whl: %s", str(file))
         if file.name.startswith("pip-"):
             found_version = file.name.split("-")[1]
@@ -265,9 +264,7 @@ def update_ensurepip(directory: pathlib.Path) -> None:
             found_version = file.name.split("-")[1]
             log.debug("Found version %s", found_version)
             if Version(found_version) >= Version(setuptools_version):
-                log.debug(
-                    "Found correct setuptools version or newer: %s", found_version
-                )
+                log.debug("Found correct setuptools version or newer: %s", found_version)
             else:
                 file.unlink()
                 update_setuptools = True
@@ -307,7 +304,7 @@ def install_sysdata(
     mod: ModuleType,
     destfile: PathLike,
     buildroot: PathLike,
-    toolchain: Optional[PathLike],
+    toolchain: PathLike | None,
 ) -> None:
     """
     Create a Relenv Python environment's sysconfigdata.
@@ -357,9 +354,7 @@ def install_sysdata(
 
     sysconfigdata_code = _load_sysconfigdata_template()
     with open(destfile, "w", encoding="utf8") as f:
-        f.write(
-            "# system configuration generated and used by" " the relenv at runtime\n"
-        )
+        f.write("# system configuration generated and used by the relenv at runtime\n")
         f.write("_build_time_vars = ")
         pprint.pprint(data, stream=f)
         f.write(sysconfigdata_code)
@@ -388,7 +383,7 @@ def install_runtime(sitepackages: PathLike) -> None:
     """
     site_dir = pathlib.Path(sitepackages)
     relenv_pth = site_dir / "relenv.pth"
-    with io.open(str(relenv_pth), "w") as fp:
+    with open(str(relenv_pth), "w") as fp:
         fp.write(RELENV_PTH)
 
     # Lay down relenv.runtime, we'll pip install the rest later
@@ -404,8 +399,8 @@ def install_runtime(sitepackages: PathLike) -> None:
     ]:
         src = MODULE_DIR / name
         dest = relenv / name
-        with io.open(src, "r") as rfp:
-            with io.open(dest, "w") as wfp:
+        with open(src) as rfp:
+            with open(dest, "w") as wfp:
                 wfp.write(rfp.read())
 
 
@@ -435,7 +430,7 @@ def finalize(
     # Install relenv-sysconfigdata module
     libdir = pathlib.Path(dirs.prefix) / "lib"
 
-    def find_pythonlib(libdir: pathlib.Path) -> Optional[str]:
+    def find_pythonlib(libdir: pathlib.Path) -> str | None:
         for _root, dirs, _files in os.walk(libdir):
             for entry in dirs:
                 if entry.startswith("python"):
@@ -488,9 +483,7 @@ def finalize(
     # Fix the shebangs in the scripts python layed down. Order matters.
     shebangs = [
         "#!{}".format(bindir / f"python{env['RELENV_PY_MAJOR_VERSION']}"),
-        "#!{}".format(
-            bindir / f"python{env['RELENV_PY_MAJOR_VERSION'].split('.', 1)[0]}"
-        ),
+        "#!{}".format(bindir / f"python{env['RELENV_PY_MAJOR_VERSION'].split('.', 1)[0]}"),
     ]
     newshebang = format_shebang("/python3")
     for shebang in shebangs:
@@ -513,11 +506,7 @@ def finalize(
         if toolchain_path is None:
             raise MissingDependencyError("Toolchain path is required for linux builds")
         shutil.copy(
-            pathlib.Path(toolchain_path)
-            / env["RELENV_HOST"]
-            / "sysroot"
-            / "lib"
-            / "libstdc++.so.6",
+            pathlib.Path(toolchain_path) / env["RELENV_HOST"] / "sysroot" / "lib" / "libstdc++.so.6",
             libdir,
         )
 
@@ -529,9 +518,9 @@ def finalize(
             format_shebang("../../bin/python3"),
         )
 
-    def runpip(pkg: Union[str, os.PathLike[str]], upgrade: bool = False) -> None:
+    def runpip(pkg: str | os.PathLike[str], upgrade: bool = False) -> None:
         logfp.write(f"\nRUN PIP {pkg} {upgrade}\n")
-        target: Optional[pathlib.Path] = None
+        target: pathlib.Path | None = None
         python_exe = str(dirs.prefix / "bin" / "python3")
         if sys.platform == LINUX:
             if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
@@ -547,7 +536,7 @@ def finalize(
         if upgrade:
             cmd.append("--upgrade")
         if target:
-            cmd.append("--target={}".format(target))
+            cmd.append(f"--target={target}")
         runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
 
     runpip("wheel")
@@ -570,7 +559,7 @@ def finalize(
         # Mac specific, factor this out
         "*.dylib",
     ]
-    archive = f"{ dirs.prefix }.tar.xz"
+    archive = f"{dirs.prefix}.tar.xz"
     log.info("Archive is %s", archive)
     with tarfile.open(archive, mode="w:xz") as fp:
         create_archive(fp, dirs.prefix, globs, logfp)
@@ -580,7 +569,7 @@ def create_archive(
     tarfp: tarfile.TarFile,
     toarchive: PathLike,
     globs: Sequence[str],
-    logfp: Optional[IO[str]] = None,
+    logfp: IO[str] | None = None,
 ) -> None:
     """
     Create an archive.

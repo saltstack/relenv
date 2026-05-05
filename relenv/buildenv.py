@@ -3,14 +3,13 @@
 """
 Helper for building libraries to install into a relenv environment.
 """
+
 from __future__ import annotations
 
-import argparse
 import json
 import logging
-import os
 import sys
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from .common import (
     MACOS_DEVELOPMENT_TARGET,
@@ -19,6 +18,10 @@ from .common import (
     get_toolchain,
     get_triplet,
 )
+
+if TYPE_CHECKING:
+    import argparse
+    import os
 
 log = logging.getLogger()
 
@@ -32,9 +35,7 @@ def setup_parser(
     :param subparsers: The subparsers object returned from ``add_subparsers``
     :type subparsers: argparse._SubParsersAction
     """
-    subparser = subparsers.add_parser(
-        "buildenv", description="Relenv build environment"
-    )
+    subparser = subparsers.add_parser("buildenv", description="Relenv build environment")
     subparser.set_defaults(func=main)
     subparser.add_argument(
         "--json",
@@ -60,7 +61,7 @@ def buildenv(
     if not relenv_path:
         if not is_relenv():
             raise RelenvEnvironmentError("Not in a relenv environment")
-        relenv_path = cast(str | os.PathLike[str], cast(Any, sys).RELENV)
+        relenv_path = cast("str | os.PathLike[str]", cast("Any", sys).RELENV)
 
     if sys.platform != "linux":
         raise PlatformError("buildenv is only supported on Linux")
@@ -78,12 +79,7 @@ def buildenv(
         "RELENV_PATH": f"{relenv_path}",
         "CC": f"{toolchain}/bin/{triplet}-gcc",
         "CXX": f"{toolchain}/bin/{triplet}-g++",
-        "CFLAGS": (
-            f"--sysroot={sysroot} "
-            f"-fPIC "
-            f"-I{relenv_path}/include "
-            f"-I{sysroot}/usr/include"
-        ),
+        "CFLAGS": (f"--sysroot={sysroot} -fPIC -I{relenv_path}/include -I{sysroot}/usr/include"),
         "CXXFLAGS": (
             f"--sysroot={sysroot} "
             f"-fPIC "
@@ -92,23 +88,9 @@ def buildenv(
             f"-L{relenv_path}/lib -L{sysroot}/lib "
             f"-Wl,-rpath,{relenv_path}/lib"
         ),
-        "CPPFLAGS": (
-            f"--sysroot={sysroot} "
-            f"-fPIC "
-            f"-I{relenv_path}/include "
-            f"-I{sysroot}/usr/include"
-        ),
-        "CMAKE_CFLAGS": (
-            f"--sysroot={sysroot} "
-            f"-fPIC "
-            f"-I{relenv_path}/include "
-            f"-I{sysroot}/usr/include"
-        ),
-        "LDFLAGS": (
-            f"--sysroot={sysroot} "
-            f"-L{relenv_path}/lib -L{sysroot}/lib "
-            f"-Wl,-rpath,{relenv_path}/lib"
-        ),
+        "CPPFLAGS": (f"--sysroot={sysroot} -fPIC -I{relenv_path}/include -I{sysroot}/usr/include"),
+        "CMAKE_CFLAGS": (f"--sysroot={sysroot} -fPIC -I{relenv_path}/include -I{sysroot}/usr/include"),
+        "LDFLAGS": (f"--sysroot={sysroot} -L{relenv_path}/lib -L{sysroot}/lib -Wl,-rpath,{relenv_path}/lib"),
         "CRATE_CC_NO_DEFAULTS": "1",
         "OPENSSL_DIR": f"{relenv_path}",
         "OPENSSL_INCLUDE_DIR": f"{relenv_path}/include",

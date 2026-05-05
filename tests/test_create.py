@@ -69,6 +69,7 @@ def test_create_with_minor_version(tmp_path: pathlib.Path) -> None:
         Version("3.12.6"): "def456",
         Version("3.12.7"): "ghi789",
         Version("3.13.1"): "zzz999",
+        Version("3.14.1"): "yyy888",
     }
 
     def mock_python_versions(minor: str | None = None) -> dict[Version, str]:
@@ -77,11 +78,7 @@ def test_create_with_minor_version(tmp_path: pathlib.Path) -> None:
             return all_versions
         # Filter versions matching the minor version
         mv = Version(minor)
-        return {
-            v: h
-            for v, h in all_versions.items()
-            if v.major == mv.major and v.minor == mv.minor
-        }
+        return {v: h for v, h in all_versions.items() if v.major == mv.major and v.minor == mv.minor}
 
     # Create a fake archive
     to_be_archived = tmp_path / "to_be_archived"
@@ -121,6 +118,7 @@ def test_create_with_full_version(tmp_path: pathlib.Path) -> None:
         Version("3.12.6"): "def456",
         Version("3.12.7"): "ghi789",
         Version("3.13.1"): "zzz999",
+        Version("3.14.1"): "yyy888",
     }
 
     def mock_python_versions(minor: str | None = None) -> dict[Version, str]:
@@ -129,11 +127,7 @@ def test_create_with_full_version(tmp_path: pathlib.Path) -> None:
             return all_versions
         # Filter versions matching the minor version
         mv = Version(minor)
-        return {
-            v: h
-            for v, h in all_versions.items()
-            if v.major == mv.major and v.minor == mv.minor
-        }
+        return {v: h for v, h in all_versions.items() if v.major == mv.major and v.minor == mv.minor}
 
     # Create a fake archive
     to_be_archived = tmp_path / "to_be_archived"
@@ -173,6 +167,7 @@ def test_create_with_unknown_minor_version(tmp_path: pathlib.Path) -> None:
         Version("3.12.6"): "def456",
         Version("3.12.7"): "ghi789",
         Version("3.13.1"): "zzz999",
+        Version("3.14.1"): "yyy888",
     }
 
     # Use appropriate architecture for the platform
@@ -185,11 +180,7 @@ def test_create_with_unknown_minor_version(tmp_path: pathlib.Path) -> None:
             return all_versions
         # Filter versions matching the minor version
         mv = Version(minor)
-        return {
-            v: h
-            for v, h in all_versions.items()
-            if v.major == mv.major and v.minor == mv.minor
-        }
+        return {v: h for v, h in all_versions.items() if v.major == mv.major and v.minor == mv.minor}
 
     with patch("relenv.create.python_versions", side_effect=mock_python_versions):
         with patch("relenv.create.build_arch", return_value=test_arch):

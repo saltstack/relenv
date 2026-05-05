@@ -3,16 +3,19 @@
 """
 Build functions for specific dependencies.
 """
+
 from __future__ import annotations
 
 import pathlib
 import shutil
 import sys
-from typing import IO, MutableMapping, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING
 
 from relenv.common import PlatformError, runcmd
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
     from .builder import Dirs
 
 
@@ -29,7 +32,7 @@ def build_default(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> 
     """
     cmd = [
         "./configure",
-        "--prefix={}".format(dirs.prefix),
+        f"--prefix={dirs.prefix}",
     ]
     if env["RELENV_HOST"].find("linux") > -1:
         cmd += [
@@ -41,9 +44,7 @@ def build_default(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> 
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
-def build_openssl_fips(
-    env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]
-) -> None:
+def build_openssl_fips(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> None:
     """Build OpenSSL with FIPS module."""
     return build_openssl(env, dirs, logfp, fips=True)
 
@@ -150,7 +151,7 @@ def build_sqlite(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> N
         "--enable-threadsafe",
         "--disable-readline",
         "--disable-dependency-tracking",
-        "--prefix={}".format(dirs.prefix),
+        f"--prefix={dirs.prefix}",
         #    "--enable-add-ons=nptl,ports",
     ]
     if env["RELENV_HOST"].find("linux") > -1:

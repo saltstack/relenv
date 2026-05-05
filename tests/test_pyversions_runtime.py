@@ -4,17 +4,20 @@
 from __future__ import annotations
 
 import hashlib
-import pathlib
 import subprocess
-from typing import Any, Dict, Sequence
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from relenv import pyversions
 
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Sequence
+
 
 def test_python_versions_returns_versions() -> None:
-    versions: Dict[pyversions.Version, str] = pyversions.python_versions()
+    versions: dict[pyversions.Version, str] = pyversions.python_versions()
     assert versions, "python_versions() should return known versions"
     first_version = next(iter(versions))
     assert isinstance(first_version, pyversions.Version)
@@ -64,14 +67,10 @@ def test_get_keyid_parses_second_line() -> None:
     assert pyversions._get_keyid(proc) == "CB1234"
 
 
-def test_verify_signature_success(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    called: Dict[str, list[str]] = {}
+def test_verify_signature_success(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+    called: dict[str, list[str]] = {}
 
-    def fake_run(
-        cmd: Sequence[str], **kwargs: Any
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
         called.setdefault("cmd", []).extend(cmd)
         return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")
 
@@ -85,9 +84,7 @@ def test_verify_signature_failure_with_missing_key(
 ) -> None:
     responses: list[str] = []
 
-    def fake_run(
-        cmd: Sequence[str], **kwargs: Any
-    ) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(cmd: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
         if len(responses) == 0:
             responses.append("first")
             stderr = b"gpg: error\n[GNUPG:] INV_SGNR 0 ABCDEF12\nNo public key\n"

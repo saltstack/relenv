@@ -6,14 +6,13 @@ The ``relenv create`` command.
 
 from __future__ import annotations
 
-import argparse
 import contextlib
 import os
 import pathlib
 import shutil
 import sys
 import tarfile
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 from .common import (
     RelenvException,
@@ -28,6 +27,10 @@ from .pyversions import (
     python_versions,
     resolve_python_version,
 )
+
+if TYPE_CHECKING:
+    import argparse
+    from collections.abc import Iterator
 
 
 @contextlib.contextmanager
@@ -82,7 +85,7 @@ def setup_parser(
         "--python",
         default=default_version,
         type=str,
-        help="The python version (e.g., 3.10, 3.13.7) [default: %(default)s]",
+        help="The python version (e.g., 3.10, 3.14.4) [default: %(default)s]",
     )
 
 
@@ -122,17 +125,17 @@ def create(
 
     if plat == "linux":
         if arch in arches[plat]:
-            triplet = "{}-{}-gnu".format(arch, plat)
+            triplet = f"{arch}-{plat}-gnu"
         else:
             raise CreateException("Unknown arch")
     elif plat == "darwin":
         if arch in arches[plat]:
-            triplet = "{}-macos".format(arch)
+            triplet = f"{arch}-macos"
         else:
             raise CreateException("Unknown arch")
     elif plat == "win32":
         if arch in arches[plat]:
-            triplet = "{}-win".format(arch)
+            triplet = f"{arch}-win"
         else:
             raise CreateException("Unknown arch")
     else:
@@ -142,8 +145,7 @@ def create(
     tar = archived_build(f"{version}-{triplet}")
     if not tar.exists():
         raise CreateException(
-            f"Error, build archive for {arch} doesn't exist: {tar}\n"
-            "You might try relenv fetch to resolve this."
+            f"Error, build archive for {arch} doesn't exist: {tar}\nYou might try relenv fetch to resolve this."
         )
     with tarfile.open(tar, "r:xz") as fp:
         for f in fp:
@@ -255,9 +257,7 @@ def main(args: argparse.Namespace) -> None:
     """
     name = args.name
     if args.arch != build_arch():
-        print(
-            "Warning: Cross compilation support is experimental and is not fully tested or working!"
-        )
+        print("Warning: Cross compilation support is experimental and is not fully tested or working!")
 
     try:
         create_version = resolve_python_version(args.python)

@@ -3,62 +3,59 @@
 """
 Builder and Builds classes for managing the build process.
 """
+
 from __future__ import annotations
 
-import io
 import json
 import logging
 import multiprocessing
 import os
-import pathlib
 import shutil
 import sys
+import tempfile
 import time
 from typing import (
-    Any,
-    Callable,
-    Dict,
     IO,
-    List,
-    MutableMapping,
-    Optional,
-    Sequence,
+    TYPE_CHECKING,
+    Any,
     TypedDict,
-    Union,
     cast,
 )
-import tempfile
 
 from relenv.common import (
     DATA_DIR,
     MODULE_DIR,
     ConfigurationError,
+    WorkDirs,
     build_arch,
     extract_archive,
     get_toolchain,
     get_triplet,
     work_dirs,
-    WorkDirs,
 )
 
+from .builders import build_default as _default_build_func
 from .download import Download
 from .ui import (
+    BuildStats,
     LineCountHandler,
     load_build_stats,
     print_ui,
     print_ui_expanded,
     update_build_stats,
-    BuildStats,
 )
-from .builders import build_default as _default_build_func
+
+if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Callable, MutableMapping, Sequence
 
 # Type alias for path-like objects
-PathLike = Union[str, os.PathLike[str]]
+PathLike = str | os.PathLike[str]
 
 log = logging.getLogger(__name__)
 
 
-def _default_populate_env(env: MutableMapping[str, str], dirs: "Dirs") -> None:
+def _default_populate_env(env: MutableMapping[str, str], dirs: Dirs) -> None:
     """Default populate_env implementation (does nothing).
 
     This default implementation intentionally does nothing; specific steps may
@@ -68,7 +65,7 @@ def _default_populate_env(env: MutableMapping[str, str], dirs: "Dirs") -> None:
     _ = dirs
 
 
-def get_dependency_version(name: str, platform: str) -> Optional[Dict[str, str]]:
+def get_dependency_version(name: str, platform: str) -> dict[str, str] | None:
     """
     Get dependency version and metadata from python-versions.json.
 
@@ -139,11 +136,11 @@ class Dirs:
         self.downloads = dirs.download
         self.logs = dirs.logs
         self.sources = dirs.src
-        self.tmpbuild = tempfile.mkdtemp(prefix="{}_build".format(name))
-        self.source: Optional[pathlib.Path] = None
+        self.tmpbuild = tempfile.mkdtemp(prefix=f"{name}_build")
+        self.source: pathlib.Path | None = None
 
     @property
-    def toolchain(self) -> Optional[pathlib.Path]:
+    def toolchain(self) -> pathlib.Path | None:
         """Get the toolchain directory path for the current platform."""
         if sys.platform == "darwin":
             return get_toolchain(root=self.root)
@@ -155,18 +152,18 @@ class Dirs:
     @property
     def _triplet(self) -> str:
         if sys.platform == "darwin":
-            return "{}-macos".format(self.arch)
+            return f"{self.arch}-macos"
         elif sys.platform == "win32":
-            return "{}-win".format(self.arch)
+            return f"{self.arch}-win"
         else:
-            return "{}-linux-gnu".format(self.arch)
+            return f"{self.arch}-linux-gnu"
 
     @property
     def prefix(self) -> pathlib.Path:
         """Get the build prefix directory path."""
         return self.build / f"{self.version}-{self._triplet}"
 
-    def __getstate__(self) -> Dict[str, Any]:
+    def __getstate__(self) -> dict[str, Any]:
         """
         Return an object used for pickling.
 
@@ -183,7 +180,7 @@ class Dirs:
             "tmpbuild": self.tmpbuild,
         }
 
-    def __setstate__(self, state: Dict[str, Any]) -> None:
+    def __setstate__(self, state: dict[str, Any]) -> None:
         """
         Unwrap the object returned from unpickling.
 
@@ -199,7 +196,7 @@ class Dirs:
         self.build = state["build"]
         self.tmpbuild = state["tmpbuild"]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Get a dictionary representation of the directories in this collection.
 
@@ -224,8 +221,8 @@ class Recipe(TypedDict):
     """Typed description of a build recipe entry."""
 
     build_func: Callable[[MutableMapping[str, str], Dirs, IO[str]], None]
-    wait_on: List[str]
-    download: Optional[Download]
+    wait_on: list[str]
+    download: Download | None
 
 
 class Builder:
@@ -248,12 +245,10 @@ class Builder:
 
     def __init__(
         self,
-        root: Optional[PathLike] = None,
-        recipies: Optional[Dict[str, Recipe]] = None,
-        build_default: Optional[
-            Callable[[MutableMapping[str, str], Dirs, IO[str]], None]
-        ] = None,
-        populate_env: Optional[Callable[[MutableMapping[str, str], Dirs], None]] = None,
+        root: PathLike | None = None,
+        recipies: dict[str, Recipe] | None = None,
+        build_default: Callable[[MutableMapping[str, str], Dirs, IO[str]], None] | None = None,
+        populate_env: Callable[[MutableMapping[str, str], Dirs], None] | None = None,
         arch: str = "x86_64",
         version: str = "",
     ) -> None:
@@ -266,14 +261,14 @@ class Builder:
         self.downloads = self.dirs.download
 
         if recipies is None:
-            self.recipies: Dict[str, Recipe] = {}
+            self.recipies: dict[str, Recipe] = {}
         else:
             self.recipies = recipies
 
         # Use dependency injection with sensible defaults
-        self.build_default: Callable[
-            [MutableMapping[str, str], Dirs, IO[str]], None
-        ] = (build_default if build_default is not None else _default_build_func)
+        self.build_default: Callable[[MutableMapping[str, str], Dirs, IO[str]], None] = (
+            build_default if build_default is not None else _default_build_func
+        )
 
         # Use the default populate_env if none provided
         self.populate_env: Callable[[MutableMapping[str, str], Dirs], None] = (
@@ -283,9 +278,9 @@ class Builder:
         self.version = version
         self.set_arch(self.arch)
 
-    def copy(self, version: str, checksum: Optional[str]) -> "Builder":
+    def copy(self, version: str, checksum: str | None) -> Builder:
         """Create a copy of this Builder with a different version."""
-        recipies: Dict[str, Recipe] = {}
+        recipies: dict[str, Recipe] = {}
         for name in self.recipies:
             recipe = self.recipies[name]
             recipies[name] = {
@@ -316,10 +311,10 @@ class Builder:
         :type arch: str
         """
         self.arch = arch
-        self._toolchain: Optional[pathlib.Path] = None
+        self._toolchain: pathlib.Path | None = None
 
     @property
-    def toolchain(self) -> Optional[pathlib.Path]:
+    def toolchain(self) -> pathlib.Path | None:
         """Lazily fetch toolchain only when needed."""
         if self._toolchain is None and sys.platform == "linux":
             from relenv.common import get_toolchain
@@ -340,18 +335,18 @@ class Builder:
     @property
     def _triplet(self) -> str:
         if sys.platform == "darwin":
-            return "{}-macos".format(self.arch)
+            return f"{self.arch}-macos"
         elif sys.platform == "win32":
-            return "{}-win".format(self.arch)
+            return f"{self.arch}-win"
         else:
-            return "{}-linux-gnu".format(self.arch)
+            return f"{self.arch}-linux-gnu"
 
     def add(
         self,
         name: str,
-        build_func: Optional[Callable[..., Any]] = None,
-        wait_on: Optional[Sequence[str]] = None,
-        download: Optional[Dict[str, Any]] = None,
+        build_func: Callable[..., Any] | None = None,
+        wait_on: Sequence[str] | None = None,
+        download: dict[str, Any] | None = None,
     ) -> None:
         """
         Add a step to the build process.
@@ -366,12 +361,12 @@ class Builder:
         :type download: dict, optional
         """
         if wait_on is None:
-            wait_on_list: List[str] = []
+            wait_on_list: list[str] = []
         else:
             wait_on_list = list(wait_on)
         if build_func is None:
             build_func = self.build_default
-        download_obj: Optional[Download] = None
+        download_obj: Download | None = None
         if download is not None:
             download_obj = Download(name, destination=self.downloads, **download)
         self.recipies[name] = {
@@ -383,12 +378,12 @@ class Builder:
     def run(
         self,
         name: str,
-        event: "multiprocessing.synchronize.Event",
+        event: multiprocessing.synchronize.Event,
         build_func: Callable[..., Any],
-        download: Optional[Download],
+        download: Download | None,
         show_ui: bool = False,
         log_level: str = "WARNING",
-        line_counts: Optional[MutableMapping[str, int]] = None,
+        line_counts: MutableMapping[str, int] | None = None,
     ) -> Any:
         """
         Run a build step.
@@ -428,13 +423,13 @@ class Builder:
         while event.is_set() is False:
             time.sleep(0.3)
 
-        logfp = io.open(os.path.join(dirs.logs, "{}.log".format(name)), "w")
+        logfp = open(os.path.join(dirs.logs, f"{name}.log"), "w")
         file_handler = logging.FileHandler(dirs.logs / f"{name}.log")
         root_log.addHandler(file_handler)
         root_log.setLevel(logging.NOTSET)
 
         # Add line count handler if tracking is enabled
-        line_count_handler: Optional[LineCountHandler] = None
+        line_count_handler: LineCountHandler | None = None
         if line_counts is not None:
             line_count_handler = LineCountHandler(name, line_counts)
             root_log.addHandler(line_count_handler)
@@ -526,7 +521,7 @@ class Builder:
 
     def download_files(
         self,
-        steps: Optional[Sequence[str]] = None,
+        steps: Sequence[str] | None = None,
         force_download: bool = False,
         show_ui: bool = False,
         expanded_ui: bool = False,
@@ -541,14 +536,14 @@ class Builder:
         """
         step_names = list(steps) if steps is not None else list(self.recipies)
 
-        fails: List[str] = []
-        processes: Dict[str, multiprocessing.Process] = {}
-        events: Dict[str, Any] = {}
+        fails: list[str] = []
+        processes: dict[str, multiprocessing.Process] = {}
+        events: dict[str, Any] = {}
 
         # For downloads, we don't track line counts but can still use expanded UI format
         manager = multiprocessing.Manager()
         line_counts: MutableMapping[str, int] = manager.dict()
-        build_stats: Dict[str, BuildStats] = {}
+        build_stats: dict[str, BuildStats] = {}
 
         if show_ui:
             if not expanded_ui:
@@ -574,15 +569,13 @@ class Builder:
 
                 return progress_callback
 
-            download_kwargs: Dict[str, Any] = {
+            download_kwargs: dict[str, Any] = {
                 "force_download": force_download,
                 "show_ui": show_ui,
                 "exit_on_failure": True,
             }
             if expanded_ui:
-                download_kwargs["progress_callback"] = make_progress_callback(
-                    name, line_counts
-                )
+                download_kwargs["progress_callback"] = make_progress_callback(name, line_counts)
 
             proc = multiprocessing.Process(
                 name=name,
@@ -615,9 +608,7 @@ class Builder:
                     fails.append(proc.name)
         if show_ui:
             if expanded_ui:
-                print_ui_expanded(
-                    events, processes, fails, line_counts, build_stats, "download"
-                )
+                print_ui_expanded(events, processes, fails, line_counts, build_stats, "download")
             else:
                 print_ui(events, processes, fails)
             sys.stdout.write("\n")
@@ -632,7 +623,7 @@ class Builder:
 
     def build(
         self,
-        steps: Optional[Sequence[str]] = None,
+        steps: Sequence[str] | None = None,
         cleanup: bool = True,
         show_ui: bool = False,
         log_level: str = "WARNING",
@@ -648,15 +639,15 @@ class Builder:
         :param expanded_ui: Whether to use expanded UI with progress bars
         :type expanded_ui: bool, optional
         """  # noqa: D400
-        fails: List[str] = []
-        events: Dict[str, Any] = {}
-        waits: Dict[str, List[str]] = {}
-        processes: Dict[str, multiprocessing.Process] = {}
+        fails: list[str] = []
+        events: dict[str, Any] = {}
+        waits: dict[str, list[str]] = {}
+        processes: dict[str, multiprocessing.Process] = {}
 
         # Set up shared line counts and load build stats for expanded UI
         manager = multiprocessing.Manager()
         line_counts: MutableMapping[str, int] = manager.dict()
-        build_stats: Dict[str, BuildStats] = {}
+        build_stats: dict[str, BuildStats] = {}
         if expanded_ui:
             build_stats = load_build_stats()
 
@@ -682,7 +673,7 @@ class Builder:
             kwargs["line_counts"] = line_counts
 
             # Determine needed dependency recipies.
-            wait_on_seq = cast(List[str], kwargs.pop("wait_on", []))
+            wait_on_seq = cast("list[str]", kwargs.pop("wait_on", []))
             wait_on_list = list(wait_on_seq)
             for dependency in wait_on_list[:]:
                 if dependency not in step_names:
@@ -692,9 +683,7 @@ class Builder:
             if not waits[name]:
                 event.set()
 
-            proc = multiprocessing.Process(
-                name=name, target=self.run, args=(name, event), kwargs=kwargs
-            )
+            proc = multiprocessing.Process(name=name, target=self.run, args=(name, event), kwargs=kwargs)
             proc.start()
             processes[name] = proc
 
@@ -706,9 +695,7 @@ class Builder:
                 if show_ui:
                     # DEBUG: Comment to debug
                     if expanded_ui:
-                        print_ui_expanded(
-                            events, processes, fails, line_counts, build_stats, "build"
-                        )
+                        print_ui_expanded(events, processes, fails, line_counts, build_stats, "build")
                     else:
                         print_ui(events, processes, fails)
                 if proc.exitcode is None:
@@ -735,7 +722,7 @@ class Builder:
             for fail in fails:
                 log_file = self.dirs.logs / f"{fail}.log"
                 try:
-                    with io.open(log_file) as fp:
+                    with open(log_file) as fp:
                         fp.seek(0, 2)
                         end = fp.tell()
                         ind = end - 4096
@@ -760,9 +747,7 @@ class Builder:
         if show_ui:
             time.sleep(0.3)
             if expanded_ui:
-                print_ui_expanded(
-                    events, processes, fails, line_counts, build_stats, "build"
-                )
+                print_ui_expanded(events, processes, fails, line_counts, build_stats, "build")
             else:
                 print_ui(events, processes, fails)
             sys.stdout.write("\n")
@@ -771,7 +756,7 @@ class Builder:
             log.debug("Performing cleanup.")
             self.cleanup()
 
-    def check_prereqs(self) -> List[str]:
+    def check_prereqs(self) -> list[str]:
         """
         Check pre-requsists for build.
 
@@ -780,18 +765,16 @@ class Builder:
         :return: Returns a list of string describing failed checks
         :rtype: list
         """
-        fail: List[str] = []
+        fail: list[str] = []
         if sys.platform == "linux":
             if not self.toolchain or not self.toolchain.exists():
-                fail.append(
-                    f"Toolchain for {self.arch} does not exist. Please pip install ppbt."
-                )
+                fail.append(f"Toolchain for {self.arch} does not exist. Please pip install ppbt.")
         return fail
 
     def __call__(
         self,
-        steps: Optional[Sequence[str]] = None,
-        arch: Optional[str] = None,
+        steps: Sequence[str] | None = None,
+        arch: str | None = None,
         clean: bool = True,
         cleanup: bool = True,
         force_download: bool = False,
@@ -819,7 +802,7 @@ class Builder:
         log = logging.getLogger(None)
         log.setLevel(logging.NOTSET)
 
-        stream_handler: Optional[logging.Handler] = None
+        stream_handler: logging.Handler | None = None
         if not show_ui:
             stream_handler = logging.StreamHandler()
             stream_handler.setLevel(logging.getLevelName(log_level))
@@ -885,17 +868,15 @@ class Builds:
 
     def __init__(self) -> None:
         """Initialize an empty collection of builders."""
-        self.builds: Dict[str, Builder] = {}
+        self.builds: dict[str, Builder] = {}
 
     def add(self, platform: str, *args: Any, **kwargs: Any) -> Builder:
         """Add a builder for a specific platform."""
         if "builder" in kwargs:
             build_candidate = kwargs.pop("builder")
             if args or kwargs:
-                raise RuntimeError(
-                    "builder keyword can not be used with other kwargs or args"
-                )
-            build = cast(Builder, build_candidate)
+                raise RuntimeError("builder keyword can not be used with other kwargs or args")
+            build = cast("Builder", build_candidate)
         else:
             build = Builder(*args, **kwargs)
         self.builds[platform] = build

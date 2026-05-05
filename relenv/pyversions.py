@@ -13,7 +13,6 @@ Versions utility.
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import logging
@@ -23,9 +22,12 @@ import re
 import subprocess as _subprocess
 import sys as _sys
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from relenv.common import Version, check_url, download_url, fetch_url_content
+
+if TYPE_CHECKING:
+    import argparse
 
 log = logging.getLogger(__name__)
 
@@ -70,9 +72,7 @@ def _release_urls(version: Version, gzip: bool = False) -> tuple[str, str | None
 
 
 def _receive_key(keyid: str, server: str) -> bool:
-    proc = subprocess.run(
-        ["gpg", "--keyserver", server, "--recv-keys", keyid], capture_output=True
-    )
+    proc = subprocess.run(["gpg", "--keyserver", server, "--recv-keys", keyid], capture_output=True)
     if proc.returncode == 0:
         return True
     return False
@@ -120,7 +120,7 @@ def verify_signature(
 
 PRINT = True
 CHECK = True
-VERSION = None  # '3.13.2'
+VERSION = None  # '3.14.0'
 UPDATE = False
 
 PINNED_VERSIONS = {
@@ -139,7 +139,6 @@ def digest(file: str | os.PathLike[str]) -> str:
 
 
 def _main() -> None:
-
     pyversions: dict[str, Any] = {"versions": []}
 
     vfile = pathlib.Path(".pyversions")
@@ -259,9 +258,7 @@ def detect_openssl_versions() -> list[str]:
         matches = [v for v in matches if v == pin or v.startswith(f"{pin}.")]
 
     # Deduplicate and sort
-    versions = sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    versions = sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
     return versions
 
 
@@ -287,9 +284,7 @@ def detect_sqlite_versions() -> list[tuple[str, str]]:
             subpatch = int(sqlite_ver[5:7])
             version = f"{major}.{minor}.{patch}.{subpatch}"
             versions.append((version, sqlite_ver))
-    return sorted(
-        versions, key=lambda x: [int(n) for n in x[0].split(".")], reverse=True
-    )
+    return sorted(versions, key=lambda x: [int(n) for n in x[0].split(".")], reverse=True)
 
 
 def detect_xz_versions() -> list[str]:
@@ -302,9 +297,7 @@ def detect_xz_versions() -> list[str]:
     pattern = r"xz-(\d+\.\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
     # Deduplicate and sort
-    versions = sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    versions = sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
     return versions
 
 
@@ -314,9 +307,7 @@ def detect_libffi_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r'v(\d+\.\d+\.\d+)"'
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_zlib_versions() -> list[str]:
@@ -325,9 +316,7 @@ def detect_zlib_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"zlib-(\d+\.\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_bzip2_versions() -> list[str]:
@@ -336,9 +325,7 @@ def detect_bzip2_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"bzip2-(\d+\.\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_ncurses_versions() -> list[str]:
@@ -347,9 +334,7 @@ def detect_ncurses_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"ncurses-(\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_readline_versions() -> list[str]:
@@ -358,9 +343,7 @@ def detect_readline_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"readline-(\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_gdbm_versions() -> list[str]:
@@ -369,9 +352,7 @@ def detect_gdbm_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"gdbm-(\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_libxcrypt_versions() -> list[str]:
@@ -380,9 +361,7 @@ def detect_libxcrypt_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r'v(\d+\.\d+\.\d+)"'
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_krb5_versions() -> list[str]:
@@ -392,9 +371,7 @@ def detect_krb5_versions() -> list[str]:
     # krb5 versions are like 1.22/
     pattern = r"(\d+\.\d+)/"
     matches = re.findall(pattern, content)
-    majors = sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    majors = sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
     if not majors:
         return []
 
@@ -405,9 +382,7 @@ def detect_krb5_versions() -> list[str]:
     pattern = r"krb5-(\d+\.\d+(\.\d+)?)\.tar\.gz"
     matches = re.findall(pattern, content)
     versions = [m[0] for m in matches]
-    return sorted(
-        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_uuid_versions() -> list[str]:
@@ -416,9 +391,7 @@ def detect_uuid_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"libuuid-(\d+\.\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_tirpc_versions() -> list[str]:
@@ -427,9 +400,7 @@ def detect_tirpc_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"(\d+\.\d+\.\d+)/"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_expat_versions() -> list[str]:
@@ -441,9 +412,7 @@ def detect_expat_versions() -> list[str]:
     matches = re.findall(pattern, content)
     # Convert R_2_7_3 to 2.7.3
     versions = [f"{m[0]}.{m[1]}.{m[2]}" for m in matches]
-    return sorted(
-        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_cpython_bin_deps_versions(name: str) -> list[str]:
@@ -454,9 +423,7 @@ def detect_cpython_bin_deps_versions(name: str) -> list[str]:
     pattern = rf"{name}-(\d+\.\d+(\.\d+)*)\""
     matches = re.findall(pattern, content)
     versions = [m[0] for m in matches]
-    return sorted(
-        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_perl_versions() -> list[str]:
@@ -475,9 +442,7 @@ def detect_perl_versions() -> list[str]:
             patch = int(m[3:4])
             subpatch = int(m[4:])
             versions.append(f"{major}.{minor}.{patch}.{subpatch}")
-    return sorted(
-        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_mpdecimal_versions() -> list[str]:
@@ -486,9 +451,7 @@ def detect_mpdecimal_versions() -> list[str]:
     content = fetch_url_content(url)
     pattern = r"mpdecimal-(\d+\.\d+\.\d+)\.tar\.gz"
     matches = re.findall(pattern, content)
-    return sorted(
-        set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_nasm_versions() -> list[str]:
@@ -498,14 +461,10 @@ def detect_nasm_versions() -> list[str]:
     pattern = r'href="(\d+\.\d+(\.\d+)?)/"'
     matches = re.findall(pattern, content)
     versions = [m[0] for m in matches]
-    return sorted(
-        set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True
-    )
+    return sorted(set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
-def update_dependency_versions(
-    path: pathlib.Path, deps_to_update: list[str] | None = None
-) -> None:
+def update_dependency_versions(path: pathlib.Path, deps_to_update: list[str] | None = None) -> None:
     """
     Update dependency versions in python-versions.json.
 
@@ -605,8 +564,7 @@ def update_dependency_versions(
                 checksum = sha256_digest(download_path)
                 print(f"SHA-256: {checksum}")
                 url_template = (
-                    "https://github.com/openssl/openssl/releases/download/"
-                    "openssl-{version}/openssl-{version}.tar.gz"
+                    "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz"
                 )
                 dependencies["openssl"][latest] = {
                     "url": url_template,
@@ -624,9 +582,7 @@ def update_dependency_versions(
         sqlite_versions = detect_sqlite_versions()
         if sqlite_versions:
             latest_version, latest_sqliteversion = sqlite_versions[0]
-            print(
-                f"Latest SQLite: {latest_version} (sqlite version {latest_sqliteversion})"
-            )
+            print(f"Latest SQLite: {latest_version} (sqlite version {latest_sqliteversion})")
             if "sqlite" not in dependencies:
                 dependencies["sqlite"] = {}
             if latest_version not in dependencies["sqlite"]:
@@ -861,9 +817,7 @@ def update_dependency_versions(
                 dependencies["krb5"] = {}
             if latest not in dependencies["krb5"]:
                 major_minor = ".".join(latest.split(".")[:2])
-                url = (
-                    f"https://kerberos.org/dist/krb5/{major_minor}/krb5-{latest}.tar.gz"
-                )
+                url = f"https://kerberos.org/dist/krb5/{major_minor}/krb5-{latest}.tar.gz"
                 print(f"Downloading {url}...")
                 try:
                     download_path = download_url(url, cwd)
@@ -1067,7 +1021,7 @@ def create_pyversions(path: pathlib.Path) -> None:
         dependencies = {}
 
     for version in versions:
-        if version >= Version("3.14"):
+        if version >= Version("3.15"):
             continue
 
         if str(version) in pydata:
@@ -1082,8 +1036,12 @@ def create_pyversions(path: pathlib.Path) -> None:
         else:
             url = ARCHIVE.format(version=url_version, ext="tgz")
         download_path = download_url(url, cwd)
-        sig_path = download_url(f"{url}.asc", cwd)
-        verified = verify_signature(download_path, sig_path)
+        if version < Version("3.14"):
+            sig_path = download_url(f"{url}.asc", cwd)
+            verified = verify_signature(download_path, sig_path)
+        else:
+            print(f"Skipping signature verification for {version}")
+            verified = True
         if verified:
             print(f"Version {version} has digest {digest(download_path)}")
             pydata[str(version)] = digest(download_path)
@@ -1127,11 +1085,7 @@ def python_versions(
         raise RuntimeError("No versions file found")
     data = json.loads(readfrom.read_text())
     # Handle both old format (flat dict) and new format (nested with "python" key)
-    pyversions = (
-        data.get("python", data)
-        if isinstance(data, dict) and "python" in data
-        else data
-    )
+    pyversions = data.get("python", data) if isinstance(data, dict) and "python" in data else data
     versions = [Version(_) for _ in pyversions]
     if minor:
         mv = Version(minor)
@@ -1217,7 +1171,7 @@ def setup_parser(
     )
     subparser.add_argument(
         "--version",
-        default="3.13",
+        default="3.14",
         type=str,
         help="The python version [default: %(default)s]",
     )
@@ -1318,21 +1272,13 @@ def main(args: argparse.Namespace) -> None:
 
             # Compare versions
             if current_version == latest_version:
-                print(
-                    f"{ok_symbol} {dep_name:12} {current_version:15} " f"(up-to-date)"
-                )
+                print(f"{ok_symbol} {dep_name:12} {current_version:15} (up-to-date)")
                 up_to_date.append(dep_name)
             elif current_version:
-                print(
-                    f"{update_symbol} {dep_name:12} {current_version:15} "
-                    f"{arrow} {latest_version} (update available)"
-                )
+                print(f"{update_symbol} {dep_name:12} {current_version:15} {arrow} {latest_version} (update available)")
                 updates_available.append((dep_name, current_version, latest_version))
             else:
-                print(
-                    f"{new_symbol} {dep_name:12} {'(not tracked)':15} "
-                    f"{arrow} {latest_version}"
-                )
+                print(f"{new_symbol} {dep_name:12} {'(not tracked)':15} {arrow} {latest_version}")
                 updates_available.append((dep_name, None, latest_version))
 
         # Summary

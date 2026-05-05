@@ -9,7 +9,6 @@ import os
 import pathlib
 import sys
 from types import ModuleType, SimpleNamespace
-from typing import Optional
 
 import pytest
 
@@ -22,12 +21,8 @@ def _raise(exc: Exception):
     raise exc
 
 
-def test_path_import_failure(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    monkeypatch.setattr(
-        importlib.util, "spec_from_file_location", lambda *args, **kwargs: None
-    )
+def test_path_import_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+    monkeypatch.setattr(importlib.util, "spec_from_file_location", lambda *args, **kwargs: None)
     with pytest.raises(ImportError):
         relenv.runtime.path_import("demo", tmp_path / "demo.py")
 
@@ -40,9 +35,7 @@ def test_path_import_success(tmp_path: pathlib.Path) -> None:
     assert sys.modules["temp_mod"] is mod
 
 
-def test_debug_print(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_debug_print(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setenv("RELENV_DEBUG", "1")
     relenv.runtime.debug("hello")
     out = capsys.readouterr().out
@@ -94,9 +87,7 @@ def test_importer() -> None:
     assert pip._internal.locations.__test_case__ is True
 
 
-def test_set_env_if_not_set(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_set_env_if_not_set(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     env_name = "RELENV_TEST_ENV"
     monkeypatch.delenv(env_name, raising=False)
     relenv.runtime.set_env_if_not_set(env_name, "value")
@@ -127,9 +118,7 @@ def test_system_sysconfig_uses_system_python(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(pathlib.Path, "exists", fake_exists)
     expected = {"AR": "ar"}
     completed = SimpleNamespace(stdout=json.dumps(expected).encode(), returncode=0)
-    monkeypatch.setattr(
-        relenv.runtime.subprocess, "run", lambda *args, **kwargs: completed
-    )
+    monkeypatch.setattr(relenv.runtime.subprocess, "run", lambda *args, **kwargs: completed)
 
     result = relenv.runtime.system_sysconfig()
     assert result["AR"] == "ar"
@@ -152,9 +141,7 @@ def test_system_sysconfig_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result == relenv.runtime.CONFIG_VARS_DEFAULTS
 
 
-def test_install_cargo_config_creates_file(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_cargo_config_creates_file(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux")
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -183,15 +170,11 @@ def test_install_cargo_config_creates_file(
 
 
 def test_build_shebang_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(
         relenv.runtime,
         "common",
-        lambda: SimpleNamespace(
-            relative_interpreter=lambda *args, **kwargs: _raise(ValueError("boom"))
-        ),
+        lambda: SimpleNamespace(relative_interpreter=lambda *args, **kwargs: _raise(ValueError("boom"))),
     )
 
     called = {"count": 0}
@@ -208,15 +191,11 @@ def test_build_shebang_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_build_shebang_windows(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "platform", "win32", raising=False)
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(
         relenv.runtime,
         "common",
-        lambda: SimpleNamespace(
-            relative_interpreter=lambda *args: pathlib.Path("python.exe")
-        ),
+        lambda: SimpleNamespace(relative_interpreter=lambda *args: pathlib.Path("python.exe")),
     )
 
     def original(self: object) -> bytes:  # type: ignore[override]
@@ -234,9 +213,7 @@ def test_get_config_var_wrapper_bindir(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result == pathlib.Path("/root/Scripts")
 
 
-def test_get_config_var_wrapper_other(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
+def test_get_config_var_wrapper_other(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setattr(relenv.runtime, "relenv_root", lambda: pathlib.Path("/root"))
     result = relenv.runtime.get_config_var_wrapper(lambda name: "value")("OTHER")
     assert result == "value"
@@ -244,9 +221,7 @@ def test_get_config_var_wrapper_other(
 
 def test_system_sysconfig_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime, "_SYSTEM_CONFIG_VARS", None, raising=False)
-    monkeypatch.setattr(
-        pathlib.Path, "exists", lambda self: str(self) == "/usr/bin/python3"
-    )
+    monkeypatch.setattr(pathlib.Path, "exists", lambda self: str(self) == "/usr/bin/python3")
     monkeypatch.setattr(
         relenv.runtime.subprocess,
         "run",
@@ -262,9 +237,7 @@ def test_system_sysconfig_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_get_paths_wrapper_updates_scripts(monkeypatch: pytest.MonkeyPatch) -> None:
-    def original_get_paths(
-        *, scheme: Optional[str], vars: Optional[dict[str, str]], expand: bool
-    ) -> dict[str, str]:
+    def original_get_paths(*, scheme: str | None, vars: dict[str, str] | None, expand: bool) -> dict[str, str]:
         return {"scripts": "/original/scripts"}
 
     wrapped = relenv.runtime.get_paths_wrapper(original_get_paths, "default")
@@ -371,9 +344,7 @@ def test_finalize_options_wrapper_appends_include(
     monkeypatch.delenv("RELENV_BUILDENV", raising=False)
 
 
-def test_install_wheel_wrapper_processes_record(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_wheel_wrapper_processes_record(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
@@ -438,9 +409,7 @@ def test_install_wheel_wrapper_processes_record(
     assert handled and handled[0][0].name == "libdemo.so"
 
 
-def test_install_wheel_wrapper_missing_file(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_wheel_wrapper_missing_file(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
@@ -476,9 +445,7 @@ def test_install_wheel_wrapper_missing_file(
     )
 
 
-def test_install_wheel_wrapper_macho_with_otool(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_wheel_wrapper_macho_with_otool(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
@@ -520,9 +487,7 @@ def test_install_wheel_wrapper_macho_with_otool(
     )
 
 
-def test_install_wheel_wrapper_macho_without_otool(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_wheel_wrapper_macho_without_otool(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
@@ -543,9 +508,7 @@ def test_install_wheel_wrapper_macho_without_otool(
         lambda: SimpleNamespace(
             is_elf=lambda path: False,
             is_macho=lambda path: True,
-            handle_macho=lambda *args, **kwargs: _raise(
-                AssertionError("unexpected macho")
-            ),
+            handle_macho=lambda *args, **kwargs: _raise(AssertionError("unexpected macho")),
         ),
     )
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda cmd: None)
@@ -569,9 +532,7 @@ def test_install_wheel_wrapper_macho_without_otool(
     assert any("otool command is not available" in msg for msg in messages)
 
 
-def test_install_wheel_wrapper_skips_without_buildenv(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_wheel_wrapper_skips_without_buildenv(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RELENV_BUILDENV", raising=False)
     plat_dir = tmp_path / "plat"
     info_dir = plat_dir / "demo.dist-info"
@@ -637,25 +598,15 @@ def test_install_wheel_wrapper_skips_without_buildenv(
     assert not handled
 
 
-def test_install_legacy_wrapper_prefix(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_install_legacy_wrapper_prefix(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     pkg_dir = tmp_path / "pkg"
     pkg_dir.mkdir()
     (pkg_dir / "PKG-INFO").write_text("Version: 1.0\nName: demo\n")
-    sitepack = (
-        tmp_path
-        / "prefix"
-        / "lib"
-        / f"python{relenv.runtime.get_major_version()}"
-        / "site-packages"
-    )
+    sitepack = tmp_path / "prefix" / "lib" / f"python{relenv.runtime.get_major_version()}" / "site-packages"
     egg_dir = sitepack / "demo-1.0.egg-info"
     egg_dir.mkdir(parents=True)
     (egg_dir / "installed-files.txt").write_text("missing.so\n")
-    scheme = SimpleNamespace(
-        purelib=str(tmp_path / "pure"), platlib=str(tmp_path / "pure")
-    )
+    scheme = SimpleNamespace(purelib=str(tmp_path / "pure"), platlib=str(tmp_path / "pure"))
     module = ModuleType("pip._internal.operations.install.legacy.prefix")
     module.install = lambda *args, **kwargs: None  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, module.__name__, module)
@@ -684,9 +635,7 @@ def test_install_legacy_wrapper_prefix(
     )
 
 
-def test_install_legacy_wrapper_no_egginfo(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_install_legacy_wrapper_no_egginfo(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     pkg_dir = tmp_path / "pkg"
     pkg_dir.mkdir()
     (pkg_dir / "PKG-INFO").write_text("Name: demo\nVersion: 1.0\n")
@@ -714,18 +663,14 @@ def test_install_legacy_wrapper_no_egginfo(
     )
 
 
-def test_install_legacy_wrapper_file_missing(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_install_legacy_wrapper_file_missing(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     pkg_dir = tmp_path / "pkg"
     pkg_dir.mkdir()
     (pkg_dir / "PKG-INFO").write_text("Name: demo\nVersion: 1.0\n")
     egg_dir = tmp_path / "pure" / "demo-1.0.egg-info"
     egg_dir.mkdir(parents=True)
     (egg_dir / "installed-files.txt").write_text("missing.so\n")
-    scheme = SimpleNamespace(
-        purelib=str(tmp_path / "pure"), platlib=str(tmp_path / "pure")
-    )
+    scheme = SimpleNamespace(purelib=str(tmp_path / "pure"), platlib=str(tmp_path / "pure"))
     module = ModuleType("pip._internal.operations.install.legacy.missing")
     module.install = lambda *args, **kwargs: None  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, module.__name__, module)
@@ -754,9 +699,7 @@ def test_install_legacy_wrapper_file_missing(
     )
 
 
-def test_install_legacy_wrapper_handles_elf(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_install_legacy_wrapper_handles_elf(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     pkg_dir = tmp_path / "pkg"
     pkg_dir.mkdir()
     (pkg_dir / "PKG-INFO").write_text("Name: demo\nVersion: 1.0\n")
@@ -766,9 +709,7 @@ def test_install_legacy_wrapper_handles_elf(
     binary.parent.mkdir(parents=True, exist_ok=True)
     binary.write_bytes(b"")
     (egg_dir / "installed-files.txt").write_text(f"{binary}\n")
-    scheme = SimpleNamespace(
-        purelib=str(tmp_path / "pure"), platlib=str(tmp_path / "pure")
-    )
+    scheme = SimpleNamespace(purelib=str(tmp_path / "pure"), platlib=str(tmp_path / "pure"))
     module = ModuleType("pip._internal.operations.install.legacy.elf")
     module.install = lambda *args, **kwargs: None  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, module.__name__, module)
@@ -841,15 +782,11 @@ def test_wrap_pip_distlib_scripts(monkeypatch: pytest.MonkeyPatch) -> None:
     module.ScriptMaker = ScriptMaker
     monkeypatch.setitem(sys.modules, module.__name__, module)
     wrapped = relenv.runtime.wrap_pip_distlib_scripts(module.__name__)
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(
         relenv.runtime,
         "common",
-        lambda: SimpleNamespace(
-            relative_interpreter=lambda *args, **kwargs: _raise(ValueError("boom"))
-        ),
+        lambda: SimpleNamespace(relative_interpreter=lambda *args, **kwargs: _raise(ValueError("boom"))),
     )
     result = wrapped.ScriptMaker()._build_shebang("target")
     assert result == b"orig"
@@ -874,9 +811,7 @@ def test_wrap_distutils_command(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RELENV_BUILDENV", raising=False)
 
 
-def test_wrap_pip_build_wheel_sets_env(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_wrap_pip_build_wheel_sets_env(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     relenv.runtime.TARGET.TARGET = False
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     toolchain = tmp_path / "toolchain" / "trip"
@@ -905,9 +840,7 @@ def test_wrap_pip_build_wheel_sets_env(
     monkeypatch.setitem(sys.modules, module_name, dummy)
     monkeypatch.setattr(relenv.runtime.importlib, "import_module", lambda name: dummy)
 
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     wrapped = relenv.runtime.wrap_pip_build_wheel(module_name)
     result = wrapped.build_wheel_pep517("backend", {}, {})
     assert result == "built"
@@ -958,9 +891,7 @@ def test_wrap_cmd_install_updates_target(monkeypatch: pytest.MonkeyPatch) -> Non
             options.ran = True
             return "ran"
 
-        def _handle_target_dir(
-            self, target_dir: str, target_temp_dir: str, upgrade: bool
-        ) -> str:
+        def _handle_target_dir(self, target_dir: str, target_temp_dir: str, upgrade: bool) -> str:
             return "handled"
 
     fake_module.InstallCommand = FakeInstallCommand
@@ -980,9 +911,7 @@ def test_wrap_cmd_install_updates_target(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(relenv.runtime.importlib, "import_module", fake_import_module)
 
     wrapped = relenv.runtime.wrap_cmd_install(fake_module.__name__)
-    options = SimpleNamespace(
-        use_user_site=False, target_dir="/tmp/target", ignore_installed=True
-    )
+    options = SimpleNamespace(use_user_site=False, target_dir="/tmp/target", ignore_installed=True)
     command = wrapped.InstallCommand()
     result = command.run(options, [])
 
@@ -1015,9 +944,7 @@ def test_wrap_cmd_install_no_user_site(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     wrapped = relenv.runtime.wrap_cmd_install(fake_module.__name__)
-    options = SimpleNamespace(
-        use_user_site=True, target_dir=None, ignore_installed=False
-    )
+    options = SimpleNamespace(use_user_site=True, target_dir=None, ignore_installed=False)
     result = wrapped.InstallCommand().run(options, [])
     assert result == "ran"
     assert relenv.runtime.TARGET.TARGET is False
@@ -1100,9 +1027,7 @@ def test_wrap_locations_without_target(monkeypatch: pytest.MonkeyPatch) -> None:
 
     fake_module.get_scheme = lambda *args, **kwargs: OriginalScheme()
     monkeypatch.setitem(sys.modules, fake_module.__name__, fake_module)
-    monkeypatch.setattr(
-        relenv.runtime.importlib, "import_module", lambda name: fake_module
-    )
+    monkeypatch.setattr(relenv.runtime.importlib, "import_module", lambda name: fake_module)
 
     wrapped = relenv.runtime.wrap_locations(fake_module.__name__)
     scheme = wrapped.get_scheme("dist")
@@ -1161,9 +1086,7 @@ def test_wrap_req_command_without_target(monkeypatch: pytest.MonkeyPatch) -> Non
 
     fake_module.RequirementCommand = RequirementCommand
     monkeypatch.setitem(sys.modules, fake_module.__name__, fake_module)
-    monkeypatch.setattr(
-        relenv.runtime.importlib, "import_module", lambda name: fake_module
-    )
+    monkeypatch.setattr(relenv.runtime.importlib, "import_module", lambda name: fake_module)
 
     wrapped = relenv.runtime.wrap_req_command(fake_module.__name__)
     options = SimpleNamespace(ignore_installed=False)
@@ -1283,9 +1206,7 @@ def test_wrapsitecustomize_sanitizes_sys_path(monkeypatch: pytest.MonkeyPatch) -
         "common",
         lambda: SimpleNamespace(sanitize_sys_path=lambda _: sanitized),
     )
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
 
     def original() -> None:
         pass
@@ -1328,9 +1249,7 @@ def test_install_cargo_config_non_linux(monkeypatch: pytest.MonkeyPatch) -> None
     relenv.runtime.install_cargo_config()
 
 
-def test_install_cargo_config_alt_triplet(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_cargo_config_alt_triplet(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     data_dir = tmp_path / "data"
     data_dir.mkdir()
@@ -1354,9 +1273,7 @@ def test_setup_openssl_windows(monkeypatch: pytest.MonkeyPatch) -> None:
     relenv.runtime.setup_openssl()
 
 
-def test_setup_openssl_without_binary(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_setup_openssl_without_binary(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "RELENV", tmp_path, raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux")
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: None)
@@ -1380,9 +1297,7 @@ def test_setup_openssl_without_binary(
     assert providers == ["default", "legacy"]
 
 
-def test_setup_openssl_with_system_binary(
-    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_setup_openssl_with_system_binary(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "RELENV", tmp_path, raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux")
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
@@ -1400,9 +1315,7 @@ def test_setup_openssl_with_system_binary(
     def fake_run(args: list[str], **kwargs: object) -> SimpleNamespace:
         if args[:2] == ["/usr/bin/openssl", "version"]:
             if "-m" in args:
-                return SimpleNamespace(
-                    returncode=0, stdout='MODULESDIR: "/usr/lib/ssl"'
-                )
+                return SimpleNamespace(returncode=0, stdout='MODULESDIR: "/usr/lib/ssl"')
             if "-d" in args:
                 return SimpleNamespace(returncode=0, stdout='OPENSSLDIR: "/etc/ssl"')
         return SimpleNamespace(returncode=1, stdout="", stderr="error")
@@ -1413,8 +1326,7 @@ def test_setup_openssl_with_system_binary(
     monkeypatch.setattr(
         pathlib.Path,
         "exists",
-        lambda self: str(self)
-        in (str(certs_dir), str(tmp_path / "lib" / "libcrypto.so")),
+        lambda self: str(self) in (str(certs_dir), str(tmp_path / "lib" / "libcrypto.so")),
     )
 
     monkeypatch.delenv("OPENSSL_MODULES", raising=False)
@@ -1475,22 +1387,12 @@ def test_install_cargo_config_toolchain_missing(
 
 def test_bootstrap(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
-    monkeypatch.setattr(
-        relenv.runtime, "relenv_root", lambda: pathlib.Path("/relbootstrap")
-    )
+    monkeypatch.setattr(relenv.runtime, "relenv_root", lambda: pathlib.Path("/relbootstrap"))
     monkeypatch.setattr(relenv.runtime, "setup_openssl", lambda: calls.append("ssl"))
-    monkeypatch.setattr(
-        relenv.runtime.site, "execsitecustomize", lambda: None, raising=False
-    )
-    monkeypatch.setattr(
-        relenv.runtime, "setup_crossroot", lambda: calls.append("cross")
-    )
-    monkeypatch.setattr(
-        relenv.runtime, "install_cargo_config", lambda: calls.append("cargo")
-    )
-    monkeypatch.setattr(
-        relenv.runtime.warnings, "filterwarnings", lambda *args, **kwargs: None
-    )
+    monkeypatch.setattr(relenv.runtime.site, "execsitecustomize", lambda: None, raising=False)
+    monkeypatch.setattr(relenv.runtime, "setup_crossroot", lambda: calls.append("cross"))
+    monkeypatch.setattr(relenv.runtime, "install_cargo_config", lambda: calls.append("cargo"))
+    monkeypatch.setattr(relenv.runtime.warnings, "filterwarnings", lambda *args, **kwargs: None)
     original_meta = list(relenv.runtime.sys.meta_path)
     relenv.runtime.bootstrap()
     assert relenv.runtime.sys.RELENV == pathlib.Path("/relbootstrap")
@@ -1555,9 +1457,7 @@ def test_buildenv_cached(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_build_shebang_target(monkeypatch: pytest.MonkeyPatch) -> None:
     relenv.runtime.TARGET.TARGET = True
     relenv.runtime.TARGET.PATH = "/target"
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(
         relenv.runtime,
         "common",
@@ -1570,9 +1470,7 @@ def test_build_shebang_target(monkeypatch: pytest.MonkeyPatch) -> None:
     def original(self: object) -> bytes:  # type: ignore[override]
         return b""
 
-    result = relenv.runtime._build_shebang(original)(
-        SimpleNamespace(target_dir="/tmp/scripts")
-    )
+    result = relenv.runtime._build_shebang(original)(SimpleNamespace(target_dir="/tmp/scripts"))
     shebang = result.decode().strip()
     assert shebang.startswith("#!")
     path_part = shebang[2:]
@@ -1585,9 +1483,7 @@ def test_build_shebang_target(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_build_shebang_linux(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
 
     class StubCommon:
         @staticmethod
@@ -1603,9 +1499,7 @@ def test_build_shebang_linux(monkeypatch: pytest.MonkeyPatch) -> None:
     def original(self: object) -> bytes:  # type: ignore[override]
         return b""
 
-    result = relenv.runtime._build_shebang(original)(
-        SimpleNamespace(target_dir="/tmp/dir")
-    )
+    result = relenv.runtime._build_shebang(original)(SimpleNamespace(target_dir="/tmp/dir"))
     shebang = result.decode().strip()
     assert shebang.startswith("#!")
     path_part = shebang[2:]
@@ -1615,9 +1509,7 @@ def test_build_shebang_linux(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_setup_openssl_version_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
     monkeypatch.setattr(relenv.runtime, "set_openssl_modules_dir", lambda path: None)
@@ -1631,9 +1523,7 @@ def test_setup_openssl_version_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_setup_openssl_parse_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
     monkeypatch.setattr(relenv.runtime, "load_openssl_provider", lambda name: 1)
@@ -1652,9 +1542,7 @@ def test_setup_openssl_parse_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_setup_openssl_cert_dir_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
     monkeypatch.setattr(relenv.runtime, "load_openssl_provider", lambda name: 1)
@@ -1662,9 +1550,7 @@ def test_setup_openssl_cert_dir_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
     def fake_run(args: list[str], **kwargs: object) -> SimpleNamespace:
         if "-m" in args:
-            return SimpleNamespace(
-                returncode=0, stdout='MODULESDIR: "/usr/lib"', stderr=""
-            )
+            return SimpleNamespace(returncode=0, stdout='MODULESDIR: "/usr/lib"', stderr="")
         return SimpleNamespace(returncode=1, stdout="", stderr="error")
 
     monkeypatch.setattr(relenv.runtime.subprocess, "run", fake_run)
@@ -1673,9 +1559,7 @@ def test_setup_openssl_cert_dir_error(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_setup_openssl_cert_dir_parse_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
     monkeypatch.setattr(relenv.runtime, "load_openssl_provider", lambda name: 1)
@@ -1686,21 +1570,15 @@ def test_setup_openssl_cert_dir_parse_error(monkeypatch: pytest.MonkeyPatch) -> 
 
     def fake_run(args: list[str], **kwargs: object) -> SimpleNamespace:
         if "-m" in args:
-            return SimpleNamespace(
-                returncode=0, stdout='MODULESDIR: "/usr/lib"', stderr=""
-            )
+            return SimpleNamespace(returncode=0, stdout='MODULESDIR: "/usr/lib"', stderr="")
         return SimpleNamespace(returncode=0, stdout="invalid", stderr="")
 
     monkeypatch.setattr(relenv.runtime.subprocess, "run", fake_run)
     relenv.runtime.setup_openssl()
 
 
-def test_setup_openssl_cert_file(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+def test_setup_openssl_cert_file(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
     cert_dir = tmp_path / "etc" / "ssl"
@@ -1710,12 +1588,8 @@ def test_setup_openssl_cert_file(
 
     def fake_run(args: list[str], **kwargs: object) -> SimpleNamespace:
         if "-m" in args:
-            return SimpleNamespace(
-                returncode=0, stdout='MODULESDIR: "{}"'.format(cert_dir), stderr=""
-            )
-        return SimpleNamespace(
-            returncode=0, stdout='OPENSSLDIR: "{}"'.format(cert_dir), stderr=""
-        )
+            return SimpleNamespace(returncode=0, stdout=f'MODULESDIR: "{cert_dir}"', stderr="")
+        return SimpleNamespace(returncode=0, stdout=f'OPENSSLDIR: "{cert_dir}"', stderr="")
 
     monkeypatch.setattr(relenv.runtime.subprocess, "run", fake_run)
     monkeypatch.setenv("OPENSSL_MODULES", "")
@@ -1734,14 +1608,10 @@ def test_set_openssl_modules_dir(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class FakeLib:
         def __init__(self) -> None:
-            self.OSSL_PROVIDER_set_default_search_path = (
-                lambda ctx, path: called.update({"path": path}) or 1
-            )
+            self.OSSL_PROVIDER_set_default_search_path = lambda ctx, path: called.update({"path": path}) or 1
 
     monkeypatch.setattr(relenv.runtime.ctypes, "CDLL", lambda path: FakeLib())
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "darwin", raising=False)
     relenv.runtime.set_openssl_modules_dir("/mods")
     assert called["path"] == b"/mods"
@@ -1753,16 +1623,12 @@ def test_load_openssl_provider(monkeypatch: pytest.MonkeyPatch) -> None:
             self.OSSL_PROVIDER_load = lambda ctx, name: 123
 
     monkeypatch.setattr(relenv.runtime.ctypes, "CDLL", lambda path: FakeLib())
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "darwin", raising=False)
     assert relenv.runtime.load_openssl_provider("default") == 123
 
 
-def test_setup_crossroot(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
-) -> None:
+def test_setup_crossroot(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> None:
     monkeypatch.setenv("RELENV_CROSS", str(tmp_path))
     original_path = sys.path[:]
     try:
@@ -1775,15 +1641,11 @@ def test_setup_crossroot(
 
 
 def test_setup_openssl_provider_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     monkeypatch.setattr(relenv.runtime.shutil, "which", lambda _: "/usr/bin/openssl")
     order: list[str] = []
-    monkeypatch.setattr(
-        relenv.runtime, "set_openssl_modules_dir", lambda path: order.append(path)
-    )
+    monkeypatch.setattr(relenv.runtime, "set_openssl_modules_dir", lambda path: order.append(path))
     providers: list[str] = []
     monkeypatch.setattr(
         relenv.runtime,
@@ -1795,9 +1657,7 @@ def test_setup_openssl_provider_failure(monkeypatch: pytest.MonkeyPatch) -> None
         "run",
         lambda args, **kwargs: SimpleNamespace(
             returncode=0,
-            stdout='MODULESDIR: "/usr/lib"'
-            if "-m" in args
-            else 'OPENSSLDIR: "/etc/ssl"',
+            stdout='MODULESDIR: "/usr/lib"' if "-m" in args else 'OPENSSLDIR: "/etc/ssl"',
             stderr="",
         ),
     )
@@ -1827,8 +1687,8 @@ def test_wrapsitecustomize_import_error(monkeypatch: pytest.MonkeyPatch) -> None
 
     def fake_import(
         name: str,
-        globals: Optional[dict] = None,
-        locals: Optional[dict] = None,
+        globals: dict | None = None,
+        locals: dict | None = None,
         fromlist=(),
         level: int = 0,
     ):
@@ -1869,14 +1729,10 @@ def test_set_openssl_modules_dir_linux(monkeypatch: pytest.MonkeyPatch) -> None:
 
     class FakeLib:
         def __init__(self) -> None:
-            self.OSSL_PROVIDER_set_default_search_path = (
-                lambda ctx, path: called.update({"path": path}) or 1
-            )
+            self.OSSL_PROVIDER_set_default_search_path = lambda ctx, path: called.update({"path": path}) or 1
 
     monkeypatch.setattr(relenv.runtime.ctypes, "CDLL", lambda path: FakeLib())
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     relenv.runtime.set_openssl_modules_dir("/mods")
     assert called["path"] == b"/mods"
@@ -1888,9 +1744,7 @@ def test_load_openssl_provider_linux(monkeypatch: pytest.MonkeyPatch) -> None:
             self.OSSL_PROVIDER_load = lambda ctx, name: 456
 
     monkeypatch.setattr(relenv.runtime.ctypes, "CDLL", lambda path: FakeLib())
-    monkeypatch.setattr(
-        relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(relenv.runtime.sys, "platform", "linux", raising=False)
     assert relenv.runtime.load_openssl_provider("default") == 456
 
@@ -1928,12 +1782,8 @@ def test_sysconfig_wrapper_applied_for_python_313_plus(
     monkeypatch.setattr(relenv.runtime, "setup_openssl", lambda: None)
     monkeypatch.setattr(relenv.runtime, "setup_crossroot", lambda: None)
     monkeypatch.setattr(relenv.runtime, "install_cargo_config", lambda: None)
-    monkeypatch.setattr(
-        relenv.runtime.site, "execsitecustomize", lambda: None, raising=False
-    )
-    monkeypatch.setattr(
-        relenv.runtime, "wrapsitecustomize", lambda func: func, raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.site, "execsitecustomize", lambda: None, raising=False)
+    monkeypatch.setattr(relenv.runtime, "wrapsitecustomize", lambda func: func, raising=False)
 
     # Mock importer
     fake_importer = SimpleNamespace()
@@ -2011,12 +1861,8 @@ def test_sysconfig_wrapper_not_applied_for_python_312(
     monkeypatch.setattr(relenv.runtime, "setup_openssl", lambda: None)
     monkeypatch.setattr(relenv.runtime, "setup_crossroot", lambda: None)
     monkeypatch.setattr(relenv.runtime, "install_cargo_config", lambda: None)
-    monkeypatch.setattr(
-        relenv.runtime.site, "execsitecustomize", lambda: None, raising=False
-    )
-    monkeypatch.setattr(
-        relenv.runtime, "wrapsitecustomize", lambda func: func, raising=False
-    )
+    monkeypatch.setattr(relenv.runtime.site, "execsitecustomize", lambda: None, raising=False)
+    monkeypatch.setattr(relenv.runtime, "wrapsitecustomize", lambda func: func, raising=False)
 
     fake_importer = SimpleNamespace()
     monkeypatch.setattr(relenv.runtime, "importer", fake_importer, raising=False)

@@ -7,10 +7,9 @@ The ``relenv fetch`` command.
 
 from __future__ import annotations
 
-import argparse
 import os
 import sys
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from .build import platform_module
 from .common import (
@@ -24,6 +23,10 @@ from .common import (
     work_dir,
 )
 from .pyversions import get_default_python_version, resolve_python_version
+
+if TYPE_CHECKING:
+    import argparse
+    from collections.abc import Sequence
 
 
 def setup_parser(
@@ -50,7 +53,7 @@ def setup_parser(
         "--python",
         default=default_version,
         type=str,
-        help="The python version (e.g., 3.10, 3.13.7) [default: %(default)s]",
+        help="The python version (e.g., 3.10, 3.14.4) [default: %(default)s]",
     )
 
 
@@ -70,9 +73,7 @@ def fetch(
             if check_url(url, timeout=5):
                 break
         else:
-            print(
-                f"Unable to find file on any hosts: github.com {' '.join(x.split('/')[0] for x in check_hosts)}"
-            )
+            print(f"Unable to find file on any hosts: github.com {' '.join(x.split('/')[0] for x in check_hosts)}")
             sys.exit(1)
     builddir = work_dir("build", DATA_DIR)
     os.makedirs(builddir, exist_ok=True)

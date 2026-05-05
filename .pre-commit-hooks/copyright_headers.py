@@ -12,9 +12,7 @@ from datetime import datetime
 CODE_ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPDX_HEADER = "# SPDX-License-Identifier: Apache-2.0"
 COPYRIGHT_HEADER = "# Copyright {year} Broadcom."
-COPYRIGHT_REGEX = re.compile(
-    r"# Copyright (?:(?P<start_year>[0-9]{4})(?:-(?P<cur_year>[0-9]{4}))?) Broadcom\."
-)
+COPYRIGHT_REGEX = re.compile(r"# Copyright (?:(?P<start_year>[0-9]{4})(?:-(?P<cur_year>[0-9]{4}))?) Broadcom\.")
 SPDX_REGEX = re.compile(r"# SPDX-License-Identifier:.*")
 
 
