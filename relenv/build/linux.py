@@ -331,6 +331,48 @@ def build_zlib(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     runcmd(["make", "install"], env=env, stderr=logfp, stdout=logfp)
 
 
+def build_zstd(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
+    """
+    Build zstd.
+
+    :param env: The environment dictionary
+    :type env: dict
+    :param dirs: The working directories
+    :type dirs: ``relenv.build.common.Dirs``
+    :param logfp: A handle for the log file
+    :type logfp: file
+    """
+    os.chdir(pathlib.Path(dirs.source) / "lib")
+    # Build only the library to avoid yacc and main() linking issues
+    runcmd(
+        [
+            "make",
+            "-j8",
+            f"PREFIX={dirs.prefix}",
+            f"CC={env['CC']}",
+            f"CFLAGS={env['CFLAGS']} -fPIC -pthread",
+            f"LDFLAGS={env['LDFLAGS']} -pthread",
+            "libzstd.a",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
+    runcmd(
+        [
+            "make",
+            "install-static",
+            "install-pc",
+            "install-includes",
+            f"PREFIX={dirs.prefix}",
+            f"CC={env['CC']}",
+        ],
+        env=env,
+        stderr=logfp,
+        stdout=logfp,
+    )
+
+
 def build_krb(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     Build kerberos.
@@ -347,6 +389,10 @@ def build_krb(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         env["ac_cv_func_regcomp"] = "yes"
         env["ac_cv_printf_positional"] = "yes"
     os.chdir(dirs.source / "src")
+    # krb5 1.22+ and some 1.21 tarballs are missing getdate.c, which normally
+    # triggers a yacc call when building the kadmin CLI. We skip building the
+    # CLI by removing it from the Makefile.
+    runcmd(["sed", "-i", "s/ kadmin / /g", "Makefile.in"], stderr=logfp, stdout=logfp)
     runcmd(
         [
             "./configure",
@@ -526,6 +572,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "--with-builtin-hashlib-hashes=blake2,md5,sha1,sha2,sha3",
         "--with-readline=readline",
         "--with-pkg-config=yes",
+        "--with-zstd=yes",
     ]
 
     if env["RELENV_HOST_ARCH"] != env["RELENV_BUILD_ARCH"]:
@@ -828,6 +875,27 @@ build.add(
     },
 )
 
+# Get zstd version from JSON
+zstd_info = get_dependency_version("zstd", "linux")
+if zstd_info:
+    zstd_version = zstd_info["version"]
+    zstd_url = zstd_info["url"]
+    zstd_checksum = zstd_info["sha256"]
+else:
+    zstd_version = "1.5.7"
+    zstd_url = "https://github.com/facebook/zstd/releases/download/v{version}/zstd-{version}.tar.gz"
+    zstd_checksum = "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+
+build.add(
+    "zstd",
+    build_func=build_zstd,
+    download={
+        "url": zstd_url,
+        "version": zstd_version,
+        "checksum": zstd_checksum,
+    },
+)
+
 # Get tirpc version from JSON
 tirpc_info = get_dependency_version("tirpc", "linux")
 if tirpc_info:
@@ -868,12 +936,13 @@ build.add(
         "uuid",
         "krb5",
         "readline",
+        "zstd",
         "tirpc",
     ],
     download={
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "version": build.version,
-        "checksum": "d31d548cd2c5ca2ae713bebe346ba15e8406633a",
+        "checksum": None,
     },
 )
 

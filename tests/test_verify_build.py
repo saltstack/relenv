@@ -189,8 +189,8 @@ def test_pip_install_salt_git(pipexec, build, build_dir, pyexec, build_version):
         pytest.xfail("Salt git install fails on Windows (setup.py tries to install missing man pages)")
     if sys.platform == "darwin" and "3.12" in build_version:
         pytest.xfail("Salt does not work with 3.12 on macos yet")
-    if sys.platform == "darwin" and "3.13" in build_version:
-        pytest.xfail("Salt does not work with 3.13 on macos yet")
+    if sys.platform == "darwin" and ("3.13" in build_version or "3.14" in build_version):
+        pytest.xfail("Salt does not work with 3.13+ on macos yet")
     if sys.platform == "darwin" and "3.14" in build_version:
         pytest.xfail("Salt does not work with 3.14 on macos yet")
 
@@ -734,8 +734,8 @@ def test_pip_install_salt_pip_dir(pipexec, pyexec, build, build_version, arch):
     if sys.platform == "win32" and arch == "amd64":
         pytest.xfail("Known failure on windows amd64")
 
-    if sys.platform == "darwin" and "3.13" in build_version:
-        pytest.xfail("Salt does not work with 3.13 on macos yet")
+    if sys.platform == "darwin" and ("3.13" in build_version or "3.14" in build_version):
+        pytest.xfail("Salt does not work with 3.13+ on macos yet")
 
     if sys.platform == "darwin" and "3.14" in build_version:
         pytest.xfail("Salt does not work with 3.14 on macos yet")
@@ -1090,7 +1090,7 @@ def test_cryptography_rpath_darwin(pipexec, build, minor_version, cryptography_v
     env["RELENV_BUILDENV"] = "yes"
     env["OPENSSL_DIR"] = f"{build}"
 
-    if minor_version == "3.13":
+    if minor_version in ["3.13", "3.14"]:
         env["PYO3_USE_ABI3_FORWARD_COMPATIBILITY"] = "1"
 
     p = subprocess.run(
