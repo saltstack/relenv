@@ -1457,7 +1457,10 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
 
 
 def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.13") or build_version.startswith("3.14"):
+    if build_version.startswith("3.14"):
+        cffi = "cffi==2.0.0"
+        pygit2 = "pygit2==1.19.2"
+    elif build_version.startswith("3.13"):
         cffi = "cffi==1.17.1"
         pygit2 = "pygit2==1.16.0"
     elif build_version.startswith("3.12"):
@@ -1490,7 +1493,10 @@ def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_v
 
 
 def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.13") or build_version.startswith("3.14"):
+    if build_version.startswith("3.14"):
+        cffi = "cffi==2.0.0"
+        pygit2 = "pygit2==1.19.2"
+    elif build_version.startswith("3.13"):
         cffi = "cffi==1.17.1"
         pygit2 = "pygit2==1.16.0"
     elif build_version.startswith("3.12"):

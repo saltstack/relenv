@@ -343,7 +343,10 @@ def build_zstd(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     :type logfp: file
     """
     os.chdir(pathlib.Path(dirs.source) / "lib")
-    # Build only the library to avoid yacc and main() linking issues
+    # Build static + shared so curl and friends can resolve ZSTD_* via libzstd.so.
+    # LDFLAGS is left to the lib Makefile because a command-line override would
+    # clobber its target-specific `LDFLAGS += -shared` and the .so link would
+    # then pull Scrt1.o and fail on a missing `main`.
     runcmd(
         [
             "make",
@@ -351,8 +354,8 @@ def build_zstd(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
             f"PREFIX={dirs.prefix}",
             f"CC={env['CC']}",
             f"CFLAGS={env['CFLAGS']} -fPIC -pthread",
-            f"LDFLAGS={env['LDFLAGS']} -pthread",
-            "libzstd.a",
+            f"LDFLAGS_DYNLIB={env['LDFLAGS']} -pthread",
+            "lib",
         ],
         env=env,
         stderr=logfp,
@@ -362,6 +365,7 @@ def build_zstd(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         [
             "make",
             "install-static",
+            "install-shared",
             "install-pc",
             "install-includes",
             f"PREFIX={dirs.prefix}",
