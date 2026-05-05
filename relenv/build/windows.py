@@ -694,6 +694,82 @@ def update_zlib(dirs: Dirs, env: EnvMapping) -> None:
                 json.dump(data, f, indent=2)
 
 
+def update_zlib_ng(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the zlib-ng library.
+
+    Python 3.14 replaced zlib with zlib-ng for the bundled zlib module on
+    Windows. The PCbuild project expects sources in
+    ``externals/zlib-ng-<version>/`` (notably ``zlib.h.in`` and
+    ``zlib-ng.h.in`` at the top level).
+    """
+    zlib_ng_info = get_dependency_version("zlib-ng", "win32")
+    if not zlib_ng_info:
+        return
+
+    version = zlib_ng_info["version"]
+    url = zlib_ng_info["url"].format(version=version)
+    sha256 = zlib_ng_info["sha256"]
+    ref_loc = f"cpe:2.3:a:zlib-ng:zlib-ng:{version}:*:*:*:*:*:*:*"  # noqa: E231
+
+    target_dir = dirs.source / "externals" / f"zlib-ng-{version}"
+    update_props(dirs.source, r"zlib-ng-\d+(\.\d+)*", f"zlib-ng-{version}")
+    if not target_dir.exists():
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "zlib-ng", version)
+
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        if spdx_json.exists():
+            with open(str(spdx_json)) as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "zlib-ng":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
+
+
+def update_zstd(dirs: Dirs, env: EnvMapping) -> None:
+    """
+    Update the zstd library.
+
+    Python 3.14 added a bundled ``_zstd`` extension whose Windows project
+    compiles zstd from source in ``externals/zstd-<version>/``.
+    """
+    zstd_info = get_dependency_version("zstd", "win32")
+    if not zstd_info:
+        return
+
+    version = zstd_info["version"]
+    url = zstd_info["url"].format(version=version)
+    sha256 = zstd_info["sha256"]
+    ref_loc = f"cpe:2.3:a:facebook:zstandard:{version}:*:*:*:*:*:*:*"  # noqa: E231
+
+    target_dir = dirs.source / "externals" / f"zstd-{version}"
+    update_props(dirs.source, r"zstd-\d+(\.\d+)*", f"zstd-{version}")
+    if not target_dir.exists():
+        get_externals_source(externals_dir=dirs.source / "externals", url=url)
+        flatten_externals(dirs, "zstd", version)
+
+    if env["RELENV_PY_MAJOR_VERSION"] in ["3.14"]:
+        spdx_json = dirs.source / "Misc" / "externals.spdx.json"
+        if spdx_json.exists():
+            with open(str(spdx_json)) as f:
+                data = json.load(f)
+                for pkg in data["packages"]:
+                    if pkg["name"] == "zstd":
+                        pkg["versionInfo"] = version
+                        pkg["downloadLocation"] = url
+                        pkg["checksums"][0]["checksumValue"] = sha256
+                        pkg["externalRefs"][0]["referenceLocator"] = ref_loc
+            with open(str(spdx_json), "w") as f:
+                json.dump(data, f, indent=2)
+
+
 def update_mpdecimal(dirs: Dirs, env: EnvMapping) -> None:
     """
     Update the MPDECIMAL library.
@@ -790,6 +866,8 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     update_bzip2(dirs=dirs, env=env)
     update_libffi(dirs=dirs, env=env)
     update_zlib(dirs=dirs, env=env)
+    update_zlib_ng(dirs=dirs, env=env)
+    update_zstd(dirs=dirs, env=env)
     update_mpdecimal(dirs=dirs, env=env)
     update_nasm(dirs=dirs, env=env)
     update_perl(dirs=dirs, env=env)
