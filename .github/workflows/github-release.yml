@@ -88,6 +88,9 @@ jobs:
             arch: x86_64
             python: '3.13'
           - platform: linux-gnu
+            arch: x86_64
+            python: '3.14'
+          - platform: linux-gnu
             arch: aarch64
             python: '3.10'
           - platform: linux-gnu
@@ -99,6 +102,9 @@ jobs:
           - platform: linux-gnu
             arch: aarch64
             python: '3.13'
+          - platform: linux-gnu
+            arch: aarch64
+            python: '3.14'
 
           - platform: win
             arch: x86
@@ -113,6 +119,9 @@ jobs:
             arch: x86
             python: '3.13'
           - platform: win
+            arch: x86
+            python: '3.14'
+          - platform: win
             arch: amd64
             python: '3.10'
           - platform: win
@@ -124,6 +133,9 @@ jobs:
           - platform: win
             arch: amd64
             python: '3.13'
+          - platform: win
+            arch: amd64
+            python: '3.14'
 
           - platform: macos
             arch: x86_64
@@ -138,6 +150,9 @@ jobs:
             arch: x86_64
             python: '3.13'
           - platform: macos
+            arch: x86_64
+            python: '3.14'
+          - platform: macos
             arch: arm64
             python: '3.10'
           - platform: macos
@@ -149,6 +164,9 @@ jobs:
           - platform: macos
             arch: arm64
             python: '3.13'
+          - platform: macos
+            arch: arm64
+            python: '3.14'
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python 3.11
