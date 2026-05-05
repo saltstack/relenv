@@ -229,7 +229,7 @@ build.add(
         "url": "https://www.python.org/ftp/python/{version}/Python-{version}.tar.xz",
         "fallback_url": "https://woz.io/relenv/dependencies/Python-{version}.tar.gz",
         "version": build.version,
-        "checksum": "d31d548cd2c5ca2ae713bebe346ba15e8406633a",
+        "checksum": None,
     },
 )
 

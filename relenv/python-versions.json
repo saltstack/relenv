@@ -396,6 +396,17 @@
     ]
    }
   },
+  "zstd": {
+   "1.5.7": {
+    "url": "https://github.com/facebook/zstd/releases/download/v{version}/zstd-{version}.tar.gz",
+    "sha256": "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   }
+  },
   "krb5": {
    "1.22.2": {
     "url": "https://kerberos.org/dist/krb5/1.22/krb5-{version}.tar.gz",

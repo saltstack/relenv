@@ -26,6 +26,7 @@ from relenv.common import (
     DATA_DIR,
     MODULE_DIR,
     ConfigurationError,
+    Version,
     WorkDirs,
     build_arch,
     extract_archive,
@@ -300,6 +301,10 @@ class Builder:
         if python_download is None:
             raise ConfigurationError("Python recipe is missing a download entry")
         python_download.version = version
+        if checksum is None:
+            from relenv.pyversions import python_versions
+
+            checksum = python_versions().get(Version(version))
         python_download.checksum = checksum
         return build
 
