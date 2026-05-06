@@ -26,7 +26,6 @@ from relenv.common import (
     DATA_DIR,
     MODULE_DIR,
     ConfigurationError,
-    Version,
     WorkDirs,
     build_arch,
     extract_archive,
@@ -278,35 +277,6 @@ class Builder:
 
         self.version = version
         self.set_arch(self.arch)
-
-    def copy(self, version: str, checksum: str | None) -> Builder:
-        """Create a copy of this Builder with a different version."""
-        recipies: dict[str, Recipe] = {}
-        for name in self.recipies:
-            recipe = self.recipies[name]
-            recipies[name] = {
-                "build_func": recipe["build_func"],
-                "wait_on": list(recipe["wait_on"]),
-                "download": recipe["download"].copy() if recipe["download"] else None,
-            }
-        build = Builder(
-            self.root,
-            recipies,
-            self.build_default,
-            self.populate_env,
-            self.arch,
-            version,
-        )
-        python_download = build.recipies["python"].get("download")
-        if python_download is None:
-            raise ConfigurationError("Python recipe is missing a download entry")
-        python_download.version = version
-        if checksum is None:
-            from relenv.pyversions import python_versions
-
-            checksum = python_versions().get(Version(version))
-        python_download.checksum = checksum
-        return build
 
     def set_arch(self, arch: str) -> None:
         """
