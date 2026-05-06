@@ -1124,7 +1124,7 @@ def test_install_pycurl(pipexec, pyexec, build):
     buildscript = textwrap.dedent(
         """\
     set -e
-    wget https://curl.se/download/curl-{curlver}.tar.gz
+    wget --tries=10 --retry-connrefused --waitretry=10 --timeout=30 https://curl.se/download/curl-{curlver}.tar.gz
     tar xvf curl-{curlver}.tar.gz
     cd curl-{curlver}
     source <({build}/bin/relenv buildenv)
@@ -1220,7 +1220,7 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
     source <({build}/bin/relenv buildenv)
 
     # Build and install libssh2
-    wget https://www.libssh2.org/download/libssh2-{libssh2}.tar.gz
+    wget --tries=10 --retry-connrefused --waitretry=10 --timeout=30 https://www.libssh2.org/download/libssh2-{libssh2}.tar.gz
     tar xvf libssh2-{libssh2}.tar.gz
     cd libssh2-{libssh2}
     mkdir bin
@@ -1238,7 +1238,7 @@ def test_install_libgit2(pipexec, build, minor_version, build_dir, versions):
     cd ../..
 
     # Build and install libgit2
-    wget https://github.com/libgit2/libgit2/archive/refs/tags/v{libgit2}.tar.gz
+    wget --tries=10 --retry-connrefused --waitretry=10 --timeout=30 https://github.com/libgit2/libgit2/archive/refs/tags/v{libgit2}.tar.gz
     tar xvf v{libgit2}.tar.gz
     cd libgit2-{libgit2}
     mkdir build
@@ -1294,7 +1294,7 @@ def test_install_python_ldap(pipexec, pyexec, build):
     source <({build}/bin/relenv buildenv)
 
     # Build and Install sasl
-    wget https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-{saslver}/cyrus-sasl-{saslver}.tar.gz
+    wget --tries=10 --retry-connrefused --waitretry=10 --timeout=30 https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-{saslver}/cyrus-sasl-{saslver}.tar.gz
     tar xvf cyrus-sasl-{saslver}.tar.gz
     cd cyrus-sasl-{saslver}
     ./configure --prefix=$RELENV_PATH
@@ -1303,7 +1303,7 @@ def test_install_python_ldap(pipexec, pyexec, build):
     cd ..
 
     # Build and Install Open LDAP
-    wget https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-{ldapver}.tgz
+    wget --tries=10 --retry-connrefused --waitretry=10 --timeout=30 https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-{ldapver}.tgz
     tar xvf openldap-{ldapver}.tgz
     cd openldap-{ldapver}
     ./configure --prefix=$RELENV_PATH
