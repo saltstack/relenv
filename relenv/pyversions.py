@@ -995,16 +995,23 @@ def update_dependency_versions(path: pathlib.Path, deps_to_update: list[str] | N
     print(f"Updated {path}")
 
 
-def create_pyversions(path: pathlib.Path) -> None:
+def detect_python_versions() -> list[Version]:
     """
-    Create python-versions.json file.
+    Detect available Python versions from python.org.
     """
     url = "https://www.python.org/downloads/"
     content = fetch_url_content(url)
     matched = re.findall(r'<a href="/downloads/.*">Python.*</a>', content)
-    cwd = os.getcwd()
     parsed_versions = sorted([_ref_version(_) for _ in matched], reverse=True)
-    versions = [_ for _ in parsed_versions if _.major >= 3]
+    return [_ for _ in parsed_versions if _.major >= 3]
+
+
+def create_pyversions(path: pathlib.Path) -> None:
+    """
+    Create python-versions.json file.
+    """
+    versions = detect_python_versions()
+    cwd = os.getcwd()
 
     if path.exists():
         all_data = json.loads(path.read_text())
@@ -1170,6 +1177,13 @@ def setup_parser(
         help="List versions",
     )
     subparser.add_argument(
+        "-c",
+        "--check",
+        default=False,
+        action="store_true",
+        help="Check for new python versions",
+    )
+    subparser.add_argument(
         "--version",
         default="3.14",
         type=str,
@@ -1195,6 +1209,62 @@ def main(args: argparse.Namespace) -> None:
     """
     packaged = pathlib.Path(__file__).parent / "python-versions.json"
 
+    # Detect terminal capabilities for fancy vs ASCII output
+    use_unicode = True
+    if sys.platform == "win32":
+        # Check if we're in a modern terminal that supports Unicode
+        import os
+
+        # Windows Terminal and modern PowerShell support Unicode
+        wt_session = os.environ.get("WT_SESSION")
+        term_program = os.environ.get("TERM_PROGRAM")
+        if not wt_session and not term_program:
+            # Likely cmd.exe or old PowerShell, use ASCII
+            use_unicode = False
+
+    if use_unicode:
+        ok_symbol = "✓"
+        update_symbol = "⚠"
+        new_symbol = "✗"
+        arrow = "→"
+    else:
+        ok_symbol = "[OK]    "
+        update_symbol = "[UPDATE]"
+        new_symbol = "[NEW]   "
+        arrow = "->"
+
+    if args.check:
+        print("Checking for new python versions...\n")
+
+        # Load current versions from JSON
+        with open(packaged) as f:
+            data = json.load(f)
+
+        current_py = data.get("python", data)
+        py_updates = []
+        py_up_to_date = []
+
+        py_detected = detect_python_versions()
+        for version in py_detected:
+            vstr = str(version)
+            if vstr in current_py:
+                print(f"{ok_symbol} Python {vstr:12} (up-to-date)")
+                py_up_to_date.append(vstr)
+            else:
+                print(f"{new_symbol} Python {vstr:12} (new version available)")
+                py_updates.append(vstr)
+
+        # Summary
+        print(f"\n{'=' * 60}")
+        print(f"Summary: {len(py_up_to_date)} up-to-date, ", end="")
+        print(f" {len(py_updates)} new versions available")
+
+        if py_updates:
+            print("\nTo update python versions, run:")
+            print("  python3 -m relenv versions --update")
+
+        sys.exit(0)
+
     # Handle dependency operations
     if args.check_deps:
         print("Checking for new dependency versions...\n")
@@ -1204,32 +1274,8 @@ def main(args: argparse.Namespace) -> None:
             data = json.load(f)
 
         current_deps = data.get("dependencies", {})
-        updates_available = []
-        up_to_date = []
-
-        # Detect terminal capabilities for fancy vs ASCII output
-        use_unicode = True
-        if sys.platform == "win32":
-            # Check if we're in a modern terminal that supports Unicode
-            import os
-
-            # Windows Terminal and modern PowerShell support Unicode
-            wt_session = os.environ.get("WT_SESSION")
-            term_program = os.environ.get("TERM_PROGRAM")
-            if not wt_session and not term_program:
-                # Likely cmd.exe or old PowerShell, use ASCII
-                use_unicode = False
-
-        if use_unicode:
-            ok_symbol = "✓"
-            update_symbol = "⚠"
-            new_symbol = "✗"
-            arrow = "→"
-        else:
-            ok_symbol = "[OK]    "
-            update_symbol = "[UPDATE]"
-            new_symbol = "[NEW]   "
-            arrow = "->"
+        dep_updates = []
+        dep_up_to_date = []
 
         # Check each dependency
         checks = [
@@ -1253,15 +1299,15 @@ def main(args: argparse.Namespace) -> None:
         ]
 
         for dep_key, dep_name, detect_func in checks:
-            detected = detect_func()
-            if not detected:
+            dep_detected = detect_func()
+            if not dep_detected:
                 continue
 
             # Handle SQLite's tuple return
             if dep_key == "sqlite":
-                latest_version = detected[0][0]  # type: ignore[index]
+                latest_version = dep_detected[0][0]  # type: ignore[index]
             else:
-                latest_version = detected[0]  # type: ignore[index]
+                latest_version = dep_detected[0]  # type: ignore[index]
 
             # Get current version from JSON
             current_version = None
@@ -1273,20 +1319,20 @@ def main(args: argparse.Namespace) -> None:
             # Compare versions
             if current_version == latest_version:
                 print(f"{ok_symbol} {dep_name:12} {current_version:15} (up-to-date)")
-                up_to_date.append(dep_name)
+                dep_up_to_date.append(dep_name)
             elif current_version:
                 print(f"{update_symbol} {dep_name:12} {current_version:15} {arrow} {latest_version} (update available)")
-                updates_available.append((dep_name, current_version, latest_version))
+                dep_updates.append((dep_name, current_version, latest_version))
             else:
                 print(f"{new_symbol} {dep_name:12} {'(not tracked)':15} {arrow} {latest_version}")
-                updates_available.append((dep_name, None, latest_version))
+                dep_updates.append((dep_name, None, latest_version))
 
         # Summary
         print(f"\n{'=' * 60}")
-        print(f"Summary: {len(up_to_date)} up-to-date, ", end="")
-        print(f"{len(updates_available)} updates available")
+        print(f"Summary: {len(dep_up_to_date)} up-to-date, ", end="")
+        print(f"{len(dep_updates)} updates available")
 
-        if updates_available:
+        if dep_updates:
             print("\nTo update dependencies, run:")
             print("  python3 -m relenv versions --update-deps")
 
