@@ -192,6 +192,29 @@ def test_detect_xz_versions(monkeypatch: pytest.MonkeyPatch) -> None:
     assert versions[0] == "5.8.1"
 
 
+def test_detect_python_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test Python version detection from python.org."""
+    mock_html = """
+    <html>
+    <a href="/downloads/release/python-3145/">Python 3.14.5</a>
+    <a href="/downloads/release/python-3132/">Python 3.13.2</a>
+    <a href="/downloads/release/python-2718/">Python 2.7.18</a>
+    </html>
+    """
+
+    def fake_fetch(url: str) -> str:
+        return mock_html
+
+    monkeypatch.setattr(pyversions, "fetch_url_content", fake_fetch)
+    versions = pyversions.detect_python_versions()
+    assert isinstance(versions, list)
+    assert any(str(v) == "3.14.5" for v in versions)
+    assert any(str(v) == "3.13.2" for v in versions)
+    assert not any(str(v) == "2.7.18" for v in versions)  # Should filter major < 3
+    # Verify sorting (latest first)
+    assert str(versions[0]) == "3.14.5"
+
+
 def test_resolve_python_version_none_defaults_to_latest_310() -> None:
     """Test that None resolves to the latest 3.10 version."""
     result = pyversions.resolve_python_version(None)
