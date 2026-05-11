@@ -348,6 +348,20 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
     for target_file in updated_files:
         os.utime(target_file, (now, now))
 
+    # For expat >= 2.8.0, new entropy source files are required but not compiled
+    # by Python's build system. Include them directly in xmlparse.c.
+    xmlparse_c = expat_dir / "xmlparse.c"
+    if xmlparse_c.exists():
+        with open(str(xmlparse_c), "a") as f:
+            f.write("\n/* Relenv: include new entropy sources for expat >= 2.8.0 */\n")
+            f.write('#if defined(_WIN32)\n#include "random_rand_s.c"\n#endif\n')
+            f.write('#if defined(HAVE_GETENTROPY)\n#include "random_getentropy.c"\n#endif\n')
+            f.write("#if defined(HAVE_GETRANDOM) || defined(HAVE_SYSCALL_GETRANDOM)\n")
+            f.write('#include "random_getrandom.c"\n#endif\n')
+            f.write('#if defined(HAVE_ARC4RANDOM_BUF)\n#include "random_arc4random_buf.c"\n#endif\n')
+            f.write('#if defined(HAVE_ARC4RANDOM)\n#include "random_arc4random.c"\n#endif\n')
+            f.write('#if !defined(_WIN32) && defined(XML_DEV_URANDOM)\n#include "random_dev_urandom.c"\n#endif\n')
+
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
     if bash_refresh.exists():
