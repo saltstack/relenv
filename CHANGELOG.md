@@ -1,3 +1,17 @@
+0.22.11
+=======
+
+* Update python 3.14 to 3.14.5
+* Update sqlite to 3.53.1.0 (CVE-2025-70873)
+* Update expat to 2.8.1 (CVE-2026-41080 and CVE-2026-45186)
+* Add --check flag to versions command for dry run.
+
+
+0.22.10
+=======
+
+* Add python 3.14 builds.
+
 0.22.10
 =======
 
