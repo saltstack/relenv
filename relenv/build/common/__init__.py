@@ -22,6 +22,7 @@ from .builders import (
 from .install import (
     create_archive,
     finalize,
+    generate_relenv_sbom,
     install_runtime,
     patch_file,
     update_ensurepip,
@@ -41,6 +42,7 @@ __all__ = [
     "update_ensurepip",
     "patch_file",
     "update_sbom_checksums",
+    "generate_relenv_sbom",
     # Builders (specific build functions)
     "build_openssl",
     "build_openssl_fips",

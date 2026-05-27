@@ -36,7 +36,6 @@ from .common import (
     install_runtime,
     patch_file,
     update_ensurepip,
-    update_sbom_checksums,
 )
 
 log = logging.getLogger(__name__)
@@ -344,6 +343,8 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             shutil.move(file, str(expat_dir))
             updated_files.append(target)
 
+    # Touch all updated files to ensure MSBuild rebuilds them
+    # (The original files may have newer timestamps)
     now = time.time()
     for target_file in updated_files:
         os.utime(target_file, (now, now))
@@ -362,8 +363,11 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             f.write('#if defined(HAVE_ARC4RANDOM)\n#include "random_arc4random.c"\n#endif\n')
             f.write('#if !defined(_WIN32) && defined(XML_DEV_URANDOM)\n#include "random_dev_urandom.c"\n#endif\n')
 
+    from relenv.build.common import update_sbom_checksums
+
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
+    # Also include refresh.sh which was patched
     if bash_refresh.exists():
         files_to_update["Modules/expat/refresh.sh"] = bash_refresh
     update_sbom_checksums(dirs.source, files_to_update)
@@ -1007,6 +1011,10 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     else:
         runpip("relenv")
 
+    from relenv.build.common.install import generate_relenv_sbom
+
+    generate_relenv_sbom(env, dirs)
+
     for root, _, files in os.walk(dirs.prefix):
         for file in files:
             if file.endswith(".pyc"):
@@ -1019,6 +1027,7 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "*.dll",
         "*.lib",
         "*.whl",
+        "*.spdx.json",
         "/Include/*",
         "/Lib/site-packages/*",
     ]
