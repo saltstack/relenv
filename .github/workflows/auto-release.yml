@@ -1,0 +1,22 @@
+name: Auto-Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  ci:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'automated-update')
+    name: Build and Release
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
+    uses: ./.github/workflows/ci.yml
+    with:
+      kind: "release"
+    secrets:
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
