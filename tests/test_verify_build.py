@@ -396,6 +396,8 @@ def test_pip_install_salt_w_package_requirements(pipexec, pyexec, tmp_path, salt
         f"py{build_version.rsplit('.', 1)[0]}",
         f"{reqfile}.txt",
     )
+    if not os.path.exists(req):
+        req = req.replace(".txt", ".lock")
     p = subprocess.run(
         [
             str(pipexec),
