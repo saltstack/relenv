@@ -30,25 +30,32 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+          pip install packaging
+
+      - name: Snapshot python-versions.json
+        run: cp relenv/python-versions.json "${RUNNER_TEMP}/python-versions.before.json"
 
       - name: Run Update Commands
         id: update
         run: |
           python3 -m relenv versions --update-deps
           python3 -m relenv versions --update
-          
+
           if git diff --quiet relenv/python-versions.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate Changelog Entry
+      - name: Prepare Release PR
         if: steps.update.outputs.changed == 'true'
+        id: prepare
         run: |
-          mkdir -p changelog
-          ENTRY_FILE="changelog/$(date +%Y%m%d%H%M%S).improvement.rst"
-          echo "Automated version updates for Python and dependencies." > "$ENTRY_FILE"
+          python3 .github/scripts/prepare_release_pr.py \
+            "${RUNNER_TEMP}/python-versions.before.json" \
+            relenv/python-versions.json | tee "${RUNNER_TEMP}/prepare.out"
+          version="$(head -n1 "${RUNNER_TEMP}/prepare.out")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: Create Pull Request
         if: steps.update.outputs.changed == 'true'
@@ -56,19 +63,14 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "chore: update python and dependency versions"
-          title: "Automated Version Updates"
+          commit-message: "Release ${{ steps.prepare.outputs.version }}"
+          title: "Release ${{ steps.prepare.outputs.version }}"
           body: |
-            This is an automated Pull Request to update the versions of Python and/or bundled dependencies in `python-versions.json`.
-            
-            This PR will be automatically merged if CI passes, and a release will be triggered.
+            Automated version bump for Python and bundled dependencies.
+
+            This PR will be merged automatically once CI passes, which will
+            trigger the release workflow.
           branch: "auto-update-versions"
           base: "main"
           delete-branch: true
           labels: "automated-update"
-          
-      - name: Enable Auto-Merge
-        if: steps.update.outputs.changed == 'true' && steps.cpr.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --auto --squash

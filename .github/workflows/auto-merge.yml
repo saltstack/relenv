@@ -1,0 +1,45 @@
+name: Auto-Merge Automated PRs
+
+# Merge PRs labeled `automated-update` once CI passes.  This avoids
+# enabling the repo-wide "allow auto-merge" setting; merge is invoked
+# directly via the API for matching PRs only.
+
+on:
+  workflow_run:
+    workflows: ["Pull Request or Push"]
+    types: [completed]
+
+jobs:
+  merge:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Merge matching PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          pr_number="$(
+            gh pr list \
+              --state open \
+              --label automated-update \
+              --search "${HEAD_SHA}" \
+              --json number,headRefName,headRefOid \
+              --jq ".[] | select(.headRefOid == \"${HEAD_SHA}\") | .number" \
+            | head -n1
+          )"
+          if [ -z "${pr_number}" ]; then
+            echo "No open automated-update PR matches commit ${HEAD_SHA}; nothing to merge."
+            exit 0
+          fi
+          echo "Merging PR #${pr_number} (head ${HEAD_SHA})."
+          gh pr merge "${pr_number}" --squash --delete-branch
