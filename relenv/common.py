@@ -654,7 +654,7 @@ def fetch_url(
     url: str,
     fp: BinaryIO,
     backoff: int = 5,
-    timeout: float = 30,
+    timeout: float = 60,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> None:
     """
@@ -723,7 +723,7 @@ def fetch_url(
     log.info("Download complete %s", url)
 
 
-def fetch_url_content(url: str, backoff: int = 5, timeout: float = 30) -> str:
+def fetch_url_content(url: str, backoff: int = 5, timeout: float = 60) -> str:
     """
     Fetch the contents of a url.
 
