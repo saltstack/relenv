@@ -653,7 +653,7 @@ def check_url(url: str, timestamp: float | None = None, timeout: float = 30) -> 
 def fetch_url(
     url: str,
     fp: BinaryIO,
-    backoff: int = 3,
+    backoff: int = 5,
     timeout: float = 30,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> None:
@@ -683,8 +683,9 @@ def fetch_url(
         ) as exc:
             if attempt >= attempts:
                 raise RelenvException(f"Error fetching url {url} {exc}")
-            log.debug("Unable to connect %s", url)
-            time.sleep(attempt * 10)
+            delay = min(30 * (2 ** (attempt - 1)), 300)
+            log.warning("Unable to connect %s (%s); retrying in %ds", url, exc, delay)
+            time.sleep(delay)
     if response is None:
         raise RelenvException(f"Unable to open url {url}")
     log.info("url opened %s", url)
@@ -722,7 +723,7 @@ def fetch_url(
     log.info("Download complete %s", url)
 
 
-def fetch_url_content(url: str, backoff: int = 3, timeout: float = 30) -> str:
+def fetch_url_content(url: str, backoff: int = 5, timeout: float = 30) -> str:
     """
     Fetch the contents of a url.
 
@@ -746,8 +747,9 @@ def fetch_url_content(url: str, backoff: int = 3, timeout: float = 30) -> str:
         ) as exc:
             if attempt >= attempts:
                 raise RelenvException(f"Error fetching url {url} {exc}")
-            log.debug("Unable to connect %s", url)
-            time.sleep(attempt * 10)
+            delay = min(30 * (2 ** (attempt - 1)), 300)
+            log.warning("Unable to connect %s (%s); retrying in %ds", url, exc, delay)
+            time.sleep(delay)
     if response is None:
         raise RelenvException(f"Unable to open url {url}")
     log.info("url opened %s", url)
