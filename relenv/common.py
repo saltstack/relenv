@@ -769,7 +769,7 @@ def download_url(
     url: str,
     dest: str | os.PathLike[str],
     verbose: bool = True,
-    backoff: int = 3,
+    backoff: int = 5,
     timeout: float = 60,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> str:
