@@ -301,6 +301,16 @@
      "darwin",
      "win32"
     ]
+   },
+   "3.53.2.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "588ad51949419a56ebe81fe56193d510c559eb94c9a57748387860b5d3069316",
+    "sqliteversion": "3530200",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   },
   "xz": {
