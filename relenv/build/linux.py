@@ -866,6 +866,7 @@ build.add(
     wait_on=["openssl"],
     download={
         "url": krb5_url,
+        "fallback_url": "https://web.mit.edu/kerberos/dist/krb5/{version}/krb5-{version}.tar.gz",
         "version": krb5_version,
         "checksum": krb5_checksum,
     },
