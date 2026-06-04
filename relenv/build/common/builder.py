@@ -587,13 +587,13 @@ class Builder:
             else:
                 print_ui(events, processes, fails)
             sys.stdout.write("\n")
-        if fails and False:
+        if fails:
             if show_ui:
                 print_ui(events, processes, fails)
-                sys.stderr.write("The following failures were reported\n")
-                for fail in fails:
-                    sys.stderr.write(fail + "\n")
-                sys.stderr.flush()
+            sys.stderr.write("The following failures were reported\n")
+            for fail in fails:
+                sys.stderr.write(fail + "\n")
+            sys.stderr.flush()
             sys.exit(1)
 
     def build(
