@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Copyright 2026 Broadcom.
+# SPDX-License-Identifier: Apache-2.0
 """
 Prepare an automated release PR.
 
@@ -16,6 +18,7 @@ Run from the repo root::
 
 Exits 0 with no changes if no relevant additions were detected.
 """
+
 import json
 import re
 import sys
