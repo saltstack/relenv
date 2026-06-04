@@ -37,11 +37,11 @@ jobs:
           pre-commit install --install-hooks
 
       - name: Check ALL Files On Branch
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || github.event.action == 'closed'
         run: |
           pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Check Changed Files On PR
-        if: github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] == 'true'
+        if: github.event_name == 'pull_request' && github.event.action != 'closed' && fromJSON(inputs.changed-files)['repo'] == 'true'
         run: |
           pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
