@@ -7,6 +7,11 @@ on:
         required: true
         type: string
         description: JSON string containing information about changed files
+      kind:
+        required: false
+        type: string
+        default: dev
+        description: Pipeline kind, "release" runs against all files
 
 jobs:
   Pre-Commit:
@@ -37,11 +42,11 @@ jobs:
           pre-commit install --install-hooks
 
       - name: Check ALL Files On Branch
-        if: github.event_name != 'pull_request' || github.event.action == 'closed'
+        if: inputs.kind == 'release' || github.event_name != 'pull_request'
         run: |
           pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Check Changed Files On PR
-        if: github.event_name == 'pull_request' && github.event.action != 'closed' && fromJSON(inputs.changed-files)['repo'] == 'true'
+        if: inputs.kind != 'release' && github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] == 'true'
         run: |
           pre-commit run --show-diff-on-failure --color=always --from-ref ${{ github.event.pull_request.base.sha }} --to-ref ${{ github.event.pull_request.head.sha }}
