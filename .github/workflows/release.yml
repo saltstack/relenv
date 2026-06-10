@@ -7,15 +7,6 @@ on:
         required: false
         type: string
         default: dev
-      package_command:
-        required: false
-        type: string
-        description: Command used to build python package
-        default: >-
-          python -m
-          build
-          --wheel
-          --outdir dist/
 
 jobs:
   ci:
@@ -28,6 +19,5 @@ jobs:
     if: contains('["dwoz", "twangboy", "dmurhpy18"]', github.actor)
     with:
       kind: "${{ inputs.kind }}"
-      package_command: "${{ inputs.package_command }}"
     secrets:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
