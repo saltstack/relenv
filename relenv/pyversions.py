@@ -24,7 +24,7 @@ import sys as _sys
 import time
 from typing import TYPE_CHECKING, Any
 
-from relenv.common import Version, check_url, download_url, fetch_url_content
+from relenv.common import Version, check_url, download_url, fetch_url, fetch_url_content
 
 if TYPE_CHECKING:
     import argparse
@@ -47,6 +47,23 @@ KEYSERVERS = [
     "keys.openpgp.org",
     "pgp.mit.edu",
 ]
+
+# Python release-manager public keys, per
+# https://www.python.org/downloads/metadata/pgp/.  Keyservers have been
+# unreliable for newer keys, so we import these directly from their
+# canonical homes before attempting signature verification.
+RELEASE_MANAGER_KEY_URLS = (
+    # Thomas Wouters (3.12, 3.13)
+    "https://github.com/Yhg1s.gpg",
+    # Pablo Galindo Salgado (3.10, 3.11)
+    "https://keybase.io/pablogsal/pgp_keys.asc",
+    # Steve Dower (Windows binaries)
+    "https://keybase.io/stevedower/pgp_keys.asc",
+    # Łukasz Langa (3.8, 3.9)
+    "https://keybase.io/ambv/pgp_keys.asc",
+    # Ned Deily (3.6, 3.7 source; macOS binaries)
+    "https://keybase.io/nad/pgp_keys.asc",
+)
 
 ARCHIVE = "https://www.python.org/ftp/python/{version}/Python-{version}.{ext}"
 
@@ -76,6 +93,31 @@ def _receive_key(keyid: str, server: str) -> bool:
     if proc.returncode == 0:
         return True
     return False
+
+
+def import_release_manager_keys() -> None:
+    """Import Python release manager public keys from their canonical homes.
+
+    Keyservers regularly fail to serve newly-issued release manager keys, so
+    we pull each key listed at python.org/downloads/metadata/pgp/ directly
+    from the URL the release managers themselves publish.
+    """
+    import io
+
+    for url in RELEASE_MANAGER_KEY_URLS:
+        buf = io.BytesIO()
+        try:
+            fetch_url(url, buf)
+        except Exception as exc:
+            print(f"Could not fetch release manager key from {url}: {exc}")
+            continue
+        proc = subprocess.run(
+            ["gpg", "--batch", "--import"],
+            input=buf.getvalue(),
+            capture_output=True,
+        )
+        if proc.returncode != 0:
+            print(f"gpg --import failed for {url}: {proc.stderr.decode().strip()}")
 
 
 def _get_keyid(proc: subprocess.CompletedProcess[bytes]) -> str | None:
@@ -1013,6 +1055,8 @@ def create_pyversions(path: pathlib.Path) -> None:
     versions = detect_python_versions()
     cwd = os.getcwd()
 
+    import_release_manager_keys()
+
     if path.exists():
         all_data = json.loads(path.read_text())
         # Handle both old format (flat dict) and new format (nested)
@@ -1053,7 +1097,7 @@ def create_pyversions(path: pathlib.Path) -> None:
             print(f"Version {version} has digest {digest(download_path)}")
             pydata[str(version)] = digest(download_path)
         else:
-            raise Exception("Signature failed to verify: {url}")
+            raise Exception(f"Signature failed to verify: {url}")
 
         # Write in new structured format
         all_data = {"python": pydata, "dependencies": dependencies}
