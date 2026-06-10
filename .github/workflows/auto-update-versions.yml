@@ -74,3 +74,7 @@ jobs:
           base: "main"
           delete-branch: true
           labels: "automated-update"
+          add-paths: |
+            relenv/python-versions.json
+            relenv/common.py
+            CHANGELOG.md
