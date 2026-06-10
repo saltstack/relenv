@@ -406,10 +406,41 @@ def detect_libxcrypt_versions() -> list[str]:
     return sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
+KRB5_HOSTS = (
+    "https://kerberos.org/dist/krb5/",
+    "https://web.mit.edu/kerberos/dist/krb5/",
+)
+
+
+def _fetch_krb5_index(suffix: str = "") -> str:
+    """Fetch a krb5 distribution directory, falling through to the MIT mirror."""
+    last_exc: Exception | None = None
+    for base in KRB5_HOSTS:
+        try:
+            return fetch_url_content(f"{base}{suffix}")
+        except Exception as exc:
+            last_exc = exc
+            print(f"Could not fetch {base}{suffix}: {exc}; trying next mirror")
+    assert last_exc is not None
+    raise last_exc
+
+
+def _download_krb5_tarball(suffix: str, dest: str) -> str:
+    """Download a krb5 tarball, falling through to the MIT mirror."""
+    last_exc: Exception | None = None
+    for base in KRB5_HOSTS:
+        try:
+            return download_url(f"{base}{suffix}", dest)
+        except Exception as exc:
+            last_exc = exc
+            print(f"Could not download {base}{suffix}: {exc}; trying next mirror")
+    assert last_exc is not None
+    raise last_exc
+
+
 def detect_krb5_versions() -> list[str]:
-    """Detect available krb5 versions from kerberos.org."""
-    url = "https://kerberos.org/dist/krb5/"
-    content = fetch_url_content(url)
+    """Detect available krb5 versions from kerberos.org (MIT mirror as fallback)."""
+    content = _fetch_krb5_index()
     # krb5 versions are like 1.22/
     pattern = r"(\d+\.\d+)/"
     matches = re.findall(pattern, content)
@@ -419,8 +450,7 @@ def detect_krb5_versions() -> list[str]:
 
     # Check the latest major for micro versions
     latest_major = majors[0]
-    url = f"https://kerberos.org/dist/krb5/{latest_major}/"
-    content = fetch_url_content(url)
+    content = _fetch_krb5_index(f"{latest_major}/")
     pattern = r"krb5-(\d+\.\d+(\.\d+)?)\.tar\.gz"
     matches = re.findall(pattern, content)
     versions = [m[0] for m in matches]
@@ -859,10 +889,10 @@ def update_dependency_versions(path: pathlib.Path, deps_to_update: list[str] | N
                 dependencies["krb5"] = {}
             if latest not in dependencies["krb5"]:
                 major_minor = ".".join(latest.split(".")[:2])
-                url = f"https://kerberos.org/dist/krb5/{major_minor}/krb5-{latest}.tar.gz"
-                print(f"Downloading {url}...")
+                tarball_suffix = f"{major_minor}/krb5-{latest}.tar.gz"
+                print(f"Downloading {KRB5_HOSTS[0]}{tarball_suffix}...")
                 try:
-                    download_path = download_url(url, cwd)
+                    download_path = _download_krb5_tarball(tarball_suffix, cwd)
                     checksum = sha256_digest(download_path)
                     print(f"SHA-256: {checksum}")
                     dependencies["krb5"][latest] = {
