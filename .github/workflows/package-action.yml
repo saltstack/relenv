@@ -7,17 +7,7 @@ on:
         required: false
         type: string
         default: dev
-      cmd:
-        required: false
-        type: string
-        description: Command used to build python package
-        default: >-
-          python -m
-          build
-          -C--global-option=egg_info
-          -C--global-option=--tag-build=dev$(git rev-parse --short HEAD)
-          --wheel
-          --outdir dist/
+        description: "'release' produces a clean PEP 440 version; anything else tags the build with +dev<sha>."
     outputs:
       version:
         value: "${{ jobs.build.outputs.version }}"
@@ -67,11 +57,18 @@ jobs:
         pkginfo
         --user
 
-    - name: Echo Build Wheel Command
-      run: echo "${{ inputs.cmd }}"
+    - name: Build Release Wheel
+      if: inputs.kind == 'release'
+      run: python -m build --wheel --outdir dist/
 
-    - name: Build Wheel
-      run: "${{ inputs.cmd }}"
+    - name: Build Dev Wheel
+      if: inputs.kind != 'release'
+      run: >-
+        python -m build
+        -C--global-option=egg_info
+        -C--global-option=--tag-build=+dev$(git rev-parse --short HEAD)
+        --wheel
+        --outdir dist/
 
     - name: Python Build Artifact
       uses: actions/upload-artifact@v4

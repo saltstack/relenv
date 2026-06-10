@@ -15,17 +15,6 @@ on:
         required: false
         type: string
         default: dev
-      package_command:
-        required: false
-        type: string
-        description: Command used to build python package
-        default: >-
-          python -m
-          build
-          -C--global-option=egg_info
-          -C--global-option=--tag-build=+dev$(git rev-parse --short HEAD)
-          --wheel
-          --outdir dist/
     secrets:
       PRIVATE_KEY:
         required: false
@@ -72,7 +61,6 @@ jobs:
       - pre-commit
     with:
       kind: "${{ inputs.kind }}"
-      cmd: "${{ inputs.package_command }}"
 
   build-native:
     name: Python Native Builds
