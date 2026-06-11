@@ -6,19 +6,21 @@ name: Retry Flaky CI
 # between an otherwise-green CI run and a release, re-run the failed
 # jobs once before giving up.
 #
-# Gated on run_attempt == 1 so the retry itself never triggers another
-# retry.
+# Gated on run_attempt <= 2 so we get at most two retries (attempts 2
+# and 3) before giving up.
 
 on:
   workflow_run:
-    workflows: ["Pull Request or Push"]
+    # Catch the three entry points that invoke ci.yml: regular PR/push
+    # CI plus both release pipelines.
+    workflows: ["Pull Request or Push", "Auto-Release", "Build and Release"]
     types: [completed]
 
 jobs:
   retry:
     if: >-
       github.event.workflow_run.conclusion == 'failure' &&
-      github.event.workflow_run.run_attempt == 1
+      github.event.workflow_run.run_attempt <= 2
     runs-on: ubuntu-latest
     steps:
       - name: Generate App Token
@@ -49,11 +51,12 @@ jobs:
           echo "Failed jobs on run ${RUN_ID}:"
           printf '  %s\n' "${failed_names}"
 
-          # Both the Python Native Builds matrix (per-platform compiles +
-          # the upstream-source Download step) and the Verify Builds
-          # matrix are sensitive to transient runner/network conditions.
-          if printf '%s\n' "${failed_names}" | grep -qE '/ (Python Native Builds|Verify Builds) /'; then
-            echo "Flaky-eligible job failed — retrying failed jobs once."
+          # The Python Native Builds matrix (per-platform compiles + the
+          # upstream-source Download step), Verify Builds, and the FIPS
+          # compatibility tests are all sensitive to transient
+          # runner/network conditions.
+          if printf '%s\n' "${failed_names}" | grep -qE '/ (Python Native Builds|Verify Builds|Test Fips Mode) /'; then
+            echo "Flaky-eligible job failed on attempt ${{ github.event.workflow_run.run_attempt }} — retrying failed jobs."
             gh run rerun "${RUN_ID}" --failed
           else
             echo "No flaky-eligible failures detected; not retrying."
