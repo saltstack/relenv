@@ -11,7 +11,9 @@ name: Retry Flaky CI
 
 on:
   workflow_run:
-    workflows: ["Pull Request or Push"]
+    # Catch the three entry points that invoke ci.yml: regular PR/push
+    # CI plus both release pipelines.
+    workflows: ["Pull Request or Push", "Auto-Release", "Build and Release"]
     types: [completed]
 
 jobs:
