@@ -1,0 +1,60 @@
+name: Retry Flaky CI
+
+# Native build jobs and Verify Build tests occasionally fail for
+# transient reasons (upstream source download blips, runner flakiness,
+# macOS keychain hiccups, etc.).  When that's the only thing standing
+# between an otherwise-green CI run and a release, re-run the failed
+# jobs once before giving up.
+#
+# Gated on run_attempt == 1 so the retry itself never triggers another
+# retry.
+
+on:
+  workflow_run:
+    workflows: ["Pull Request or Push"]
+    types: [completed]
+
+jobs:
+  retry:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Re-run failed jobs if a flaky build/verify job failed
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+
+          failed_names=$(gh api \
+            "repos/${GH_REPO}/actions/runs/${RUN_ID}/jobs" \
+            --paginate \
+            --jq '.jobs[] | select(.conclusion == "failure") | .name')
+
+          if [ -z "${failed_names}" ]; then
+            echo "No failed jobs reported on run ${RUN_ID}; nothing to do."
+            exit 0
+          fi
+
+          echo "Failed jobs on run ${RUN_ID}:"
+          printf '  %s\n' "${failed_names}"
+
+          # Both the Python Native Builds matrix (per-platform compiles +
+          # the upstream-source Download step) and the Verify Builds
+          # matrix are sensitive to transient runner/network conditions.
+          if printf '%s\n' "${failed_names}" | grep -qE '/ (Python Native Builds|Verify Builds) /'; then
+            echo "Flaky-eligible job failed — retrying failed jobs once."
+            gh run rerun "${RUN_ID}" --failed
+          else
+            echo "No flaky-eligible failures detected; not retrying."
+          fi
