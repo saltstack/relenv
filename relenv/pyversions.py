@@ -1418,6 +1418,7 @@ def main(args: argparse.Namespace) -> None:
 
     if args.update:
         python_versions(create=True)
+        sys.exit(0)
     if args.list:
         for version in python_versions():
             print(version)
