@@ -109,6 +109,31 @@ Write-Host "Confirming Presence of Visual Studio Build Tools: " -NoNewline
 # We're only gonna look for msbuild.exe
 if ( Test-Path -Path $MSBUILD_BIN ) {
     Write-Result "Success" -ForegroundColor Green
+
+    # MSBuild is present, but Python's PCbuild for 3.10/3.11 (and any
+    # other component pinned to the VS2015 toolset) requires the v140
+    # build tools.  Current windows-latest runners ship VS without v140
+    # by default, so use vs_installer.exe to add the component to
+    # whatever VS install we just located.  --add is idempotent.
+    Write-Host "Ensuring v140 toolset is installed: " -NoNewline
+    $VS_INSTALLER = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+    if ( -not (Test-Path -Path $VS_INSTALLER) ) {
+        Write-Result "vs_installer.exe not found at $VS_INSTALLER" -ForegroundColor Red
+        exit 1
+    }
+    $proc = Start-Process `
+        -FilePath $VS_INSTALLER `
+        -ArgumentList "modify", `
+                      "--installPath", "`"$VS_INST_LOC`"", `
+                      "--add", "Microsoft.VisualStudio.Component.VC.140", `
+                      "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
+                      "--quiet", "--norestart", "--wait" `
+        -PassThru -Wait
+    if ( $proc.ExitCode -ne 0 ) {
+        Write-Result "Failed (ExitCode=$($proc.ExitCode))" -ForegroundColor Red
+        exit 1
+    }
+    Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Missing" -ForegroundColor Yellow
 
