@@ -130,17 +130,15 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
             Write-Host "  VS bootstrapper not found under Microsoft Visual Studio\Installer"
             exit 1
         }
-        $installer_args = @(
-            "modify",
-            "--installPath", $VS_INST_LOC,
-            "--add", "Microsoft.VisualStudio.Component.VC.140",
-            "--add", "Microsoft.VisualStudio.Component.Windows81SDK",
-            "--quiet", "--norestart", "--wait", "--nocache"
-        )
-        Write-Host "  Running: $VS_BOOTSTRAPPER $($installer_args -join ' ')"
+        # Pass the entire command line as a single string so the embedded
+        # quotes around --installPath survive Start-Process intact.  Passing
+        # an array would let Start-Process drop the quotes and the
+        # bootstrapper would parse "C:\Program" as the installPath value.
+        $installer_cmdline = 'modify --installPath "{0}" --add Microsoft.VisualStudio.Component.VC.140 --add Microsoft.VisualStudio.Component.Windows81SDK --quiet --norestart --wait --nocache' -f $VS_INST_LOC
+        Write-Host "  Running: $VS_BOOTSTRAPPER $installer_cmdline"
         $proc = Start-Process `
             -FilePath $VS_BOOTSTRAPPER `
-            -ArgumentList $installer_args `
+            -ArgumentList $installer_cmdline `
             -PassThru -Wait -NoNewWindow
         Write-Host "  bootstrapper exit code: $($proc.ExitCode)"
         Write-Host "Verifying v140 toolset: " -NoNewline
