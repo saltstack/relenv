@@ -109,6 +109,48 @@ Write-Host "Confirming Presence of Visual Studio Build Tools: " -NoNewline
 # We're only gonna look for msbuild.exe
 if ( Test-Path -Path $MSBUILD_BIN ) {
     Write-Result "Success" -ForegroundColor Green
+
+    # MSBuild is present, but Python's PCbuild for 3.10/3.11 pins
+    # PlatformToolset to v140.  Current windows-latest runners ship VS
+    # without v140 by default, so use the VS bootstrapper to add the
+    # component to the existing install.  We don't trust the installer's
+    # exit code (it returns non-zero in a few benign cases) — instead
+    # verify the v140 platform-toolset targets file exists afterwards.
+    $V140_TARGETS = "${env:ProgramFiles(x86)}\MSBuild\Microsoft.Cpp\v4.0\V140"
+    Write-Host "Ensuring v140 toolset is installed: " -NoNewline
+    if ( Test-Path -Path $V140_TARGETS ) {
+        Write-Result "Already present" -ForegroundColor Green
+    } else {
+        Write-Host ""
+        $VS_BOOTSTRAPPER = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+        if ( -not (Test-Path -Path $VS_BOOTSTRAPPER) ) {
+            $VS_BOOTSTRAPPER = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+        }
+        if ( -not (Test-Path -Path $VS_BOOTSTRAPPER) ) {
+            Write-Host "  VS bootstrapper not found under Microsoft Visual Studio\Installer"
+            exit 1
+        }
+        $installer_args = @(
+            "modify",
+            "--installPath", $VS_INST_LOC,
+            "--add", "Microsoft.VisualStudio.Component.VC.140",
+            "--add", "Microsoft.VisualStudio.Component.Windows81SDK",
+            "--quiet", "--norestart", "--wait", "--nocache"
+        )
+        Write-Host "  Running: $VS_BOOTSTRAPPER $($installer_args -join ' ')"
+        $proc = Start-Process `
+            -FilePath $VS_BOOTSTRAPPER `
+            -ArgumentList $installer_args `
+            -PassThru -Wait -NoNewWindow
+        Write-Host "  bootstrapper exit code: $($proc.ExitCode)"
+        Write-Host "Verifying v140 toolset: " -NoNewline
+        if ( Test-Path -Path $V140_TARGETS ) {
+            Write-Result "Success" -ForegroundColor Green
+        } else {
+            Write-Result "Failed (v140 still not registered with MSBuild)" -ForegroundColor Red
+            exit 1
+        }
+    }
 } else {
     Write-Result "Missing" -ForegroundColor Yellow
 
