@@ -134,7 +134,11 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
         # quotes around --installPath survive Start-Process intact.  Passing
         # an array would let Start-Process drop the quotes and the
         # bootstrapper would parse "C:\Program" as the installPath value.
-        $installer_cmdline = 'modify --installPath "{0}" --add Microsoft.VisualStudio.Component.VC.140 --add Microsoft.VisualStudio.Component.Windows81SDK --quiet --norestart --wait --nocache' -f $VS_INST_LOC
+        # `setup.exe modify` does NOT accept --wait (verified against
+        # Visual Studio Installer 4.x — `Option 'wait' is unknown`).
+        # --quiet already runs synchronously, and Start-Process -Wait
+        # below ensures we don't return until the bootstrapper exits.
+        $installer_cmdline = 'modify --installPath "{0}" --add Microsoft.VisualStudio.Component.VC.140 --add Microsoft.VisualStudio.Component.Windows81SDK --quiet --norestart --nocache' -f $VS_INST_LOC
         Write-Host "  Running: $VS_BOOTSTRAPPER $installer_cmdline"
         $proc = Start-Process `
             -FilePath $VS_BOOTSTRAPPER `
