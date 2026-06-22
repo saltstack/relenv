@@ -138,7 +138,12 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
         # Visual Studio Installer 4.x — `Option 'wait' is unknown`).
         # --quiet already runs synchronously, and Start-Process -Wait
         # below ensures we don't return until the bootstrapper exits.
-        $installer_cmdline = 'modify --installPath "{0}" --add Microsoft.VisualStudio.Component.VC.140 --add Microsoft.VisualStudio.Component.Windows81SDK --quiet --norestart --nocache' -f $VS_INST_LOC
+        # Pair v140 with the Windows 10 SDK 19041 (the latest SDK known
+        # to compile cleanly against the v140 toolset and Python 3.10/3.11
+        # PCbuild headers; newer SDKs put SSE intrinsics in <wchar.h>
+        # that v140 chokes on with C2440).  Windows81SDK is not present
+        # in the VS 2022+/VS 18 product graph and silently no-op'd here.
+        $installer_cmdline = 'modify --installPath "{0}" --add Microsoft.VisualStudio.Component.VC.140 --add Microsoft.VisualStudio.Component.Windows10SDK.19041 --quiet --norestart --nocache' -f $VS_INST_LOC
         Write-Host "  Running: $VS_BOOTSTRAPPER $installer_cmdline"
         $proc = Start-Process `
             -FilePath $VS_BOOTSTRAPPER `
