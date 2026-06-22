@@ -317,6 +317,11 @@ jobs:
       - name: Build Python with Relenv
         env:
           RELENV_NATIVE_PY_VERSION: 3.10.15
+          # Pin MSBuild to the older Windows 10 SDK we just installed
+          # alongside v140; the newer 26100 SDK on windows-latest has
+          # SSE intrinsics in <wchar.h> that break C compiles under the
+          # v140 toolset Python 3.10/3.11 PCbuild targets.
+          WindowsTargetPlatformVersion: "10.0.19041.0"
         run: |
           python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ steps.python-version.outputs.version }}
 
