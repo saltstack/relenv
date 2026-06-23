@@ -38,8 +38,11 @@ def test_path_import_success(tmp_path: pathlib.Path) -> None:
 def test_debug_print(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     monkeypatch.setenv("RELENV_DEBUG", "1")
     relenv.runtime.debug("hello")
-    out = capsys.readouterr().out
-    assert "hello" in out
+    captured = capsys.readouterr()
+    # debug() must write to stderr so it doesn't pollute stdout for
+    # tools that parse subprocess stdout as JSON (maturin, pyo3, etc).
+    assert "hello" in captured.err
+    assert captured.out == ""
     monkeypatch.delenv("RELENV_DEBUG", raising=False)
 
 
@@ -96,7 +99,10 @@ def test_set_env_if_not_set(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     monkeypatch.setenv(env_name, "other")
     relenv.runtime.set_env_if_not_set(env_name, "value")
     captured = capsys.readouterr()
-    assert "Warning:" in captured.out
+    # Warning is routed to stderr for the same reason as debug() — keep
+    # stdout clean for JSON-emitting subprocess consumers.
+    assert "Warning:" in captured.err
+    assert captured.out == ""
 
 
 def test_get_config_var_wrapper_with_env(monkeypatch: pytest.MonkeyPatch) -> None:
