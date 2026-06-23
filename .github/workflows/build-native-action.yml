@@ -263,7 +263,14 @@ jobs:
 
   build_windows:
     name: "Python Windows"
-    runs-on: windows-latest
+    # Pinned to windows-2022 deliberately.  windows-latest has rolled to
+    # VS 18 / VS 2026, whose product graph only exposes Win11 SDK 26100
+    # (Microsoft.VisualStudio.Component.Windows10SDK.19041 etc. are
+    # silently no-op'd by the VS Installer there).  Win10 SDK 26100 uses
+    # SSE intrinsics in <wchar.h> that v140 (which Python 3.10/3.11
+    # PCbuild pin to) chokes on, breaking the build.  windows-2022 still
+    # ships VS 2022 plus multiple older SDKs that pair cleanly with v140.
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:

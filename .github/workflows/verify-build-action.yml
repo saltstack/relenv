@@ -212,7 +212,9 @@ jobs:
 
   test_windows:
     name: "Verify Windows"
-    runs-on: windows-latest
+    # Match the build runner (windows-2022) — see build-native-action.yml
+    # for why we don't use windows-latest.
+    runs-on: windows-2022
 
     strategy:
       fail-fast: false
