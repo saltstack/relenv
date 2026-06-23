@@ -139,12 +139,18 @@ def debug(string: str) -> None:
     """
     Prints the provided message if RELENV_DEBUG is truthy in the environment.
 
+    Writes to stderr so this output does not contaminate stdout when relenv
+    Python is invoked as a helper that emits structured data (JSON/TOML)
+    on stdout — tools like ``maturin pep517 write-dist-info`` and several
+    pyo3 / rust-openssl-sys build scripts parse the first line of stdout
+    and fail with "expected value at line 1 column 1" otherwise.
+
     :param string: The message to print
     :type string: str
     """
     if os.environ.get("RELENV_DEBUG"):
-        print(string)
-        sys.stdout.flush()
+        print(string, file=sys.stderr)
+        sys.stderr.flush()
 
 
 def relenv_root() -> pathlib.Path:
@@ -647,7 +653,12 @@ def set_env_if_not_set(name: str, value: str) -> None:
     user.
     """
     if name in os.environ and os.environ[name] != value:
-        print(f"Warning: {name} environment not set to relenv's root!\nexpected: {value}\ncurrent: {os.environ[name]}")
+        # Stderr keeps this warning out of stdout, which several build
+        # tools parse as structured data — see debug() above.
+        print(
+            f"Warning: {name} environment not set to relenv's root!\nexpected: {value}\ncurrent: {os.environ[name]}",
+            file=sys.stderr,
+        )
     else:
         debug(f"Relenv set {name}")
         os.environ[name] = value
