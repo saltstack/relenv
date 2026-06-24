@@ -1,3 +1,17 @@
+0.22.15
+=======
+
+* Patch bundled Lib/ssl.py on Windows Python 3.10 / 3.11 to work around
+  cpython#104135.  The pre-fix _load_windows_store_certs concatenated
+  every Windows root-store certificate and handed the blob to OpenSSL,
+  which (3.5.x) rejects the lot on a single ASN.1-malformed cert with
+  [ASN1: NOT_ENOUGH_DATA] — breaking pip-over-HTTPS and any other TLS
+  use inside an onedir.  Upstream merged an iterate-and-skip rewrite
+  for Python 3.12+ but never backported it; relenv now applies the same
+  rewrite at build time.  Self-disables on Python 3.12+ and on
+  non-Windows.
+
+
 0.22.14
 =======
 
