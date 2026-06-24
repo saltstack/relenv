@@ -43,6 +43,79 @@ log = logging.getLogger(__name__)
 
 ARCHES = arches[WIN32]
 
+# cpython#104135 work-around.  Python 3.10 / 3.11 stdlib's
+# ssl._load_windows_store_certs concatenates every Windows root-store
+# certificate and hands the blob to OpenSSL's load_verify_locations.
+# OpenSSL 3.5.x rejects the whole blob on a single ASN.1-malformed cert
+# with `[ASN1: NOT_ENOUGH_DATA]`, which kills any TLS connection inside
+# the onedir (pip install, salt-call to a master, etc).  Upstream
+# merged an iterate-and-skip rewrite onto the 3.12 branch but never
+# backported it to 3.10 or 3.11.  See
+# https://github.com/python/cpython/issues/104135.
+#
+# Append the iterate-and-skip replacement to the bundled stdlib's
+# Lib/ssl.py during the build.  The patch self-disables on Python
+# 3.12+ and on non-Windows, so writing it unconditionally here is safe;
+# we only ever invoke this on the Windows builder anyway.
+#
+# Marker matches Salt's cicd/windows-ssl-104135-patch.py so an ssl.py
+# patched by either side is left alone by the other during the
+# transition window.  Once a relenv release carrying this patch is
+# pinned by Salt, Salt drops its workaround chain (the patch script,
+# the three workflow steps, the salt/__init__.py monkey-patch, and the
+# salt/ext/tornado/netutil.py certifi pin).
+_SSL_PATCH_MARKER = "# >>> cpython#104135 patch (windows-ssl-104135-patch.py) <<<"
+_SSL_PATCH_BODY = f"""
+
+{_SSL_PATCH_MARKER}
+# Applied at relenv build time; see relenv/build/windows.py.
+import sys as _patch_sys
+
+if _patch_sys.platform == "win32" and _patch_sys.version_info < (3, 12):
+
+    def _salt_safe_load_windows_store_certs(
+        self, storename, purpose, _SSLError=SSLError
+    ):
+        try:
+            from _ssl import enum_certificates
+        except ImportError:
+            return
+        try:
+            for cert, encoding, trust in enum_certificates(storename):
+                if encoding != "x509_asn":
+                    continue
+                if trust is True or purpose.oid in trust:
+                    try:
+                        self.load_verify_locations(cadata=cert)
+                    except _SSLError:
+                        pass
+        except PermissionError:
+            pass
+
+    SSLContext._load_windows_store_certs = _salt_safe_load_windows_store_certs
+"""
+
+
+def patch_ssl_for_cpython_104135(source_dir: pathlib.Path) -> None:
+    """
+    Apply the cpython#104135 iterate-and-skip work-around to ``Lib/ssl.py``.
+
+    Idempotent: skips if the marker is already present.  Self-disabling
+    on Python 3.12+ and non-Windows; safe to call unconditionally from
+    the Windows build path.
+    """
+    ssl_py = source_dir / "Lib" / "ssl.py"
+    if not ssl_py.exists():
+        log.warning("Lib/ssl.py not found at %s; cpython#104135 patch skipped", ssl_py)
+        return
+    contents = ssl_py.read_text(encoding="utf-8")
+    if _SSL_PATCH_MARKER in contents:
+        log.info("Lib/ssl.py already carries cpython#104135 patch; skipping")
+        return
+    log.info("Appending cpython#104135 work-around to Lib/ssl.py")
+    with open(ssl_py, "a", encoding="utf-8") as fh:
+        fh.write(_SSL_PATCH_BODY)
+
 EnvMapping = MutableMapping[str, str]
 
 if sys.platform == WIN32:
@@ -908,6 +981,8 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     if batch_file.exists():
         with open(str(batch_file), "w") as f:
             f.write("@echo off\necho skipping fetch\n")
+
+    patch_ssl_for_cpython_104135(dirs.source)
 
     arch_to_plat = {"amd64": "x64", "x86": "win32", "arm64": "arm64"}
     arch = env["RELENV_HOST_ARCH"]
