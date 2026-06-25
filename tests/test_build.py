@@ -532,3 +532,61 @@ def test_copy_pyconfig_h_missing_legacy_raises(tmp_path: pathlib.Path) -> None:
     with pytest.raises(RuntimeError, match="Expected pyconfig.h at"):
         copy_pyconfig_h(source, build_dir, dest_dir)
     assert not (dest_dir / "pyconfig.h").exists()
+
+
+def test_patch_ssl_for_cpython_104135_appends_when_marker_missing(tmp_path: pathlib.Path) -> None:
+    """The helper writes the patch body into Lib/ssl.py and adds the marker."""
+    from relenv.build.windows import _SSL_PATCH_MARKER, patch_ssl_for_cpython_104135
+
+    (tmp_path / "Lib").mkdir()
+    ssl_py = tmp_path / "Lib" / "ssl.py"
+    original = '"""stub ssl module."""\n\nclass SSLContext: pass\nclass SSLError(Exception): pass\n'
+    ssl_py.write_text(original, encoding="utf-8")
+
+    patch_ssl_for_cpython_104135(tmp_path)
+
+    patched = ssl_py.read_text(encoding="utf-8")
+    assert patched.startswith(original)
+    assert _SSL_PATCH_MARKER in patched
+    assert "_load_windows_store_certs" in patched
+
+
+def test_patch_ssl_for_cpython_104135_is_idempotent(tmp_path: pathlib.Path) -> None:
+    """Applying twice leaves exactly one marker (no double append)."""
+    from relenv.build.windows import _SSL_PATCH_MARKER, patch_ssl_for_cpython_104135
+
+    (tmp_path / "Lib").mkdir()
+    ssl_py = tmp_path / "Lib" / "ssl.py"
+    ssl_py.write_text("# stub\n", encoding="utf-8")
+
+    patch_ssl_for_cpython_104135(tmp_path)
+    after_first = ssl_py.read_text(encoding="utf-8")
+    patch_ssl_for_cpython_104135(tmp_path)
+    after_second = ssl_py.read_text(encoding="utf-8")
+
+    assert after_first == after_second
+    assert after_second.count(_SSL_PATCH_MARKER) == 1
+
+
+def test_patch_ssl_for_cpython_104135_missing_file_is_noop(
+    tmp_path: pathlib.Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A source tree without Lib/ssl.py logs a warning and does not raise."""
+    from relenv.build.windows import patch_ssl_for_cpython_104135
+
+    with caplog.at_level(logging.WARNING, logger="relenv.build.windows"):
+        patch_ssl_for_cpython_104135(tmp_path)
+
+    assert any("Lib/ssl.py not found" in r.message for r in caplog.records)
+    assert not (tmp_path / "Lib").exists()
+
+
+def test_patch_ssl_for_cpython_104135_body_is_valid_python() -> None:
+    """The appended block must compile cleanly as a Python module."""
+    from relenv.build.windows import _SSL_PATCH_BODY
+
+    # ssl.py defines SSLError / SSLContext at module scope; supply stubs so
+    # the patch body resolves the same names when concatenated.
+    preamble = "class SSLError(Exception): pass\nclass SSLContext: pass\n"
+    compile(preamble + _SSL_PATCH_BODY, "<patched_ssl>", "exec")
