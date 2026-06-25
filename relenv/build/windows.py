@@ -116,6 +116,7 @@ def patch_ssl_for_cpython_104135(source_dir: pathlib.Path) -> None:
     with open(ssl_py, "a", encoding="utf-8") as fh:
         fh.write(_SSL_PATCH_BODY)
 
+
 EnvMapping = MutableMapping[str, str]
 
 if sys.platform == WIN32:
