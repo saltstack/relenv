@@ -316,6 +316,56 @@ def test_format_shebang_newline() -> None:
     assert format_shebang("python3", SHEBANG_TPL_LINUX).endswith("\n")
 
 
+@mark_skipif(sys.platform == "win32", reason="POSIX shell launcher; no /bin/sh on Windows")
+def test_macos_shebang_preserves_caller_cwd(tmp_path: pathlib.Path) -> None:
+    """
+    Regression for https://github.com/saltstack/relenv/issues/293.
+
+    The pre-fix SHEBANG_TPL_MACOS resolved $0 through a cd / readlink loop
+    that ran in the script's own shell, so by the time it `exec`'d Python
+    the caller's working directory had been replaced with the install
+    directory.  The new template confines those cd's to a subshell.
+
+    Exercised here on plain /bin/sh — Python's launcher polyglot is
+    POSIX-portable, so a Linux runner reproduces the bug the same way a
+    macOS one does.
+    """
+    install_dir = tmp_path / "install"
+    shim_dir = tmp_path / "shim"
+    caller_dir = tmp_path / "caller"
+    install_dir.mkdir()
+    shim_dir.mkdir()
+    caller_dir.mkdir()
+
+    # Real Python next to the launcher, reachable through the shebang's
+    # "$(dirname "$REALPATH")<interp>" suffix — pass /python so it resolves
+    # to install_dir/python.
+    (install_dir / "python").symlink_to(sys.executable)
+
+    body = "import os\nprint(os.getcwd())\n"
+    launcher = install_dir / "cli"
+    launcher.write_text(format_shebang("/python", SHEBANG_TPL_MACOS) + body)
+    launcher.chmod(0o755)
+
+    # The Salt-on-macOS deployment shape: /usr/local/bin/<cmd> is a symlink
+    # to /opt/<app>/bin/<cmd>.  Reproduce that here.
+    shim = shim_dir / "cli"
+    shim.symlink_to(launcher)
+
+    result = subprocess.run(
+        [str(shim)],
+        cwd=str(caller_dir),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, f"stderr={result.stderr!r}"
+    reported_cwd = pathlib.Path(result.stdout.strip()).resolve()
+    assert reported_cwd == caller_dir.resolve(), (
+        f"launcher leaked cwd: got {reported_cwd}, expected {caller_dir.resolve()}"
+    )
+
+
 def test_relative_interpreter_default_location() -> None:
     assert relative_interpreter("/tmp/relenv", "/tmp/relenv/bin", "/tmp/relenv/bin/python3") == pathlib.Path(
         "..", "bin", "python3"
