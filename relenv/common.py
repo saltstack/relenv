@@ -156,18 +156,26 @@ SHEBANG_TPL_MACOS = textwrap.dedent(
     """\
 #!/bin/sh
 "true" ''''
-TARGET_FILE=$0
-cd "$(dirname "$TARGET_FILE")" || return
-TARGET_FILE=$(basename "$TARGET_FILE")
-# Iterate down a (possible) chain of symlinks
-while [ -L "$TARGET_FILE" ]
-do
-    TARGET_FILE=$(readlink "$TARGET_FILE")
-    cd "$(dirname "$TARGET_FILE")" || return
+# Resolve $0 to its physical path inside a subshell so the cd's required to
+# walk symlinks on macOS (which lacks `readlink -f` in /usr/bin pre-Big Sur)
+# don't leak out and clobber the caller's working directory.  Without the
+# subshell, every entry point produced by relenv on macOS started Python
+# with cwd set to the install dir, breaking anything that resolved relative
+# paths against os.getcwd() (Saltfile auto-discovery, --config-dir=./...,
+# config_dir: ./..., etc).  See
+# https://github.com/saltstack/relenv/issues/293.
+REALPATH=$(
+    TARGET_FILE=$0
+    cd "$(dirname "$TARGET_FILE")" || exit
     TARGET_FILE=$(basename "$TARGET_FILE")
-done
-PHYS_DIR=$(pwd -P)
-REALPATH=$PHYS_DIR/$TARGET_FILE
+    while [ -L "$TARGET_FILE" ]
+    do
+        TARGET_FILE=$(readlink "$TARGET_FILE")
+        cd "$(dirname "$TARGET_FILE")" || exit
+        TARGET_FILE=$(basename "$TARGET_FILE")
+    done
+    echo "$(pwd -P)/$TARGET_FILE"
+)
 # shellcheck disable=SC2093
 "exec" "$(dirname "$REALPATH")"{} "$REALPATH" "$@"
 ' '''
