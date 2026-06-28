@@ -1,3 +1,11 @@
+0.22.16
+=======
+
+* Update expat to 2.8.2
+* Update libffi to 3.6.0
+* Update sqlite to 3.53.3.0
+
+
 0.22.15
 =======
 
