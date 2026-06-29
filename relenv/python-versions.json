@@ -373,8 +373,7 @@
     "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
     "sha256": "31ff1fe32deaebfbb388727f32677bb254bf2a41382c51464c0b1837c9ee9828",
     "platforms": [
-     "linux",
-     "win32"
+     "linux"
     ]
    }
   },
