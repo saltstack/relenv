@@ -322,6 +322,16 @@
      "darwin",
      "win32"
     ]
+   },
+   "3.53.3.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "c917d7db16648ec95f714974ace5e5dcf46b7dc70e26600a0a102a3141125db0",
+    "sqliteversion": "3530300",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   },
   "xz": {
@@ -357,6 +367,13 @@
     "sha256": "eb51312acdeed06451c53ec29a40f9e9141e01e1e777bd91c154ca14ddd5e055",
     "platforms": [
      "win32"
+    ]
+   },
+   "3.6.0": {
+    "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+    "sha256": "31ff1fe32deaebfbb388727f32677bb254bf2a41382c51464c0b1837c9ee9828",
+    "platforms": [
+     "linux"
     ]
    }
   },
@@ -535,6 +552,15 @@
    "2.8.1": {
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_1/expat-{version}.tar.xz",
     "sha256": "10b195ee78160a908388180a8fe3603d4e9a12f4755fbf5f3816b23a9d750da0",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "2.8.2": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_2/expat-{version}.tar.xz",
+    "sha256": "3ad89b8588e6644bd4e49981480d48b21289eebbcd4f0a1a4afb1c29f99b6ab4",
     "platforms": [
      "linux",
      "darwin",

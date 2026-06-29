@@ -723,7 +723,13 @@ def update_dependency_versions(path: pathlib.Path, deps_to_update: list[str] | N
                     dependencies["libffi"][latest] = {
                         "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
                         "sha256": checksum,
-                        "platforms": ["linux", "win32"],
+                        # libffi/libffi source releases ship configure/Makefile
+                        # only; Windows libffi (ffi.h, libffi-8.lib, libffi-8.dll)
+                        # comes from python/cpython-bin-deps, handled by the
+                        # detect_cpython_bin_deps_versions branch below.
+                        # Don't claim win32 here or get_dependency_version picks
+                        # this entry by version-sort and fails the _ctypes build.
+                        "platforms": ["linux"],
                     }
                     os.remove(download_path)
                 except Exception as e:
