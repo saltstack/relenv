@@ -27,11 +27,21 @@ jobs:
       - name: Download Dependencies
         run: |
           python3 -m relenv build --download-only
-      - name: Cache Dependencies
-        uses: actions/cache@v4
+      # Use an artifact instead of actions/cache: cache writes are scoped
+      # to the workflow's head ref, and Auto-Release fires on
+      # `pull_request: closed` where the source branch has just been
+      # deleted by auto-merge.yml's `--delete-branch`.  With no valid ref
+      # for the cache scope, the runtime token has no writable scopes
+      # and the save fails ("token has no writable scopes").  Artifacts
+      # are scoped to the run_id, not a branch ref, so branch deletion
+      # doesn't affect them.
+      - name: Upload Build Dependencies Artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: python-build-download
           path: ${{ github.workspace }}/download
-          key: ${{ github.run_id }}-dependencies
+          retention-days: 1
+          if-no-files-found: error
 
   build_linux:
     strategy:
@@ -86,11 +96,11 @@ jobs:
           venv/bin/python3 --version
           venv/bin/python3 -c 'import os; print(os.name)'
 
-      - name: Restore Cached Dependencies
-        uses: actions/cache/restore@v4
+      - name: Download Build Dependencies Artifact
+        uses: actions/download-artifact@v4
         with:
+          name: python-build-download
           path: ${{ github.workspace }}/download
-          key: ${{ github.run_id }}-dependencies
 
       - name: List downloads
         run: |
