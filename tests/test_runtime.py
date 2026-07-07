@@ -175,6 +175,54 @@ def test_install_cargo_config_creates_file(tmp_path: pathlib.Path, monkeypatch: 
     assert "x86_64-unknown-linux-gnu" in config_path.read_text()
 
 
+def test_install_cargo_config_toolchain_permission_error(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Regression for
+    https://github.com/saltstack/relenv/issues/252#issuecomment-4478458740.
+
+    ``common().get_toolchain()`` calls ``os.makedirs(DATA_DIR)`` and can raise
+    ``PermissionError`` under a non-root process whose install dir isn't
+    writable.  ``install_cargo_config`` catches the ``PermissionError`` but
+    then checks ``if not toolchain:``.  If the local ``toolchain`` isn't
+    initialized before the ``try:``, the check fires ``UnboundLocalError:
+    local variable 'toolchain' referenced before assignment`` — surfacing as
+    a noisy traceback from ``site.addpackage`` on every interpreter start.
+
+    ``install_cargo_config`` must degrade quietly (log via ``debug`` and
+    return) whether ``get_toolchain`` raises ``PermissionError`` or returns
+    ``None``.
+    """
+    monkeypatch.setattr(relenv.runtime.sys, "platform", "linux")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    class StubDirs:
+        def __init__(self, data: pathlib.Path) -> None:
+            self.data = data
+
+    stub_dirs = StubDirs(data_dir)
+
+    def _raise_permission_error() -> pathlib.Path:
+        raise PermissionError("[Errno 13] Permission denied: '/opt/example/.local'")
+
+    stub_common = SimpleNamespace(
+        DATA_DIR=tmp_path,
+        work_dirs=lambda: stub_dirs,
+        get_triplet=lambda: "x86_64-linux-gnu",
+        get_toolchain=_raise_permission_error,
+    )
+    monkeypatch.setattr(relenv.runtime, "common", lambda: stub_common)
+
+    # Must not raise UnboundLocalError (or anything else).
+    relenv.runtime.install_cargo_config()
+
+    # And must not have written a cargo config, since there's no toolchain
+    # to point it at.
+    assert not (data_dir / "cargo" / "config.toml").exists()
+
+
 def test_build_shebang_value_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(relenv.runtime.sys, "RELENV", pathlib.Path("/rel"), raising=False)
     monkeypatch.setattr(
