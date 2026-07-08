@@ -468,6 +468,17 @@ def test_pip_install_pyzmq(
     if pyzmq_version == "26.2.0" and sys.platform == "win32":
         pytest.xfail("vcredist not found as of 9/9/24")
 
+    if pyzmq_version == "26.2.0" and sys.platform == "linux":
+        # pyzmq 26.2.0's pyproject.toml uses scikit-build-core's
+        # `cmake.targets = ["pyzmq"]` option, which was renamed to
+        # `build.targets` in scikit-build-core 1.0.0 (released 2026-07-06).
+        # pyzmq 26.2.0 leaves scikit-build-core unpinned in build-system.requires,
+        # so pip picks up the newest release and the build errors out with:
+        #   ERROR: Use build.targets instead of cmake.targets for
+        #   scikit-build-core >= 0.10
+        # Fixed upstream in pyzmq 26.4.0 (which uses build.targets).
+        pytest.xfail("pyzmq 26.2.0 incompatible with scikit-build-core >= 1.0")
+
     if pyzmq_version == "26.4.0" and sys.platform == "win32":
         pytest.xfail("Needs troubleshooting 4/12/25")
 
