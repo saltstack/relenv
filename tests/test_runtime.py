@@ -463,6 +463,58 @@ def test_install_wheel_wrapper_processes_record(tmp_path: pathlib.Path, monkeypa
     assert handled and handled[0][0].name == "libdemo.so"
 
 
+def test_install_wheel_wrapper_forwards_new_kwargs(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Pip 26.2 added a `script_executable` parameter to install_wheel; the
+    wrapper must forward it (and anything else pip adds) through untouched
+    instead of rejecting it as an unexpected keyword argument.
+    """
+    wheel_utils = ModuleType("pip._internal.utils.wheel")
+    wheel_utils.parse_wheel = lambda _zf, _name: ("demo.dist-info", {})
+    monkeypatch.setitem(sys.modules, wheel_utils.__name__, wheel_utils)
+
+    class DummyZip:
+        def __init__(self, path: pathlib.Path) -> None:
+            self.path = path
+
+        def __enter__(self) -> DummyZip:
+            return self
+
+        def __exit__(self, *exc: object) -> bool:
+            return False
+
+    monkeypatch.setattr("zipfile.ZipFile", DummyZip)
+
+    install_module = ModuleType("pip._internal.operations.install.wheel")
+    received: dict[str, object] = {}
+
+    def original_install(
+        _name: str, _wheel_path: object, _scheme: object, _req_description: str, **kwargs: object
+    ) -> str:
+        received.update(kwargs)
+        return "original"
+
+    install_module.install_wheel = original_install  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, install_module.__name__, install_module)
+
+    wrapped_module = relenv.runtime.wrap_pip_install_wheel(install_module.__name__)
+
+    scheme = SimpleNamespace(platlib=str(tmp_path))
+    wrapped_module.install_wheel(
+        "demo",
+        tmp_path / "wheel.whl",
+        scheme,
+        "desc",
+        pycompile=True,
+        warn_script_location=True,
+        direct_url=None,
+        requested=False,
+        script_executable="/target/bin/python3",
+    )
+
+    assert received["script_executable"] == "/target/bin/python3"
+
+
 def test_install_wheel_wrapper_missing_file(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RELENV_BUILDENV", "1")
     plat_dir = tmp_path / "plat"
@@ -1251,6 +1303,65 @@ def test_wrap_req_install_no_target(monkeypatch: pytest.MonkeyPatch) -> None:
     installer = wrapped.InstallRequirement()
     result = installer.install(None, None, None, None, None, True, False, True)
     assert result == "installed"
+
+
+def test_wrap_req_install_pip_26_2_signature(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Pip 26.2 added a `script_executable` keyword argument to
+    InstallRequirement.install. Ensure the wrapper still overrides `home`
+    when a TARGET install is active, and forwards script_executable through
+    untouched instead of rejecting it as an unexpected keyword argument.
+    """
+    relenv.runtime.TARGET.TARGET = True
+    relenv.runtime.TARGET.PATH = "/pip26/target"
+
+    module_name = "pip._internal.req.req_install.pip262"
+    module = ModuleType(module_name)
+
+    class InstallRequirement:
+        def install(
+            self,
+            root: object = None,
+            home: object = None,
+            prefix: object = None,
+            warn_script_location: bool = True,
+            use_user_site: bool = False,
+            pycompile: bool = True,
+            script_executable: object = None,
+        ) -> tuple[object, object]:
+            return script_executable, home
+
+    module.InstallRequirement = InstallRequirement
+    monkeypatch.setitem(sys.modules, module_name, module)
+    monkeypatch.setattr(relenv.runtime.importlib, "import_module", lambda name: module)
+
+    wrapped = relenv.runtime.wrap_req_install(module_name)
+    installer = wrapped.InstallRequirement()
+    script_executable, home = installer.install(script_executable="/target/bin/python3")
+
+    assert home == relenv.runtime.TARGET.PATH
+    assert script_executable == "/target/bin/python3"
+
+
+def test_wrap_req_install_missing_home_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    If a future pip ever drops the `home` parameter entirely, relenv's
+    TARGET-install support can no longer work correctly. Fail loudly at
+    bootstrap time instead of silently doing nothing.
+    """
+    module_name = "pip._internal.req.req_install.nohome"
+    module = ModuleType(module_name)
+
+    class InstallRequirement:
+        def install(self, root: object = None, prefix: object = None) -> None:
+            return None
+
+    module.InstallRequirement = InstallRequirement
+    monkeypatch.setitem(sys.modules, module_name, module)
+    monkeypatch.setattr(relenv.runtime.importlib, "import_module", lambda name: module)
+
+    with pytest.raises(RuntimeError, match="home"):
+        relenv.runtime.wrap_req_install(module_name)
 
 
 def test_wrapsitecustomize_sanitizes_sys_path(monkeypatch: pytest.MonkeyPatch) -> None:

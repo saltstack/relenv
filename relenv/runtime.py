@@ -17,6 +17,7 @@ import contextlib
 import ctypes as _ctypes
 import functools
 import importlib as _importlib
+import inspect
 import json as _json
 import os
 import pathlib
@@ -347,10 +348,8 @@ def install_wheel_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
         wheel_path: PathType,
         scheme: Any,
         req_description: str,
-        pycompile: Any,
-        warn_script_location: Any,
-        direct_url: Any,
-        requested: Any,
+        *args: Any,
+        **kwargs: Any,
     ) -> Any:
         from zipfile import ZipFile
 
@@ -358,16 +357,7 @@ def install_wheel_wrapper(func: Callable[..., Any]) -> Callable[..., Any]:
 
         with ZipFile(wheel_path) as zf:
             info_dir, metadata = parse_wheel(zf, name)
-        func(
-            name,
-            wheel_path,
-            scheme,
-            req_description,
-            pycompile,
-            warn_script_location,
-            direct_url,
-            requested,
-        )
+        func(name, wheel_path, scheme, req_description, *args, **kwargs)
         if "RELENV_BUILDENV" in os.environ:
             plat = pathlib.Path(scheme.platlib)
             rootdir = relenv_root()
@@ -825,141 +815,37 @@ def wrap_req_command(name: str) -> ModuleType:
 
 def wrap_req_install(name: str) -> ModuleType:
     """
-    Honor ignore installed option from pip cli.
+    Ensure installs honor the TARGET home directory, staying compatible with
+    whatever shape pip's InstallRequirement.install currently has (pip has
+    changed this signature several times across releases, most recently
+    adding `script_executable` in pip 26.2).
     """
     module: ModuleType = importlib.import_module(name)
     mod = cast("Any", module)
 
     original = mod.InstallRequirement.install
-    argcount = original.__code__.co_argcount
+    sig = inspect.signature(original)
+    if "home" not in sig.parameters:
+        raise RuntimeError(
+            "pip's InstallRequirement.install no longer has a 'home' "
+            f"parameter (signature is now {sig}); relenv's TARGET-install "
+            "support needs to be updated for this pip version."
+        )
 
-    if argcount == 7:
+    @functools.wraps(original)
+    def install_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        try:
+            if TARGET.TARGET:
+                TARGET.INSTALL = True
+                bound = sig.bind_partial(self, *args, **kwargs)
+                bound.apply_defaults()
+                bound.arguments["home"] = _ensure_target_path()
+                return original(*bound.args, **bound.kwargs)
+            return original(self, *args, **kwargs)
+        finally:
+            TARGET.INSTALL = False
 
-        @functools.wraps(original)
-        def install_wrapper_pep517(
-            self: Any,
-            root: PathType | None = None,
-            home: PathType | None = None,
-            prefix: PathType | None = None,
-            warn_script_location: bool = True,
-            use_user_site: bool = False,
-            pycompile: bool = True,
-        ) -> Any:
-            try:
-                if TARGET.TARGET:
-                    TARGET.INSTALL = True
-                    home = _ensure_target_path()
-                return original(
-                    self,
-                    root,
-                    home,
-                    prefix,
-                    warn_script_location,
-                    use_user_site,
-                    pycompile,
-                )
-            finally:
-                TARGET.INSTALL = False
-
-        mod.InstallRequirement.install = install_wrapper_pep517
-
-    elif argcount == 8:
-
-        @functools.wraps(original)
-        def install_wrapper_pep517_opts(
-            self: Any,
-            global_options: Any = None,
-            root: PathType | None = None,
-            home: PathType | None = None,
-            prefix: PathType | None = None,
-            warn_script_location: bool = True,
-            use_user_site: bool = False,
-            pycompile: bool = True,
-        ) -> Any:
-            try:
-                if TARGET.TARGET:
-                    TARGET.INSTALL = True
-                    home = _ensure_target_path()
-                return original(
-                    self,
-                    global_options,
-                    root,
-                    home,
-                    prefix,
-                    warn_script_location,
-                    use_user_site,
-                    pycompile,
-                )
-            finally:
-                TARGET.INSTALL = False
-
-        mod.InstallRequirement.install = install_wrapper_pep517_opts
-
-    elif argcount == 9:
-
-        @functools.wraps(original)
-        def install_wrapper_legacy(
-            self: Any,
-            install_options: Any,
-            global_options: Any = None,
-            root: PathType | None = None,
-            home: PathType | None = None,
-            prefix: PathType | None = None,
-            warn_script_location: bool = True,
-            use_user_site: bool = False,
-            pycompile: bool = True,
-        ) -> Any:
-            try:
-                if TARGET.TARGET:
-                    TARGET.INSTALL = True
-                    home = _ensure_target_path()
-                return original(
-                    self,
-                    install_options,
-                    global_options,
-                    root,
-                    home,
-                    prefix,
-                    warn_script_location,
-                    use_user_site,
-                    pycompile,
-                )
-            finally:
-                TARGET.INSTALL = False
-
-        mod.InstallRequirement.install = install_wrapper_legacy
-
-    else:
-
-        @functools.wraps(original)
-        def install_wrapper_generic(
-            self: Any,
-            global_options: Any = None,
-            root: PathType | None = None,
-            home: PathType | None = None,
-            prefix: PathType | None = None,
-            warn_script_location: bool = True,
-            use_user_site: bool = False,
-            pycompile: bool = True,
-        ) -> Any:
-            try:
-                if TARGET.TARGET:
-                    TARGET.INSTALL = True
-                    home = _ensure_target_path()
-                return original(
-                    self,
-                    global_options,
-                    root,
-                    home,
-                    prefix,
-                    warn_script_location,
-                    use_user_site,
-                    pycompile,
-                )
-            finally:
-                TARGET.INSTALL = False
-
-        mod.InstallRequirement.install = install_wrapper_generic
+    mod.InstallRequirement.install = install_wrapper
     return module
 
 
