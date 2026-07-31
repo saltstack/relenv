@@ -137,6 +137,17 @@ def populate_env(env: EnvMapping, dirs: Dirs) -> None:
     """
     env["MSBUILDDISABLENODEREUSE"] = "1"
 
+    # CPython's PCbuild\find_python.bat only looks for a pre-installed
+    # bootstrap interpreter via specific "py -X.Y" versions (e.g. 3.10's
+    # copy of the script only tries 3.9/3.8), which age out of GitHub's
+    # hosted Windows runner images as those versions go EOL. When none of
+    # those match, it falls back to downloading a bootstrap Python via
+    # NuGet, which is an extra, flaky, network-dependent step. Point
+    # find_python.bat at the interpreter already running this build (it
+    # checks HOST_PYTHON before either of those) so it never needs to do
+    # either.
+    env["HOST_PYTHON"] = sys.executable
+
 
 def find_vcvarsall(env: EnvMapping) -> pathlib.Path | None:
     """
