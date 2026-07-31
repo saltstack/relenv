@@ -3,6 +3,7 @@
 import hashlib
 import logging
 import pathlib
+import sys
 
 import pytest
 
@@ -473,6 +474,24 @@ def _make_layout(
         if pc_content:
             (source / "PC" / "pyconfig.h").write_text(pc_content)
     return source, build_dir, dest_dir
+
+
+def test_populate_env_sets_host_python() -> None:
+    """
+    CPython's PCbuild/find_python.bat only looks for a pre-installed
+    bootstrap interpreter via specific "py -X.Y" versions (e.g. 3.10's copy
+    of the script only tries 3.9/3.8), both of which are EOL and age out of
+    CI images over time; when neither is found it falls back to an
+    unreliable NuGet download. HOST_PYTHON is checked before either of
+    those, so populate_env should point it at the interpreter already
+    running the build.
+    """
+    from relenv.build.windows import populate_env
+
+    dirs = Dirs(work_dirs(), "python", "amd64", "3.10.20")
+    env: dict[str, str] = {}
+    populate_env(env, dirs)
+    assert env["HOST_PYTHON"] == sys.executable
 
 
 def test_copy_pyconfig_h_legacy(tmp_path: pathlib.Path) -> None:
