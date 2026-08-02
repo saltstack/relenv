@@ -1,3 +1,10 @@
+0.22.18
+=======
+
+* Update libffi to 3.7.1
+* Update sqlite to 3.53.4.0
+
+
 0.22.17
 =======
 
