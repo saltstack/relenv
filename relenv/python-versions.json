@@ -332,6 +332,16 @@
      "darwin",
      "win32"
     ]
+   },
+   "3.53.4.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "0e9483900e92cd5de8fd48d16bf9200145a61f7fd5be542a5ac81d8a9516eb9c",
+    "sqliteversion": "3530400",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   },
   "xz": {
@@ -372,6 +382,13 @@
    "3.6.0": {
     "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
     "sha256": "31ff1fe32deaebfbb388727f32677bb254bf2a41382c51464c0b1837c9ee9828",
+    "platforms": [
+     "linux"
+    ]
+   },
+   "3.7.1": {
+    "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+    "sha256": "d5e9a6638ddbd2513ddb54518eb67e4bbe6fa707bcc01c10f6212f0a088d819d",
     "platforms": [
      "linux"
     ]
