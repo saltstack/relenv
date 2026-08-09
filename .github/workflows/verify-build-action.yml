@@ -301,10 +301,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
+        # 3.10, unlike the x64 job, has no official arm64 Windows build
+        # for setup-python to install ("The version '3.10' with
+        # architecture 'arm64' was not found for Windows Enterprise") --
+        # CPython's arm64 Windows installers only started at 3.11. Use
+        # the same bootstrap version build_windows_arm64 already uses.
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install VS Build Tools
         run: |
