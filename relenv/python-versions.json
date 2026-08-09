@@ -197,7 +197,8 @@
   "3.14.0": "8a1ae36a2c4212637401af93c8a7856d126156e3",
   "3.14.5": "550bd85f05ba3a75d710e716100db174f13601f6",
   "3.14.6": "064b06388d8911f337a023badc7c34a199787a25",
-  "3.13.14": "2c448ef334b33b3a2db9bbc70b9b51b312e1cc32"
+  "3.13.14": "2c448ef334b33b3a2db9bbc70b9b51b312e1cc32",
+  "3.14.7": "1239d153c968b5fa1958963acd350a42b73d895b"
  },
  "dependencies": {
   "perl": {
@@ -389,6 +390,13 @@
    "3.7.1": {
     "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
     "sha256": "d5e9a6638ddbd2513ddb54518eb67e4bbe6fa707bcc01c10f6212f0a088d819d",
+    "platforms": [
+     "linux"
+    ]
+   },
+   "3.8.0": {
+    "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+    "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
     "platforms": [
      "linux"
     ]
