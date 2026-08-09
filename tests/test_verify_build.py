@@ -700,25 +700,44 @@ def test_pip_install_pyzmq(
         )
 
 
-def test_pip_install_cryptography(pipexec, pyexec):
+def _openssl_dir_env(build: pathlib.Path, env: dict[str, str]) -> dict[str, str]:
+    """
+    Point OPENSSL_DIR at the OpenSSL dev tree relenv bundles into the
+    onedir when it built OpenSSL from source (currently windows arm64
+    only). Packages like `cryptography` that fall back to compiling
+    openssl-sys from source -- because no prebuilt wheel exists yet for
+    a target nothing has shipped wheels for -- have no other way to find
+    an OpenSSL to link against. A no-op everywhere the bundled tree
+    doesn't exist (binary-openssl platforms already have prebuilt
+    wheels, so this never matters there).
+    """
+    openssl_dir = build / "OpenSSL"
+    if openssl_dir.exists():
+        env["OPENSSL_DIR"] = str(openssl_dir)
+    return env
+
+
+def test_pip_install_cryptography(pipexec, pyexec, build):
     _install_ppbt(pyexec)
     packages = [
         "cryptography",
     ]
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
+    env = _openssl_dir_env(build, env)
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
-def test_pip_install_idem(pipexec, pyexec):
+def test_pip_install_idem(pipexec, pyexec, build):
     _install_ppbt(pyexec)
     packages = [
         "idem",
     ]
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
+    env = _openssl_dir_env(build, env)
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
