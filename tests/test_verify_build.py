@@ -1443,6 +1443,10 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
+    if build_version.startswith("3.14"):
+        cffi_version = "2.0.0"
+    else:
+        cffi_version = "1.17.1"
     if build_version[:4] not in ["3.13", "3.14"]:
         subprocess.run(
             [str(pipexec), "install", "cffi==1.14.6"],
@@ -1455,7 +1459,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
             env=env,
         )
     subprocess.run(
-        [str(pipexec), "install", "cffi==1.17.1", f"--target={extras}"],
+        [str(pipexec), "install", f"cffi=={cffi_version}", f"--target={extras}"],
         check=True,
         env=env,
     )
