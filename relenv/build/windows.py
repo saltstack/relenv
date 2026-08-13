@@ -607,6 +607,20 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
                 shutil.copy(str(target_dir / license_file), str(out_dir / "LICENSE"))
                 break
 
+        if not is_binary:
+            # Bundle a copy of the OpenSSL dev tree (headers + import
+            # libs) into the onedir itself. Rust crates such as
+            # openssl-sys -- a transitive build dependency of packages
+            # like `cryptography` when pip falls back to building from
+            # source, which it does on arm64 since no prebuilt wheel
+            # exists yet for a target nothing has shipped wheels for --
+            # have no other way to find an OpenSSL to link against.
+            # Consumers set OPENSSL_DIR to <onedir>/OpenSSL before
+            # pip installing such packages.
+            openssl_bundle_dir = dirs.prefix / "OpenSSL"
+            if not openssl_bundle_dir.exists():
+                shutil.copytree(str(prefix), str(openssl_bundle_dir))
+
     if is_binary:
         # Ensure include/openssl exists
         inc_openssl_dir = target_dir / "include" / "openssl"
@@ -1108,6 +1122,7 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "*.whl",
         "/Include/*",
         "/Lib/site-packages/*",
+        "/OpenSSL/*",
     ]
     archive = f"{dirs.prefix}.tar.xz"
     with tarfile.open(archive, mode="w:xz") as fp:

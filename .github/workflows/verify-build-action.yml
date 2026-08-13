@@ -273,3 +273,71 @@ jobs:
           name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-windows-logs
           path: logs/*
           retention-days: 5
+
+  test_windows_arm64:
+    name: "Verify Windows arm64"
+    # Matches build_windows_arm64's native windows-11-arm runner in
+    # build-native-action.yml. WIP for
+    # https://github.com/saltstack/relenv/issues/280.
+    runs-on: windows-11-arm
+
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
+          - '3.14'
+        arch:
+          - arm64
+
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
+    env:
+      RELENV_DATA: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        # 3.10, unlike the x64 job, has no official arm64 Windows build
+        # for setup-python to install ("The version '3.10' with
+        # architecture 'arm64' was not found for Windows Enterprise") --
+        # CPython's arm64 Windows installers only started at 3.11. Use
+        # the same bootstrap version build_windows_arm64 already uses.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install VS Build Tools
+        run: |
+          relenv/_scripts/install_vc_build.ps1 -CICD
+
+      - name: Install nox
+        run: |
+          pip3 install nox
+
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$env:GITHUB_OUTPUT"
+
+      - name: "Download artifact: build/${{ matrix.version }}-${{ matrix.arch }}-win.tar.xz"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
+          path: build/
+
+      - name: Verify Build
+        run: |
+          nox -e tests -- tests/test_verify_build.py
+
+      - name: Upload Build Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-windows-logs
+          path: logs/*
+          retention-days: 5
