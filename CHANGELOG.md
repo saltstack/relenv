@@ -1,3 +1,11 @@
+0.22.22
+=======
+
+* Update python 3.10 to 3.10.21
+* Update python 3.11 to 3.11.16
+* Update python 3.12 to 3.12.14
+
+
 0.22.21
 =======
 
