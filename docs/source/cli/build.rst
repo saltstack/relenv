@@ -2,7 +2,7 @@
 ``build``
 =========
 
-Relenv build is resposible for building Python and it's dependencies from
+Relenv build is responsible for building Python and it's dependencies from
 source. The build process also ensures Python is re-locatable. The directory
 containg the python build can be moved around on the filesystem or to another
 host machine of the same architecture.
