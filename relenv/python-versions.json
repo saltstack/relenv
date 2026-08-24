@@ -226,6 +226,13 @@
     "platforms": [
      "win32"
     ]
+   },
+   "5.42.3.1": {
+    "url": "https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/download/SP_54231_64bit/strawberry-perl-{version}-64bit-portable.zip",
+    "sha256": "6a081a811781c30aca51dbc036afd93092af91e3297901f02c17043795a10690",
+    "platforms": [
+     "win32"
+    ]
    }
   },
   "openssl": {
