@@ -308,6 +308,11 @@ def test_pip_install_salt_w_static_requirements(pipexec, pyexec, build, tmp_path
     # build-time Cython below 3.3 so the transitive pyzmq build succeeds.
     constraint = tmp_path / "cython-constraint.txt"
     constraint.write_text("cython<3.3\n")
+    # PIP_BUILD_CONSTRAINT (pip 24.2+, maps to --build-constraint) is what
+    # constrains PEP 517 *build-isolation* deps like Cython. PIP_CONSTRAINT
+    # (--constraint) only affects the outer install and is not propagated
+    # into the isolated build subprocess.
+    env["PIP_BUILD_CONSTRAINT"] = str(constraint)
     env["PIP_CONSTRAINT"] = str(constraint)
     p = subprocess.run(
         [
@@ -372,6 +377,11 @@ def test_pip_install_salt_w_package_requirements(pipexec, pyexec, tmp_path, salt
     # ("'hint' redeclared"). Constrain build-time Cython to <3.3.
     constraint = tmp_path / "cython-constraint.txt"
     constraint.write_text("cython<3.3\n")
+    # PIP_BUILD_CONSTRAINT (pip 24.2+, maps to --build-constraint) is what
+    # constrains PEP 517 *build-isolation* deps like Cython. PIP_CONSTRAINT
+    # (--constraint) only affects the outer install and is not propagated
+    # into the isolated build subprocess.
+    env["PIP_BUILD_CONSTRAINT"] = str(constraint)
     env["PIP_CONSTRAINT"] = str(constraint)
     p = subprocess.run(
         [
@@ -534,6 +544,11 @@ def test_pip_install_pyzmq(
         # otherwise the reset wipes it before the pyzmq install subprocess runs.
         constraint = tmp_path / "cython-constraint.txt"
         constraint.write_text("cython<3.3\n")
+        # PIP_BUILD_CONSTRAINT (pip 24.2+, maps to --build-constraint) is what
+        # constrains PEP 517 *build-isolation* deps like Cython. PIP_CONSTRAINT
+        # (--constraint) only affects the outer install and is not propagated
+        # into the isolated build subprocess.
+        env["PIP_BUILD_CONSTRAINT"] = str(constraint)
         env["PIP_CONSTRAINT"] = str(constraint)
 
     if sys.platform == "linux":
