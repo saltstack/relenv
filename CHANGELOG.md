@@ -1,3 +1,35 @@
+0.22.25
+=======
+
+* Fix 2^n slowdown in wrap_sysconfig by making it idempotent - #321
+
+
+0.22.24
+=======
+
+* Update openssl to 3.5.8
+
+
+0.22.23
+=======
+
+* Update perl to 5.42.3.1
+
+
+0.22.22
+=======
+
+* Update python 3.10 to 3.10.21
+* Update python 3.11 to 3.11.16
+* Update python 3.12 to 3.12.14
+
+
+0.22.21
+=======
+
+* Update expat to 2.8.3
+
+
 0.22.20
 =======
 

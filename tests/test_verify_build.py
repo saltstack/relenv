@@ -302,6 +302,18 @@ def test_pip_install_salt_w_static_requirements(pipexec, pyexec, build, tmp_path
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
+    # Salt 3006.x's static requirements pin pyzmq 26.4.0, whose isolated build
+    # env pulls cython>=3.0.0 -> resolves to 3.3.0 (2026-08-22), which then
+    # rejects zmq/backend/cython/_zmq.py with "'hint' redeclared". Constrain
+    # build-time Cython below 3.3 so the transitive pyzmq build succeeds.
+    constraint = tmp_path / "cython-constraint.txt"
+    constraint.write_text("cython<3.3\n")
+    # PIP_BUILD_CONSTRAINT (pip 24.2+, maps to --build-constraint) is what
+    # constrains PEP 517 *build-isolation* deps like Cython. PIP_CONSTRAINT
+    # (--constraint) only affects the outer install and is not propagated
+    # into the isolated build subprocess.
+    env["PIP_BUILD_CONSTRAINT"] = str(constraint)
+    env["PIP_CONSTRAINT"] = str(constraint)
     p = subprocess.run(
         [
             "git",
@@ -360,6 +372,17 @@ def test_pip_install_salt_w_package_requirements(pipexec, pyexec, tmp_path, salt
     _setup_buildenv(pyexec, env)
     env["RELENV_BUILDENV"] = "yes"
     env["USE_STATIC_REQUIREMENTS"] = "1"
+    # See test_pip_install_salt_w_static_requirements: Salt 3006.x's package
+    # requirements pin pyzmq 26.4.0, which fails to build under Cython 3.3.0
+    # ("'hint' redeclared"). Constrain build-time Cython to <3.3.
+    constraint = tmp_path / "cython-constraint.txt"
+    constraint.write_text("cython<3.3\n")
+    # PIP_BUILD_CONSTRAINT (pip 24.2+, maps to --build-constraint) is what
+    # constrains PEP 517 *build-isolation* deps like Cython. PIP_CONSTRAINT
+    # (--constraint) only affects the outer install and is not propagated
+    # into the isolated build subprocess.
+    env["PIP_BUILD_CONSTRAINT"] = str(constraint)
+    env["PIP_CONSTRAINT"] = str(constraint)
     p = subprocess.run(
         [
             "git",
@@ -430,6 +453,7 @@ def test_pip_install_salt_w_package_requirements(pipexec, pyexec, tmp_path, salt
         "25.1.2",
         "26.2.0",
         "26.4.0",
+        "27.2.0",
     ],
 )
 def test_pip_install_pyzmq(
@@ -482,6 +506,14 @@ def test_pip_install_pyzmq(
     if pyzmq_version == "26.4.0" and sys.platform == "win32":
         pytest.xfail("Needs troubleshooting 4/12/25")
 
+    if pyzmq_version == "27.2.0" and sys.platform == "win32":
+        # ``--no-binary=:all:`` (below) forces the isolated build env to build
+        # Cython 3.3.0 from source too. MSVC hits ``fatal error C1083: Cannot
+        # open compiler generated file: '': Invalid argument`` when the
+        # object-file path under the isolated tempdir exceeds Windows' effective
+        # path limit. Skip until we teach the test to allow a Cython wheel.
+        pytest.xfail("Cython source build fails under MSVC (path length)")
+
     _install_ppbt(pyexec)
 
     env = os.environ.copy()
@@ -501,6 +533,24 @@ def test_pip_install_pyzmq(
     if pyzmq_version == "26.2.0" and sys.platform == "darwin":
         env["CFLAGS"] = f"{env.get('CFLAGS', '')} -DCMAKE_OSX_ARCHITECTURES='arm64' -DZMQ_HAVE_CURVE=0"
     env = os.environ.copy()
+
+    if pyzmq_version in ("23.2.0", "25.1.2", "26.2.0", "26.4.0"):
+        # pyzmq <27 declares cython>=3.0.0 in build-system.requires. Cython 3.3.0
+        # (2026-08-22) tightened pure-Python-mode name-conflict detection and
+        # rejects `hint: pointer(_zhint) = cast(...)` in zmq/backend/cython/_zmq.py
+        # with "'hint' redeclared". Fixed upstream in pyzmq 27.x. Constrain the
+        # isolated build env's Cython so the old-pyzmq builds still compile.
+        # NOTE: set this AFTER the ``env = os.environ.copy()`` reset above,
+        # otherwise the reset wipes it before the pyzmq install subprocess runs.
+        constraint = tmp_path / "cython-constraint.txt"
+        constraint.write_text("cython<3.3\n")
+        # PIP_BUILD_CONSTRAINT (pip 24.2+, maps to --build-constraint) is what
+        # constrains PEP 517 *build-isolation* deps like Cython. PIP_CONSTRAINT
+        # (--constraint) only affects the outer install and is not propagated
+        # into the isolated build subprocess.
+        env["PIP_BUILD_CONSTRAINT"] = str(constraint)
+        env["PIP_CONSTRAINT"] = str(constraint)
+
     if sys.platform == "linux":
         p = subprocess.run(
             [

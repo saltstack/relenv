@@ -2070,3 +2070,64 @@ if sys.version_info >= (3, 13):
 
     finally:
         monkeypatch.setattr(sys, "meta_path", original_meta_path)
+
+
+def test_wrap_sysconfig_is_idempotent() -> None:
+    """
+    Regression test for issue #321.
+
+    wrap_sysconfig() must be idempotent. bootstrap() re-runs whenever the
+    relenv .pth file is re-executed (importlib.reload(site) does this;
+    Salt's state.module_refresh() does exactly that). Without a guard,
+    every call stacks another wrapper layer around sysconfig.get_config_var,
+    get_config_vars, and get_paths. Because get_config_vars_wrapper
+    invokes its wrapped function twice per call, N layers cost 2**N
+    calls to the innermost function, and a long-lived Salt minion
+    eventually spins forever inside a single get_config_var() call.
+    """
+    import sysconfig
+
+    # Previous tests in this module may have already wrapped sysconfig.
+    # Walk the ``__wrapped__`` chain (installed by functools.wraps) to
+    # recover the original stdlib callable and reinstall it, so we can
+    # assert cleanly on wrapping / non-wrapping identity.
+    pre_test_get_config_var = sysconfig.get_config_var
+    pre_test_get_config_vars = sysconfig.get_config_vars
+    pre_test_get_paths = sysconfig.get_paths
+
+    def _unwrap(func: object) -> object:
+        while getattr(func, "__wrapped__", None) is not None:
+            func = func.__wrapped__
+        return func
+
+    raw_get_config_var = _unwrap(pre_test_get_config_var)
+    raw_get_config_vars = _unwrap(pre_test_get_config_vars)
+    raw_get_paths = _unwrap(pre_test_get_paths)
+    sysconfig.get_config_var = raw_get_config_var
+    sysconfig.get_config_vars = raw_get_config_vars
+    sysconfig.get_paths = raw_get_paths
+    try:
+        # First call installs wrappers.
+        relenv.runtime.wrap_sysconfig("sysconfig")
+        wrapped_get_config_var = sysconfig.get_config_var
+        wrapped_get_config_vars = sysconfig.get_config_vars
+        wrapped_get_paths = sysconfig.get_paths
+        assert wrapped_get_config_var is not raw_get_config_var
+        assert getattr(wrapped_get_config_var, "__wrapped__", None) is raw_get_config_var
+
+        # Second and third calls must be no-ops. The wrapper attributes must
+        # still be the same objects installed by the first call — no stacking.
+        relenv.runtime.wrap_sysconfig("sysconfig")
+        relenv.runtime.wrap_sysconfig("sysconfig")
+        assert sysconfig.get_config_var is wrapped_get_config_var
+        assert sysconfig.get_config_vars is wrapped_get_config_vars
+        assert sysconfig.get_paths is wrapped_get_paths
+        # ``__wrapped__`` must still point at the raw stdlib function, not
+        # another layer of wrapping.
+        assert getattr(sysconfig.get_config_var, "__wrapped__", None) is raw_get_config_var
+    finally:
+        # Restore whatever state the previous tests left in place so we do
+        # not leak wrappers into subsequent tests.
+        sysconfig.get_config_var = pre_test_get_config_var
+        sysconfig.get_config_vars = pre_test_get_config_vars
+        sysconfig.get_paths = pre_test_get_paths
