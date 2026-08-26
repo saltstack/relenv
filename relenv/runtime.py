@@ -582,6 +582,17 @@ def wrap_sysconfig(name: str) -> ModuleType:
     """
     module: ModuleType = importlib.import_module("sysconfig")
     mod = cast("Any", module)
+    # Idempotence guard. bootstrap() is re-entered whenever the relenv .pth
+    # file is re-executed, and importlib.reload(site) does exactly that.
+    # Salt calls importlib.reload(site) from state.module_refresh() on every
+    # module refresh; on a long-lived minion the wrappers stack. Because
+    # get_config_vars_wrapper calls its wrapped function twice per
+    # invocation, N stacked layers cost 2**N calls to the innermost
+    # implementation and a single sysconfig.get_config_var() eventually
+    # never returns (issue #321). functools.wraps sets ``__wrapped__``
+    # on our wrappers, so its presence marks "already wrapped."
+    if getattr(mod.get_config_var, "__wrapped__", None) is not None:
+        return module
     mod.get_config_var = get_config_var_wrapper(mod.get_config_var)
     mod.get_config_vars = get_config_vars_wrapper(mod.get_config_vars, mod)
     mod._PIP_USE_SYSCONFIG = True
