@@ -2095,7 +2095,7 @@ def test_wrap_sysconfig_is_idempotent() -> None:
     pre_test_get_config_vars = sysconfig.get_config_vars
     pre_test_get_paths = sysconfig.get_paths
 
-    def _unwrap(func: Any) -> Any:
+    def _unwrap(func: object) -> object:
         while getattr(func, "__wrapped__", None) is not None:
             func = func.__wrapped__
         return func
