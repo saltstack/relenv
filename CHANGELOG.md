@@ -1,3 +1,9 @@
+0.22.25
+=======
+
+* Fix 2^n slowdown in wrap_sysconfig by making it idempotent - #321
+
+
 0.22.24
 =======
 
