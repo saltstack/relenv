@@ -1530,9 +1530,7 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
     # landed upstream in cffi 1.17). Skip the older-cffi coverage on
     # win-arm64; the ``cffi_version`` path below still exercises the
     # arm64-supported release.
-    old_cffi_supported = build_version[:4] not in ["3.13", "3.14"] and not (
-        sys.platform == "win32" and arch == "arm64"
-    )
+    old_cffi_supported = build_version[:4] not in ["3.13", "3.14"] and not (sys.platform == "win32" and arch == "arm64")
     if old_cffi_supported:
         subprocess.run(
             [str(pipexec), "install", "cffi==1.14.6"],
@@ -1560,18 +1558,23 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
 
 
 def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version, arch):
-    # On Windows arm64, cffi <1.17 and pygit2 <1.16 have no wheels on
+    # On Windows arm64, cffi <1.17 and pygit2 <1.19 have no wheels on
     # PyPI and their source builds do not support the MSVC arm64
-    # toolchain. Pin to the earliest arm64-supported release for each
-    # Python version so this test exercises the same "install cffi,
-    # then --target pygit2 sees it as already-satisfied" flow.
+    # toolchain (pygit2 additionally needs libgit2 headers, which are
+    # not installed on the windows-11-arm runners). pygit2 wheels for
+    # win_arm64 first appear in 1.19.0 and only for cp311+ (pygit2's
+    # requires_python is >=3.11), so Python 3.10 arm64 has no runnable
+    # combination -- skip. Otherwise pin to the earliest arm64-wheel
+    # release so the "install cffi, then --target pygit2 sees it as
+    # already-satisfied" flow still gets exercised.
     if sys.platform == "win32" and arch == "arm64":
+        if build_version.startswith("3.10"):
+            pytest.skip("pygit2 has no win_arm64 wheels for Python 3.10")
         if build_version.startswith("3.14"):
             cffi = "cffi==2.0.0"
-            pygit2 = "pygit2==1.19.2"
         else:
             cffi = "cffi==1.17.1"
-            pygit2 = "pygit2==1.16.0"
+        pygit2 = "pygit2==1.19.2"
     elif build_version.startswith("3.14"):
         cffi = "cffi==2.0.0"
         pygit2 = "pygit2==1.19.2"
@@ -1611,12 +1614,13 @@ def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_vers
     # See test_install_with_target_no_ignore_installed for why win-arm64
     # needs its own version selection.
     if sys.platform == "win32" and arch == "arm64":
+        if build_version.startswith("3.10"):
+            pytest.skip("pygit2 has no win_arm64 wheels for Python 3.10")
         if build_version.startswith("3.14"):
             cffi = "cffi==2.0.0"
-            pygit2 = "pygit2==1.19.2"
         else:
             cffi = "cffi==1.17.1"
-            pygit2 = "pygit2==1.16.0"
+        pygit2 = "pygit2==1.19.2"
     elif build_version.startswith("3.14"):
         cffi = "cffi==2.0.0"
         pygit2 = "pygit2==1.19.2"
