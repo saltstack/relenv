@@ -331,16 +331,36 @@ def detect_sqlite_versions() -> list[tuple[str, str]]:
 
 def detect_xz_versions() -> list[str]:
     """
-    Detect available XZ versions from tukaani.org.
+    Detect available XZ versions from the tukaani-project GitHub releases API.
+
+    Sourcing xz version metadata from tukaani.org is discouraged after
+    CVE-2024-3094 (the March 2024 xz-utils supply-chain backdoor). Both
+    release tarball hosting and the authoritative release listing moved
+    to https://github.com/tukaani-project/xz, so we consult that project's
+    Releases API and skip drafts / prereleases.
     """
-    url = "https://tukaani.org/xz/"
+    url = "https://api.github.com/repos/tukaani-project/xz/releases"
     content = fetch_url_content(url)
-    # Find xz-X.Y.Z.tar.gz
-    pattern = r"xz-(\d+\.\d+\.\d+)\.tar\.gz"
-    matches = re.findall(pattern, content)
-    # Deduplicate and sort
-    versions = sorted(set(matches), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
-    return versions
+    try:
+        releases = json.loads(content)
+    except json.JSONDecodeError:
+        return []
+    versions: list[str] = []
+    for release in releases:
+        if not isinstance(release, dict):
+            continue
+        if release.get("draft") or release.get("prerelease"):
+            continue
+        tag = release.get("tag_name", "")
+        if not isinstance(tag, str):
+            continue
+        # Tags are like "v5.8.4"; accept plain "5.8.4" too for robustness.
+        if tag.startswith("v"):
+            tag = tag[1:]
+        if not re.fullmatch(r"\d+\.\d+\.\d+", tag):
+            continue
+        versions.append(tag)
+    return sorted(set(versions), key=lambda v: [int(x) for x in v.split(".")], reverse=True)
 
 
 def detect_libffi_versions() -> list[str]:
@@ -691,13 +711,13 @@ def update_dependency_versions(path: pathlib.Path, deps_to_update: list[str] | N
             if "xz" not in dependencies:
                 dependencies["xz"] = {}
             if latest not in dependencies["xz"]:
-                url = f"http://tukaani.org/xz/xz-{latest}.tar.gz"
+                url = f"https://github.com/tukaani-project/xz/releases/download/v{latest}/xz-{latest}.tar.gz"
                 print(f"Downloading {url}...")
                 download_path = download_url(url, cwd)
                 checksum = sha256_digest(download_path)
                 print(f"SHA-256: {checksum}")
                 dependencies["xz"][latest] = {
-                    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+                    "url": "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.gz",
                     "sha256": checksum,
                     "platforms": ["linux", "darwin", "win32"],
                 }

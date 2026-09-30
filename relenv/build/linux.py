@@ -689,7 +689,7 @@ if xz_info:
 else:
     # Fallback to hardcoded values
     xz_version = "5.8.1"
-    xz_url = "http://tukaani.org/xz/xz-{version}.tar.gz"
+    xz_url = "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.gz"
     xz_checksum = "ed4d5589c4cfe84e1697bd02a9954b76af336931"
 
 build.add(
