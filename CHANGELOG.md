@@ -1,3 +1,12 @@
+0.22.27
+=======
+
+* Update expat to 2.8.5
+* Update openssl to 3.5.9
+* Update tirpc to 1.3.8
+* Update xz to 5.8.4
+
+
 0.22.26
 =======
 
