@@ -131,7 +131,7 @@ arches = {
     WIN32: (
         "amd64",
         "x86",
-        #    "arm64", # Python 11 should support arm.
+        "arm64",
     ),
 }
 

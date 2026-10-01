@@ -750,25 +750,44 @@ def test_pip_install_pyzmq(
         )
 
 
-def test_pip_install_cryptography(pipexec, pyexec):
+def _openssl_dir_env(build: pathlib.Path, env: dict[str, str]) -> dict[str, str]:
+    """
+    Point OPENSSL_DIR at the OpenSSL dev tree relenv bundles into the
+    onedir when it built OpenSSL from source (currently windows arm64
+    only). Packages like `cryptography` that fall back to compiling
+    openssl-sys from source -- because no prebuilt wheel exists yet for
+    a target nothing has shipped wheels for -- have no other way to find
+    an OpenSSL to link against. A no-op everywhere the bundled tree
+    doesn't exist (binary-openssl platforms already have prebuilt
+    wheels, so this never matters there).
+    """
+    openssl_dir = build / "OpenSSL"
+    if openssl_dir.exists():
+        env["OPENSSL_DIR"] = str(openssl_dir)
+    return env
+
+
+def test_pip_install_cryptography(pipexec, pyexec, build):
     _install_ppbt(pyexec)
     packages = [
         "cryptography",
     ]
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
+    env = _openssl_dir_env(build, env)
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
 
 
-def test_pip_install_idem(pipexec, pyexec):
+def test_pip_install_idem(pipexec, pyexec, build):
     _install_ppbt(pyexec)
     packages = [
         "idem",
     ]
     env = os.environ.copy()
     env["RELENV_BUILDENV"] = "yes"
+    env = _openssl_dir_env(build, env)
     for name in packages:
         p = subprocess.run([str(pipexec), "install", name, "--no-cache-dir"], env=env)
         assert p.returncode == 0, f"Failed to pip install {name}"
@@ -796,6 +815,15 @@ def test_pip_install_salt_pip_dir(pipexec, pyexec, build, build_version, arch):
 
     if sys.platform == "win32" and arch == "amd64":
         pytest.xfail("Known failure on windows amd64")
+
+    if sys.platform == "win32" and arch == "arm64":
+        # Windows arm64: salt's transitive C-extension deps
+        # (pymssql, cryptography, cffi at their older pinned versions)
+        # have no arm64 wheels on PyPI and their source builds do not
+        # succeed under the MSVC arm64 toolchain (no FreeTDS/OpenSSL
+        # for arm64 in this environment, and cffi <1.17 predates arm64
+        # Windows support).
+        pytest.xfail("Known failure on windows arm64")
 
     if sys.platform == "darwin" and ("3.13" in build_version or "3.14" in build_version):
         pytest.xfail("Salt does not work with 3.13+ on macos yet")
@@ -1489,7 +1517,7 @@ def test_install_with_target_uninstall(pipexec, build):
     assert not (extras / "bin" / "cowsay").exists()
 
 
-def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version):
+def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version, arch):
     env = os.environ.copy()
     env["RELENV_DEBUG"] = "yes"
     extras = build / "extras"
@@ -1497,7 +1525,13 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
         cffi_version = "2.0.0"
     else:
         cffi_version = "1.17.1"
-    if build_version[:4] not in ["3.13", "3.14"]:
+    # cffi 1.14.6 / 1.16.0 have no Windows arm64 wheels on PyPI and their
+    # source builds fail under the MSVC arm64 toolchain (arm64 support
+    # landed upstream in cffi 1.17). Skip the older-cffi coverage on
+    # win-arm64; the ``cffi_version`` path below still exercises the
+    # arm64-supported release.
+    old_cffi_supported = build_version[:4] not in ["3.13", "3.14"] and not (sys.platform == "win32" and arch == "arm64")
+    if old_cffi_supported:
         subprocess.run(
             [str(pipexec), "install", "cffi==1.14.6"],
             check=True,
@@ -1523,8 +1557,25 @@ def test_install_with_target_cffi_versions(pipexec, pyexec, build, build_version
     proc.stdout.decode().strip() == "1.17.1"
 
 
-def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.14"):
+def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_version, arch):
+    # On Windows arm64, cffi <1.17 and pygit2 <1.19 have no wheels on
+    # PyPI and their source builds do not support the MSVC arm64
+    # toolchain (pygit2 additionally needs libgit2 headers, which are
+    # not installed on the windows-11-arm runners). pygit2 wheels for
+    # win_arm64 first appear in 1.19.0 and only for cp311+ (pygit2's
+    # requires_python is >=3.11), so Python 3.10 arm64 has no runnable
+    # combination -- skip. Otherwise pin to the earliest arm64-wheel
+    # release so the "install cffi, then --target pygit2 sees it as
+    # already-satisfied" flow still gets exercised.
+    if sys.platform == "win32" and arch == "arm64":
+        if build_version.startswith("3.10"):
+            pytest.skip("pygit2 has no win_arm64 wheels for Python 3.10")
+        if build_version.startswith("3.14"):
+            cffi = "cffi==2.0.0"
+        else:
+            cffi = "cffi==1.17.1"
+        pygit2 = "pygit2==1.19.2"
+    elif build_version.startswith("3.14"):
         cffi = "cffi==2.0.0"
         pygit2 = "pygit2==1.19.2"
     elif build_version.startswith("3.13"):
@@ -1559,8 +1610,18 @@ def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_v
     assert "installed cffi" not in out
 
 
-def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_version):
-    if build_version.startswith("3.14"):
+def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_version, arch):
+    # See test_install_with_target_no_ignore_installed for why win-arm64
+    # needs its own version selection.
+    if sys.platform == "win32" and arch == "arm64":
+        if build_version.startswith("3.10"):
+            pytest.skip("pygit2 has no win_arm64 wheels for Python 3.10")
+        if build_version.startswith("3.14"):
+            cffi = "cffi==2.0.0"
+        else:
+            cffi = "cffi==1.17.1"
+        pygit2 = "pygit2==1.19.2"
+    elif build_version.startswith("3.14"):
         cffi = "cffi==2.0.0"
         pygit2 = "pygit2==1.19.2"
     elif build_version.startswith("3.13"):
