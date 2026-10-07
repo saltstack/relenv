@@ -476,6 +476,12 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             f.write('#if defined(HAVE_ARC4RANDOM_BUF)\n#include "random_arc4random_buf.c"\n#endif\n')
             f.write('#if defined(HAVE_ARC4RANDOM)\n#include "random_arc4random.c"\n#endif\n')
             f.write('#if !defined(_WIN32) && defined(XML_DEV_URANDOM)\n#include "random_dev_urandom.c"\n#endif\n')
+            # expat >= 2.9.0 moved xcslen/xcscmp/xcsncmp into a separate TU
+            # (xcs.c). Python's build system only compiles xmlparse.c,
+            # xmlrole.c, and xmltok.c, so pull xcs.c into xmlparse.c's TU to
+            # avoid undefined-reference failures when linking pyexpat.
+            if (expat_dir / "xcs.c").exists():
+                f.write('#include "xcs.c"\n')
 
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {}
