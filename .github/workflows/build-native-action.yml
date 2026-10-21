@@ -367,3 +367,87 @@ jobs:
           name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
           path: build/${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
           retention-days: 5
+
+  build_windows_arm64:
+    name: "Python Windows arm64"
+    # Native build: host and target are both arm64, so this runs on the
+    # windows-11-arm hosted runner rather than cross-compiling from the
+    # x64 windows-2022 image build_windows uses. WIP job for
+    # https://github.com/saltstack/relenv/issues/280 -- untested until a
+    # CI run actually exercises it; expect early iterations to surface
+    # missing toolchain/SDK pieces the way build_windows's history did.
+    runs-on: windows-11-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
+          - '3.14'
+        arch:
+          - arm64
+    env:
+      RELENV_DATA: ${{ github.workspace }}
+    outputs:
+      version: ${{ steps.python-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install VS Build Tools
+        run: |
+          relenv/_scripts/install_vc_build.ps1 -CICD
+
+      - name: Install ARM64 VC++ Tools
+        # install_vc_build.ps1 only requests the x86/x64 VCTools workload
+        # plus the legacy VC.140 toolset for the amd64/x86 job; it never
+        # asks for the ARM64 compiler/linker/armasm64, so request that
+        # component explicitly here rather than assuming the runner
+        # image's pre-installed VS carries it.
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -property installationPath
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          & $installer modify --installPath "$vsPath" `
+            --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 `
+            --quiet --norestart --nocache
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install nox
+        run: |
+          pip3 install nox
+
+      - name: Determine Python Version
+        id: python-version
+        run: |
+          echo "version=$(python3 -m relenv versions --version=${{ matrix.version }})" | tee -a "$env:GITHUB_OUTPUT"
+
+      - name: Build Python with Relenv
+        env:
+          RELENV_NATIVE_PY_VERSION: 3.10.15
+          WindowsTargetPlatformVersion: "10.0.19041.0"
+          HOST_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+        run: |
+          python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ steps.python-version.outputs.version }}
+
+      - name: Upload Build Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-windows-logs
+          path: logs/*
+          retention-days: 5
+
+      - name: Upload Zipfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
+          path: build/${{ steps.python-version.outputs.version }}-${{ matrix.arch }}-win.tar.xz
+          retention-days: 5
