@@ -454,10 +454,7 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             # symbols at link time.
             if (expat_dir / "xcs.c").exists():
                 pyexpat_vcxproj = dirs.source / "PCbuild" / "pyexpat.vcxproj"
-                vcxproj_compiles_xcs = (
-                    pyexpat_vcxproj.exists()
-                    and "expat\\xcs.c" in pyexpat_vcxproj.read_text()
-                )
+                vcxproj_compiles_xcs = pyexpat_vcxproj.exists() and "expat\\xcs.c" in pyexpat_vcxproj.read_text()
                 if not vcxproj_compiles_xcs:
                     f.write('#include "xcs.c"\n')
 
