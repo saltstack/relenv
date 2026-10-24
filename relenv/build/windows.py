@@ -447,11 +447,19 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             f.write('#if defined(HAVE_ARC4RANDOM)\n#include "random_arc4random.c"\n#endif\n')
             f.write('#if !defined(_WIN32) && defined(XML_DEV_URANDOM)\n#include "random_dev_urandom.c"\n#endif\n')
             # expat >= 2.9.0 moved xcslen/xcscmp/xcsncmp into a separate TU
-            # (xcs.c). Python's build system only compiles xmlparse.c,
-            # xmlrole.c, and xmltok.c, so pull xcs.c into xmlparse.c's TU to
-            # avoid undefined-reference failures when linking pyexpat.
+            # (xcs.c). On Python versions whose PCbuild/pyexpat.vcxproj does
+            # not already compile xcs.c (3.10-3.13), pull it into xmlparse.c's
+            # TU so pyexpat links. On 3.14+ the vcxproj already lists xcs.c as
+            # a ClCompile entry — including it here would produce duplicate
+            # symbols at link time.
             if (expat_dir / "xcs.c").exists():
-                f.write('#include "xcs.c"\n')
+                pyexpat_vcxproj = dirs.source / "PCbuild" / "pyexpat.vcxproj"
+                vcxproj_compiles_xcs = (
+                    pyexpat_vcxproj.exists()
+                    and "expat\\xcs.c" in pyexpat_vcxproj.read_text()
+                )
+                if not vcxproj_compiles_xcs:
+                    f.write('#include "xcs.c"\n')
 
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
