@@ -1924,6 +1924,10 @@ def test_install_pyinotify_w_latest_pip(pipexec, build, minor_version):
 
 
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="saltext-zabbix HEAD requires Python >= 3.11",
+)
 def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_path):
     _install_ppbt(pyexec)
     os.chdir(tmp_path)
@@ -1947,6 +1951,10 @@ def test_install_editable_package(pipexec, pyexec, build, minor_version, tmp_pat
 
 
 @pytest.mark.skip_unless_on_linux
+@pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="saltext-zabbix HEAD requires Python >= 3.11",
+)
 def test_install_editable_package_in_extras(pipexec, pyexec, build, minor_version, tmp_path):
     _install_ppbt(pyexec)
     sitepkgs = pathlib.Path(build) / "lib" / f"python{minor_version}" / "site-packages"
