@@ -25,6 +25,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    patch_file,
     update_sbom_checksums,
 )
 
@@ -149,6 +150,19 @@ def build_python(env: MutableMapping[str, str], dirs: Dirs, logfp: IO[str]) -> N
     """
     # Update bundled expat to latest version
     update_expat(dirs, env)
+
+    # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
+    # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
+    # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
+    # usedforsecurity=False) fail under FIPS, so hashlib falls back to the
+    # builtin MD5 and silently bypasses FIPS enforcement. Idempotent: the
+    # correctly-fixed source has "!disable_fips_property" which this regex
+    # does not match. Remove once a CPython 3.14 point release ships the fix.
+    patch_file(
+        dirs.source / "Modules" / "_hashopenssl.c",
+        r"int fips = disable_fips_property\(",
+        "int fips = !disable_fips_property(",
+    )
 
     env["LDFLAGS"] = "-Wl,-rpath,{prefix}/lib {ldflags}".format(prefix=dirs.prefix, ldflags=env["LDFLAGS"])
     runcmd(
