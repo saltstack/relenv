@@ -28,6 +28,7 @@ from .common import (
     builds,
     finalize,
     get_dependency_version,
+    patch_file,
     update_sbom_checksums,
 )
 
@@ -476,6 +477,12 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             f.write('#if defined(HAVE_ARC4RANDOM_BUF)\n#include "random_arc4random_buf.c"\n#endif\n')
             f.write('#if defined(HAVE_ARC4RANDOM)\n#include "random_arc4random.c"\n#endif\n')
             f.write('#if !defined(_WIN32) && defined(XML_DEV_URANDOM)\n#include "random_dev_urandom.c"\n#endif\n')
+            # expat >= 2.9.0 moved xcslen/xcscmp/xcsncmp into a separate TU
+            # (xcs.c). Python's build system only compiles xmlparse.c,
+            # xmlrole.c, and xmltok.c, so pull xcs.c into xmlparse.c's TU to
+            # avoid undefined-reference failures when linking pyexpat.
+            if (expat_dir / "xcs.c").exists():
+                f.write('#include "xcs.c"\n')
 
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {}
@@ -500,6 +507,19 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     """
     # Update bundled expat to latest version
     update_expat(dirs, env)
+
+    # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
+    # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
+    # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
+    # usedforsecurity=False) fail under FIPS, so hashlib falls back to the
+    # builtin MD5 and silently bypasses FIPS enforcement. Idempotent: the
+    # correctly-fixed source has "!disable_fips_property" which this regex
+    # does not match. Remove once a CPython 3.14 point release ships the fix.
+    patch_file(
+        dirs.source / "Modules" / "_hashopenssl.c",
+        r"int fips = disable_fips_property\(",
+        "int fips = !disable_fips_property(",
+    )
 
     ldflagopt = f"-Wl,--rpath={dirs.prefix}/lib"
     if ldflagopt not in env["LDFLAGS"]:
@@ -689,7 +709,7 @@ if xz_info:
 else:
     # Fallback to hardcoded values
     xz_version = "5.8.1"
-    xz_url = "http://tukaani.org/xz/xz-{version}.tar.gz"
+    xz_url = "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.gz"
     xz_checksum = "ed4d5589c4cfe84e1697bd02a9954b76af336931"
 
 build.add(

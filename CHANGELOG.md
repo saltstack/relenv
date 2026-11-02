@@ -1,3 +1,50 @@
+0.22.32
+=======
+
+* Update python 3.11 to 3.11.18
+* Update python 3.12 to 3.12.16
+* Update python 3.13 to 3.13.18
+* Update python 3.14 to 3.14.10
+* Update expat to 2.10.0
+
+
+0.22.31
+=======
+
+* Update sqlite to 3.54.1.0
+
+
+0.22.30
+=======
+
+* Update sqlite to 3.54.0.0
+
+
+0.22.29
+=======
+
+* Update expat to 2.9.0
+
+
+0.22.28
+=======
+
+* Update python 3.10 to 3.10.22
+* Update python 3.11 to 3.11.17
+* Update python 3.12 to 3.12.15
+* Update python 3.13 to 3.13.16
+* Update python 3.14 to 3.14.8
+
+
+0.22.27
+=======
+
+* Update expat to 2.8.5
+* Update openssl to 3.5.9
+* Update tirpc to 1.3.8
+* Update xz to 5.8.4
+
+
 0.22.26
 =======
 

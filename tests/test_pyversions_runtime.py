@@ -170,24 +170,35 @@ def test_detect_sqlite_versions(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_detect_xz_versions(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test XZ version detection from tukaani.org."""
-    mock_html = """
-    <html>
-    <a href="xz-5.8.1.tar.gz">xz-5.8.1.tar.gz</a>
-    <a href="xz-5.8.0.tar.gz">xz-5.8.0.tar.gz</a>
-    <a href="xz-5.6.3.tar.gz">xz-5.6.3.tar.gz</a>
-    </html>
-    """
+    """Test XZ version detection from the tukaani-project GitHub releases API."""
+    import json
+
+    mock_releases = json.dumps(
+        [
+            {"tag_name": "v5.8.1", "draft": False, "prerelease": False},
+            {"tag_name": "v5.7.2beta", "draft": False, "prerelease": True},
+            {"tag_name": "v5.8.0", "draft": False, "prerelease": False},
+            {"tag_name": "v5.6.3", "draft": False, "prerelease": False},
+            {"tag_name": "v5.9.0-draft", "draft": True, "prerelease": False},
+        ]
+    )
+
+    captured_url: dict[str, str] = {}
 
     def fake_fetch(url: str) -> str:
-        return mock_html
+        captured_url["url"] = url
+        return mock_releases
 
     monkeypatch.setattr(pyversions, "fetch_url_content", fake_fetch)
     versions = pyversions.detect_xz_versions()
+    assert captured_url["url"] == "https://api.github.com/repos/tukaani-project/xz/releases"
     assert isinstance(versions, list)
     assert "5.8.1" in versions
     assert "5.8.0" in versions
     assert "5.6.3" in versions
+    # Draft and prerelease tags must be skipped
+    assert "5.7.2beta" not in versions
+    assert not any(v.startswith("5.9") for v in versions)
     # Verify sorting (latest first)
     assert versions[0] == "5.8.1"
 

@@ -202,7 +202,18 @@
   "3.13.15": "ad29f70f33312d40732a850013cd24ad7c2cafb5",
   "3.12.14": "3b3ddf03a7265334f6ed69b4e7a6d77186416135",
   "3.11.16": "15b8043d84d0a74a25b6c816e4e9669b9fe1f6ed",
-  "3.10.21": "0d96ab98b85d2dbf354d9613aa7fdd3f402eb851"
+  "3.10.21": "0d96ab98b85d2dbf354d9613aa7fdd3f402eb851",
+  "3.14.8": "f236c255d3dea446cfba89ecb810374f37dbac14",
+  "3.13.16": "bd197ec7cca6f9ad264b336ce2ca9462530215d0",
+  "3.12.15": "e9c22b58d8dc5cede5890ccd905df53fc4a71ea7",
+  "3.11.17": "edb83dc8c9503f1fc75eba7132d713d02ef0bb61",
+  "3.10.22": "2e60cf906956540998c893e704c50ff91a7ded71",
+  "3.14.10": "5b66b69732cd99929643817cf0e1b470445d2794",
+  "3.14.9": "03f198753505d017b453f29eddb473bc68008c9a",
+  "3.13.18": "a1b6893ae86049fe445cbc3e241fdbf11963d9f2",
+  "3.13.17": "a78f50da4775605757cb0b424fc9b28e98dde8a2",
+  "3.12.16": "ebda7010e59dcdd245729a573d0a44bb8c7ca06e",
+  "3.11.18": "b7c1ced0dd102f4f30c4de79e3c7fe52c9bdec8a"
  },
  "dependencies": {
   "perl": {
@@ -266,6 +277,15 @@
    "3.5.8": {
     "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
     "sha256": "a8f84a39918ec6415ce765d9b429d313ba97b8143169c172e734b9514464f5b2",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "3.5.9": {
+    "url": "https://github.com/openssl/openssl/releases/download/openssl-{version}/openssl-{version}.tar.gz",
+    "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
     "platforms": [
      "linux",
      "darwin",
@@ -363,11 +383,31 @@
      "darwin",
      "win32"
     ]
+   },
+   "3.54.0.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "134ec0802dda5795816e25d25872d20b312cb3973438c49b30bc40b7705ea9ed",
+    "sqliteversion": "3540000",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "3.54.1.0": {
+    "url": "https://sqlite.org/2026/sqlite-autoconf-{version}.tar.gz",
+    "sha256": "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e",
+    "sqliteversion": "3540100",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   },
   "xz": {
    "5.8.2": {
-    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+    "url": "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.gz",
     "sha256": "ce09c50a5962786b83e5da389c90dd2c15ecd0980a258dd01f70f9e7ce58a8f1",
     "platforms": [
      "linux",
@@ -376,8 +416,17 @@
     ]
    },
    "5.8.3": {
-    "url": "http://tukaani.org/xz/xz-{version}.tar.gz",
+    "url": "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.gz",
     "sha256": "3d3a1b973af218114f4f889bbaa2f4c037deaae0c8e815eec381c3d546b974a0",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "5.8.4": {
+    "url": "https://github.com/tukaani-project/xz/releases/download/v{version}/xz-{version}.tar.gz",
+    "sha256": "0014c7886930454fe8bd4228665b51af55eeae560ea135c9c4cd33f55b2591d9",
     "platforms": [
      "linux",
      "darwin",
@@ -546,6 +595,13 @@
     "platforms": [
      "linux"
     ]
+   },
+   "1.3.8": {
+    "url": "https://sourceforge.net/projects/libtirpc/files/libtirpc-{version}.tar.bz2",
+    "sha256": "8839959bfcc7a0f4c609d8e4f53f1c67ae33de23775ec35beb39ff15adf11920",
+    "platforms": [
+     "linux"
+    ]
    }
   },
   "mpdecimal": {
@@ -631,6 +687,33 @@
    "2.8.4": {
     "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_4/expat-{version}.tar.xz",
     "sha256": "656ae1cc8da3b4ea513bb4e254f33e6243938084c0ec6239da873376b09985a7",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "2.8.5": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_5/expat-{version}.tar.xz",
+    "sha256": "1e727b8933ec51a77a9a9d9afcf8e688bce45d907c13e36ab7393fe36e703182",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "2.9.0": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-{version}.tar.xz",
+    "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
+   },
+   "2.10.0": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_10_0/expat-{version}.tar.xz",
+    "sha256": "c624ba2998fc65df1163a49641ff3f9ab73138b11641d92c86bee0fb01b1bc7f",
     "platforms": [
      "linux",
      "darwin",

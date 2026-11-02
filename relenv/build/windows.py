@@ -446,6 +446,17 @@ def update_expat(dirs: Dirs, env: EnvMapping) -> None:
             f.write('#if defined(HAVE_ARC4RANDOM_BUF)\n#include "random_arc4random_buf.c"\n#endif\n')
             f.write('#if defined(HAVE_ARC4RANDOM)\n#include "random_arc4random.c"\n#endif\n')
             f.write('#if !defined(_WIN32) && defined(XML_DEV_URANDOM)\n#include "random_dev_urandom.c"\n#endif\n')
+            # expat >= 2.9.0 moved xcslen/xcscmp/xcsncmp into a separate TU
+            # (xcs.c). On Python versions whose PCbuild/pyexpat.vcxproj does
+            # not already compile xcs.c (3.10-3.13), pull it into xmlparse.c's
+            # TU so pyexpat links. On 3.14+ the vcxproj already lists xcs.c as
+            # a ClCompile entry — including it here would produce duplicate
+            # symbols at link time.
+            if (expat_dir / "xcs.c").exists():
+                pyexpat_vcxproj = dirs.source / "PCbuild" / "pyexpat.vcxproj"
+                vcxproj_compiles_xcs = pyexpat_vcxproj.exists() and "expat\\xcs.c" in pyexpat_vcxproj.read_text()
+                if not vcxproj_compiles_xcs:
+                    f.write('#include "xcs.c"\n')
 
     # Update SBOM with correct checksums for updated expat files
     files_to_update = {f"Modules/expat/{f.name}": f for f in updated_files}
@@ -1009,6 +1020,19 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
             f.write("@echo off\necho skipping fetch\n")
 
     patch_ssl_for_cpython_104135(dirs.source)
+
+    # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
+    # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
+    # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
+    # usedforsecurity=False) fail under FIPS, so hashlib falls back to the
+    # builtin MD5 and silently bypasses FIPS enforcement. Idempotent: the
+    # correctly-fixed source has "!disable_fips_property" which this regex
+    # does not match. Remove once a CPython 3.14 point release ships the fix.
+    patch_file(
+        dirs.source / "Modules" / "_hashopenssl.c",
+        r"int fips = disable_fips_property\(",
+        "int fips = !disable_fips_property(",
+    )
 
     arch_to_plat = {"amd64": "x64", "x86": "win32", "arm64": "arm64"}
     arch = env["RELENV_HOST_ARCH"]
