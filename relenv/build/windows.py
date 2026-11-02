@@ -1007,6 +1007,19 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
     patch_ssl_for_cpython_104135(dirs.source)
 
+    # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
+    # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
+    # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
+    # usedforsecurity=False) fail under FIPS, so hashlib falls back to the
+    # builtin MD5 and silently bypasses FIPS enforcement. Idempotent: the
+    # correctly-fixed source has "!disable_fips_property" which this regex
+    # does not match. Remove once a CPython 3.14 point release ships the fix.
+    patch_file(
+        dirs.source / "Modules" / "_hashopenssl.c",
+        r"int fips = disable_fips_property\(",
+        "int fips = !disable_fips_property(",
+    )
+
     arch_to_plat = {"amd64": "x64", "x86": "win32", "arm64": "arm64"}
     arch = env["RELENV_HOST_ARCH"]
     plat = arch_to_plat[arch]
