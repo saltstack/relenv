@@ -41,5 +41,21 @@ jobs:
             echo "No open automated-update PR matches commit ${HEAD_SHA}; nothing to merge."
             exit 0
           fi
-          echo "Merging PR #${pr_number} (head ${HEAD_SHA})."
+          # Require at least one approving review before merging. Without this
+          # gate, release PRs would merge on green CI alone -- the whole point
+          # of these PRs is to get human eyes on the bundled upstream bumps
+          # before they ship. Approvals submitted on an older commit still
+          # count here; configure branch protection with
+          # "Dismiss stale pull request approvals when new commits are pushed"
+          # if a re-approval per push is desired.
+          approved="$(
+            gh pr view "${pr_number}" \
+              --json reviews \
+              --jq '[.reviews[] | select(.state == "APPROVED")] | length'
+          )"
+          if [ "${approved}" -eq 0 ]; then
+            echo "PR #${pr_number} has no approving reviews; skipping auto-merge."
+            exit 0
+          fi
+          echo "Merging PR #${pr_number} (head ${HEAD_SHA}, ${approved} approval(s))."
           gh pr merge "${pr_number}" --squash --delete-branch
