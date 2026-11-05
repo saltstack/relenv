@@ -41,6 +41,38 @@ function Write-Result($result, $ForegroundColor="Green") {
     }
 }
 
+function Test-V140Installed {
+    # The v140 PlatformToolset lives in one of two places depending on the
+    # VS installer generation:
+    #
+    #   * VS 2017 / VS 2019 and earlier shared MSBuild writes to the legacy
+    #     shared location under ``${env:ProgramFiles(x86)}\MSBuild``.
+    #   * VS 2022 17.14+ / VS 18 moved MSBuild inside the per-install tree
+    #     and populates only ``<VS_INST_LOC>\MSBuild\Microsoft\VC\<vXXX>\
+    #     Platforms\<Arch>\PlatformToolsets\v140`` -- the legacy path stays
+    #     empty even when v140 is installed and usable.
+    #
+    # Return $true on the first match.
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [String] $VSInstLoc
+    )
+    if ( Test-Path -Path "${env:ProgramFiles(x86)}\MSBuild\Microsoft.Cpp\v4.0\V140" ) {
+        return $true
+    }
+    if ( $VSInstLoc ) {
+        $hit = Get-ChildItem `
+            -Path "$VSInstLoc\MSBuild\Microsoft\VC\*\Platforms\*\PlatformToolsets\v140" `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ( $hit ) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Add-Certificate {
     [CmdletBinding()]
     param(
@@ -130,10 +162,11 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
     # without v140 by default, so use the VS bootstrapper to add the
     # component to the existing install.  We don't trust the installer's
     # exit code (it returns non-zero in a few benign cases) — instead
-    # verify the v140 platform-toolset targets file exists afterwards.
-    $V140_TARGETS = "${env:ProgramFiles(x86)}\MSBuild\Microsoft.Cpp\v4.0\V140"
+    # verify the v140 platform-toolset targets exist afterwards. Check
+    # both the legacy shared-MSBuild location and the VS 2022 17.14+ /
+    # VS 18 per-install location (see Test-V140Installed above).
     Write-Host "Ensuring v140 toolset is installed: " -NoNewline
-    if ( Test-Path -Path $V140_TARGETS ) {
+    if ( Test-V140Installed -VSInstLoc $VS_INST_LOC ) {
         Write-Result "Already present" -ForegroundColor Green
     } else {
         Write-Host ""
@@ -166,7 +199,7 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
             -PassThru -Wait -NoNewWindow
         Write-Host "  bootstrapper exit code: $($proc.ExitCode)"
         Write-Host "Verifying v140 toolset: " -NoNewline
-        if ( Test-Path -Path $V140_TARGETS ) {
+        if ( Test-V140Installed -VSInstLoc $VS_INST_LOC ) {
             Write-Result "Success" -ForegroundColor Green
         } else {
             Write-Result "Failed (v140 still not registered with MSBuild)" -ForegroundColor Red
