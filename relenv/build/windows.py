@@ -229,6 +229,62 @@ def find_vcvarsall(env: EnvMapping) -> pathlib.Path | None:
     return None
 
 
+def _discover_installed_platform_toolset(env: EnvMapping, platform: str) -> str | None:
+    r"""
+    Return the newest PlatformToolset installed under the detected VS
+    install for *platform* (``ARM64``, ``x64``, ``Win32``), or ``None``
+    if we can't find vswhere/an install.
+
+    Each VS install lays out installed PlatformToolsets under::
+
+        <installPath>\MSBuild\Microsoft\VC\<vcDir>\Platforms\<platform>\PlatformToolsets\<name>
+
+    ``<name>`` is the value we need to pass to MSBuild via
+    ``/p:PlatformToolset=<name>``.  Sorting lexicographically on the
+    directory name is good enough -- v143 < v144 < v180 as strings.
+    """
+    vswhere = shutil.which("vswhere.exe")
+    if not vswhere:
+        candidate = (
+            pathlib.Path(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"))
+            / "Microsoft Visual Studio"
+            / "Installer"
+            / "vswhere.exe"
+        )
+        if candidate.exists():
+            vswhere = str(candidate)
+    if not vswhere:
+        return None
+
+    try:
+        result = subprocess.run(
+            [vswhere, "-latest", "-products", "*", "-property", "installationPath"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        return None
+    vs_path = result.stdout.strip()
+    if not vs_path:
+        return None
+
+    toolset_root = pathlib.Path(vs_path) / "MSBuild" / "Microsoft" / "VC"
+    if not toolset_root.exists():
+        return None
+
+    names: set[str] = set()
+    for vc_dir in toolset_root.iterdir():
+        plats = vc_dir / "Platforms" / platform / "PlatformToolsets"
+        if plats.is_dir():
+            for p in plats.iterdir():
+                if p.is_dir() and p.name.lower().startswith("v"):
+                    names.add(p.name)
+    if not names:
+        return None
+    return max(names)
+
+
 def update_props(source: pathlib.Path, old: str, new: str) -> None:
     """
     Overwrite a dependency string for Windows PCBuild.
@@ -1076,6 +1132,28 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         plat,
         "--no-tkinter",
     ]
+
+    # On VS Enterprise 2026 / VS 18 (the windows-11-arm runner), neither v143
+    # nor v140 ARM64 build tools are installed by default, but python.props
+    # on all branches 3.10-3.14 still manages to pick one or the other -- VS
+    # 18 unconditionally sets $(VCTargetsPath14) which makes 3.10's fallback
+    # match and resolve PlatformToolset=v140 (which can't even target arm64),
+    # while 3.14 upstream pins the '18.0' arm to v143.  Discover the newest
+    # vXXX directory actually installed under
+    # <VSInstallPath>\MSBuild\Microsoft\VC\*\Platforms\<Platform>\PlatformToolsets
+    # and pass it via /p:PlatformToolset=<name> so MSBuild stops guessing.
+    # Only applied on arm64 to avoid perturbing the amd64/x86 windows-2022
+    # builds, which already resolve correctly to v143 under VS 2022.
+    if arch == "arm64":
+        toolset = _discover_installed_platform_toolset(env, "ARM64")
+        if toolset:
+            log.info("Pinning PlatformToolset=%s via /p: for arm64 build", toolset)
+            cmd.append(f"/p:PlatformToolset={toolset}")
+        else:
+            log.warning(
+                "No installed arm64 PlatformToolset discovered; MSBuild may fall "
+                "back to an uninstalled default and fail with MSB8020"
+            )
 
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
