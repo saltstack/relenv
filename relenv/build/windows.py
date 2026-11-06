@@ -1141,14 +1141,20 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     # while 3.14 upstream pins the '18.0' arm to v143.  Discover the newest
     # vXXX directory actually installed under
     # <VSInstallPath>\MSBuild\Microsoft\VC\*\Platforms\<Platform>\PlatformToolsets
-    # and pass it via /p:PlatformToolset=<name> so MSBuild stops guessing.
+    # and push it into MSBuild via the PlatformToolset env var (MSBuild promotes
+    # any env var that matches a known property, and CPython's build.bat passes
+    # the environment through to MSBuild intact).  Env-var passing avoids a
+    # batch-file pitfall: build.bat forwards its positional args verbatim to
+    # msbuild.exe, but cmd.exe strips the ``=`` out of positional args so
+    # ``/p:PlatformToolset=v145`` arrives at MSBuild as two tokens
+    # (``/p:PlatformToolset`` and ``v145``) and errors with MSB1008.
     # Only applied on arm64 to avoid perturbing the amd64/x86 windows-2022
     # builds, which already resolve correctly to v143 under VS 2022.
     if arch == "arm64":
         toolset = _discover_installed_platform_toolset(env, "ARM64")
         if toolset:
-            log.info("Pinning PlatformToolset=%s via /p: for arm64 build", toolset)
-            cmd.append(f"/p:PlatformToolset={toolset}")
+            log.info("Pinning PlatformToolset=%s via env var for arm64 build", toolset)
+            env["PlatformToolset"] = toolset
         else:
             log.warning(
                 "No installed arm64 PlatformToolset discovered; MSBuild may fall "
