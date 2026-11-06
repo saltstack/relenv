@@ -432,7 +432,12 @@ jobs:
       - name: Build Python with Relenv
         env:
           RELENV_NATIVE_PY_VERSION: 3.10.15
-          WindowsTargetPlatformVersion: "10.0.19041.0"
+          # NOTE: the amd64/x86 job pins WindowsTargetPlatformVersion to
+          # 10.0.19041.0 so MSBuild pairs with the v140 toolset (newer
+          # SDKs' SSE intrinsics break under v140).  Arm64 never uses
+          # v140 (v140 has no arm64 code generator), so leave the SDK
+          # version unpinned here: the windows-11-arm runner ships VS 18
+          # with Win11 SDK 26100 and does not have 10.0.19041.0 available.
           HOST_PYTHON: ${{ steps.setup-python.outputs.python-path }}
         run: |
           python -m relenv build --no-pretty --arch=${{ matrix.arch }} --python=${{ steps.python-version.outputs.version }}

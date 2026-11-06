@@ -165,8 +165,19 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
     # verify the v140 platform-toolset targets exist afterwards. Check
     # both the legacy shared-MSBuild location and the VS 2022 17.14+ /
     # VS 18 per-install location (see Test-V140Installed above).
+    #
+    # Skip v140 entirely on arm64 hosts: v140 cannot generate arm64 code
+    # (VS 2015 predates the arm64 toolchain), and the windows-11-arm
+    # runner image ships VS 18 / VS Enterprise 2026, whose product graph
+    # does not expose Microsoft.VisualStudio.Component.VC.140 at all —
+    # the bootstrapper logs "Cannot find package ... in product graph"
+    # and exits 0, which then fails the post-install verify.  Python
+    # 3.10/3.11 PCbuild on arm64 falls through python.props to whatever
+    # toolset VS has (v143/v144), which supports arm64 natively.
     Write-Host "Ensuring v140 toolset is installed: " -NoNewline
-    if ( Test-V140Installed -VSInstLoc $VS_INST_LOC ) {
+    if ( $env:PROCESSOR_ARCHITECTURE -eq "ARM64" ) {
+        Write-Result "Skipped (arm64 host; v140 does not support arm64)" -ForegroundColor Green
+    } elseif ( Test-V140Installed -VSInstLoc $VS_INST_LOC ) {
         Write-Result "Already present" -ForegroundColor Green
     } else {
         Write-Host ""

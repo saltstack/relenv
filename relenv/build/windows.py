@@ -1021,6 +1021,30 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
     patch_ssl_for_cpython_104135(dirs.source)
 
+    # CPython 3.10-3.13 python.props only recognises VisualStudioVersion
+    # values up to '17.0' (VS 2022) when picking BasePlatformToolset.  On
+    # the windows-11-arm runner the pre-installed VS is Enterprise 2026
+    # (VisualStudioVersion='18.0'), which means every condition in the
+    # BasePlatformToolset chain is skipped and PlatformToolset ends up
+    # empty -- MSBuild then either falls back to an unexpected default or
+    # errors outright.  Upstream added a '18.0' -> v143 arm in 3.14; mirror
+    # that here for the older branches by inserting the same line just
+    # above the '17.0' check.  The patch is idempotent (the sentinel line
+    # already carries '18.0' on 3.14, so the regex won't re-match) and a
+    # no-op on x86/amd64 builds where '17.0' still resolves.
+    props_path = dirs.source / "PCbuild" / "python.props"
+    if props_path.exists():
+        content = props_path.read_text(encoding="utf-8")
+        if "'$(VisualStudioVersion)' == '18.0'" not in content:
+            log.info("Patching python.props to add VS 18 (VS 2026) -> v143")
+            _tpl = (
+                "<BasePlatformToolset Condition=\"'$(BasePlatformToolset)' == ''"
+                " and '$(VisualStudioVersion)' == '{ver}'\">v143</BasePlatformToolset>"
+            )
+            old_line = _tpl.format(ver="17.0")
+            new_line = _tpl.format(ver="18.0") + "\n    " + old_line
+            props_path.write_text(content.replace(old_line, new_line), encoding="utf-8")
+
     # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
     # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
     # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
