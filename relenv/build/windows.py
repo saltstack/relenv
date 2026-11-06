@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -1021,29 +1022,34 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
     patch_ssl_for_cpython_104135(dirs.source)
 
-    # CPython 3.10-3.13 python.props only recognises VisualStudioVersion
-    # values up to '17.0' (VS 2022) when picking BasePlatformToolset.  On
-    # the windows-11-arm runner the pre-installed VS is Enterprise 2026
-    # (VisualStudioVersion='18.0'), which means every condition in the
-    # BasePlatformToolset chain is skipped and PlatformToolset ends up
-    # empty -- MSBuild then either falls back to an unexpected default or
-    # errors outright.  Upstream added a '18.0' -> v143 arm in 3.14; mirror
-    # that here for the older branches by inserting the same line just
-    # above the '17.0' check.  The patch is idempotent (the sentinel line
-    # already carries '18.0' on 3.14, so the regex won't re-match) and a
-    # no-op on x86/amd64 builds where '17.0' still resolves.
+    # Drop any python.props line that hard-pins BasePlatformToolset to v143
+    # when running under VS Enterprise 2026 / VS 18
+    # (VisualStudioVersion='18.0').  The windows-11-arm runner image ships
+    # VS 18 with its native toolset only; v143 (VS 2022 build tools) is not
+    # installed and installing it on-demand is awkward (the "legacy" v143
+    # ARM64 compat component isn't exposed in VS 18's product graph).  With
+    # the pin removed, BasePlatformToolset stays empty for VS 18, so
+    # python.props's existing fallback leaves PlatformToolset empty too and
+    # MSBuild resolves it via Microsoft.Cpp.Default.props's
+    # DefaultPlatformToolset -- i.e. whatever VS 18 ships natively on the
+    # runner.
+    #
+    # Only CPython 3.14 upstream carries the 18.0 line; 3.10-3.13 never
+    # matched VS 18 to begin with, so the sub below is a no-op on those
+    # trees. No effect on windows-2022 (x86/amd64) builds, which run under
+    # VS 2022 (VisualStudioVersion='17.0') and still match the '17.0' arm.
     props_path = dirs.source / "PCbuild" / "python.props"
     if props_path.exists():
         content = props_path.read_text(encoding="utf-8")
-        if "'$(VisualStudioVersion)' == '18.0'" not in content:
-            log.info("Patching python.props to add VS 18 (VS 2026) -> v143")
-            _tpl = (
-                "<BasePlatformToolset Condition=\"'$(BasePlatformToolset)' == ''"
-                " and '$(VisualStudioVersion)' == '{ver}'\">v143</BasePlatformToolset>"
-            )
-            old_line = _tpl.format(ver="17.0")
-            new_line = _tpl.format(ver="18.0") + "\n    " + old_line
-            props_path.write_text(content.replace(old_line, new_line), encoding="utf-8")
+        vs18_pin_re = (
+            r"^[ \t]*<BasePlatformToolset Condition=\"'\$\(BasePlatformToolset\)' "
+            r"== '' and '\$\(VisualStudioVersion\)' == '18\.0'\">"
+            r"v14\d</BasePlatformToolset>\r?\n"
+        )
+        new_content, n = re.subn(vs18_pin_re, "", content, count=1, flags=re.MULTILINE)
+        if n:
+            log.info("Removed VS 18 -> v14x pin from python.props (letting MSBuild use DefaultPlatformToolset)")
+            props_path.write_text(new_content, encoding="utf-8")
 
     # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
     # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
