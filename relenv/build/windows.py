@@ -1135,6 +1135,45 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         if content != original:
             props_path.write_text(content, encoding="utf-8")
 
+    # Disable whole-program optimisation and link-time code generation on
+    # ARM64 Release builds.  The resulting "pass 2" / LTCG phase in
+    # ``cl.exe`` is where the HostX86 cross-compiler runs out of heap on
+    # ``Objects/unicodetype_db.h`` (``fatal error C1002``) -- repeatedly
+    # reproduced on Python 3.10-3.13 under VS 18 on windows-11-arm, where
+    # we can't convince MSBuild to use the HostX64 cross-compiler.
+    # Dropping WPO and LTCG gives up some runtime speed (official builds
+    # keep them on) but avoids the OOM.  Python 3.14 happens to compile
+    # without hitting the limit so it's unaffected.  Only touches the
+    # ARM64 conditional stanza; amd64/x86 Release keeps WPO+LTCG.
+    pyproject_path = dirs.source / "PCbuild" / "pyproject.props"
+    if pyproject_path.exists():
+        original = pyproject_path.read_text(encoding="utf-8")
+        content = original
+        sentinel = "<!-- relenv-arm64-disable-wpo -->"
+        marker = "  </ItemDefinitionGroup>"
+        if sentinel not in content and marker in content:
+            override_block = (
+                "  </ItemDefinitionGroup>\n"
+                "  " + sentinel + "\n"
+                "  <ItemDefinitionGroup "
+                "Condition=\"'$(Platform)' == 'ARM64' and "
+                "'$(Configuration)' == 'Release'\">\n"
+                "    <ClCompile>\n"
+                "      <WholeProgramOptimization>false</WholeProgramOptimization>\n"
+                "    </ClCompile>\n"
+                "    <Link>\n"
+                "      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>\n"
+                "    </Link>\n"
+                "    <Lib>\n"
+                "      <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>\n"
+                "    </Lib>\n"
+                "  </ItemDefinitionGroup>"
+            )
+            content = content.replace(marker, override_block, 1)
+            log.info("Patched pyproject.props to disable WPO/LTCG on ARM64 Release")
+        if content != original:
+            pyproject_path.write_text(content, encoding="utf-8")
+
     # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
     # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
     # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
@@ -1153,8 +1192,13 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     plat = arch_to_plat[arch]
 
     # -e skips fetching externals if they already exist.
-    build_bat = dirs.source / "PCbuild" / "build.bat"
-    cmd_list = [str(build_bat), "-e", "-p", plat, "--no-tkinter"]
+    cmd = [
+        str(dirs.source / "PCbuild" / "build.bat"),
+        "-e",
+        "-p",
+        plat,
+        "--no-tkinter",
+    ]
 
     # On VS Enterprise 2026 / VS 18 (the windows-11-arm runner), neither
     # v143 nor v140 ARM64 build tools are installed by default, but
@@ -1167,21 +1211,7 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     # and push it into MSBuild via the ``PlatformToolset`` env var
     # (MSBuild promotes every env var whose name matches a known property;
     # CPython's build.bat passes the environment through to msbuild.exe
-    # intact).  Env-var passing avoids a batch-file pitfall: build.bat
-    # forwards its positional args verbatim and cmd.exe splits unquoted
-    # args on ``=`` (so ``/p:PlatformToolset=v145`` becomes two tokens and
-    # errors with MSB1008).  Only applied on arm64 to avoid perturbing the
-    # amd64/x86 windows-2022 builds, which already resolve to v143 under
-    # VS 2022.
-    #
-    # ``PreferredToolArchitecture`` *cannot* be set the same way --
-    # Microsoft.Cpp.Default.props resets it to x86 after env-var promotion
-    # for the ARM64 platform, and setting it in python.props early also
-    # loses to the same reset.  Pass it via a /p: switch instead and route
-    # the whole command line through a shell string (not an argv list) so
-    # build.bat sees a *quoted* arg and the ``=`` survives cmd.exe's
-    # positional-arg tokenization.
-    use_shell = False
+    # intact).
     if arch == "arm64":
         toolset = _discover_installed_platform_toolset(env, "ARM64")
         if toolset:
@@ -1193,20 +1223,8 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
                 "back to an uninstalled default and fail with MSB8020"
             )
 
-        # Build a properly-quoted shell command.  Each arg is quoted so
-        # cmd.exe keeps the ``/p:PreferredToolArchitecture=x64`` token
-        # intact when forwarding through build.bat.
-        cmd = subprocess.list2cmdline(cmd_list) + ' "/p:PreferredToolArchitecture=x64"'
-        use_shell = True
-        log.info("Launching PCbuild via shell to preserve quoted /p: arg")
-    else:
-        cmd = cmd_list
-
     log.info("Start PCbuild")
-    if use_shell:
-        runcmd(cmd, env=env, stderr=logfp, stdout=logfp, shell=True)
-    else:
-        runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
 
     if arch == "amd64":
