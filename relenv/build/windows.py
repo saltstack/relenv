@@ -1153,31 +1153,35 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     plat = arch_to_plat[arch]
 
     # -e skips fetching externals if they already exist.
-    cmd = [
-        str(dirs.source / "PCbuild" / "build.bat"),
-        "-e",
-        "-p",
-        plat,
-        "--no-tkinter",
-    ]
+    build_bat = dirs.source / "PCbuild" / "build.bat"
+    cmd_list = [str(build_bat), "-e", "-p", plat, "--no-tkinter"]
 
-    # On VS Enterprise 2026 / VS 18 (the windows-11-arm runner), neither v143
-    # nor v140 ARM64 build tools are installed by default, but python.props
-    # on all branches 3.10-3.14 still manages to pick one or the other -- VS
-    # 18 unconditionally sets $(VCTargetsPath14) which makes 3.10's fallback
-    # match and resolve PlatformToolset=v140 (which can't even target arm64),
-    # while 3.14 upstream pins the '18.0' arm to v143.  Discover the newest
-    # vXXX directory actually installed under
+    # On VS Enterprise 2026 / VS 18 (the windows-11-arm runner), neither
+    # v143 nor v140 ARM64 build tools are installed by default, but
+    # python.props on all branches 3.10-3.14 still manages to pick one of
+    # them -- VS 18 unconditionally sets $(VCTargetsPath14) which makes
+    # 3.10's fallback match and resolve PlatformToolset=v140 (which can't
+    # even target arm64), while 3.14 upstream pins the '18.0' arm to v143.
+    # Discover the newest vXXX directory actually installed under
     # <VSInstallPath>\MSBuild\Microsoft\VC\*\Platforms\<Platform>\PlatformToolsets
-    # and push it into MSBuild via the PlatformToolset env var (MSBuild promotes
-    # any env var that matches a known property, and CPython's build.bat passes
-    # the environment through to MSBuild intact).  Env-var passing avoids a
-    # batch-file pitfall: build.bat forwards its positional args verbatim to
-    # msbuild.exe, but cmd.exe strips the ``=`` out of positional args so
-    # ``/p:PlatformToolset=v145`` arrives at MSBuild as two tokens
-    # (``/p:PlatformToolset`` and ``v145``) and errors with MSB1008.
-    # Only applied on arm64 to avoid perturbing the amd64/x86 windows-2022
-    # builds, which already resolve correctly to v143 under VS 2022.
+    # and push it into MSBuild via the ``PlatformToolset`` env var
+    # (MSBuild promotes every env var whose name matches a known property;
+    # CPython's build.bat passes the environment through to msbuild.exe
+    # intact).  Env-var passing avoids a batch-file pitfall: build.bat
+    # forwards its positional args verbatim and cmd.exe splits unquoted
+    # args on ``=`` (so ``/p:PlatformToolset=v145`` becomes two tokens and
+    # errors with MSB1008).  Only applied on arm64 to avoid perturbing the
+    # amd64/x86 windows-2022 builds, which already resolve to v143 under
+    # VS 2022.
+    #
+    # ``PreferredToolArchitecture`` *cannot* be set the same way --
+    # Microsoft.Cpp.Default.props resets it to x86 after env-var promotion
+    # for the ARM64 platform, and setting it in python.props early also
+    # loses to the same reset.  Pass it via a /p: switch instead and route
+    # the whole command line through a shell string (not an argv list) so
+    # build.bat sees a *quoted* arg and the ``=`` survives cmd.exe's
+    # positional-arg tokenization.
+    use_shell = False
     if arch == "arm64":
         toolset = _discover_installed_platform_toolset(env, "ARM64")
         if toolset:
@@ -1189,13 +1193,20 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
                 "back to an uninstalled default and fail with MSB8020"
             )
 
-        # NOTE: ``PreferredToolArchitecture=x64`` is injected into
-        # python.props above (not via env var) because
-        # Microsoft.Cpp.Default.props overrides the env var but not an
-        # explicit property set in python.props (imported before it).
+        # Build a properly-quoted shell command.  Each arg is quoted so
+        # cmd.exe keeps the ``/p:PreferredToolArchitecture=x64`` token
+        # intact when forwarding through build.bat.
+        cmd = subprocess.list2cmdline(cmd_list) + ' "/p:PreferredToolArchitecture=x64"'
+        use_shell = True
+        log.info("Launching PCbuild via shell to preserve quoted /p: arg")
+    else:
+        cmd = cmd_list
 
     log.info("Start PCbuild")
-    runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
+    if use_shell:
+        runcmd(cmd, env=env, stderr=logfp, stdout=logfp, shell=True)
+    else:
+        runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
 
     if arch == "amd64":
