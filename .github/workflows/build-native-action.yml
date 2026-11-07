@@ -369,7 +369,7 @@ jobs:
           retention-days: 5
 
   build_windows_arm64:
-    name: "Python Windows arm64"
+    name: "Python Windows"
     # Native build: host and target are both arm64, so this runs on the
     # windows-11-arm hosted runner rather than cross-compiling from the
     # x64 windows-2022 image build_windows uses. WIP job for

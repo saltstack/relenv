@@ -275,7 +275,7 @@ jobs:
           retention-days: 5
 
   test_windows_arm64:
-    name: "Verify Windows arm64"
+    name: "Verify Windows"
     # Matches build_windows_arm64's native windows-11-arm runner in
     # build-native-action.yml. WIP for
     # https://github.com/saltstack/relenv/issues/280.
