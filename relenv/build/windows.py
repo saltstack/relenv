@@ -1161,6 +1161,15 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
                 "back to an uninstalled default and fail with MSB8020"
             )
 
+        # MSBuild's default host-tool arch is x86 for arm64 cross-compiles.
+        # The 32-bit cl.exe caps its address space at ~2GB and hits
+        # "fatal error C1002: compiler is out of heap space in pass 2" on
+        # unicodetype_db.h / similar generated sources on every branch here.
+        # Switch to x64-hosted tools so the compiler process has a 64-bit
+        # address space.  (x64 binaries run under Windows 11 ARM64's native
+        # emulation layer, no extra install needed.)
+        env["PreferredToolArchitecture"] = "x64"
+
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
     log.info("PCbuild finished")
