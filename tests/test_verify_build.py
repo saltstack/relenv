@@ -1570,10 +1570,11 @@ def test_install_with_target_no_ignore_installed(pipexec, pyexec, build, build_v
     if sys.platform == "win32" and arch == "arm64":
         if build_version.startswith("3.10"):
             pytest.skip("pygit2 has no win_arm64 wheels for Python 3.10")
-        if build_version.startswith("3.14"):
-            cffi = "cffi==2.0.0"
-        else:
-            cffi = "cffi==1.17.1"
+        # pygit2 1.19.2 is the earliest release carrying win_arm64 wheels,
+        # and its METADATA pins ``cffi>=2.0``.  Pre-installing anything
+        # older would be re-upgraded during the pygit2 install and defeat
+        # the "already satisfied: cffi" assertion below.
+        cffi = "cffi==2.0.0"
         pygit2 = "pygit2==1.19.2"
     elif build_version.startswith("3.14"):
         cffi = "cffi==2.0.0"
@@ -1616,10 +1617,11 @@ def test_install_with_target_ignore_installed(pipexec, pyexec, build, build_vers
     if sys.platform == "win32" and arch == "arm64":
         if build_version.startswith("3.10"):
             pytest.skip("pygit2 has no win_arm64 wheels for Python 3.10")
-        if build_version.startswith("3.14"):
-            cffi = "cffi==2.0.0"
-        else:
-            cffi = "cffi==1.17.1"
+        # pygit2 1.19.2 is the earliest release carrying win_arm64 wheels,
+        # and its METADATA pins ``cffi>=2.0``.  Pre-installing anything
+        # older would be re-upgraded during the pygit2 install and defeat
+        # the "already satisfied: cffi" assertion below.
+        cffi = "cffi==2.0.0"
         pygit2 = "pygit2==1.19.2"
     elif build_version.startswith("3.14"):
         cffi = "cffi==2.0.0"
