@@ -41,6 +41,38 @@ function Write-Result($result, $ForegroundColor="Green") {
     }
 }
 
+function Test-V140Installed {
+    # The v140 PlatformToolset lives in one of two places depending on the
+    # VS installer generation:
+    #
+    #   * VS 2017 / VS 2019 and earlier shared MSBuild writes to the legacy
+    #     shared location under ``${env:ProgramFiles(x86)}\MSBuild``.
+    #   * VS 2022 17.14+ / VS 18 moved MSBuild inside the per-install tree
+    #     and populates only ``<VS_INST_LOC>\MSBuild\Microsoft\VC\<vXXX>\
+    #     Platforms\<Arch>\PlatformToolsets\v140`` -- the legacy path stays
+    #     empty even when v140 is installed and usable.
+    #
+    # Return $true on the first match.
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [String] $VSInstLoc
+    )
+    if ( Test-Path -Path "${env:ProgramFiles(x86)}\MSBuild\Microsoft.Cpp\v4.0\V140" ) {
+        return $true
+    }
+    if ( $VSInstLoc ) {
+        $hit = Get-ChildItem `
+            -Path "$VSInstLoc\MSBuild\Microsoft\VC\*\Platforms\*\PlatformToolsets\v140" `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ( $hit ) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Add-Certificate {
     [CmdletBinding()]
     param(
@@ -97,8 +129,23 @@ try {
     $VS_INST_LOC    = $(Get-CimInstance MSFT_VSInstance -Namespace root/cimv2/vs).InstallLocation
     $MSBUILD_BIN = $(Get-ChildItem "$VS_INST_LOC\MSBuild\*\Bin\msbuild.exe").FullName
 } catch {
-    # If VS is not installed, this is the fallback for this installation
-    $MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
+    # The MSFT_VSInstance CIM class isn't registered on every runner image
+    # (confirmed absent on windows-11-arm even though VS 2022 ships
+    # pre-installed there) -- before assuming VS needs to be installed
+    # from scratch, fall back to vswhere.exe, which is present on every
+    # GitHub-hosted Windows image regardless of CIM provider support.
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    $VS_INST_LOC = $null
+    if ( Test-Path -Path $vswhere ) {
+        $VS_INST_LOC = & $vswhere -latest -products * -property installationPath
+    }
+    if ( $VS_INST_LOC ) {
+        $MSBUILD_BIN = $(Get-ChildItem "$VS_INST_LOC\MSBuild\*\Bin\msbuild.exe").FullName
+    } else {
+        # Genuinely no VS install found by either method - this is the
+        # fallback for a from-scratch installation.
+        $MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
+    }
 }
 
 #-------------------------------------------------------------------------------
@@ -115,10 +162,22 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
     # without v140 by default, so use the VS bootstrapper to add the
     # component to the existing install.  We don't trust the installer's
     # exit code (it returns non-zero in a few benign cases) — instead
-    # verify the v140 platform-toolset targets file exists afterwards.
-    $V140_TARGETS = "${env:ProgramFiles(x86)}\MSBuild\Microsoft.Cpp\v4.0\V140"
+    # verify the v140 platform-toolset targets exist afterwards. Check
+    # both the legacy shared-MSBuild location and the VS 2022 17.14+ /
+    # VS 18 per-install location (see Test-V140Installed above).
+    #
+    # Skip v140 entirely on arm64 hosts: v140 cannot generate arm64 code
+    # (VS 2015 predates the arm64 toolchain), and the windows-11-arm
+    # runner image ships VS 18 / VS Enterprise 2026, whose product graph
+    # does not expose Microsoft.VisualStudio.Component.VC.140 at all —
+    # the bootstrapper logs "Cannot find package ... in product graph"
+    # and exits 0, which then fails the post-install verify.  Python
+    # 3.10/3.11 PCbuild on arm64 falls through python.props to whatever
+    # toolset VS has (v143/v144), which supports arm64 natively.
     Write-Host "Ensuring v140 toolset is installed: " -NoNewline
-    if ( Test-Path -Path $V140_TARGETS ) {
+    if ( $env:PROCESSOR_ARCHITECTURE -eq "ARM64" ) {
+        Write-Result "Skipped (arm64 host; v140 does not support arm64)" -ForegroundColor Green
+    } elseif ( Test-V140Installed -VSInstLoc $VS_INST_LOC ) {
         Write-Result "Already present" -ForegroundColor Green
     } else {
         Write-Host ""
@@ -151,7 +210,7 @@ if ( Test-Path -Path $MSBUILD_BIN ) {
             -PassThru -Wait -NoNewWindow
         Write-Host "  bootstrapper exit code: $($proc.ExitCode)"
         Write-Host "Verifying v140 toolset: " -NoNewline
-        if ( Test-Path -Path $V140_TARGETS ) {
+        if ( Test-V140Installed -VSInstLoc $VS_INST_LOC ) {
             Write-Result "Success" -ForegroundColor Green
         } else {
             Write-Result "Failed (v140 still not registered with MSBuild)" -ForegroundColor Red

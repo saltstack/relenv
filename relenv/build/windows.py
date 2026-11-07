@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -226,6 +227,62 @@ def find_vcvarsall(env: EnvMapping) -> pathlib.Path | None:
                     return candidate
 
     return None
+
+
+def _discover_installed_platform_toolset(env: EnvMapping, platform: str) -> str | None:
+    r"""
+    Return the newest PlatformToolset installed under the detected VS
+    install for *platform* (``ARM64``, ``x64``, ``Win32``), or ``None``
+    if we can't find vswhere/an install.
+
+    Each VS install lays out installed PlatformToolsets under::
+
+        <installPath>\MSBuild\Microsoft\VC\<vcDir>\Platforms\<platform>\PlatformToolsets\<name>
+
+    ``<name>`` is the value we need to pass to MSBuild via
+    ``/p:PlatformToolset=<name>``.  Sorting lexicographically on the
+    directory name is good enough -- v143 < v144 < v180 as strings.
+    """
+    vswhere = shutil.which("vswhere.exe")
+    if not vswhere:
+        candidate = (
+            pathlib.Path(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"))
+            / "Microsoft Visual Studio"
+            / "Installer"
+            / "vswhere.exe"
+        )
+        if candidate.exists():
+            vswhere = str(candidate)
+    if not vswhere:
+        return None
+
+    try:
+        result = subprocess.run(
+            [vswhere, "-latest", "-products", "*", "-property", "installationPath"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        return None
+    vs_path = result.stdout.strip()
+    if not vs_path:
+        return None
+
+    toolset_root = pathlib.Path(vs_path) / "MSBuild" / "Microsoft" / "VC"
+    if not toolset_root.exists():
+        return None
+
+    names: set[str] = set()
+    for vc_dir in toolset_root.iterdir():
+        plats = vc_dir / "Platforms" / platform / "PlatformToolsets"
+        if plats.is_dir():
+            for p in plats.iterdir():
+                if p.is_dir() and p.name.lower().startswith("v"):
+                    names.add(p.name)
+    if not names:
+        return None
+    return max(names)
 
 
 def update_props(source: pathlib.Path, old: str, new: str) -> None:
@@ -618,6 +675,20 @@ def update_openssl(dirs: Dirs, env: EnvMapping) -> None:
                 shutil.copy(str(target_dir / license_file), str(out_dir / "LICENSE"))
                 break
 
+        if not is_binary:
+            # Bundle a copy of the OpenSSL dev tree (headers + import
+            # libs) into the onedir itself. Rust crates such as
+            # openssl-sys -- a transitive build dependency of packages
+            # like `cryptography` when pip falls back to building from
+            # source, which it does on arm64 since no prebuilt wheel
+            # exists yet for a target nothing has shipped wheels for --
+            # have no other way to find an OpenSSL to link against.
+            # Consumers set OPENSSL_DIR to <onedir>/OpenSSL before
+            # pip installing such packages.
+            openssl_bundle_dir = dirs.prefix / "OpenSSL"
+            if not openssl_bundle_dir.exists():
+                shutil.copytree(str(prefix), str(openssl_bundle_dir))
+
     if is_binary:
         # Ensure include/openssl exists
         inc_openssl_dir = target_dir / "include" / "openssl"
@@ -1007,6 +1078,110 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
 
     patch_ssl_for_cpython_104135(dirs.source)
 
+    # Drop any python.props line that hard-pins BasePlatformToolset to v143
+    # when running under VS Enterprise 2026 / VS 18
+    # (VisualStudioVersion='18.0').  The windows-11-arm runner image ships
+    # VS 18 with its native toolset only; v143 (VS 2022 build tools) is not
+    # installed and installing it on-demand is awkward (the "legacy" v143
+    # ARM64 compat component isn't exposed in VS 18's product graph).  With
+    # the pin removed, BasePlatformToolset stays empty for VS 18, so
+    # python.props's existing fallback leaves PlatformToolset empty too and
+    # MSBuild resolves it via Microsoft.Cpp.Default.props's
+    # DefaultPlatformToolset -- i.e. whatever VS 18 ships natively on the
+    # runner.
+    #
+    # Only CPython 3.14 upstream carries the 18.0 line; 3.10-3.13 never
+    # matched VS 18 to begin with, so the sub below is a no-op on those
+    # trees. No effect on windows-2022 (x86/amd64) builds, which run under
+    # VS 2022 (VisualStudioVersion='17.0') and still match the '17.0' arm.
+    props_path = dirs.source / "PCbuild" / "python.props"
+    if props_path.exists():
+        original = props_path.read_text(encoding="utf-8")
+        content = original
+
+        vs18_pin_re = (
+            r"^[ \t]*<BasePlatformToolset Condition=\"'\$\(BasePlatformToolset\)' "
+            r"== '' and '\$\(VisualStudioVersion\)' == '18\.0'\">"
+            r"v14\d</BasePlatformToolset>\r?\n"
+        )
+        content, n = re.subn(vs18_pin_re, "", content, count=1, flags=re.MULTILINE)
+        if n:
+            log.info("Removed VS 18 -> v14x pin from python.props (letting MSBuild use DefaultPlatformToolset)")
+
+        # Force x64-hosted cl.exe/link.exe on ARM64 builds.  The default
+        # ``PreferredToolArchitecture`` MSBuild picks for the ARM64 platform
+        # is empty, which causes Microsoft.Cpp.Default.props to default it
+        # to ``x86`` -- the 32-bit compiler then OOMs ("fatal error C1002:
+        # compiler is out of heap space in pass 2") on sources like
+        # Objects/unicodetype_db.h where PGO/whole-program optimization
+        # pushes the heap past 2 GB.  Setting the value in python.props
+        # (imported before Microsoft.Cpp.Default.props by every .vcxproj
+        # under PCbuild/) wins over the default.  Passing it via a MSBuild
+        # ``/p:`` flag isn't an option because build.bat forwards %* through
+        # cmd.exe, which splits positional args on ``=`` into two tokens
+        # and triggers MSB1008.  Setting it via a process env var doesn't
+        # win against Microsoft.Cpp.Default.props's resetter.
+        if "PreferredToolArchitecture" not in content:
+            marker = "    <PlatformToolset Condition="
+            if marker in content:
+                prefarch_line = (
+                    "    <PreferredToolArchitecture "
+                    "Condition=\"'$(PreferredToolArchitecture)' == '' "
+                    "and '$(Platform)' == 'ARM64'\">x64</PreferredToolArchitecture>\n"
+                )
+                content = content.replace(marker, prefarch_line + marker, 1)
+                log.info("Inserted PreferredToolArchitecture=x64 for Platform=ARM64 into python.props")
+
+        if content != original:
+            props_path.write_text(content, encoding="utf-8")
+
+    # Reduce optimisation level and disable whole-program optimisation /
+    # link-time code generation on ARM64 Release builds.  The HostX86
+    # cross-compiler (which MSBuild picks for ARM64 targets under VS 18
+    # and refuses to let us override) OOMs in pass 2 on
+    # ``Objects/unicodetype_db.h`` (``fatal error C1002``) with Python's
+    # default ``MaxSpeed``+``WholeProgramOptimization=true`` settings.
+    # Even disabling WPO alone isn't enough -- /O2's register allocator
+    # also blows past the 32-bit heap on that file.  Switching to
+    # ``MinSpace`` (``/O1``), turning off WPO/LTCG, and disabling
+    # ``IntrinsicFunctions`` keeps optimisation shallow enough to fit in
+    # 2 GB.  Python 3.14 happens to compile without hitting the limit so
+    # its arm64 build was already green; this patch is a no-op there and
+    # on amd64/x86 (the condition keys off Platform='ARM64').
+    pyproject_path = dirs.source / "PCbuild" / "pyproject.props"
+    if pyproject_path.exists():
+        original = pyproject_path.read_text(encoding="utf-8")
+        content = original
+        sentinel = "<!-- relenv-arm64-disable-wpo -->"
+        marker = "  </ItemDefinitionGroup>"
+        if sentinel not in content and marker in content:
+            override_block = (
+                "  </ItemDefinitionGroup>\n"
+                "  " + sentinel + "\n"
+                "  <ItemDefinitionGroup "
+                "Condition=\"'$(Platform)' == 'ARM64'\">\n"
+                "    <ClCompile>\n"
+                "      <Optimization>Disabled</Optimization>\n"
+                "      <InlineFunctionExpansion>Disabled"
+                "</InlineFunctionExpansion>\n"
+                "      <IntrinsicFunctions>false</IntrinsicFunctions>\n"
+                "      <StringPooling>false</StringPooling>\n"
+                "      <FunctionLevelLinking>false</FunctionLevelLinking>\n"
+                "      <WholeProgramOptimization>false</WholeProgramOptimization>\n"
+                "    </ClCompile>\n"
+                "    <Link>\n"
+                "      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>\n"
+                "    </Link>\n"
+                "    <Lib>\n"
+                "      <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>\n"
+                "    </Lib>\n"
+                "  </ItemDefinitionGroup>"
+            )
+            content = content.replace(marker, override_block, 1)
+            log.info("Patched pyproject.props to disable WPO/LTCG on ARM64 Release")
+        if content != original:
+            pyproject_path.write_text(content, encoding="utf-8")
+
     # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
     # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
     # Modules/_hashopenssl.c. The inverted polarity makes openssl_md5(
@@ -1032,6 +1207,29 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         plat,
         "--no-tkinter",
     ]
+
+    # On VS Enterprise 2026 / VS 18 (the windows-11-arm runner), neither
+    # v143 nor v140 ARM64 build tools are installed by default, but
+    # python.props on all branches 3.10-3.14 still manages to pick one of
+    # them -- VS 18 unconditionally sets $(VCTargetsPath14) which makes
+    # 3.10's fallback match and resolve PlatformToolset=v140 (which can't
+    # even target arm64), while 3.14 upstream pins the '18.0' arm to v143.
+    # Discover the newest vXXX directory actually installed under
+    # <VSInstallPath>\MSBuild\Microsoft\VC\*\Platforms\<Platform>\PlatformToolsets
+    # and push it into MSBuild via the ``PlatformToolset`` env var
+    # (MSBuild promotes every env var whose name matches a known property;
+    # CPython's build.bat passes the environment through to msbuild.exe
+    # intact).
+    if arch == "arm64":
+        toolset = _discover_installed_platform_toolset(env, "ARM64")
+        if toolset:
+            log.info("Pinning PlatformToolset=%s via env var for arm64 build", toolset)
+            env["PlatformToolset"] = toolset
+        else:
+            log.warning(
+                "No installed arm64 PlatformToolset discovered; MSBuild may fall "
+                "back to an uninstalled default and fail with MSB8020"
+            )
 
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
@@ -1132,6 +1330,7 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "*.whl",
         "/Include/*",
         "/Lib/site-packages/*",
+        "/OpenSSL/*",
     ]
     archive = f"{dirs.prefix}.tar.xz"
     with tarfile.open(archive, mode="w:xz") as fp:
