@@ -1135,16 +1135,19 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         if content != original:
             props_path.write_text(content, encoding="utf-8")
 
-    # Disable whole-program optimisation and link-time code generation on
-    # ARM64 Release builds.  The resulting "pass 2" / LTCG phase in
-    # ``cl.exe`` is where the HostX86 cross-compiler runs out of heap on
-    # ``Objects/unicodetype_db.h`` (``fatal error C1002``) -- repeatedly
-    # reproduced on Python 3.10-3.13 under VS 18 on windows-11-arm, where
-    # we can't convince MSBuild to use the HostX64 cross-compiler.
-    # Dropping WPO and LTCG gives up some runtime speed (official builds
-    # keep them on) but avoids the OOM.  Python 3.14 happens to compile
-    # without hitting the limit so it's unaffected.  Only touches the
-    # ARM64 conditional stanza; amd64/x86 Release keeps WPO+LTCG.
+    # Reduce optimisation level and disable whole-program optimisation /
+    # link-time code generation on ARM64 Release builds.  The HostX86
+    # cross-compiler (which MSBuild picks for ARM64 targets under VS 18
+    # and refuses to let us override) OOMs in pass 2 on
+    # ``Objects/unicodetype_db.h`` (``fatal error C1002``) with Python's
+    # default ``MaxSpeed``+``WholeProgramOptimization=true`` settings.
+    # Even disabling WPO alone isn't enough -- /O2's register allocator
+    # also blows past the 32-bit heap on that file.  Switching to
+    # ``MinSpace`` (``/O1``), turning off WPO/LTCG, and disabling
+    # ``IntrinsicFunctions`` keeps optimisation shallow enough to fit in
+    # 2 GB.  Python 3.14 happens to compile without hitting the limit so
+    # its arm64 build was already green; this patch is a no-op there and
+    # on amd64/x86 (the condition keys off Platform='ARM64').
     pyproject_path = dirs.source / "PCbuild" / "pyproject.props"
     if pyproject_path.exists():
         original = pyproject_path.read_text(encoding="utf-8")
@@ -1159,6 +1162,10 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
                 "Condition=\"'$(Platform)' == 'ARM64' and "
                 "'$(Configuration)' == 'Release'\">\n"
                 "    <ClCompile>\n"
+                "      <Optimization>MinSpace</Optimization>\n"
+                "      <InlineFunctionExpansion>OnlyExplicitInline"
+                "</InlineFunctionExpansion>\n"
+                "      <IntrinsicFunctions>false</IntrinsicFunctions>\n"
                 "      <WholeProgramOptimization>false</WholeProgramOptimization>\n"
                 "    </ClCompile>\n"
                 "    <Link>\n"
