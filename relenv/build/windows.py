@@ -1096,16 +1096,44 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     # VS 2022 (VisualStudioVersion='17.0') and still match the '17.0' arm.
     props_path = dirs.source / "PCbuild" / "python.props"
     if props_path.exists():
-        content = props_path.read_text(encoding="utf-8")
+        original = props_path.read_text(encoding="utf-8")
+        content = original
+
         vs18_pin_re = (
             r"^[ \t]*<BasePlatformToolset Condition=\"'\$\(BasePlatformToolset\)' "
             r"== '' and '\$\(VisualStudioVersion\)' == '18\.0'\">"
             r"v14\d</BasePlatformToolset>\r?\n"
         )
-        new_content, n = re.subn(vs18_pin_re, "", content, count=1, flags=re.MULTILINE)
+        content, n = re.subn(vs18_pin_re, "", content, count=1, flags=re.MULTILINE)
         if n:
             log.info("Removed VS 18 -> v14x pin from python.props (letting MSBuild use DefaultPlatformToolset)")
-            props_path.write_text(new_content, encoding="utf-8")
+
+        # Force x64-hosted cl.exe/link.exe on ARM64 builds.  The default
+        # ``PreferredToolArchitecture`` MSBuild picks for the ARM64 platform
+        # is empty, which causes Microsoft.Cpp.Default.props to default it
+        # to ``x86`` -- the 32-bit compiler then OOMs ("fatal error C1002:
+        # compiler is out of heap space in pass 2") on sources like
+        # Objects/unicodetype_db.h where PGO/whole-program optimization
+        # pushes the heap past 2 GB.  Setting the value in python.props
+        # (imported before Microsoft.Cpp.Default.props by every .vcxproj
+        # under PCbuild/) wins over the default.  Passing it via a MSBuild
+        # ``/p:`` flag isn't an option because build.bat forwards %* through
+        # cmd.exe, which splits positional args on ``=`` into two tokens
+        # and triggers MSB1008.  Setting it via a process env var doesn't
+        # win against Microsoft.Cpp.Default.props's resetter.
+        if "PreferredToolArchitecture" not in content:
+            marker = "    <PlatformToolset Condition="
+            if marker in content:
+                prefarch_line = (
+                    "    <PreferredToolArchitecture "
+                    "Condition=\"'$(PreferredToolArchitecture)' == '' "
+                    "and '$(Platform)' == 'ARM64'\">x64</PreferredToolArchitecture>\n"
+                )
+                content = content.replace(marker, prefarch_line + marker, 1)
+                log.info("Inserted PreferredToolArchitecture=x64 for Platform=ARM64 into python.props")
+
+        if content != original:
+            props_path.write_text(content, encoding="utf-8")
 
     # CPython 3.14.10 shipped a bad backport of gh-149816 (upstream PR #160006)
     # that dropped the "!" from `int fips = !disable_fips_property(py_ht);` in
@@ -1161,14 +1189,10 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
                 "back to an uninstalled default and fail with MSB8020"
             )
 
-        # MSBuild's default host-tool arch is x86 for arm64 cross-compiles.
-        # The 32-bit cl.exe caps its address space at ~2GB and hits
-        # "fatal error C1002: compiler is out of heap space in pass 2" on
-        # unicodetype_db.h / similar generated sources on every branch here.
-        # Switch to x64-hosted tools so the compiler process has a 64-bit
-        # address space.  (x64 binaries run under Windows 11 ARM64's native
-        # emulation layer, no extra install needed.)
-        env["PreferredToolArchitecture"] = "x64"
+        # NOTE: ``PreferredToolArchitecture=x64`` is injected into
+        # python.props above (not via env var) because
+        # Microsoft.Cpp.Default.props overrides the env var but not an
+        # explicit property set in python.props (imported before it).
 
     log.info("Start PCbuild")
     runcmd(cmd, env=env, stderr=logfp, stdout=logfp)
