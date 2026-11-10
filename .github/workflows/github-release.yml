@@ -136,6 +136,21 @@ jobs:
           - platform: win
             arch: amd64
             python: '3.14'
+          - platform: win
+            arch: arm64
+            python: '3.10'
+          - platform: win
+            arch: arm64
+            python: '3.11'
+          - platform: win
+            arch: arm64
+            python: '3.12'
+          - platform: win
+            arch: arm64
+            python: '3.13'
+          - platform: win
+            arch: arm64
+            python: '3.14'
 
           - platform: macos
             arch: x86_64
