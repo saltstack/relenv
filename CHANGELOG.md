@@ -1,3 +1,9 @@
+0.23.0
+======
+
+* Add native Windows arm64 build and verify support (#328)
+
+
 0.22.32
 =======
 
