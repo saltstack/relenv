@@ -566,6 +566,13 @@
     "platforms": [
      "linux"
     ]
+   },
+   "1.22.3": {
+    "url": "https://kerberos.org/dist/krb5/1.22/krb5-{version}.tar.gz",
+    "sha256": "fe90af8441ad9fa9b064b8e53077cefb782a96f8a68276b031dc54af1789ff0b",
+    "platforms": [
+     "linux"
+    ]
    }
   },
   "bzip2": {
