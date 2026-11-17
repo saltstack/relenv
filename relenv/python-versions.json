@@ -469,6 +469,13 @@
     "platforms": [
      "linux"
     ]
+   },
+   "3.8.1": {
+    "url": "https://github.com/libffi/libffi/releases/download/v{version}/libffi-{version}.tar.gz",
+    "sha256": "81e879c094cc5ec3186c48510c6385ac6b3e866192e8bc71a35245703757ee40",
+    "platforms": [
+     "linux"
+    ]
    }
   },
   "zlib": {

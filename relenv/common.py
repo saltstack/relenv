@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
 # relenv package version
-__version__ = "0.23.1"
+__version__ = "0.23.2"
 
 log = logging.getLogger(__name__)
 
