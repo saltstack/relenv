@@ -1,17 +1,42 @@
 name: Auto-Merge Automated PRs
 
-# Merge PRs labeled `automated-update` once CI passes.  This avoids
-# enabling the repo-wide "allow auto-merge" setting; merge is invoked
-# directly via the API for matching PRs only.
+# Merge PRs labeled `automated-update` once CI passes AND a human has
+# approved.  This avoids enabling the repo-wide "allow auto-merge" setting;
+# merge is invoked directly via the API for matching PRs only.
+#
+# Fires on two triggers so whichever condition completes last unblocks:
+#
+#   * ``workflow_run`` of "Pull Request or Push" succeeding -- CI went green;
+#     check if any approval is already recorded.
+#   * ``pull_request_review`` submitted as APPROVED -- a reviewer approved;
+#     check if CI is already green.
+#
+# Prior revision only watched ``workflow_run``, so approvals submitted
+# after CI had already completed never re-fired this workflow and the PR
+# sat waiting on a human to click Merge.
 
 on:
   workflow_run:
     workflows: ["Pull Request or Push"]
     types: [completed]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
   merge:
-    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    # Only run when at least one of these conditions holds.  For
+    # workflow_run, filter to pull_request CI runs that passed.  For
+    # pull_request_review, filter to APPROVED reviews on PRs that carry
+    # the ``automated-update`` label (the ref-scoped checks happen in the
+    # step script because the review event doesn't surface head_sha
+    # directly at the workflow level).
+    if: |
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'pull_request_review' &&
+       github.event.review.state == 'approved' &&
+       contains(github.event.pull_request.labels.*.name, 'automated-update'))
     runs-on: ubuntu-latest
     steps:
       - name: Generate App Token
@@ -21,41 +46,107 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
 
-      - name: Merge matching PR
+      - name: Resolve PR number and head SHA
+        id: resolve
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEW_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          pr_number="$(
-            gh pr list \
-              --state open \
-              --label automated-update \
-              --search "${HEAD_SHA}" \
-              --json number,headRefName,headRefOid \
-              --jq ".[] | select(.headRefOid == \"${HEAD_SHA}\") | .number" \
-            | head -n1
-          )"
+          if [ "${EVENT_NAME}" = "workflow_run" ]; then
+            head_sha="${WORKFLOW_HEAD_SHA}"
+            pr_number="$(
+              gh pr list \
+                --state open \
+                --label automated-update \
+                --search "${head_sha}" \
+                --json number,headRefOid \
+                --jq ".[] | select(.headRefOid == \"${head_sha}\") | .number" \
+              | head -n1
+            )"
+          else
+            pr_number="${REVIEW_PR_NUMBER}"
+            head_sha="${REVIEW_HEAD_SHA}"
+          fi
           if [ -z "${pr_number}" ]; then
-            echo "No open automated-update PR matches commit ${HEAD_SHA}; nothing to merge."
+            echo "No matching automated-update PR; nothing to merge."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Require at least one approving review before merging. Without this
-          # gate, release PRs would merge on green CI alone -- the whole point
-          # of these PRs is to get human eyes on the bundled upstream bumps
-          # before they ship. Approvals submitted on an older commit still
-          # count here; configure branch protection with
-          # "Dismiss stale pull request approvals when new commits are pushed"
-          # if a re-approval per push is desired.
+          echo "pr_number=${pr_number}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Merge matching PR
+        if: steps.resolve.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+
+          # Only merge if the PR still carries the automated-update label
+          # (defence in depth -- a maintainer may have removed it after the
+          # workflow fired).
+          has_label="$(
+            gh pr view "${PR_NUMBER}" \
+              --json labels \
+              --jq '[.labels[] | select(.name == "automated-update")] | length'
+          )"
+          if [ "${has_label}" -eq 0 ]; then
+            echo "PR #${PR_NUMBER} no longer carries the automated-update label; skipping."
+            exit 0
+          fi
+
+          # Require at least one approving review before merging. Without
+          # this gate, release PRs would merge on green CI alone -- the
+          # whole point of these PRs is to get human eyes on the bundled
+          # upstream bumps before they ship. Approvals submitted on an
+          # older commit still count here; configure branch protection
+          # with "Dismiss stale pull request approvals when new commits
+          # are pushed" if a re-approval per push is desired.
           approved="$(
-            gh pr view "${pr_number}" \
+            gh pr view "${PR_NUMBER}" \
               --json reviews \
               --jq '[.reviews[] | select(.state == "APPROVED")] | length'
           )"
           if [ "${approved}" -eq 0 ]; then
-            echo "PR #${pr_number} has no approving reviews; skipping auto-merge."
+            echo "PR #${PR_NUMBER} has no approving reviews; skipping auto-merge."
             exit 0
           fi
-          echo "Merging PR #${pr_number} (head ${HEAD_SHA}, ${approved} approval(s))."
-          gh pr merge "${pr_number}" --squash --delete-branch
+
+          # Require CI to be green on the current head.  On the
+          # ``workflow_run`` trigger this is implied by the ``if`` guard
+          # above, but the ``pull_request_review`` path has to check
+          # explicitly since the review event doesn't know the CI state.
+          # We look at statusCheckRollup and require every check to have
+          # conclusion in {SUCCESS, SKIPPED, NEUTRAL}.  ``gh pr checks``
+          # with ``--required`` would be stricter, but this repo's branch
+          # protection doesn't enumerate required checks individually.
+          ci_state="$(
+            gh pr view "${PR_NUMBER}" \
+              --json statusCheckRollup \
+              --jq '[
+                .statusCheckRollup[]
+                | select(.status != null)
+                | {status: .status, conclusion: .conclusion}
+              ]'
+          )"
+          not_done="$(echo "${ci_state}" | jq '[.[] | select(.status != "COMPLETED")] | length')"
+          failed="$(echo "${ci_state}" | jq '[.[] | select(.status == "COMPLETED" and (.conclusion // "" | ascii_upcase | . != "SUCCESS" and . != "SKIPPED" and . != "NEUTRAL"))] | length')"
+          if [ "${not_done}" -ne 0 ]; then
+            echo "PR #${PR_NUMBER} has ${not_done} check(s) still running; waiting for CI to complete."
+            exit 0
+          fi
+          if [ "${failed}" -ne 0 ]; then
+            echo "PR #${PR_NUMBER} has ${failed} failing check(s); not auto-merging."
+            exit 1
+          fi
+
+          echo "Merging PR #${PR_NUMBER} (head ${HEAD_SHA}, ${approved} approval(s), CI green)."
+          gh pr merge "${PR_NUMBER}" --squash --delete-branch
