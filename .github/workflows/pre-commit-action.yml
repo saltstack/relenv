@@ -29,7 +29,13 @@ jobs:
       - name: Install System Deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
+          # ``libxml2`` was dropped from Ubuntu 26.04 "resolute" (ubuntu-latest
+          # moved to it in Nov 2026); apt now errors with "Package 'libxml2'
+          # has no installation candidate".  The ``libxml2-dev`` package
+          # still exists on resolute and depends on the current runtime
+          # SONAME package, so leaving just the -dev entry pulls the runtime
+          # in transitively.  Same package list is otherwise unchanged.
+          sudo apt-get install -y git gcc make zlib1g-dev libc-dev libffi-dev g++ libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev
 
       - uses: actions/checkout@v3
         with:
