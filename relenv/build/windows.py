@@ -1272,6 +1272,20 @@ def build_python(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     shutil.copytree(src=str(dirs.source / "Lib"), dst=str(dirs.prefix / "Lib"), dirs_exist_ok=True)
     os.makedirs(str(dirs.prefix / "Lib" / "site-packages"), exist_ok=True)
 
+    # CPython 3.13 rewrote venv.EnvBuilder (gh-99834) to look for the venv
+    # launchers exclusively at ``Lib/venv/scripts/nt/venv{w,}launcher.exe``,
+    # dropping the ``Scripts/``-adjacent fallback that 3.10-3.12 used.  Our
+    # build.bat run emits them into ``PCbuild/<arch>/`` and the ``binaries``
+    # move above lands them under ``Scripts/`` -- which is fine for direct
+    # invocation but leaves ``python -m venv`` broken on 3.13+ with
+    # ``[WinError 2] The system cannot find the file specified``.  Mirror a
+    # copy into the location stdlib venv probes.  Harmless on 3.10-3.12
+    # (their venv.EnvBuilder still falls back to the Scripts/ path).
+    venv_nt = dirs.prefix / "Lib" / "venv" / "scripts" / "nt"
+    venv_nt.mkdir(parents=True, exist_ok=True)
+    for launcher in ("venvlauncher.exe", "venvwlauncher.exe"):
+        shutil.copy(src=str(bin_dir / launcher), dst=str(venv_nt / launcher))
+
     (dirs.prefix / "libs").mkdir(parents=True, exist_ok=True)
     shutil.copy(
         src=str(build_dir / "python3.lib"),
@@ -1330,6 +1344,13 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
         "*.whl",
         "/Include/*",
         "/Lib/site-packages/*",
+        # CPython's ``venv`` module copies these into any virtual env it
+        # creates.  ``activate`` has no extension, the others don't match
+        # any of the extension-only globs above, so without an explicit
+        # include they'd be stripped from the archive and ``python -m venv``
+        # would produce a venv whose ``Scripts\activate*`` scripts are
+        # missing.
+        "/Lib/venv/scripts/*",
         "/OpenSSL/*",
     ]
     archive = f"{dirs.prefix}.tar.xz"

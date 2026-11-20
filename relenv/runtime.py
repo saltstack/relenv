@@ -1121,6 +1121,113 @@ def wrapsitecustomize(func: Callable[[], Any]) -> Callable[[], None]:
     return wrapper
 
 
+def wrap_venv() -> None:
+    """
+    Patch ``venv.EnvBuilder`` so stdlib ``python -m venv`` children carry a
+    ``relenv.pth`` pointing back at this installation's ``runtime.py``.
+
+    gh-161: relenv's base-interpreter bootstrap is driven by a ``.pth`` file
+    in the base's ``site-packages/``. ``python -m venv`` creates a fresh
+    ``site-packages/`` with no such ``.pth``, so ``bootstrap()`` never runs
+    in the child -- breaking OpenSSL FIPS provider ordering, the
+    ``RelenvImporter`` meta-path hook, ``sysconfig`` wrapping, and the cargo
+    config install. We fix this by piggybacking on ``EnvBuilder.post_setup``:
+    after CPython finishes populating the child venv we drop a ``.pth`` into
+    the child's ``site-packages/`` whose single line imports *this* base
+    runtime (by absolute path) and calls ``bootstrap()``. The child's
+    ``site.py`` processes it on next startup exactly like the base does.
+
+    Only covers stdlib ``venv``. ``virtualenv``, ``uv venv``, ``poetry env``
+    use their own venv-creation paths and would need parallel hooks.
+    """
+    try:
+        venv_mod = cast("Any", importlib.import_module("venv"))
+    except ImportError:
+        # ``venv`` is stdlib under normal CPython layouts, but some stripped
+        # or embedded builds omit it, and nox-spawned unit-test envs in CI
+        # can end up without it too (observed on
+        # setup-python 3.11 + nox virtualenvs).  Nothing to wrap in that
+        # case; same graceful-skip posture as the other wrappers.
+        debug("wrap_venv: venv module unavailable; skipping EnvBuilder patch")
+        return
+    # Idempotence: bootstrap() is re-entered when the relenv .pth is
+    # re-executed (e.g. importlib.reload(site)); re-wrapping would double
+    # the work in post_setup and could recurse in weird EnvBuilder
+    # subclasses. Same pattern as wrap_sysconfig's __wrapped__ guard.
+    if getattr(venv_mod.EnvBuilder, "_relenv_wrapped", False):
+        return
+
+    orig_post_setup = venv_mod.EnvBuilder.post_setup
+    # Capture the absolute path of this runtime.py NOW, while we know it.
+    # In the child venv __file__ is unavailable at .pth-exec time, and the
+    # child has no ``relenv`` package of its own -- the baked-in absolute
+    # path is what lets the child find us.
+    runtime_path = str(pathlib.Path(__file__).resolve())
+
+    # The .pth file's single line. Mirrors the shape of RELENV_PTH in
+    # relenv/build/common/install.py but substitutes the absolute runtime
+    # path instead of computing it from __file__. site.py requires the
+    # line to start with ``import`` -- the leading ``import os`` satisfies
+    # that. Use repr() so Windows backslashes and any exotic chars in the
+    # path round-trip safely into a Python source literal.
+    pth_body = (
+        "import os; "
+        "import sys; "
+        "from importlib import util; "
+        "spec = util.spec_from_file_location("
+        "'relenv.runtime', " + repr(runtime_path) + "); "
+        "mod = util.module_from_spec(spec); "
+        "sys.modules['relenv.runtime'] = mod; "
+        "spec.loader.exec_module(mod); mod.bootstrap();"
+    )
+
+    @functools.wraps(orig_post_setup)
+    def post_setup(self: Any, context: Any) -> None:
+        orig_post_setup(self, context)
+        try:
+            env_dir = getattr(context, "env_dir", None)
+            if env_dir is None:
+                debug("wrap_venv: context has no env_dir; skipping relenv.pth")
+                return
+            # Skip pip's isolated build environments.  pip subclasses
+            # ``venv.EnvBuilder`` to stand up throwaway envs for building
+            # wheels (``pip install <sdist>`` for anything without a
+            # pre-built wheel on the target).  Dropping ``relenv.pth``
+            # into those envs re-bootstraps the full relenv runtime inside
+            # the build env, which hijacks ``sysconfig.get_config_var``
+            # (``BINDIR`` in particular), and the resulting wheel ships
+            # with its ``.data/scripts`` pointing at the base onedir
+            # instead of the install's actual scheme -- breaking
+            # ``test_pip_install_salt_pip_dir`` on macOS when salt builds
+            # from sdist.  Pip's own sitecustomize marker ("pip-build-env"
+            # in the env path) is the same signal ``wrapsitecustomize``
+            # already uses to skip its sys.path munging.
+            if "pip-build-env" in str(env_dir):
+                debug(f"wrap_venv: pip build-env detected ({env_dir}); skipping relenv.pth")
+                return
+            env_dir_path = pathlib.Path(env_dir)
+            if sys.platform == "win32":
+                child_site = env_dir_path / "Lib" / "site-packages"
+            else:
+                child_site = (
+                    env_dir_path / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+                )
+            if not child_site.is_dir():
+                debug(f"wrap_venv: child site-packages {child_site} missing; skipping relenv.pth")
+                return
+            pth_file = child_site / "relenv.pth"
+            with open(str(pth_file), "w") as fp:
+                fp.write(pth_body + "\n")
+            debug(f"wrap_venv: wrote {pth_file}")
+        except Exception as exc:  # noqa: BLE001
+            # Never break `python -m venv` because of a relenv quirk; log
+            # under RELENV_DEBUG and move on.
+            debug(f"wrap_venv: post_setup failed: {exc!r}")
+
+    venv_mod.EnvBuilder.post_setup = post_setup
+    venv_mod.EnvBuilder._relenv_wrapped = True
+
+
 def bootstrap() -> None:
     """
     Bootstrap the relenv environment.
@@ -1143,3 +1250,15 @@ def bootstrap() -> None:
     # intercept it. Manually wrap it here.
     if sys.version_info >= (3, 13):
         wrap_sysconfig("sysconfig")
+
+    # gh-161: make `python -m venv` children re-bootstrap on startup.
+    # Must run AFTER the RelenvImporter is on sys.meta_path:
+    # wrap_venv() calls ``importlib.import_module("venv")``, and the
+    # venv module's own imports (``sysconfig``, ``logging``,
+    # ``subprocess``, ...) would otherwise populate sys.modules with
+    # *unwrapped* copies, defeating the meta-path hook for the rest of
+    # the process -- observed as ``test_pip_install_salt_pip_dir``
+    # failing on macOS M1 because the cached unwrapped ``sysconfig``'s
+    # ``BINDIR`` pointed at the pre-wrap default during salt's wheel
+    # install.
+    wrap_venv()
