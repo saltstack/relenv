@@ -155,6 +155,45 @@ def test_imports_windows(pyexec):
         assert p.returncode == 0, f"Failed to import {mod}"
 
 
+def test_pip_freeze_relenv_version(pipexec):
+    """
+    Regression test for https://github.com/saltstack/relenv/issues/336.
+
+    ``pip install <checkout-path>`` writes a PEP 610 ``direct_url.json``
+    into the installed dist-info, which pip freeze echoes verbatim as
+    ``relenv @ file:///<path>``.  Before the fix, the onedir's finalize
+    step ran ``pip install <MODULE_DIR.parent>`` against the build
+    checkout, so every shipped onedir carried a ``direct_url.json``
+    pointing at the build machine's filesystem (``D:/a/relenv/relenv`` on
+    Windows CI, equivalent on Linux/macOS). End-user ``pip freeze`` then
+    reported ``relenv @ file:///D:/a/relenv/relenv`` instead of
+    ``relenv==<version>``, breaking lockfiles and requirements reproduction.
+
+    The fix (``strip_pep610_direct_url`` in
+    ``relenv/build/common/install.py``) deletes the file from the
+    installed dist-info during finalize.  Assert here that ``pip freeze``
+    output for relenv is a version-pinned form, not a ``file://`` URL.
+    """
+    p = subprocess.run(
+        [str(pipexec), "freeze"],
+        capture_output=True,
+        check=True,
+    )
+    freeze = p.stdout.decode()
+    lines = [line for line in freeze.splitlines() if line.lower().startswith("relenv")]
+    assert lines, f"relenv not listed by pip freeze; full output:\n{freeze}"
+    relenv_line = lines[0]
+    assert "file://" not in relenv_line, (
+        "gh-336: pip freeze is echoing a direct_url.json file:// reference "
+        "instead of the project's version. Output: " + relenv_line
+    )
+    # Positive check: should be ``relenv==X.Y.Z`` (or ``relenv @ ...``
+    # with something non-file:// if pip ever adds other PEP 610 forms).
+    assert "==" in relenv_line, (
+        "gh-336: pip freeze output for relenv is not version-pinned. Expected ``relenv==X.Y.Z``, got: " + relenv_line
+    )
+
+
 @pytest.mark.skip_on_windows
 def test_imports(pyexec):
     modules = [
