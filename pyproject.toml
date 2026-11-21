@@ -18,7 +18,10 @@ Changelog = "https://relenv.readthedocs.io/en/latest/changelog.html"
 relenv = "relenv.__main__:main"
 
 [project.optional-dependencies]
-toolchain = ["ppbt"]
+toolchain = ["ppbt>=0.2.0"]
+toolchain-cross-aarch64-linux-gnu = ["ppbt[cross-aarch64-linux-gnu]>=0.2.0"]
+toolchain-cross-x86_64-linux-gnu = ["ppbt[cross-x86_64-linux-gnu]>=0.2.0"]
+toolchain-cross-all = ["ppbt[cross-all]>=0.2.0"]
 
 [tool.setuptools]
 include-package-data = true

@@ -447,6 +447,12 @@ def get_toolchain(
     patch sys.platform to "linux"). This allows using existing toolchains
     without requiring ppbt to be installed.
 
+    When ``arch`` differs from the host, the cross toolchain is looked
+    up via ``ppbt.common.archive_for(triplet)`` (ppbt 0.2.0+).  The
+    matching cross archive ships in a sibling ``ppbt-cross-<triplet>``
+    PyPI package and is discovered through the ``ppbt.toolchains`` entry
+    point.  Install it via ``pip install ppbt[cross-<triplet>]``.
+
     :param arch: The architecture to get the toolchain for
     :type arch: str
     :param root: The root of the relenv working directories to search in
@@ -475,13 +481,33 @@ def get_toolchain(
     except ImportError:
         # If toolchain already exists, use it even without ppbt
         return toolchain_path if toolchain_path.exists() else None
-    archive_attr = getattr(ppbt_common, "ARCHIVE", None)
     extract = getattr(ppbt_common, "extract_archive", None)
-    if archive_attr is None or not callable(extract):
-        raise RelenvException("ppbt.common missing ARCHIVE or extract_archive")
+    if not callable(extract):
+        raise RelenvException("ppbt.common missing extract_archive")
+
+    archive_for = getattr(ppbt_common, "archive_for", None)
+    if callable(archive_for):
+        # ppbt 0.2.0+: resolve by target triplet so a cross-arch request
+        # pulls the archive out of the matching ppbt-cross-* sibling.
+        archive_path = pathlib.Path(archive_for(triplet))
+    else:
+        # Pre-0.2.0 ppbt only shipped the host native archive.
+        archive_attr = getattr(ppbt_common, "ARCHIVE", None)
+        if archive_attr is None:
+            raise RelenvException("ppbt.common missing ARCHIVE or archive_for")
+        archive_path = pathlib.Path(archive_attr)
+
+    if not archive_path.exists():
+        # Archive isn't staged.  For cross targets this means the
+        # ppbt-cross-<triplet> extra isn't installed.  Leave existing
+        # extracted toolchains usable rather than erroring.
+        if toolchain_path.exists():
+            return toolchain_path
+        raise RelenvException(
+            f"Toolchain archive {archive_path} not available; pip install ppbt[cross-{triplet}] for cross-arch builds"
+        )
 
     toolchain_root.mkdir(parents=True, exist_ok=True)
-    archive_path = pathlib.Path(archive_attr)
     archive_meta = _archive_metadata(archive_path)
 
     if toolchain_path.exists() and metadata and _manifest_matches(metadata, archive_meta):
