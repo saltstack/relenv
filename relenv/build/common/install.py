@@ -377,6 +377,38 @@ def find_sysconfigdata(pymodules: PathLike) -> str:
     raise MissingDependencyError("Unable to locate sysconfigdata module")
 
 
+def strip_pep610_direct_url(sitepackages: PathLike, project_name: str) -> None:
+    """
+    Remove ``<project>-<version>.dist-info/direct_url.json`` for a project.
+
+    When relenv's finalize step runs ``pip install <checkout-path>`` (the
+    git-clone build path at ``MODULE_DIR.parent``), pip records the install
+    as a PEP 610 "direct URL" reference by writing ``direct_url.json`` into
+    the installed dist-info. ``pip freeze`` then prints
+    ``<project> @ file:///...`` -- the build host's checkout path -- instead
+    of the project's version. The onedir inherits that stale local path
+    forever, so end-user ``pip freeze`` output reads e.g. ``relenv @
+    file:///D:/a/relenv/relenv`` on Windows from the GitHub Actions
+    workspace. See gh-336.
+
+    Deleting ``direct_url.json`` makes pip fall back to parsing METADATA,
+    which yields the correct version-pinned output in ``pip freeze``.
+    ``pip list`` is unaffected either way.
+
+    :param sitepackages: Path to ``site-packages`` where the project was
+        installed (``<prefix>/lib/pythonX.Y/site-packages`` on POSIX,
+        ``<prefix>/Lib/site-packages`` on Windows).
+    :param project_name: pip's normalised project name (e.g. ``relenv``).
+    """
+    sitepackages_path = pathlib.Path(sitepackages)
+    pattern = f"{project_name}-*.dist-info"
+    for dist_info in sitepackages_path.glob(pattern):
+        direct_url = dist_info / "direct_url.json"
+        if direct_url.is_file():
+            log.debug("Removing %s (gh-336)", direct_url)
+            direct_url.unlink()
+
+
 def install_runtime(sitepackages: PathLike) -> None:
     """
     Install a base relenv runtime.
@@ -544,6 +576,11 @@ def finalize(
     # an installed Relenv
     if (MODULE_DIR.parent / ".git").exists():
         runpip(MODULE_DIR.parent, upgrade=True)
+        # gh-336: the checkout path install just wrote a PEP 610
+        # ``direct_url.json`` that pip freeze would echo as
+        # ``relenv @ file:///path/to/build/checkout`` forever. Strip it so
+        # end-user ``pip freeze`` sees the real version.
+        strip_pep610_direct_url(pymodules / "site-packages", "relenv")
     else:
         runpip("relenv", upgrade=True)
     globs = [

@@ -36,6 +36,7 @@ from .common import (
     get_dependency_version,
     install_runtime,
     patch_file,
+    strip_pep610_direct_url,
     update_ensurepip,
     update_sbom_checksums,
 )
@@ -1327,6 +1328,12 @@ def finalize(env: EnvMapping, dirs: Dirs, logfp: IO[str]) -> None:
     runpip("wheel")
     if (MODULE_DIR.parent / ".git").exists():
         runpip(MODULE_DIR.parent)
+        # gh-336: the checkout path install just wrote a PEP 610
+        # ``direct_url.json`` that pip freeze would echo as
+        # ``relenv @ file:///D:/a/relenv/relenv`` (the GitHub Actions
+        # workspace path) forever. Strip it so end-user ``pip freeze``
+        # sees the real version.
+        strip_pep610_direct_url(sitepackages, "relenv")
     else:
         runpip("relenv")
 

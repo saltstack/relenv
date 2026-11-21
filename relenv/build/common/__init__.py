@@ -24,6 +24,7 @@ from .install import (
     finalize,
     install_runtime,
     patch_file,
+    strip_pep610_direct_url,
     update_ensurepip,
     update_sbom_checksums,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "create_archive",
     "update_ensurepip",
     "patch_file",
+    "strip_pep610_direct_url",
     "update_sbom_checksums",
     # Builders (specific build functions)
     "build_openssl",
