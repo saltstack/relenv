@@ -43,12 +43,22 @@ from relenv.common import (
 from tests._pytest_typing import mark_skipif, parametrize
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
 
-def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str, archive_path: pathlib.Path) -> None:
+def _mock_ppbt_module(
+    monkeypatch: pytest.MonkeyPatch,
+    triplet: str,
+    archive_path: pathlib.Path,
+    *,
+    archives: Mapping[str, pathlib.Path] | None = None,
+) -> None:
     """
     Provide a lightweight ppbt.common stub so get_toolchain() skips the real extraction.
+
+    By default emulates pre-0.2.0 ppbt (only ``ARCHIVE`` is exposed).
+    Pass ``archives={triplet: path, ...}`` to also expose the 0.2.0+
+    ``archive_for`` API so the cross-triplet lookup path is exercised.
     """
     stub_package = ModuleType("ppbt")
     stub_common = ModuleType("ppbt.common")
@@ -60,10 +70,26 @@ def _mock_ppbt_module(monkeypatch: pytest.MonkeyPatch, triplet: str, archive_pat
 
     setattr(stub_common, "ARCHIVE", archive_path)
 
+    if archives is not None:
+
+        def archive_for(t: str) -> pathlib.Path:
+            return archives.get(t, archive_path.parent / f"{t}.tar.xz")
+
+        setattr(stub_common, "archive_for", archive_for)
+
     def fake_extract_archive(dest: str, archive: str) -> None:
+        # When archive_for is wired up (0.2.0+ emulation) derive the
+        # extracted dir from the archive filename so cross-triplet
+        # requests produce the right subdir.  Otherwise fall back to
+        # the fixture's host triplet, matching pre-0.2.0 behaviour.
+        archive_name = pathlib.Path(archive).name
+        if archives is not None and archive_name.endswith(".tar.xz"):
+            extracted_triplet = archive_name[: -len(".tar.xz")]
+        else:
+            extracted_triplet = triplet
         dest_path = pathlib.Path(dest)
         dest_path.mkdir(parents=True, exist_ok=True)
-        (dest_path / triplet).mkdir(parents=True, exist_ok=True)
+        (dest_path / extracted_triplet).mkdir(parents=True, exist_ok=True)
 
     setattr(stub_common, "extract_archive", fake_extract_archive)
 
@@ -201,6 +227,116 @@ def test_get_toolchain_no_arch(tmp_path: pathlib.Path, monkeypatch: pytest.Monke
     _mock_ppbt_module(monkeypatch, triplet, archive_path)
     ret = get_toolchain()
     assert ret == data_dir / "toolchain" / triplet
+
+
+def test_get_toolchain_cross_triplet_uses_archive_for(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    A cross-arch request routes through ``ppbt.common.archive_for(triplet)``.
+
+    Simulates ppbt 0.2.0+ with a sibling ``ppbt-cross-aarch64-linux-gnu``
+    installed: the host archive is the x86_64 tarball, but asking for
+    ``arch="aarch64"`` picks the aarch64 tarball instead.
+    """
+    data_dir = tmp_path / "data"
+    host_archive = tmp_path / "x86_64-linux-gnu.tar.xz"
+    host_archive.write_bytes(b"")
+    cross_archive = tmp_path / "aarch64-linux-gnu.tar.xz"
+    cross_archive.write_bytes(b"")
+
+    monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(
+        relenv.common,
+        "get_triplet",
+        lambda machine=None, plat=None: f"{machine or 'x86_64'}-linux-gnu",
+    )
+    monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
+
+    _mock_ppbt_module(
+        monkeypatch,
+        "x86_64-linux-gnu",
+        host_archive,
+        archives={
+            "x86_64-linux-gnu": host_archive,
+            "aarch64-linux-gnu": cross_archive,
+        },
+    )
+
+    ret = get_toolchain(arch="aarch64")
+    assert ret == data_dir / "toolchain" / "aarch64-linux-gnu"
+    # The native toolchain dir must NOT have been created as a side effect.
+    assert not (data_dir / "toolchain" / "x86_64-linux-gnu").exists()
+
+
+def test_get_toolchain_missing_cross_archive_raises(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Requesting a cross triplet without the ppbt-cross-* extra installed raises.
+
+    The 0.2.0 ``archive_for`` helper returns a path pointing into
+    ``ppbt-cross-<triplet>``'s ``_toolchain/`` dir; if that package
+    isn't installed, the path doesn't exist and we surface a helpful
+    error instead of silently falling back to the host tarball.
+    """
+    data_dir = tmp_path / "data"
+    host_archive = tmp_path / "x86_64-linux-gnu.tar.xz"
+    host_archive.write_bytes(b"")
+
+    monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(
+        relenv.common,
+        "get_triplet",
+        lambda machine=None, plat=None: f"{machine or 'x86_64'}-linux-gnu",
+    )
+    monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
+
+    # archive_for maps the cross triplet to a path that deliberately
+    # doesn't exist, mimicking "ppbt-cross-aarch64-linux-gnu not
+    # installed".
+    _mock_ppbt_module(
+        monkeypatch,
+        "x86_64-linux-gnu",
+        host_archive,
+        archives={"x86_64-linux-gnu": host_archive},
+    )
+
+    with pytest.raises(RelenvException) as exc:
+        get_toolchain(arch="aarch64")
+    assert "aarch64-linux-gnu" in str(exc.value)
+    assert "ppbt[cross-aarch64-linux-gnu]" in str(exc.value)
+
+
+def test_get_toolchain_missing_archive_but_existing_dir(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    Missing archive + previously-extracted toolchain → return the dir, no error.
+
+    Lets users keep running against a toolchain they already extracted
+    even if they later uninstall the ppbt extra that supplied it.
+    """
+    data_dir = tmp_path / "data"
+    triplet = "aarch64-linux-gnu"
+    existing = data_dir / "toolchain" / triplet
+    existing.mkdir(parents=True)
+
+    host_archive = tmp_path / "x86_64-linux-gnu.tar.xz"
+    host_archive.write_bytes(b"")
+
+    monkeypatch.setattr(relenv.common, "DATA_DIR", data_dir, raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(relenv.common, "get_triplet", lambda machine=None, plat=None: triplet)
+    monkeypatch.setenv("RELENV_TOOLCHAIN_CACHE", str(data_dir / "toolchain"))
+
+    _mock_ppbt_module(
+        monkeypatch,
+        "x86_64-linux-gnu",
+        host_archive,
+        archives={"x86_64-linux-gnu": host_archive},  # no aarch64 archive
+    )
+
+    ret = get_toolchain(arch="aarch64")
+    assert ret == existing
 
 
 WriteMode = Literal["w:gz", "w:xz", "w:bz2", "w"]
