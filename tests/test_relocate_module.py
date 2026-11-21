@@ -101,13 +101,11 @@ def test_handle_elf_sets_rpath(monkeypatch: pytest.MonkeyPatch, tmp_path: pathli
     resident = lib_dir / "libfoo.so"
     resident.write_text("library")
 
-    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
-        if cmd[0] == "ldd":
-            stdout = f"libfoo.so => {resident} (0x00007)\nlibc.so.6 => /lib/libc.so.6 (0x00007)\n"
-            return subprocess.CompletedProcess(cmd, 0, stdout=stdout.encode(), stderr=b"")
-        raise AssertionError(f"Unexpected command {cmd}")
-
-    monkeypatch.setattr(relocate.subprocess, "run", fake_run)
+    # gh-37: handle_elf no longer shells out to the host ``ldd`` for the
+    # rpath-only path; it calls ``read_needed`` which runs ``readelf -d``
+    # on the ELF.  Stub that out so this unit test doesn't need a real
+    # cross-compiled binary.
+    monkeypatch.setattr(relocate, "read_needed", lambda path: ["libfoo.so", "libc.so.6"])
 
     captured: dict[str, str] = {}
 
