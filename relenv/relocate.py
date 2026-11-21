@@ -25,8 +25,10 @@ __all__ = [
     "is_elf",
     "parse_otool_l",
     "parse_readelf_d",
+    "parse_readelf_d_needed",
     "parse_macho",
     "parse_rpath",
+    "read_needed",
     "handle_macho",
     "is_in_dir",
     "handle_elf",
@@ -272,6 +274,52 @@ def parse_rpath(path: str | os.PathLike[str]) -> list[str]:
     return parse_readelf_d(proc.stdout.decode())
 
 
+def parse_readelf_d_needed(stdout: str) -> list[str]:
+    """
+    Parse DT_NEEDED entries from ``readelf -d <path>`` output.
+
+    ``readelf -d`` prints every dynamic-section entry; DT_NEEDED rows look
+    like::
+
+        0x0000000000000001 (NEEDED)             Shared library: [libssl.so.3]
+
+    The SONAME is in square brackets.  This is the architecture-agnostic
+    equivalent of ``ldd``'s first column, with the critical difference
+    that ``readelf`` parses ELF metadata directly and works for
+    cross-compiled binaries where the host dynamic linker would error
+    out.
+
+    :param stdout: Output of ``readelf -d <path>``.
+    :return: List of SONAMEs (strings without brackets) in file order.
+    """
+    needed: list[str] = []
+    for line in stdout.splitlines():
+        if "NEEDED" not in line:
+            continue
+        start = line.find("[")
+        end = line.find("]", start)
+        if start == -1 or end == -1 or end <= start + 1:
+            continue
+        needed.append(line[start + 1 : end])
+    return needed
+
+
+def read_needed(path: str | os.PathLike[str]) -> list[str]:
+    """
+    Run ``readelf -d <path>`` and return the DT_NEEDED SONAMEs.
+
+    Toolchain-aware: :func:`_get_readelf_binary` already prefers the
+    target toolchain's ``readelf`` when ``RELENV_BUILDENV`` is set, so this
+    works on ELFs of any architecture.
+
+    :param path: The path to the ELF file.
+    :return: The SONAMEs the binary depends on, in dynamic-section order.
+    """
+    readelf = _get_readelf_binary()
+    proc = subprocess.run([readelf, "-d", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return parse_readelf_d_needed(proc.stdout.decode())
+
+
 def handle_macho(
     path: str | os.PathLike[str],
     root_dir: str | os.PathLike[str],
@@ -423,43 +471,78 @@ def handle_elf(
     """
     if root is None:
         root = libs
-    proc = subprocess.run(["ldd", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    # gh-37: the original implementation shelled out to the host ``ldd``,
+    # which fails on cross-compiled ELFs (the host dynamic linker refuses
+    # to load a foreign-arch object: either "not a dynamic executable" or
+    # a non-zero exit with empty stdout).  The ensuing "needs_rpath stays
+    # False -> remove_rpath(path)" silently stripped RPATH from every
+    # cross-built binary.  Use ``readelf -d`` instead: it parses the ELF's
+    # dynamic section directly, is arch-agnostic, and ``_get_readelf_binary``
+    # already prefers the target toolchain's ``readelf`` so even an
+    # x86_64 host building aarch64 picks up the right tool.
+    #
+    # In ``rpath_only`` mode (the default -- what finalize uses) we never
+    # needed the host linker's path resolution anyway: all we care about
+    # is whether the binary's DT_NEEDED SONAMEs refer to libraries we
+    # already laid down under ``libs/``.  That's a filesystem-local check
+    # that works identically for native and cross builds.
     needs_rpath = False
+    libs_dir = pathlib.Path(libs)
+    root_dir = pathlib.Path(root)
 
-    for line in proc.stdout.decode().splitlines():
-        if line.find("=>") == -1:
-            log.debug("Skip ldd output line: %s", line)
+    for soname in read_needed(path):
+        if soname in LIBCLIBS:
+            log.debug("Skipping glibc lib %s", soname)
             continue
 
-        lib_name, location_info = [_.strip() for _ in line.split("=>", 1)]
-        if location_info == "not found":
-            # It is likely that something was not compiled correctly
-            log.warning("Unable to find library %s linked from %s", lib_name, path)
-            continue
-
-        linked_lib = location_info.rsplit(" ", 1)[0].strip()
-        lib_basename = os.path.basename(linked_lib)
-
-        if lib_name in LIBCLIBS:
-            log.debug("Skipping glibc lib %s", lib_name)
-            continue
-
-        if is_in_dir(linked_lib, root):
+        candidate = libs_dir / soname
+        if candidate.exists():
             needs_rpath = True
-            log.info("File already within root directory: %s", linked_lib)
+            log.info("File already within libs directory: %s", candidate)
             continue
 
-        relocated_path = os.path.join(libs, lib_basename)
+        # Fall back to a shallow search of root_dir -- covers the case
+        # where the needed SONAME lives somewhere under the prefix but
+        # not directly in libs (e.g. architecture-specific subdirs).
+        try:
+            hits = [p for p in root_dir.rglob(soname) if p.is_file()]
+        except OSError:
+            hits = []
+        if hits:
+            needs_rpath = True
+            log.info("File already within root directory: %s", hits[0])
+            continue
 
-        if os.path.exists(relocated_path):
+        relocated_path = libs_dir / soname
+        if relocated_path.exists():
             log.debug("Relocated library exists: %s", relocated_path)
         elif rpath_only:
-            log.warning("In `rpath_only mode` but %s is not in %s", linked_lib, root)
+            log.warning("In `rpath_only mode` but %s is not in %s", soname, root)
         else:
-            # If we aren't in `rpath_only` mode, we can copy
+            # Non-rpath_only mode is only used by the ``relenv relocate``
+            # CLI on already-installed native onedirs.  Cross builds never
+            # exercise this path (finalize is always rpath_only=True), so
+            # the host ``ldd`` fallback is retained here for native
+            # relocation only.
+            ldd_proc = subprocess.run(["ldd", path], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            linked_lib: str | None = None
+            for line in ldd_proc.stdout.decode().splitlines():
+                if " => " not in line:
+                    continue
+                name, info = [p.strip() for p in line.split("=>", 1)]
+                if name != soname or info.startswith("not found"):
+                    continue
+                linked_lib = info.rsplit(" ", 1)[0].strip()
+                break
+            if not linked_lib or not os.path.exists(linked_lib):
+                log.warning(
+                    "Could not resolve %s on host for copying (cross build?)",
+                    soname,
+                )
+                continue
             log.info("Copy %s to %s", linked_lib, relocated_path)
-            shutil.copy(linked_lib, relocated_path)
-            shutil.copymode(linked_lib, relocated_path)
+            shutil.copy(linked_lib, str(relocated_path))
+            shutil.copymode(linked_lib, str(relocated_path))
             needs_rpath = True
 
     if needs_rpath:

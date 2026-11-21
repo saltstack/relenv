@@ -15,6 +15,7 @@ from relenv.relocate import (
     is_macho,
     main,
     parse_readelf_d,
+    parse_readelf_d_needed,
     patch_rpath,
     remove_rpath,
 )
@@ -156,6 +157,46 @@ def test_parse_readelf_d_rpath() -> None:
     assert parse_readelf_d(section) == ["$ORIGIN/../.."]
 
 
+def test_parse_readelf_d_needed() -> None:
+    """gh-37: DT_NEEDED parsing used to replace host ``ldd`` on cross builds."""
+    section = dedent(
+        """
+    Dynamic section at offset 0xbdd40 contains 28 entries:
+      Tag        Type                         Name/Value
+     0x0000000000000001 (NEEDED)             Shared library: [libz.so.1]
+     0x0000000000000001 (NEEDED)             Shared library: [libbz2.so.1]
+     0x0000000000000001 (NEEDED)             Shared library: [libpng15.so.15]
+     0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+     0x000000000000000e (SONAME)             Library soname: [libfreetype.so.6]
+     0x000000000000000f (RPATH)              Library rpath: [$ORIGIN]
+    """
+    )
+    assert parse_readelf_d_needed(section) == [
+        "libz.so.1",
+        "libbz2.so.1",
+        "libpng15.so.15",
+        "libc.so.6",
+    ]
+
+
+def test_parse_readelf_d_needed_empty() -> None:
+    section = dedent(
+        """
+    Dynamic section at offset 0x58000 contains 3 entries:
+      Tag        Type                         Name/Value
+     0x000000000000000e (SONAME)             Library soname: [libfoo.so.1]
+     0x000000000000000c (INIT)               0x51f8
+    """
+    )
+    assert parse_readelf_d_needed(section) == []
+
+
+def test_parse_readelf_d_needed_malformed() -> None:
+    # Lines with "NEEDED" but no bracket pair must not explode.
+    section = "0x0000000000000001 (NEEDED)             Shared library: broken\n"
+    assert parse_readelf_d_needed(section) == []
+
+
 def test_is_in_dir(tmp_path: pathlib.Path) -> None:
     parent = tmp_path / "foo"
     child = tmp_path / "foo" / "bar" / "bang"
@@ -231,43 +272,47 @@ def test_handle_elf(tmp_path: pathlib.Path) -> None:
     libcrypt = tmp_path / "libcrypt.so.2"
     libcrypt.touch()
 
+    needed = ["libcrypt.so.2", "libm.so.6", "libc.so.6"]
+    # Non-rpath_only mode falls back to host ``ldd`` to resolve
+    # not-yet-bundled SONAMEs for copying.  Provide that resolution via a
+    # mocked subprocess.run keyed on argv[0].
     ldd_ret = f"""
-    linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
     libcrypt.so.2 => {libcrypt} (0x0123456789)
     libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
     libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
     """.encode()
 
+    def fake_run(argv: Any, **_kwargs: Any) -> MagicMock:
+        if argv and str(argv[0]).endswith("ldd"):
+            return MagicMock(stdout=ldd_ret)
+        return MagicMock(stdout=b"")
+
     with proj:
-        with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
-            with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
-                handle_elf(str(pybin), str(proj.libs_dir), False, str(proj.root_dir))
-                assert not (proj.libs_dir / "linux-vdso.so.1").exists()
-                assert (proj.libs_dir / "libcrypt.so.2").exists()
-                assert not (proj.libs_dir / "libm.so.6").exists()
-                assert not (proj.libs_dir / "libc.so.6").exists()
-                assert patch_rpath_mock.call_count == 1
-                patch_rpath_mock.assert_called_with(str(pybin), "$ORIGIN/../lib")
+        with patch("relenv.relocate.read_needed", return_value=needed):
+            with patch("subprocess.run", side_effect=fake_run):
+                with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
+                    handle_elf(str(pybin), str(proj.libs_dir), False, str(proj.root_dir))
+                    assert (proj.libs_dir / "libcrypt.so.2").exists()
+                    assert not (proj.libs_dir / "libm.so.6").exists()
+                    assert not (proj.libs_dir / "libc.so.6").exists()
+                    assert patch_rpath_mock.call_count == 1
+                    patch_rpath_mock.assert_called_with(str(pybin), "$ORIGIN/../lib")
 
 
 def test_handle_elf_rpath_only(tmp_path: pathlib.Path) -> None:
     proj = LinuxProject(tmp_path / "proj")
     pybin = proj.add_simple_elf("python", "foo")
     libcrypt = proj.libs_dir / "libcrypt.so.2"
-    fake = tmp_path / "fake.so.2"
-    fake.touch()
 
-    ldd_ret = f"""
-    linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
-    libcrypt.so.2 => {libcrypt} (0x0123456789)
-    fake.so.2 => {fake} (0x0123456789)
-    libm.so.6 => /usr/lib/libm.so.6 (0x0123456789)
-    libc.so.6 => /usr/lib/libc.so.6 (0x0123456789)
-    """.encode()
+    # rpath_only=True: ``handle_elf`` only cares about DT_NEEDED entries
+    # that resolve to files already present under ``libs``.  ``fake.so.2``
+    # is in the NEEDED list but not under libs, so it should log a warning
+    # and be skipped (no copy, no rpath contribution from it alone).
+    needed = ["libcrypt.so.2", "fake.so.2", "libm.so.6", "libc.so.6"]
 
     with proj:
         libcrypt.touch()
-        with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
+        with patch("relenv.relocate.read_needed", return_value=needed):
             with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
                 handle_elf(str(pybin), str(proj.libs_dir), True, str(proj.root_dir))
                 assert not (proj.libs_dir / "fake.so.2").exists()
@@ -309,15 +354,11 @@ def test_handle_elf_removes_rpath_when_no_relenv_libs(tmp_path: pathlib.Path) ->
     proj = LinuxProject(tmp_path / "proj")
     module = proj.add_simple_elf("array.so", "lib", "python3.10", "lib-dynload")
 
-    # ldd output showing only system libraries
-    ldd_ret = b"""
-    linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
-    libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x0123456789)
-    libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0123456789)
-    """
+    # DT_NEEDED entries referring only to the LIBCLIBS allow-list (glibc)
+    needed = ["libpthread.so.0", "libc.so.6"]
 
     with proj:
-        with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
+        with patch("relenv.relocate.read_needed", return_value=needed):
             with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
                 with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
                     handle_elf(str(module), str(proj.libs_dir), True, str(proj.root_dir))
@@ -334,16 +375,10 @@ def test_handle_elf_sets_rpath_when_relenv_libs_present(tmp_path: pathlib.Path) 
     libssl = proj.libs_dir / "libssl.so.3"
     libssl.touch()
 
-    # ldd output showing relenv-built library
-    ldd_ret = f"""
-    linux-vdso.so.1 => linux-vdso.so.1 (0x0123456789)
-    libssl.so.3 => {libssl} (0x0123456789)
-    libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x0123456789)
-    libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x0123456789)
-    """.encode()
+    needed = ["libssl.so.3", "libpthread.so.0", "libc.so.6"]
 
     with proj:
-        with patch("subprocess.run", return_value=MagicMock(stdout=ldd_ret)):
+        with patch("relenv.relocate.read_needed", return_value=needed):
             with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
                 with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
                     handle_elf(str(module), str(proj.libs_dir), True, str(proj.root_dir))
@@ -351,3 +386,42 @@ def test_handle_elf_sets_rpath_when_relenv_libs_present(tmp_path: pathlib.Path) 
                     assert patch_rpath_mock.call_count == 1
                     assert remove_rpath_mock.call_count == 0
                     patch_rpath_mock.assert_called_with(str(module), "$ORIGIN/../..")
+
+
+def test_handle_elf_keeps_rpath_on_cross_build(tmp_path: pathlib.Path) -> None:
+    """
+    gh-37: on a cross-build the host ``ldd`` cannot read a foreign-arch
+    ELF and historically emitted empty output -- which drove
+    ``handle_elf`` down the "no relenv libs linked -> remove_rpath" path
+    for every single cross-built binary.  With the ``readelf -d`` DT_NEEDED
+    rewrite, ``handle_elf`` consults ELF metadata directly (arch-agnostic)
+    and correctly sees the bundled ``libssl`` dependency, so RPATH is
+    preserved instead of stripped.
+    """
+    proj = LinuxProject(tmp_path / "proj")
+    module = proj.add_simple_elf("_ssl.so", "lib", "python3.10", "lib-dynload")
+    libssl = proj.libs_dir / "libssl.so.3"
+    libssl.touch()
+
+    needed = ["libssl.so.3", "libpthread.so.0", "libc.so.6"]
+
+    # Simulate the exact cross-compile failure mode: host ``ldd`` exits
+    # non-zero with empty stdout because the ELF is a foreign arch.  Any
+    # subprocess.run call (there shouldn't be one for rpath_only=True,
+    # since read_needed is mocked) returns the broken ldd result -- if
+    # ``handle_elf`` were still consulting ldd we'd see it fall through to
+    # remove_rpath.
+    broken_ldd_ret = MagicMock(stdout=b"", returncode=1)
+
+    with proj:
+        with patch("relenv.relocate.read_needed", return_value=needed):
+            with patch("subprocess.run", return_value=broken_ldd_ret):
+                with patch("relenv.relocate.remove_rpath") as remove_rpath_mock:
+                    with patch("relenv.relocate.patch_rpath") as patch_rpath_mock:
+                        handle_elf(str(module), str(proj.libs_dir), True, str(proj.root_dir))
+                        assert patch_rpath_mock.call_count == 1, (
+                            "gh-37: cross-built binary with bundled DT_NEEDED "
+                            "should get its RPATH patched, not removed."
+                        )
+                        assert remove_rpath_mock.call_count == 0
+                        patch_rpath_mock.assert_called_with(str(module), "$ORIGIN/../..")
