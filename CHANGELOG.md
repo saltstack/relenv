@@ -1,3 +1,28 @@
+0.24.0
+======
+
+* Fix ``python -m venv`` end-to-end inside relenv environments on Windows (gh-334, gh-161).
+  CPython 3.13 moved ``venvlauncher.exe`` / ``venvwlauncher.exe``; relenv now copies
+  them to the new path, and venvs created by ``python -m venv`` get a ``relenv.pth``
+  dropped in via a monkey-patched ``venv.EnvBuilder.post_setup`` so the relenv
+  runtime bootstraps inside them.
+* Fix ``pip freeze`` showing a ``file://`` URL for relenv instead of its version
+  (gh-336).  The PEP 610 ``direct_url.json`` written during finalize is now stripped
+  so the installed dist-info records a normal version install.
+* Fix ``relenv relocate`` stripping RPATH on cross-compiled builds (gh-37).  The old
+  code shelled out to the host ``ldd`` to resolve ``DT_NEEDED`` entries, which fails
+  on foreign-arch ELFs; relocate now parses the dynamic section via ``readelf -d``
+  from the target toolchain, which is arch-agnostic.
+* Route ``get_toolchain()`` through ``ppbt.archive_for(triplet)`` so cross-arch
+  requests pick the matching tarball out of a sibling ``ppbt-cross-<triplet>`` PyPI
+  package instead of silently extracting the host tarball.  New extras
+  ``toolchain-cross-aarch64-linux-gnu``, ``toolchain-cross-x86_64-linux-gnu``, and
+  ``toolchain-cross-all`` forward to ``ppbt[cross-*]``.  Requires ppbt >= 0.2.0.
+* Document the ``relenv.runtime`` bootstrap pipeline (gh-154).
+* Auto-merge release PRs on approval rather than waiting for a separate CI
+  completion event.
+
+
 0.23.2
 ======
 
