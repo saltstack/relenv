@@ -733,6 +733,15 @@
      "darwin",
      "win32"
     ]
+   },
+   "2.11.0": {
+    "url": "https://github.com/libexpat/libexpat/releases/download/R_2_11_0/expat-{version}.tar.xz",
+    "sha256": "61e7614b602201c28a189dafee78f5bceaee192bbde46a930752ff09cf5542fa",
+    "platforms": [
+     "linux",
+     "darwin",
+     "win32"
+    ]
    }
   }
  }
