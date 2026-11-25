@@ -1,7 +1,12 @@
 0.24.1
 ======
 
-* Update expat to 2.11.0
+* Update expat to 2.11.0 (security).  Fixes CVE-2026-124317 (overread in the
+  unknown-encoding decoder; only affects callers of
+  ``XML_SetUnknownEncodingHandler``), CVE-2026-128241 (symlink attack in the
+  ``xmlwf -d <directory>`` CLI mode), and CVE-2026-134703 (malformed UTF-16
+  ending in isolated high surrogates can reach character-data / default
+  handlers; same family as CVE-2026-93990 / CVE-2022-25235).
 
 
 0.24.0
